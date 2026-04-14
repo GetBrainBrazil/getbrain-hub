@@ -87,27 +87,31 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2 py-2">
+            Módulos
+          </SidebarGroupLabel>
           <Collapsible open={finOpen} onOpenChange={setFinOpen}>
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors">
-                <DollarSign className="h-4 w-4 mr-2" />
-                {!collapsed && (
-                  <>
-                    <span className="flex-1 text-left">Financeiro</span>
-                    <ChevronDown className={`h-3 w-3 transition-transform ${finOpen ? "rotate-180" : ""}`} />
-                  </>
-                )}
-              </SidebarGroupLabel>
+              <SidebarMenuButton 
+                className="w-full justify-between font-semibold text-foreground hover:bg-sidebar-accent/50 data-[active=true]:bg-sidebar-accent"
+                data-active={financeiroItems.some(i => isActive(i.url)) || location.pathname.startsWith("/financeiro")}
+              >
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-5 w-5" />
+                  <span>Financeiro</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${finOpen ? "rotate-180" : ""}`} />
+              </SidebarMenuButton>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarGroupContent>
+              <SidebarGroupContent className="pl-2 border-l-2 border-sidebar-border ml-4 mt-1">
                 <SidebarMenu>
                   {financeiroItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <SidebarMenuButton asChild isActive={isActive(item.url)} className="text-sm">
                         <NavLink to={item.url}>
                           <item.icon className="h-4 w-4" />
-                          {!collapsed && <span>{item.title}</span>}
+                          <span>{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
