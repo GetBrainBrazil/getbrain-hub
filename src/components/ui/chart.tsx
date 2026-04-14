@@ -120,6 +120,8 @@ const ChartTooltipContent = React.forwardRef<
     ref,
   ) => {
     const { config } = useChart();
+    const payload = payloadProp as any[];
+    const label = labelProp as string;
 
     const tooltipLabel = React.useMemo(() => {
       if (hideLabel || !payload?.length) {
