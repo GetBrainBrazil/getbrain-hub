@@ -179,6 +179,8 @@ export default function FinanceiroVisaoGeral() {
                   stroke="hsl(var(--accent))"
                   strokeWidth={2}
                   fill="url(#saldoGrad)"
+                  dot={{ r: 5, fill: "hsl(var(--accent))", stroke: "hsl(var(--accent))" }}
+                  activeDot={{ r: 7, fill: "hsl(var(--accent))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
