@@ -39,6 +39,7 @@ export default function FinanceiroVisaoGeral() {
       const despPagas = all.filter(m => m.tipo === "despesa" && m.status === "pago" && m.conta_bancaria_id === c.id).reduce((s, m) => s + Number(m.valor_realizado), 0);
       return { ...c, saldo: Number(c.saldo_inicial) + recPagas - despPagas };
     });
+    setContas(contasComSaldo);
 
     const saldoTotal = contasComSaldo.reduce((s, c) => s + c.saldo, 0);
     const aReceber = all.filter(m => m.tipo === "receita" && m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
@@ -66,6 +67,10 @@ export default function FinanceiroVisaoGeral() {
       months.push({ name: nm, receitas: r, despesas: dp });
     }
     setChartData(months);
+
+    // Últimas 5 movimentações
+    const { data: ult } = await supabase.from("movimentacoes").select("*").eq("status", "pago").order("data_pagamento", { ascending: false }).limit(5);
+    setUltimas(ult || []);
 
     // Fluxo de caixa projetado — próximos 60 dias
     const hoje = new Date();
@@ -176,6 +181,55 @@ export default function FinanceiroVisaoGeral() {
                 />
               </AreaChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Saldo por Conta + Últimas Movimentações */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="animate-fade-slide">
+          <CardHeader>
+            <CardTitle className="text-base">Saldo por Conta Bancária</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {contas.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma conta bancária cadastrada</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {contas.map(c => (
+                  <div key={c.id} className="p-3 rounded-lg border bg-muted/30 flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.cor }} />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{c.nome}</p>
+                      <p className="text-xs text-muted-foreground">{c.banco} • {c.tipo}</p>
+                    </div>
+                    <span className="font-mono text-sm font-semibold">{formatCurrency(c.saldo)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="animate-fade-slide">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Últimas Movimentações</CardTitle>
+            <button onClick={() => navigate("/financeiro/transacoes")} className="text-xs text-accent hover:underline">Ver todas →</button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {ultimas.map(m => (
+                <div key={m.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <p className="text-sm truncate max-w-[200px]">{m.descricao}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(m.data_pagamento!)}</p>
+                  </div>
+                  <span className={`font-mono text-sm font-semibold ${m.tipo === "receita" ? "text-success" : "text-destructive"}`}>
+                    {m.tipo === "despesa" ? "-" : "+"}{formatCurrency(Number(m.valor_realizado))}
+                  </span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
