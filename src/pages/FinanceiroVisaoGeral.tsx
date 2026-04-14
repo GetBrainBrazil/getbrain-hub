@@ -117,18 +117,19 @@ export default function FinanceiroVisaoGeral() {
 
       {/* Alertas */}
       {vencidas > 0 && (
-        <Card className="border-l-4 border-l-warning border-warning/30 bg-warning/5 animate-fade-slide">
-          <CardContent className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Alertas e Avisos</p>
-                <p className="text-xs text-muted-foreground">{vencidas} conta(s) a pagar atrasada(s)</p>
-              </div>
+        <Card className="border-l-4 border-l-warning bg-card animate-fade-slide">
+          <CardContent className="py-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <p className="text-sm font-semibold">Alertas e Avisos</p>
             </div>
-            <span className="font-mono text-sm font-bold text-warning">{formatCurrency(valorVencido)}</span>
+            <div className="flex items-center justify-between bg-destructive/5 rounded-md px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <span className="text-sm">{vencidas} conta(s) a pagar atrasada(s)</span>
+              </div>
+              <span className="font-mono text-sm font-bold">{formatCurrency(valorVencido)}</span>
+            </div>
           </CardContent>
         </Card>
       )}
