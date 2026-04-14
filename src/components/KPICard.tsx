@@ -10,9 +10,11 @@ interface KPICardProps {
   variant?: "default" | "success" | "danger" | "dynamic";
   change?: number;
   isCurrency?: boolean;
+  badgeText?: string;
+  badgeVariant?: "warning" | "danger";
 }
 
-export function KPICard({ title, value, icon: Icon, variant = "default", change, isCurrency = true }: KPICardProps) {
+export function KPICard({ title, value, icon: Icon, variant = "default", change, isCurrency = true, badgeText, badgeVariant = "danger" }: KPICardProps) {
   const dynamicVariant = variant === "dynamic" ? (value >= 0 ? "success" : "danger") : variant;
 
   const iconColors: Record<string, string> = {
@@ -31,6 +33,14 @@ export function KPICard({ title, value, icon: Icon, variant = "default", change,
         <div className={cn("text-2xl font-bold font-mono", dynamicVariant === "danger" && "text-destructive", dynamicVariant === "success" && "text-success")}>
           {isCurrency ? formatCurrency(value) : value}
         </div>
+        {badgeText && (
+          <span className={cn(
+            "inline-flex items-center gap-1 text-xs mt-1.5 px-2 py-0.5 rounded-full font-medium",
+            badgeVariant === "danger" ? "bg-destructive/15 text-destructive" : "bg-warning/15 text-warning"
+          )}>
+            {badgeText}
+          </span>
+        )}
         {change !== undefined && (
           <div className={cn("flex items-center gap-1 text-xs mt-1", change >= 0 ? "text-success" : "text-destructive")}>
             {change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
