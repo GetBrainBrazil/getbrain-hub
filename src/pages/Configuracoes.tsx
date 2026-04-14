@@ -40,6 +40,96 @@ export default function Configuracoes() {
   );
 }
 
+function MinhaContaTab() {
+  const { user } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [nameLoading, setNameLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("full_name").eq("id", user.id).single().then(({ data }) => {
+        if (data) setFullName(data.full_name);
+      });
+    }
+  }, [user]);
+
+  async function handleChangePassword() {
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não conferem");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Senha alterada com sucesso!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  }
+
+  async function handleUpdateName() {
+    if (!fullName.trim()) return;
+    setNameLoading(true);
+    const { error } = await supabase.from("profiles").update({ full_name: fullName }).eq("id", user!.id);
+    setNameLoading(false);
+    if (error) toast.error("Erro ao atualizar nome");
+    else toast.success("Nome atualizado!");
+  }
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Dados Pessoais</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>E-mail</Label>
+            <Input value={user?.email || ""} disabled className="bg-muted/50" />
+          </div>
+          <div>
+            <Label>Nome completo</Label>
+            <Input value={fullName} onChange={e => setFullName(e.target.value)} />
+          </div>
+          <Button onClick={handleUpdateName} disabled={nameLoading} size="sm">
+            {nameLoading ? "Salvando..." : "Salvar Nome"}
+          </Button>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Alterar Senha</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Nova senha</Label>
+            <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+          </div>
+          <div>
+            <Label>Confirmar nova senha</Label>
+            <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" />
+          </div>
+          <Button onClick={handleChangePassword} disabled={loading} size="sm">
+            {loading ? "Alterando..." : "Alterar Senha"}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function ContasBancariasTab() {
   const [items, setItems] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
