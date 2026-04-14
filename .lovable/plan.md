@@ -1,29 +1,18 @@
 
 
-## Plano: Redesign da Visão Geral Financeira
+## Plano: Bolinhas pontuais no Fluxo de Caixa Projetado
 
-Baseado na imagem de referência, vou reorganizar a página `/financeiro` para seguir o mesmo layout, mantendo a identidade visual escura do GetBrain.
+### Problema
+Atualmente, o gráfico exibe bolinhas (`dot`) em **todos os 13 pontos** de dados (a cada 5 dias), criando poluição visual.
 
-### Mudanças
+### Solução
+Exibir bolinhas apenas nos pontos-chave: **dia 0 (hoje), dia 15, dia 30, dia 45 e dia 60** — ou seja, a cada 15 dias. Isso dá contexto temporal sem sobrecarregar a linha.
 
-**1. KPI Cards (topo)**
-- Reordenar: Saldo Total, Resultado do Período, A Receber, A Pagar
-- No card "A Pagar", adicionar badge mostrando valor vencido (ex: "R$ 795,22 vencido") quando houver contas atrasadas
-- Atualizar os ícones para corresponder à referência (Wallet, TrendingUp, ArrowUpCircle, ArrowDownCircle)
+### Mudança
+**`src/pages/FinanceiroVisaoGeral.tsx`**:
+1. Marcar nos dados do `fluxoData` quais pontos são "âncora" (dias 0, 15, 30, 45, 60)
+2. Trocar `dot={{ r: 5, ... }}` por uma função customizada que só renderiza o ponto quando o índice corresponde a um ponto âncora
+3. Manter `activeDot` para hover em qualquer ponto
 
-**2. Nova seção: Alertas e Avisos**
-- Card com borda lateral amarela/laranja
-- Ícone de alerta triangular + texto "X conta(s) a pagar atrasada(s)" + valor total vencido à direita
-- Substituir o card de "contas vencidas" atual por este formato
-
-**3. Gráficos lado a lado**
-- **Evolução Mensal** (esquerda) — manter o BarChart existente
-- **Fluxo de Caixa Projetado** (direita) — novo AreaChart/LineChart projetando saldo dos próximos 60 dias com base em contas pendentes e saldo atual
-
-**4. Reorganizar layout**
-- Remover seções "Saldo por Conta Bancária" e "Últimas Movimentações" desta view (podem ir para outra página ou ficar abaixo dos gráficos)
-
-### Arquivos modificados
-- `src/pages/FinanceiroVisaoGeral.tsx` — redesign completo do layout
-- `src/components/KPICard.tsx` — suportar prop de badge extra (valor vencido)
+Resultado: linha suave com 5 bolinhas bem espaçadas nos marcos de tempo.
 
