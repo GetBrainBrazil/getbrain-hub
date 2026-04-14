@@ -15,7 +15,7 @@ import { useState, useEffect } from "react";
 
 const routeNames: Record<string, string> = {
   "/": "Dashboard",
-  "/financeiro": "Financeiro › Visão Geral",
+  "/financeiro": "Financeiro › Dashboard",
   "/financeiro/receber": "Financeiro › Contas a Receber",
   "/financeiro/pagar": "Financeiro › Contas a Pagar",
   "/financeiro/transacoes": "Financeiro › Transações",
