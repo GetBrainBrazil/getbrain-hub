@@ -34,7 +34,7 @@ const mainItems = [
 ];
 
 const financeiroItems = [
-  { title: "Visão Geral", url: "/financeiro" },
+  { title: "Dashboard", url: "/financeiro" },
   { title: "Contas a Receber", url: "/financeiro/receber" },
   { title: "Contas a Pagar", url: "/financeiro/pagar" },
   { title: "Transações", url: "/financeiro/transacoes" },
