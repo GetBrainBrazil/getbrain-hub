@@ -11,7 +11,7 @@ import {
   ArrowLeftRight,
   PieChart,
   FileText,
-  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import logo from "@/assets/logo-getbrain.svg";
@@ -20,13 +20,9 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -38,12 +34,12 @@ const mainItems = [
 ];
 
 const financeiroItems = [
-  { title: "Visão Geral", url: "/financeiro", icon: Eye },
-  { title: "Contas a Receber", url: "/financeiro/receber", icon: ArrowDownToLine },
-  { title: "Contas a Pagar", url: "/financeiro/pagar", icon: ArrowUpFromLine },
-  { title: "Transações", url: "/financeiro/transacoes", icon: ArrowLeftRight },
-  { title: "Orçamento", url: "/financeiro/orcamento", icon: PieChart },
-  { title: "Relatórios", url: "/financeiro/relatorios", icon: FileText },
+  { title: "Visão Geral", url: "/financeiro" },
+  { title: "Contas a Receber", url: "/financeiro/receber" },
+  { title: "Contas a Pagar", url: "/financeiro/pagar" },
+  { title: "Transações", url: "/financeiro/transacoes" },
+  { title: "Orçamento", url: "/financeiro/orcamento" },
+  { title: "Relatórios", url: "/financeiro/relatorios" },
 ];
 
 const otherItems = [
@@ -56,10 +52,12 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const [finOpen, setFinOpen] = useState(location.pathname.startsWith("/financeiro"));
+  const [finOpen, setFinOpen] = useState(location.pathname.startsWith("/financeiro") || location.pathname === "/");
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname === path;
+
+  const isFinActive = location.pathname.startsWith("/financeiro");
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -86,38 +84,43 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2 py-2">
-            Módulos
-          </SidebarGroupLabel>
+        <SidebarGroup className="px-2">
           <Collapsible open={finOpen} onOpenChange={setFinOpen}>
             <CollapsibleTrigger asChild>
-              <SidebarMenuButton 
-                className="w-full justify-between font-semibold text-foreground hover:bg-sidebar-accent/50 data-[active=true]:bg-sidebar-accent"
-                data-active={financeiroItems.some(i => isActive(i.url)) || location.pathname.startsWith("/financeiro")}
+              <button
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                  isFinActive
+                    ? "bg-accent text-primary-foreground shadow-md shadow-accent/25"
+                    : "bg-accent/15 text-accent hover:bg-accent/25"
+                }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <DollarSign className="h-5 w-5" />
-                  <span>Financeiro</span>
+                  {!collapsed && <span>Financeiro</span>}
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${finOpen ? "rotate-180" : ""}`} />
-              </SidebarMenuButton>
+                {!collapsed && (
+                  <ChevronUp
+                    className={`h-4 w-4 transition-transform duration-200 ${finOpen ? "" : "rotate-180"}`}
+                  />
+                )}
+              </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarGroupContent className="pl-2 border-l-2 border-sidebar-border ml-4 mt-1">
-                <SidebarMenu>
-                  {financeiroItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive(item.url)} className="text-sm">
-                        <NavLink to={item.url}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
+              <div className="mt-1 space-y-0.5 py-1">
+                {financeiroItems.map((item) => (
+                  <NavLink
+                    key={item.title}
+                    to={item.url}
+                    className={`block px-4 py-2 text-sm rounded-md transition-colors ${
+                      isActive(item.url)
+                        ? "bg-accent/20 text-accent font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
+                    }`}
+                  >
+                    {item.title}
+                  </NavLink>
+                ))}
+              </div>
             </CollapsibleContent>
           </Collapsible>
         </SidebarGroup>
