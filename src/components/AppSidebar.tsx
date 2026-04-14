@@ -114,7 +114,7 @@ export function AppSidebar() {
                     className={`block px-4 py-2 text-sm rounded-md transition-colors ${
                       isActive(item.url)
                         ? "bg-accent/20 text-accent font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
+                        : "text-sidebar-foreground/70 hover:text-foreground hover:bg-sidebar-accent/50"
                     }`}
                   >
                     {item.title}
