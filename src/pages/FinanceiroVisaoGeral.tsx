@@ -78,18 +78,19 @@ export default function FinanceiroVisaoGeral() {
     const fluxo: any[] = [];
     let saldoAcumulado = saldoTotal;
 
-    for (let i = 0; i <= 60; i += 5) {
-      const dia = new Date(hoje);
-      dia.setDate(dia.getDate() + i);
-      const diaStr = dia.toISOString().split("T")[0];
-      const label = dia.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    const marcos = [0, 7, 15, 30, 45, 60];
+    const labels = ["Hoje", "+7d", "+15d", "+30d", "+45d", "+60d"];
 
-      // Movs pendentes com vencimento até esse dia
+    for (let idx = 0; idx < marcos.length; idx++) {
+      const dia = new Date(hoje);
+      dia.setDate(dia.getDate() + marcos[idx]);
+      const diaStr = dia.toISOString().split("T")[0];
+
       const recAte = pendentes.filter(m => m.tipo === "receita" && m.data_vencimento <= diaStr).reduce((s, m) => s + Number(m.valor_previsto), 0);
       const despAte = pendentes.filter(m => m.tipo === "despesa" && m.data_vencimento <= diaStr).reduce((s, m) => s + Number(m.valor_previsto), 0);
 
       fluxo.push({
-        name: label,
+        name: labels[idx],
         saldo: saldoAcumulado + recAte - despAte,
       });
     }
@@ -179,15 +180,8 @@ export default function FinanceiroVisaoGeral() {
                   stroke="hsl(var(--accent))"
                   strokeWidth={2}
                   fill="url(#saldoGrad)"
-                  dot={(props: any) => {
-                    const { cx, cy, index } = props;
-                    // Show dots only at 15-day intervals: indices 0, 3, 6, 9, 12 (days 0, 15, 30, 45, 60)
-                    if (index % 3 === 0) {
-                      return <circle key={index} cx={cx} cy={cy} r={5} fill="hsl(var(--accent))" stroke="hsl(var(--background))" strokeWidth={2} />;
-                    }
-                    return <circle key={index} cx={cx} cy={cy} r={0} fill="none" stroke="none" />;
-                  }}
-                  activeDot={{ r: 7, fill: "hsl(var(--accent))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                  dot={{ r: 4, fill: "hsl(var(--accent))", stroke: "hsl(var(--accent))" }}
+                  activeDot={{ r: 6, fill: "hsl(var(--accent))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
