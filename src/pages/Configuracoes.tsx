@@ -20,14 +20,16 @@ export default function Configuracoes() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
-      <Tabs defaultValue="contas">
-        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+      <Tabs defaultValue="conta">
+        <TabsList className="grid grid-cols-6 w-full max-w-3xl">
+          <TabsTrigger value="conta">Minha Conta</TabsTrigger>
           <TabsTrigger value="contas">Contas Bancárias</TabsTrigger>
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
           <TabsTrigger value="meios">Meios Pgto</TabsTrigger>
           <TabsTrigger value="centros">Centros Custo</TabsTrigger>
           <TabsTrigger value="fornecedores">Fornecedores</TabsTrigger>
         </TabsList>
+        <TabsContent value="conta"><MinhaContaTab /></TabsContent>
         <TabsContent value="contas"><ContasBancariasTab /></TabsContent>
         <TabsContent value="categorias"><CategoriasTab /></TabsContent>
         <TabsContent value="meios"><MeiosPagamentoTab /></TabsContent>
