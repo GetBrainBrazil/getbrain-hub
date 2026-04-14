@@ -179,7 +179,14 @@ export default function FinanceiroVisaoGeral() {
                   stroke="hsl(var(--accent))"
                   strokeWidth={2}
                   fill="url(#saldoGrad)"
-                  dot={{ r: 5, fill: "hsl(var(--accent))", stroke: "hsl(var(--accent))" }}
+                  dot={(props: any) => {
+                    const { cx, cy, index } = props;
+                    // Show dots only at 15-day intervals: indices 0, 3, 6, 9, 12 (days 0, 15, 30, 45, 60)
+                    if (index % 3 === 0) {
+                      return <circle key={index} cx={cx} cy={cy} r={5} fill="hsl(var(--accent))" stroke="hsl(var(--background))" strokeWidth={2} />;
+                    }
+                    return <circle key={index} cx={cx} cy={cy} r={0} fill="none" stroke="none" />;
+                  }}
                   activeDot={{ r: 7, fill: "hsl(var(--accent))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
                 />
               </AreaChart>
