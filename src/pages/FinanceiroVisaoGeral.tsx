@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { Wallet, TrendingUp, ArrowUpCircle, ArrowDownCircle, AlertTriangle } from "lucide-react";
 import { KPICard } from "@/components/KPICard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate, StatusType } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from "recharts";
+import { useNavigate } from "react-router-dom";
 
 export default function FinanceiroVisaoGeral() {
+  const navigate = useNavigate();
   const [kpis, setKpis] = useState({ saldo: 0, aReceber: 0, aPagar: 0, resultado: 0 });
+  const [contas, setContas] = useState<any[]>([]);
+  const [ultimas, setUltimas] = useState<any[]>([]);
   const [vencidas, setVencidas] = useState(0);
   const [valorVencido, setValorVencido] = useState(0);
   const [chartData, setChartData] = useState<any[]>([]);
