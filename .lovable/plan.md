@@ -1,46 +1,35 @@
 
-Detectei o problema: o layout novo foi aplicado em `src/pages/ContasPagar.tsx`, mas você está usando a tela `/financeiro/movimentacoes`, que abre outro modal separado em `src/pages/Movimentacoes.tsx`. Por isso nada mudou no que você está vendo.
 
-Plano de correção:
+## Plano: Copiar exatamente o estilo clean do modal da referência
 
-1. Usar o modal certo
-- Refazer o modal de “Conta a Pagar” dentro de `src/pages/Movimentacoes.tsx`, que é o modal real da tela que você está usando.
-- Aplicar o mesmo layout também no modal de edição aberto pelo botão “Editar” da lateral.
+### Problema
+O modal atual tem inputs com fundo bege (`bg-[#FDF8F4]`), botão marrom escuro, e um estilo "pesado" que não combina com o layout limpo da referência.
 
-2. Seguir exatamente a referência
-- Substituir o `NewForm` genérico por uma estrutura específica para “Conta a Pagar”.
-- Replicar a organização exata dos campos, inclusive:
-  - Fornecedor + botão “+” na mesma linha
-  - Descrição em largura total
-  - Valor previsto + data competência + data vencimento lado a lado
-  - Conta bancária abaixo, alinhada à esquerda
-  - Observações internas
-  - Recorrência
-  - Rodapé com “Cancelar” e “Confirmar Cadastro” no mesmo layout do print
-- Ajustar largura do modal, padding, tipografia, tamanhos, espaçamentos, bordas e cores para bater com a imagem.
+### O que muda
 
-3. Manter as regras funcionais que você pediu
-- Remover “Empresa proprietária”
-- Manter GetBrain implícita
-- Fornecedor em estilo combobox/pesquisa
-- Se digitar um fornecedor inexistente e confirmar, criar automaticamente na base
-- Manter recorrência mensal criando os próximos lançamentos automaticamente
+**Estilo dos inputs:**
+- Remover `bg-[#FDF8F4]` de todos os inputs — usar fundo branco/transparente com borda simples (`border-gray-300`)
+- Altura e tipografia mais leves
 
-4. Unificar criação e edição
-- O mesmo componente/layout será usado para:
-  - nova conta a pagar
-  - edição de conta a pagar
-- Assim não fica um modal bonito numa tela e outro antigo em outra.
+**Título do modal:**
+- Ícone de documento (📄) + "Nova Conta a Pagar" no header, estilo simples como na referência
 
-5. Preservar o restante da tela
-- Não mexer na tabela/listagem além do necessário
-- Não alterar as contas a receber agora, a menos que você peça depois
+**Seções:**
+- Headers "DADOS PRINCIPAIS" e "PRAZOS E VALORES" com ícone pequeno + texto cinza, exatamente como no print
+- Separadores finos e discretos
 
-Arquivos envolvidos
-- `src/pages/Movimentacoes.tsx` — correção principal
-- possivelmente extração de um componente compartilhado em `src/components/...` para evitar duplicação entre criação e edição
+**Campos — sem Empresa Proprietária:**
+- Fornecedor (largura total menos o botão "+") + botão "+"
+- Descrição da Movimentação (largura total)
+- 3 colunas: Valor Previsto | Data de Competência | Data de Vencimento
+- Conta Bancária (select pequeno, alinhado à esquerda)
 
-Resultado esperado
-- Ao abrir “Conta a Pagar” em Movimentações, o modal ficará igual ao modelo enviado
-- Ao clicar em “Editar” na lateral, abrirá esse mesmo modal com os dados preenchidos
-- As mudanças finalmente aparecerão na tela que você está usando
+**Botão principal:**
+- Trocar o marrom (`bg-[#7C2D12]`) por um estilo mais clean/escuro ou manter consistente com o tema do app
+
+**Remover:**
+- Seção de Observações Internas e Recorrência do visual imediato (ou mover para baixo, discreto) — o print não mostra essas seções
+
+### Arquivo
+- `src/pages/Movimentacoes.tsx` — função `renderModalForm` (linhas 327-506) e os DialogContent dos modais de criação e edição
+
