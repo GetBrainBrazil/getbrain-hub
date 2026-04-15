@@ -35,8 +35,7 @@ const mainItems = [
 
 const financeiroItems = [
   { title: "Dashboard", url: "/financeiro" },
-  { title: "Contas a Receber", url: "/financeiro/receber" },
-  { title: "Contas a Pagar", url: "/financeiro/pagar" },
+  { title: "Contas a Pagar / Receber", url: "/financeiro/movimentacoes" },
   { title: "Transações", url: "/financeiro/transacoes" },
   { title: "Orçamento", url: "/financeiro/orcamento" },
   { title: "Relatórios", url: "/financeiro/relatorios" },
