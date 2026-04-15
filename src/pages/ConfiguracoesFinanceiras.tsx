@@ -283,33 +283,57 @@ function ContasBancariasTab({ search }: { search: string }) {
             {drawerMode === "edit" && (
               <>
                 <div className="flex-1 space-y-4 py-4 overflow-y-auto animate-fade-in">
-                  <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} /></div>
-                  <div><Label>Banco *</Label><Input value={editForm.banco} onChange={e => setEditForm({ ...editForm, banco: e.target.value })} /></div>
-                  <div><Label>Tipo</Label>
-                    <Select value={editForm.tipo} onValueChange={v => setEditForm({ ...editForm, tipo: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="corrente">Corrente</SelectItem>
-                        <SelectItem value="poupanca">Poupança</SelectItem>
-                        <SelectItem value="investimento">Investimento</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} placeholder="Ex: Itaú Corrente" /></div>
+                  <div className="grid grid-cols-[2fr_3fr] gap-3">
+                    <div><Label>Tipo</Label>
+                      <Select value={editForm.tipo} onValueChange={v => setEditForm({ ...editForm, tipo: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="corrente">Corrente</SelectItem>
+                          <SelectItem value="poupanca">Poupança</SelectItem>
+                          <SelectItem value="investimento">Investimento</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div><Label>Moeda</Label>
+                      <Select value={editForm.moeda} onValueChange={v => setEditForm({ ...editForm, moeda: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BRL">Real (R$)</SelectItem>
+                          <SelectItem value="USD">Dólar (US$)</SelectItem>
+                          <SelectItem value="EUR">Euro (€)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div><Label>Moeda</Label>
-                    <Select value={editForm.moeda} onValueChange={v => setEditForm({ ...editForm, moeda: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BRL">Real (R$)</SelectItem>
-                        <SelectItem value="USD">Dólar (US$)</SelectItem>
-                        <SelectItem value="EUR">Euro (€)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><Label>Banco</Label><Input value={editForm.banco} onChange={e => setEditForm({ ...editForm, banco: e.target.value })} placeholder="Itaú" /></div>
+                    <div><Label>Agência</Label><Input value={editForm.agencia} onChange={e => setEditForm({ ...editForm, agencia: e.target.value })} placeholder="1234" /></div>
+                    <div><Label>Conta</Label><Input value={editForm.conta} onChange={e => setEditForm({ ...editForm, conta: e.target.value })} placeholder="12345-6" /></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Agência</Label><Input value={editForm.agencia} onChange={e => setEditForm({ ...editForm, agencia: e.target.value })} /></div>
-                    <div><Label>Conta</Label><Input value={editForm.conta} onChange={e => setEditForm({ ...editForm, conta: e.target.value })} /></div>
+                  <div><Label>Saldo Inicial</Label><Input value={editForm.saldo_inicial} onChange={e => setEditForm({ ...editForm, saldo_inicial: e.target.value })} placeholder="0,00" /></div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Chaves PIX</Label>
+                      <div className="flex items-center gap-2">
+                        <Input value={editNewPixKey} onChange={e => setEditNewPixKey(e.target.value)} placeholder="CPF, e-mail, telefone..." className="h-8 text-sm w-48" onKeyDown={e => { if (e.key === "Enter" && editNewPixKey.trim()) { setEditForm({ ...editForm, chaves_pix: [...editForm.chaves_pix, editNewPixKey.trim()] }); setEditNewPixKey(""); }}} />
+                        <Button type="button" variant="outline" size="sm" className="h-8 gap-1" onClick={() => { if (editNewPixKey.trim()) { setEditForm({ ...editForm, chaves_pix: [...editForm.chaves_pix, editNewPixKey.trim()] }); setEditNewPixKey(""); }}}><Plus className="h-3 w-3" /> Adicionar</Button>
+                      </div>
+                    </div>
+                    {editForm.chaves_pix.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-3">Nenhuma chave PIX cadastrada</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {editForm.chaves_pix.map((k, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-1.5 text-sm">
+                            <span>{k}</span>
+                            <button type="button" onClick={() => setEditForm({ ...editForm, chaves_pix: editForm.chaves_pix.filter((_, j) => j !== idx) })} className="text-muted-foreground hover:text-destructive transition-colors"><X className="h-3.5 w-3.5" /></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div><Label>Saldo Inicial (R$)</Label><Input value={editForm.saldo_inicial} onChange={e => setEditForm({ ...editForm, saldo_inicial: e.target.value })} placeholder="0,00" /></div>
+                  <div><Label>Observações</Label><Textarea value={editForm.observacoes} onChange={e => setEditForm({ ...editForm, observacoes: e.target.value })} placeholder="Observações sobre a conta..." rows={4} /></div>
                   <div className="flex items-center gap-3">
                     <Label>Ativo</Label>
                     <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
