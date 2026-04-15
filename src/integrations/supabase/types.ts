@@ -171,11 +171,13 @@ export type Database = {
           agencia: string | null
           ativo: boolean | null
           banco: string | null
+          chaves_pix: string[] | null
           conta: string | null
           created_at: string | null
           id: string
           moeda: string
           nome: string
+          observacoes: string | null
           saldo_inicial: number | null
           tipo: string | null
           updated_at: string | null
@@ -184,11 +186,13 @@ export type Database = {
           agencia?: string | null
           ativo?: boolean | null
           banco?: string | null
+          chaves_pix?: string[] | null
           conta?: string | null
           created_at?: string | null
           id?: string
           moeda?: string
           nome: string
+          observacoes?: string | null
           saldo_inicial?: number | null
           tipo?: string | null
           updated_at?: string | null
@@ -197,11 +201,13 @@ export type Database = {
           agencia?: string | null
           ativo?: boolean | null
           banco?: string | null
+          chaves_pix?: string[] | null
           conta?: string | null
           created_at?: string | null
           id?: string
           moeda?: string
           nome?: string
+          observacoes?: string | null
           saldo_inicial?: number | null
           tipo?: string | null
           updated_at?: string | null
