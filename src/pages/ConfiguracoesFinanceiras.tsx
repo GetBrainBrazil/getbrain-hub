@@ -278,7 +278,7 @@ function ContasBancariasTab({ search }: { search: string }) {
                 <TableCell><Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma conta bancária encontrada</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma conta encontrada para os filtros selecionados</TableCell></TableRow>}
           </TableBody>
         </Table>
 
