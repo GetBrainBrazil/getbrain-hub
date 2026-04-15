@@ -242,8 +242,6 @@ function ContasBancariasTab({ search }: { search: string }) {
     </Card>
   );
 }
-  );
-}
 
 /* ─── Plano de Contas ─── */
 function PlanoContasTab({ search }: { search: string }) {
