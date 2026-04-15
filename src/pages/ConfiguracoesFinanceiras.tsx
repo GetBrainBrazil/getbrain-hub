@@ -121,7 +121,10 @@ function ContasBancariasTab({ search }: { search: string }) {
       saldo_inicial: new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(selectedItem.saldo_inicial ?? 0)),
       moeda: selectedItem.moeda || "BRL",
       ativo: selectedItem.ativo ?? true,
+      chaves_pix: selectedItem.chaves_pix || [],
+      observacoes: selectedItem.observacoes || "",
     });
+    setEditNewPixKey("");
     setDrawerMode("edit");
   }
 
