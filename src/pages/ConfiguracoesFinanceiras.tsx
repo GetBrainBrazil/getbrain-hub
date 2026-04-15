@@ -174,6 +174,28 @@ function ContasBancariasTab({ search }: { search: string }) {
     await supabase.from("contas_bancarias").update({ ativo: !ativo }).eq("id", id); load();
   }
 
+  async function handleDelete() {
+    if (!selectedItem) return;
+    const { error } = await supabase.from("contas_bancarias").delete().eq("id", selectedItem.id);
+    if (error) { toast.error("Erro ao excluir conta"); return; }
+    toast.success("Conta excluída com sucesso");
+    setDeleteDialogOpen(false);
+    setDrawerOpen(false);
+    load();
+  }
+
+  function handleCopyBankData() {
+    if (!selectedItem) return;
+    const pixKeys = selectedItem.chaves_pix && selectedItem.chaves_pix.length > 0 ? selectedItem.chaves_pix.join(", ") : "Nenhuma";
+    const text = `Banco: ${selectedItem.banco || "—"}\nAgência: ${selectedItem.agencia || "—"}\nConta: ${selectedItem.conta || "—"}\nTipo: ${formatTipo(selectedItem.tipo)}\nTitular: ${selectedItem.nome}\nPIX: ${pixKeys}`;
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("Dados bancários copiados!");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  }
+
   const formatMoeda = (m: string) => m === "USD" ? "Dólar (US$)" : m === "EUR" ? "Euro (€)" : "Real (R$)";
   const formatMoedaShort = (m: string) => m === "USD" ? "US$" : m === "EUR" ? "€" : "R$";
   const formatTipo = (t: string) => t === "poupanca" ? "Poupança" : t === "investimento" ? "Investimento" : "Corrente";
