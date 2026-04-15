@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown } from "lucide-react";
+import { usePersistedState } from "@/hooks/use-persisted-state";
+import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +27,7 @@ type TabType = "pagar" | "receber";
 
 export default function Movimentacoes() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<TabType>("pagar");
+  const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
   const [movs, setMovs] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
@@ -33,8 +35,10 @@ export default function Movimentacoes() {
   const [contas, setContas] = useState<any[]>([]);
   const [projetos, setProjetos] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todas");
+  const [search, setSearch] = usePersistedState("movimentacoes_search", "");
+  const [statusFilter, setStatusFilter] = usePersistedState("movimentacoes_status", "todas");
+  const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("movimentacoes_period", "month");
+  const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -129,7 +133,19 @@ export default function Movimentacoes() {
 
   const selectedClienteNome = clientes.find(c => c.id === form.cliente_id)?.nome;
 
-  const filtered = movs.filter(m => {
+  const periodRange = useMemo(() => getDateRange(periodPreset, periodCustom), [periodPreset, periodCustom]);
+
+  const periodFiltered = useMemo(() => {
+    if (!periodRange.startDate && !periodRange.endDate) return movs;
+    return movs.filter(m => {
+      const d = new Date(m.data_vencimento + "T12:00:00");
+      if (periodRange.startDate && d < periodRange.startDate) return false;
+      if (periodRange.endDate && d > periodRange.endDate) return false;
+      return true;
+    });
+  }, [movs, periodRange]);
+
+  const filtered = periodFiltered.filter(m => {
     if (statusFilter === "pendentes" && m.status !== "pendente") return false;
     if (statusFilter === "recebidas" && m.status !== "pago") return false;
     if (statusFilter === "pagas" && m.status !== "pago") return false;
@@ -138,9 +154,9 @@ export default function Movimentacoes() {
     return true;
   });
 
-  const totalPendente = movs.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
-  const totalRecebidoPago = movs.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0);
-  const totalAtrasado = movs.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0);
+  const totalPendente = periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
+  const totalRecebidoPago = periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0);
+  const totalAtrasado = periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0);
 
   const entityLabel = isPagar ? "Fornecedor" : "Cliente";
 
@@ -610,6 +626,7 @@ export default function Movimentacoes() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
+        <PeriodFilter preset={periodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
         <div className="flex gap-1.5 ml-auto">
           {statusButtons.map(s => (
             <Button
