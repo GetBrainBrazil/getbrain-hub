@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
 import { Plus, ArrowDownToLine, Search, Filter } from "lucide-react";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
