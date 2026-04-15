@@ -410,7 +410,7 @@ export default function Movimentacoes() {
               )}
 
               {/* Actions */}
-              <div className="mt-auto p-5 flex items-center gap-2">
+              <div className="px-5 pt-2 pb-5 flex items-center gap-2">
                 {detailMov.status !== "pago" && detailMov.status !== "cancelado" && (
                   <Button
                     className="gap-1.5 bg-success hover:bg-success/90 text-white"
@@ -420,6 +420,9 @@ export default function Movimentacoes() {
                     {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
                   </Button>
                 )}
+                <Button variant="outline" className="gap-1.5">
+                  <Pencil className="h-4 w-4" /> Editar
+                </Button>
                 <Button
                   variant="destructive"
                   size="icon"
