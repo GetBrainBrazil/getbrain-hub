@@ -326,25 +326,25 @@ export default function Movimentacoes() {
   // Shared modal form content for both create and edit
   function renderModalForm(onSave: () => void, saveLabel: string, onCancel: () => void) {
     return (
-      <>
+      <div className="space-y-6">
         {/* DADOS PRINCIPAIS */}
-        <div className="mt-5 mb-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
-            📋 DADOS PRINCIPAIS
+        <div>
+          <p className="text-[11px] font-medium text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-2">
+            <span className="text-sm">📋</span> DADOS PRINCIPAIS
           </p>
-          <Separator className="mt-2" />
+          <Separator />
         </div>
 
         {/* Entity field: Fornecedor or Cliente */}
-        <div className="grid grid-cols-[1fr_auto] gap-2 items-end mt-1">
+        <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
           <div>
-            <Label className="text-[13px] font-semibold text-foreground mb-1 block">
+            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">
               {isPagar ? "Fornecedor *" : "Cliente *"}
             </Label>
             {isPagar ? (
               <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50">
+                  <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal h-10 text-sm bg-background border-input">
                     {selectedFornecedorNome || "Selecione..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -383,7 +383,7 @@ export default function Movimentacoes() {
             ) : (
               <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={clienteOpen} className="w-full justify-between font-normal h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50">
+                  <Button variant="outline" role="combobox" aria-expanded={clienteOpen} className="w-full justify-between font-normal h-10 text-sm bg-background border-input">
                     {selectedClienteNome || "Selecione..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -421,7 +421,7 @@ export default function Movimentacoes() {
               </Popover>
             )}
           </div>
-          <Button variant="outline" size="icon" className="h-10 w-10 border-border/50" onClick={() => {
+          <Button variant="outline" size="icon" className="h-10 w-10 border-input" onClick={() => {
             if (isPagar) { setFornecedorOpen(true); setFornecedorSearch(""); }
             else { setClienteOpen(true); setClienteSearch(""); }
           }}>
@@ -429,66 +429,55 @@ export default function Movimentacoes() {
           </Button>
         </div>
 
-        <div className="mt-4">
-          <Label className="text-[13px] font-semibold text-foreground mb-1 block">Descrição da Movimentação *</Label>
-          <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+        <div>
+          <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Descrição da Movimentação *</Label>
+          <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} className="h-10 text-sm" />
         </div>
 
         {/* PRAZOS E VALORES */}
-        <div className="mt-7 mb-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
-            📅 PRAZOS E VALORES
+        <div>
+          <p className="text-[11px] font-medium text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-2">
+            <span className="text-sm">💰</span> PRAZOS E VALORES
           </p>
-          <Separator className="mt-2" />
+          <Separator />
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-1">
+        <div className="grid grid-cols-3 gap-4">
           <div>
-            <Label className="text-[13px] font-semibold text-foreground mb-1 block">Valor Previsto (R$) *</Label>
-            <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Valor Previsto (R$) *</Label>
+            <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} className="h-10 text-sm" />
           </div>
           <div>
-            <Label className="text-[13px] font-semibold text-foreground mb-1 block">Data de Competência *</Label>
-            <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Data de Competência *</Label>
+            <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} className="h-10 text-sm" />
           </div>
           <div>
-            <Label className="text-[13px] font-semibold text-foreground mb-1 block">Data de Vencimento *</Label>
-            <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Data de Vencimento *</Label>
+            <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} className="h-10 text-sm" />
           </div>
         </div>
 
-        <div className="mt-4 max-w-[240px]">
-          <Label className="text-[13px] font-semibold text-foreground mb-1 block">Conta Bancária</Label>
+        <div className="max-w-[240px]">
+          <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Conta Bancária</Label>
           <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
-            <SelectTrigger className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+            <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
             <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
           </Select>
         </div>
 
-        {/* OBSERVAÇÕES INTERNAS */}
-        <div className="mt-7 mb-2">
-          <p className="text-[11px] font-semibold text-primary tracking-[0.15em] uppercase flex items-center gap-1.5">
-            💬 OBSERVAÇÕES INTERNAS
-          </p>
-          <Separator className="mt-2" />
+        {/* OBSERVAÇÕES */}
+        <div>
+          <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Observações Internas</Label>
+          <Textarea
+            placeholder="Observações adicionais..."
+            value={form.observacoes}
+            onChange={e => setForm({...form, observacoes: e.target.value})}
+            className="min-h-[72px] text-sm resize-none"
+          />
         </div>
-
-        <Textarea
-          placeholder="Observações adicionais..."
-          value={form.observacoes}
-          onChange={e => setForm({...form, observacoes: e.target.value})}
-          className="min-h-[80px] text-sm bg-[#FDF8F4] dark:bg-muted border-border/50 resize-none"
-        />
 
         {/* RECORRÊNCIA */}
-        <div className="mt-7 mb-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
-            🔄 RECORRÊNCIA
-          </p>
-          <Separator className="mt-2" />
-        </div>
-
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-lg border border-input p-3">
           <div>
             <p className="text-sm font-medium text-foreground">Conta recorrente</p>
             <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 12 meses</p>
@@ -497,11 +486,11 @@ export default function Movimentacoes() {
         </div>
 
         {/* FOOTER */}
-        <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-border">
-          <Button variant="outline" onClick={onCancel} className="px-6 h-10">Cancelar</Button>
-          <Button onClick={onSave} className="px-6 h-10 bg-[#7C2D12] hover:bg-[#63240e] text-white">{saveLabel}</Button>
+        <div className="flex justify-end gap-3 pt-4 border-t border-border">
+          <Button variant="outline" onClick={onCancel} className="px-5 h-10">Cancelar</Button>
+          <Button onClick={onSave} className="px-5 h-10">{saveLabel}</Button>
         </div>
-      </>
+      </div>
     );
   }
 
