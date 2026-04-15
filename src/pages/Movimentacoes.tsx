@@ -509,9 +509,11 @@ export default function Movimentacoes() {
                 <Plus className="h-4 w-4" /> Conta a Pagar
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8 bg-white dark:bg-card">
+            <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
               <DialogHeader>
-                <DialogTitle className="text-lg font-bold text-foreground">Nova Conta a Pagar</DialogTitle>
+                <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <span>📄</span> Nova Conta a Pagar
+                </DialogTitle>
               </DialogHeader>
               {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
             </DialogContent>
@@ -522,9 +524,11 @@ export default function Movimentacoes() {
                 <Plus className="h-4 w-4" /> Conta a Receber
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8 bg-white dark:bg-card">
+            <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
               <DialogHeader>
-                <DialogTitle className="text-lg font-bold text-foreground">Nova Conta a Receber</DialogTitle>
+                <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <span>📄</span> Nova Conta a Receber
+                </DialogTitle>
               </DialogHeader>
               {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
             </DialogContent>
