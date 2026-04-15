@@ -78,6 +78,11 @@ function ContasBancariasTab({ search }: { search: string }) {
   const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [] as string[], observacoes: "" });
   const [newPixKey, setNewPixKey] = useState("");
 
+  // Filters
+  const [filterBanco, setFilterBanco] = useState("__all__");
+  const [filterTipo, setFilterTipo] = useState("__all__");
+  const [filterStatus, setFilterStatus] = useState("__all__");
+
   // Drawer state: view/edit two-step
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<"view" | "edit">("view");
@@ -88,7 +93,16 @@ function ContasBancariasTab({ search }: { search: string }) {
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("contas_bancarias").select("*").order("nome"); setItems(data || []); }
 
-  const filtered = items.filter(i => !search || i.nome.toLowerCase().includes(search.toLowerCase()) || (i.banco || "").toLowerCase().includes(search.toLowerCase()));
+  const bancos = Array.from(new Set(items.map(i => i.banco).filter(Boolean))).sort();
+
+  const filtered = items.filter(i => {
+    if (search && !i.nome.toLowerCase().includes(search.toLowerCase()) && !(i.banco || "").toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterBanco !== "__all__" && i.banco !== filterBanco) return false;
+    if (filterTipo !== "__all__" && i.tipo !== filterTipo) return false;
+    if (filterStatus === "ativas" && !i.ativo) return false;
+    if (filterStatus === "inativas" && i.ativo) return false;
+    return true;
+  });
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
