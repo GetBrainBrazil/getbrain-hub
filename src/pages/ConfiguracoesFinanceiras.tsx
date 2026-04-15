@@ -165,12 +165,11 @@ function ContasBancariasTab({ search }: { search: string }) {
         <div className="flex justify-end mb-4">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Nova Conta</Button></DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>Nova Conta Bancária</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Banco</Label><Input value={form.banco} onChange={e => setForm({ ...form, banco: e.target.value })} /></div>
+              <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                <div><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Itaú Corrente" /></div>
+                <div className="grid grid-cols-[2fr_3fr] gap-3">
                   <div><Label>Tipo</Label>
                     <Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -181,13 +180,6 @@ function ContasBancariasTab({ search }: { search: string }) {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Agência</Label><Input value={form.agencia} onChange={e => setForm({ ...form, agencia: e.target.value })} /></div>
-                  <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: e.target.value })} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Saldo Inicial</Label><Input type="number" step="0.01" value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} /></div>
                   <div><Label>Moeda</Label>
                     <Select value={form.moeda} onValueChange={v => setForm({ ...form, moeda: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -199,6 +191,34 @@ function ContasBancariasTab({ search }: { search: string }) {
                     </Select>
                   </div>
                 </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div><Label>Banco</Label><Input value={form.banco} onChange={e => setForm({ ...form, banco: e.target.value })} placeholder="Itaú" /></div>
+                  <div><Label>Agência</Label><Input value={form.agencia} onChange={e => setForm({ ...form, agencia: e.target.value })} placeholder="1234" /></div>
+                  <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: e.target.value })} placeholder="12345-6" /></div>
+                </div>
+                <div><Label>Saldo Inicial</Label><Input value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} placeholder="0,00" /></div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Chaves PIX</Label>
+                    <div className="flex items-center gap-2">
+                      <Input value={newPixKey} onChange={e => setNewPixKey(e.target.value)} placeholder="CPF, e-mail, telefone..." className="h-8 text-sm w-48" onKeyDown={e => { if (e.key === "Enter" && newPixKey.trim()) { setForm({ ...form, chaves_pix: [...form.chaves_pix, newPixKey.trim()] }); setNewPixKey(""); }}} />
+                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1" onClick={() => { if (newPixKey.trim()) { setForm({ ...form, chaves_pix: [...form.chaves_pix, newPixKey.trim()] }); setNewPixKey(""); }}}><Plus className="h-3 w-3" /> Adicionar</Button>
+                    </div>
+                  </div>
+                  {form.chaves_pix.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-3">Nenhuma chave PIX cadastrada</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {form.chaves_pix.map((k, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-1.5 text-sm">
+                          <span>{k}</span>
+                          <button type="button" onClick={() => setForm({ ...form, chaves_pix: form.chaves_pix.filter((_, j) => j !== idx) })} className="text-muted-foreground hover:text-destructive transition-colors"><X className="h-3.5 w-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações sobre a conta..." rows={4} /></div>
                 <Button onClick={handleSave} className="w-full">Salvar</Button>
               </div>
             </DialogContent>
