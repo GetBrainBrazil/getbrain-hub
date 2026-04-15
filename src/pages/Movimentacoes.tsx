@@ -33,6 +33,7 @@ export default function Movimentacoes() {
   const [statusFilter, setStatusFilter] = useState("todas");
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
   const [detailMov, setDetailMov] = useState<any>(null);
   const [form, setForm] = useState({
