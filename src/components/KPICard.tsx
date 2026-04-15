@@ -30,7 +30,7 @@ export function KPICard({ title, value, icon: Icon, variant = "default", change,
         <Icon className={cn("h-5 w-5", iconColors[dynamicVariant] || "text-accent")} />
       </CardHeader>
       <CardContent>
-        <div className={cn("text-2xl font-bold font-mono", dynamicVariant === "danger" && "text-destructive", dynamicVariant === "success" && "text-success")}>
+        <div className={cn("text-2xl font-bold", dynamicVariant === "danger" && "text-destructive", dynamicVariant === "success" && "text-success")}>
           {isCurrency ? formatCurrency(value) : value}
         </div>
         {badgeText && (
