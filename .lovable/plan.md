@@ -1,41 +1,46 @@
 
+Detectei o problema: o layout novo foi aplicado em `src/pages/ContasPagar.tsx`, mas você está usando a tela `/financeiro/movimentacoes`, que abre outro modal separado em `src/pages/Movimentacoes.tsx`. Por isso nada mudou no que você está vendo.
 
-## Plano: Refazer modal "Nova Conta a Pagar" seguindo exatamente o layout da referência
+Plano de correção:
 
-### O que será feito
+1. Usar o modal certo
+- Refazer o modal de “Conta a Pagar” dentro de `src/pages/Movimentacoes.tsx`, que é o modal real da tela que você está usando.
+- Aplicar o mesmo layout também no modal de edição aberto pelo botão “Editar” da lateral.
 
-Reescrever completamente o conteúdo do modal em `src/pages/ContasPagar.tsx` para seguir pixel a pixel o layout das imagens enviadas:
+2. Seguir exatamente a referência
+- Substituir o `NewForm` genérico por uma estrutura específica para “Conta a Pagar”.
+- Replicar a organização exata dos campos, inclusive:
+  - Fornecedor + botão “+” na mesma linha
+  - Descrição em largura total
+  - Valor previsto + data competência + data vencimento lado a lado
+  - Conta bancária abaixo, alinhada à esquerda
+  - Observações internas
+  - Recorrência
+  - Rodapé com “Cancelar” e “Confirmar Cadastro” no mesmo layout do print
+- Ajustar largura do modal, padding, tipografia, tamanhos, espaçamentos, bordas e cores para bater com a imagem.
 
-### Layout exato baseado nas imagens
+3. Manter as regras funcionais que você pediu
+- Remover “Empresa proprietária”
+- Manter GetBrain implícita
+- Fornecedor em estilo combobox/pesquisa
+- Se digitar um fornecedor inexistente e confirmar, criar automaticamente na base
+- Manter recorrência mensal criando os próximos lançamentos automaticamente
 
-**Seção 1 — DADOS PRINCIPAIS**
-- Header: ícone 📋 + "DADOS PRINCIPAIS" (uppercase, small, muted)
-- Linha com separador
-- Row 1: **Fornecedor \*** (ocupa ~70% largura) + botão **"+"** (ao lado direito) — sem campo "Empresa Proprietária"
-- Row 2: **Descrição da Movimentação \*** (largura total)
+4. Unificar criação e edição
+- O mesmo componente/layout será usado para:
+  - nova conta a pagar
+  - edição de conta a pagar
+- Assim não fica um modal bonito numa tela e outro antigo em outra.
 
-**Seção 2 — PRAZOS E VALORES**
-- Header: ícone 📅 + "PRAZOS E VALORES" (uppercase, small, muted)
-- Linha com separador
-- Row 1 (3 colunas iguais): **Valor Previsto (R$) \*** | **Data de Competência \*** | **Data de Vencimento \***
-- Row 2: **Conta Bancária** (select, ~1/3 da largura, alinhado à esquerda)
+5. Preservar o restante da tela
+- Não mexer na tabela/listagem além do necessário
+- Não alterar as contas a receber agora, a menos que você peça depois
 
-**Seção 3 — OBSERVAÇÕES INTERNAS**
-- Header: "OBSERVAÇÕES INTERNAS" (uppercase, small, muted, cor primária/cyan)
-- Textarea com placeholder "Observações adicionais..."
+Arquivos envolvidos
+- `src/pages/Movimentacoes.tsx` — correção principal
+- possivelmente extração de um componente compartilhado em `src/components/...` para evitar duplicação entre criação e edição
 
-**Seção 4 — RECORRÊNCIA** (manter como está, abaixo)
-
-**Footer** — separado por border-top:
-- Botões alinhados à direita: **"Cancelar"** (outline) + **"Confirmar Cadastro"** (primário/vermelho escuro como na ref)
-
-### Ajustes visuais
-- Modal largo (`max-w-[820px]`), padding generoso (`p-8`)
-- Labels com `text-[13px] font-semibold` e cor escura
-- Inputs com fundo levemente bege/warm (`bg-[#FDF8F4]` ou similar, bordas suaves)
-- Botão "Confirmar Cadastro" com fundo escuro/marrom (`bg-[#7C2D12]` ou similar)
-- Adicionar campo `observacoes` ao form state (texto livre, salvo na coluna `observacoes` da tabela movimentacoes)
-
-### Arquivo editado
-- `src/pages/ContasPagar.tsx`
-
+Resultado esperado
+- Ao abrir “Conta a Pagar” em Movimentações, o modal ficará igual ao modelo enviado
+- Ao clicar em “Editar” na lateral, abrirá esse mesmo modal com os dados preenchidos
+- As mudanças finalmente aparecerão na tela que você está usando
