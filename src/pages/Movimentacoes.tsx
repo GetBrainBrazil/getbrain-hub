@@ -33,6 +33,7 @@ export default function Movimentacoes() {
   const [statusFilter, setStatusFilter] = useState("todas");
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
   const [detailMov, setDetailMov] = useState<any>(null);
   const [form, setForm] = useState({
@@ -161,6 +162,45 @@ export default function Movimentacoes() {
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
     setDetailMov(null);
+    loadAll();
+  }
+
+  function openEditModal(m: any) {
+    setForm({
+      descricao: m.descricao || "",
+      cliente_id: m.cliente_id || "",
+      fornecedor_id: m.fornecedor_id || "",
+      projeto_id: m.projeto_id || "",
+      categoria_id: m.categoria_id || "",
+      conta_bancaria_id: m.conta_bancaria_id || "",
+      valor_previsto: String(m.valor_previsto || ""),
+      data_competencia: m.data_competencia || "",
+      data_vencimento: m.data_vencimento || "",
+      observacoes: m.observacoes || "",
+    });
+    setSelectedMov(m);
+    setOpenEdit(true);
+  }
+
+  async function handleEditSave() {
+    if (!selectedMov) return;
+    const { error } = await supabase.from("movimentacoes").update({
+      descricao: form.descricao,
+      cliente_id: !isPagar ? (form.cliente_id || null) : null,
+      fornecedor_id: isPagar ? (form.fornecedor_id || null) : null,
+      projeto_id: form.projeto_id || null,
+      categoria_id: form.categoria_id || null,
+      conta_bancaria_id: form.conta_bancaria_id || null,
+      valor_previsto: parseFloat(form.valor_previsto),
+      data_competencia: form.data_competencia,
+      data_vencimento: form.data_vencimento,
+      observacoes: form.observacoes || null,
+    }).eq("id", selectedMov.id);
+    if (error) { toast.error("Erro ao atualizar"); return; }
+    toast.success("Movimentação atualizada!");
+    setOpenEdit(false);
+    setDetailMov(null);
+    resetForm();
     loadAll();
   }
 
@@ -420,7 +460,7 @@ export default function Movimentacoes() {
                     {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
                   </Button>
                 )}
-                <Button variant="outline" className="gap-1.5">
+                <Button variant="outline" className="gap-1.5" onClick={() => openEditModal(detailMov)}>
                   <Pencil className="h-4 w-4" /> Editar
                 </Button>
                 <Button
@@ -460,12 +500,31 @@ export default function Movimentacoes() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={openEdit} onOpenChange={(v) => { setOpenEdit(v); if (!v) resetForm(); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Editar Movimentação</DialogTitle></DialogHeader>
+          <NewForm
+            isPagar={isPagar}
+            form={form}
+            setForm={setForm}
+            fornecedores={fornecedores}
+            clientes={clientes}
+            projetos={projetos}
+            categorias={categorias}
+            contas={contas}
+            onSave={handleEditSave}
+            saveLabel="Salvar Alterações"
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 /* Sub-component for the new entry form */
-function NewForm({ isPagar, form, setForm, fornecedores, clientes, projetos, categorias, contas, onSave }: any) {
+function NewForm({ isPagar, form, setForm, fornecedores, clientes, projetos, categorias, contas, onSave, saveLabel = "Salvar" }: any) {
   return (
     <div className="space-y-4">
       <div><Label>Descrição *</Label><Input value={form.descricao} onChange={(e: any) => setForm({...form, descricao: e.target.value})} /></div>
@@ -508,7 +567,7 @@ function NewForm({ isPagar, form, setForm, fornecedores, clientes, projetos, cat
         </Select>
       </div>
       <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={(e: any) => setForm({...form, observacoes: e.target.value})} /></div>
-      <Button onClick={onSave} className="w-full">Salvar</Button>
+      <Button onClick={onSave} className="w-full">{saveLabel}</Button>
     </div>
   );
 }
