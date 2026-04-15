@@ -142,14 +142,14 @@ function ContasBancariasTab({ search }: { search: string }) {
           </Dialog>
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Cor</TableHead><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
               <TableRow key={i.id}>
-                <TableCell><div className="w-4 h-4 rounded-full" style={{ backgroundColor: i.cor }} /></TableCell>
                 <TableCell className="font-medium">{i.nome}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{i.banco || "—"}</TableCell>
                 <TableCell className="text-sm capitalize">{i.tipo}</TableCell>
+                <TableCell className="text-sm">{i.moeda === "USD" ? "US$" : i.moeda === "EUR" ? "€" : "R$"}</TableCell>
                 <TableCell className="text-sm">{formatCurrency(Number(i.saldo_inicial))}</TableCell>
                 <TableCell><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
               </TableRow>
