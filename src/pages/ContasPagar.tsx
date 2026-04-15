@@ -41,7 +41,7 @@ export default function ContasPagar() {
   const [form, setForm] = useState({
     descricao: "", fornecedor_id: "", conta_bancaria_id: "",
     valor_previsto: "", data_competencia: "", data_vencimento: "",
-    recorrente: false, frequencia_recorrencia: "mensal",
+    recorrente: false, frequencia_recorrencia: "mensal", observacoes: "",
   });
   const [pagForm, setPagForm] = useState({
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
@@ -113,6 +113,7 @@ export default function ContasPagar() {
       valor_previsto: parseFloat(form.valor_previsto),
       data_competencia: form.data_competencia,
       data_vencimento: form.data_vencimento,
+      observacoes: form.observacoes || null,
       recorrente: form.recorrente,
       frequencia_recorrencia: form.recorrente ? form.frequencia_recorrencia : null,
       created_by: user?.id,
@@ -141,7 +142,7 @@ export default function ContasPagar() {
 
     toast.success(form.recorrente ? "Conta recorrente criada (12 meses)!" : "Conta a pagar criada!");
     setOpenNew(false);
-    setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal" });
+    setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal", observacoes: "" });
     setFornecedorSearch("");
     loadAll();
   }
@@ -210,25 +211,25 @@ export default function ContasPagar() {
           <DialogTrigger asChild>
             <Button className="gap-1"><Plus className="h-4 w-4" /> Nova Conta a Pagar</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8">
+          <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8 bg-white dark:bg-card">
             <DialogHeader>
-              <DialogTitle className="text-base font-semibold">Nova Conta a Pagar</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-foreground">Nova Conta a Pagar</DialogTitle>
             </DialogHeader>
 
             {/* DADOS PRINCIPAIS */}
-            <div className="mt-4 mb-3">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5">
+            <div className="mt-5 mb-2">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
                 📋 DADOS PRINCIPAIS
               </p>
-              <Separator className="mt-1.5" />
+              <Separator className="mt-2" />
             </div>
 
-            <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+            <div className="grid grid-cols-[1fr_auto] gap-2 items-end mt-1">
               <div>
-                <Label className="text-[13px] font-medium">Fornecedor *</Label>
+                <Label className="text-[13px] font-semibold text-foreground mb-1 block">Fornecedor *</Label>
                 <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal h-10 text-sm">
+                    <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50">
                       {selectedFornecedorNome || "Selecione..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -265,7 +266,7 @@ export default function ContasPagar() {
                   </PopoverContent>
                 </Popover>
               </div>
-              <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => {
+              <Button variant="outline" size="icon" className="h-10 w-10 border-border/50" onClick={() => {
                 setFornecedorOpen(true);
                 setFornecedorSearch("");
               }}>
@@ -273,61 +274,77 @@ export default function ContasPagar() {
               </Button>
             </div>
 
-            <div className="mt-3">
-              <Label className="text-[13px] font-medium">Descrição da Movimentação *</Label>
-              <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} className="h-10 text-sm" />
+            <div className="mt-4">
+              <Label className="text-[13px] font-semibold text-foreground mb-1 block">Descrição da Movimentação *</Label>
+              <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
             </div>
 
             {/* PRAZOS E VALORES */}
-            <div className="mt-6 mb-3">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5">
+            <div className="mt-7 mb-2">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
                 📅 PRAZOS E VALORES
               </p>
-              <Separator className="mt-1.5" />
+              <Separator className="mt-2" />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4 mt-1">
               <div>
-                <Label className="text-[13px] font-medium">Valor Previsto (R$) *</Label>
-                <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} className="h-10 text-sm" />
+                <Label className="text-[13px] font-semibold text-foreground mb-1 block">Valor Previsto (R$) *</Label>
+                <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
               </div>
               <div>
-                <Label className="text-[13px] font-medium">Data de Competência *</Label>
-                <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} className="h-10 text-sm" />
+                <Label className="text-[13px] font-semibold text-foreground mb-1 block">Data de Competência *</Label>
+                <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
               </div>
               <div>
-                <Label className="text-[13px] font-medium">Data de Vencimento *</Label>
-                <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} className="h-10 text-sm" />
+                <Label className="text-[13px] font-semibold text-foreground mb-1 block">Data de Vencimento *</Label>
+                <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
               </div>
             </div>
 
-            <div className="mt-3 max-w-[240px]">
-              <Label className="text-[13px] font-medium">Conta Bancária</Label>
+            <div className="mt-4 max-w-[240px]">
+              <Label className="text-[13px] font-semibold text-foreground mb-1 block">Conta Bancária</Label>
               <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
-                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectTrigger className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                 <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
+            {/* OBSERVAÇÕES INTERNAS */}
+            <div className="mt-7 mb-2">
+              <p className="text-[11px] font-semibold text-primary tracking-[0.15em] uppercase flex items-center gap-1.5">
+                💬 OBSERVAÇÕES INTERNAS
+              </p>
+              <Separator className="mt-2" />
+            </div>
+
+            <Textarea
+              placeholder="Observações adicionais..."
+              value={form.observacoes}
+              onChange={e => setForm({...form, observacoes: e.target.value})}
+              className="min-h-[80px] text-sm bg-[#FDF8F4] dark:bg-muted border-border/50 resize-none"
+            />
+
             {/* RECORRÊNCIA */}
-            <div className="mt-6 mb-3">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5">
+            <div className="mt-7 mb-2">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
                 🔄 RECORRÊNCIA
               </p>
-              <Separator className="mt-1.5" />
+              <Separator className="mt-2" />
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Conta recorrente</p>
+                <p className="text-sm font-medium text-foreground">Conta recorrente</p>
                 <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 12 meses</p>
               </div>
               <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
             </div>
 
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setOpenNew(false)} className="px-6">Cancelar</Button>
-              <Button onClick={handleSave} className="px-6">Confirmar Cadastro</Button>
+            {/* FOOTER */}
+            <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-border">
+              <Button variant="outline" onClick={() => setOpenNew(false)} className="px-6 h-10">Cancelar</Button>
+              <Button onClick={handleSave} className="px-6 h-10 bg-[#7C2D12] hover:bg-[#63240e] text-white">Confirmar Cadastro</Button>
             </div>
           </DialogContent>
         </Dialog>
