@@ -210,7 +210,7 @@ export default function ContasPagar() {
           <DialogTrigger asChild>
             <Button className="gap-1"><Plus className="h-4 w-4" /> Nova Conta a Pagar</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle className="flex items-center gap-2 text-lg">Nova Conta a Pagar</DialogTitle></DialogHeader>
 
             {/* DADOS PRINCIPAIS */}
@@ -323,7 +323,10 @@ export default function ContasPagar() {
               <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
             </div>
 
-            <Button onClick={handleSave} className="w-full mt-2">Salvar</Button>
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+              <Button variant="outline" onClick={() => setOpenNew(false)}>Cancelar</Button>
+              <Button onClick={handleSave}>Confirmar Cadastro</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
