@@ -142,7 +142,7 @@ export default function ContasPagar() {
 
     toast.success(form.recorrente ? "Conta recorrente criada (12 meses)!" : "Conta a pagar criada!");
     setOpenNew(false);
-    setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal" });
+    setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal", observacoes: "" });
     setFornecedorSearch("");
     loadAll();
   }
