@@ -39,6 +39,7 @@ const financeiroItems = [
   
   { title: "Orçamento", url: "/financeiro/orcamento" },
   { title: "Relatórios", url: "/financeiro/relatorios" },
+  { title: "Configurações", url: "/financeiro/configuracoes" },
 ];
 
 const otherItems = [
