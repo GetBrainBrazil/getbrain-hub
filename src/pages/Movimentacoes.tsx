@@ -500,6 +500,25 @@ export default function Movimentacoes() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={openEdit} onOpenChange={(v) => { setOpenEdit(v); if (!v) resetForm(); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Editar Movimentação</DialogTitle></DialogHeader>
+          <NewForm
+            isPagar={isPagar}
+            form={form}
+            setForm={setForm}
+            fornecedores={fornecedores}
+            clientes={clientes}
+            projetos={projetos}
+            categorias={categorias}
+            contas={contas}
+            onSave={handleEditSave}
+            saveLabel="Salvar Alterações"
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
