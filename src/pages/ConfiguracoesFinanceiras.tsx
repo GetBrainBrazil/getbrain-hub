@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Pencil, Eye, X } from "lucide-react";
+import { Plus, Search, Pencil, Eye, X, Copy, Check, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatters";
@@ -85,7 +86,8 @@ function ContasBancariasTab({ search }: { search: string }) {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [] as string[], observacoes: "" });
   const [editNewPixKey, setEditNewPixKey] = useState("");
-
+  const [copied, setCopied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("contas_bancarias").select("*").order("nome"); setItems(data || []); }
 
@@ -172,6 +174,28 @@ function ContasBancariasTab({ search }: { search: string }) {
     await supabase.from("contas_bancarias").update({ ativo: !ativo }).eq("id", id); load();
   }
 
+  async function handleDelete() {
+    if (!selectedItem) return;
+    const { error } = await supabase.from("contas_bancarias").delete().eq("id", selectedItem.id);
+    if (error) { toast.error("Erro ao excluir conta"); return; }
+    toast.success("Conta excluída com sucesso");
+    setDeleteDialogOpen(false);
+    setDrawerOpen(false);
+    load();
+  }
+
+  function handleCopyBankData() {
+    if (!selectedItem) return;
+    const pixKeys = selectedItem.chaves_pix && selectedItem.chaves_pix.length > 0 ? selectedItem.chaves_pix.join(", ") : "Nenhuma";
+    const text = `Banco: ${selectedItem.banco || "—"}\nAgência: ${selectedItem.agencia || "—"}\nConta: ${selectedItem.conta || "—"}\nTipo: ${formatTipo(selectedItem.tipo)}\nTitular: ${selectedItem.nome}\nPIX: ${pixKeys}`;
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("Dados bancários copiados!");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  }
+
   const formatMoeda = (m: string) => m === "USD" ? "Dólar (US$)" : m === "EUR" ? "Euro (€)" : "Real (R$)";
   const formatMoedaShort = (m: string) => m === "USD" ? "US$" : m === "EUR" ? "€" : "R$";
   const formatTipo = (t: string) => t === "poupanca" ? "Poupança" : t === "investimento" ? "Investimento" : "Corrente";
@@ -248,6 +272,12 @@ function ContasBancariasTab({ search }: { search: string }) {
                   </div>
                   <div><span className="text-xs text-muted-foreground">Saldo Inicial</span><p className="text-sm font-medium mt-0.5">{formatCurrency(Number(selectedItem.saldo_inicial ?? 0))}</p></div>
                   <div><span className="text-xs text-muted-foreground">Status</span><p className="text-sm font-medium mt-0.5">{selectedItem.ativo ? "Ativo" : "Inativo"}</p></div>
+                  
+                  <Button variant="outline" className="w-full gap-2" onClick={handleCopyBankData}>
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    {copied ? "Copiado!" : "Copiar Dados Bancários"}
+                  </Button>
+
                   <div>
                     <span className="text-xs text-muted-foreground">Chaves PIX</span>
                     {(selectedItem.chaves_pix && selectedItem.chaves_pix.length > 0) ? (
@@ -256,10 +286,30 @@ function ContasBancariasTab({ search }: { search: string }) {
                   </div>
                   {selectedItem.observacoes && <div><span className="text-xs text-muted-foreground">Observações</span><p className="text-sm font-medium mt-0.5 whitespace-pre-wrap">{selectedItem.observacoes}</p></div>}
                 </div>
-                <SheetFooter className="flex-row gap-2 pt-4 border-t">
-                  <Button variant="outline" className="flex-1" onClick={() => setDrawerOpen(false)}>Fechar</Button>
-                  <Button className="flex-1 gap-1.5" onClick={startEdit}><Pencil className="h-3.5 w-3.5" /> Editar Conta</Button>
+                <SheetFooter className="flex-row justify-between gap-2 pt-4 border-t">
+                  <Button variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="h-3.5 w-3.5" /> Excluir
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setDrawerOpen(false)}>Fechar</Button>
+                    <Button className="gap-1.5" onClick={startEdit}><Pencil className="h-3.5 w-3.5" /> Editar Conta</Button>
+                  </div>
                 </SheetFooter>
+
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir conta</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir a conta <strong>{selectedItem.nome}</strong>? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>Excluir Conta</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             )}
 
