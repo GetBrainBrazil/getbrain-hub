@@ -8,8 +8,7 @@ import { AppLayout } from "@/components/AppLayout";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import FinanceiroVisaoGeral from "./pages/FinanceiroVisaoGeral";
-import ContasReceber from "./pages/ContasReceber";
-import ContasPagar from "./pages/ContasPagar";
+import Movimentacoes from "./pages/Movimentacoes";
 import Transacoes from "./pages/Transacoes";
 import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
@@ -46,8 +45,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroVisaoGeral /></ProtectedRoute>} />
-            <Route path="/financeiro/receber" element={<ProtectedRoute><ContasReceber /></ProtectedRoute>} />
-            <Route path="/financeiro/pagar" element={<ProtectedRoute><ContasPagar /></ProtectedRoute>} />
+            <Route path="/financeiro/movimentacoes" element={<ProtectedRoute><Movimentacoes /></ProtectedRoute>} />
             <Route path="/financeiro/transacoes" element={<ProtectedRoute><Transacoes /></ProtectedRoute>} />
             <Route path="/financeiro/orcamento" element={<ProtectedRoute><Orcamento /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
