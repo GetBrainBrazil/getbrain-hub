@@ -325,7 +325,7 @@ function ContasBancariasTab({ search }: { search: string }) {
                 </div>
                 <SheetFooter className="flex-row gap-2 pt-4 border-t">
                   <Button variant="outline" className="flex-1" onClick={cancelEdit}>Cancelar</Button>
-                  <Button className="flex-1" onClick={handleEditSave}>Salvar Alterações</Button>
+                  <Button className="flex-1" onClick={handleFormSave}>{drawerMode === "create" ? "Salvar" : "Salvar Alterações"}</Button>
                 </SheetFooter>
               </>
             )}
