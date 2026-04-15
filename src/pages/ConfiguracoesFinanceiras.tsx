@@ -78,7 +78,7 @@ function ContasBancariasTab({ search }: { search: string }) {
   // Filters
   const [filterBanco, setFilterBanco] = useState("__all__");
   const [filterTipo, setFilterTipo] = useState("__all__");
-  const [filterStatus, setFilterStatus] = useState("__all__");
+  const [filterMoeda, setFilterMoeda] = useState("__all__");
 
   // Unified drawer for create/view/edit
   const [drawerOpen, setDrawerOpen] = useState(false);
