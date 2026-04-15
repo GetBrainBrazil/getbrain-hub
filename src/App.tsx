@@ -13,6 +13,7 @@ import Movimentacoes from "./pages/Movimentacoes";
 
 import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
+import ExtratosBancarios from "./pages/ExtratosBancarios";
 import ConfiguracoesFinanceiras from "./pages/ConfiguracoesFinanceiras";
 import Projetos from "./pages/Projetos";
 import Clientes from "./pages/Clientes";
@@ -61,6 +62,7 @@ const App = () => (
             
             <Route path="/financeiro/orcamento" element={<ProtectedRoute><Orcamento /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
+            <Route path="/financeiro/extratos" element={<ProtectedRoute><ExtratosBancarios /></ProtectedRoute>} />
             <Route path="/financeiro/configuracoes" element={<ProtectedRoute><ConfiguracoesFinanceiras /></ProtectedRoute>} />
             <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />

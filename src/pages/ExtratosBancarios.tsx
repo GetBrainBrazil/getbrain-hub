@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedState } from "@/hooks/use-persisted-state";
-import { PeriodFilter, PeriodPreset, computeDateRange } from "@/components/PeriodFilter";
+import { PeriodFilter, PeriodPreset, getDateRange } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,7 +27,7 @@ export default function ExtratosBancarios() {
   const contaSelecionada = contas.find((c) => c.id === contaId);
   const saldoInicial = contaSelecionada?.saldo_inicial ?? 0;
 
-  const dateRange = useMemo(() => computeDateRange(preset, customRange), [preset, customRange]);
+  const dateRange = useMemo(() => getDateRange(preset, customRange), [preset, customRange]);
 
   const { data: movimentacoes = [] } = useQuery({
     queryKey: ["extrato_movimentacoes", contaId, dateRange.startDate?.toISOString(), dateRange.endDate?.toISOString()],
