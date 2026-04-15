@@ -320,13 +320,13 @@ export default function Movimentacoes() {
               </div>
 
               {/* Value */}
-              <div className="px-5 pt-3 pb-4">
-                <span className={`text-3xl font-bold tabular-nums tracking-tight ${detailMov.status === "atrasado" ? "text-destructive" : isPagar ? "text-foreground" : "text-success"}`}>
+              <div className="px-5 pt-2 pb-4">
+                <p className={`text-2xl font-semibold ${detailMov.status === "atrasado" ? "text-destructive" : isPagar ? "text-destructive" : "text-success"}`}>
                   {formatCurrency(Number(detailMov.valor_previsto))}
-                </span>
+                </p>
                 {detailMov.valor_realizado && Number(detailMov.valor_realizado) > 0 && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Valor {isPagar ? "pago" : "recebido"}: <span className="font-medium tabular-nums text-foreground">{formatCurrency(Number(detailMov.valor_realizado))}</span>
+                    Valor {isPagar ? "pago" : "recebido"}: <span className="font-medium text-foreground">{formatCurrency(Number(detailMov.valor_realizado))}</span>
                   </p>
                 )}
               </div>
