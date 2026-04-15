@@ -41,7 +41,7 @@ export default function ContasPagar() {
   const [form, setForm] = useState({
     descricao: "", fornecedor_id: "", conta_bancaria_id: "",
     valor_previsto: "", data_competencia: "", data_vencimento: "",
-    recorrente: false, frequencia_recorrencia: "mensal",
+    recorrente: false, frequencia_recorrencia: "mensal", observacoes: "",
   });
   const [pagForm, setPagForm] = useState({
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
