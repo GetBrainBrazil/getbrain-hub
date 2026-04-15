@@ -454,6 +454,8 @@ function PlanoContasTab({ search }: { search: string }) {
 }
 
 /* ─── Clientes ─── */
+const ESTADOS_BR = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 function ClientesTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
   const [filterTipo, setFilterTipo] = useState("__all__");
@@ -462,7 +464,14 @@ function ClientesTab({ search }: { search: string }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<"view" | "edit" | "create">("view");
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", email: "", telefone: "", ativo: true, endereco: "", observacoes: "" });
+  const [editForm, setEditForm] = useState({
+    nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", razao_social: "", nome_empresa: "",
+    emails: [] as string[], telefones: [] as string[],
+    cep: "", estado: "", cidade: "", endereco: "", numero: "", bairro: "", complemento: "",
+    observacoes: "", ativo: true,
+  });
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [copied, setCopied] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -470,7 +479,10 @@ function ClientesTab({ search }: { search: string }) {
   async function load() { const { data } = await supabase.from("clientes").select("*").order("nome"); setItems(data || []); }
 
   const filtered = items.filter(i => {
-    if (search && !i.nome.toLowerCase().includes(search.toLowerCase()) && !(i.cpf_cnpj || "").includes(search) && !(i.email || "").toLowerCase().includes(search.toLowerCase())) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      if (!i.nome.toLowerCase().includes(s) && !(i.cpf_cnpj || "").includes(s) && !(i.email || "").toLowerCase().includes(s)) return false;
+    }
     if (filterTipo !== "__all__" && i.tipo_pessoa !== filterTipo) return false;
     if (filterStatus === "ativo" && !i.ativo) return false;
     if (filterStatus === "inativo" && i.ativo) return false;
@@ -479,38 +491,43 @@ function ClientesTab({ search }: { search: string }) {
 
   function formatCpfCnpj(value: string | null, tipo: string) {
     if (!value) return "—";
-    const digits = value.replace(/\D/g, "");
-    if (tipo === "PF" && digits.length === 11) return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-    if (tipo === "PJ" && digits.length === 14) return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    const d = value.replace(/\D/g, "");
+    if (tipo === "PF" && d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    if (tipo === "PJ" && d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
     return value;
   }
 
   function formatPhone(value: string | null) {
     if (!value) return "—";
-    const digits = value.replace(/\D/g, "");
-    if (digits.length === 11) return digits.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+    const d = value.replace(/\D/g, "");
+    if (d.length === 11) return d.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
     return value;
   }
 
   function applyCpfCnpjMask(value: string, tipo: string) {
-    const digits = value.replace(/\D/g, "");
-    if (tipo === "PF") {
-      return digits.slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-    }
-    return digits.slice(0, 14).replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1/$2").replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+    const d = value.replace(/\D/g, "");
+    if (tipo === "PF") return d.slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    return d.slice(0, 14).replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1/$2").replace(/(\d{4})(\d{1,2})$/, "$1-$2");
   }
 
   function applyPhoneMask(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 11);
-    if (digits.length <= 2) return digits.replace(/(\d{1,2})/, "($1");
-    if (digits.length <= 7) return digits.replace(/(\d{2})(\d{1,5})/, "($1) $2");
-    return digits.replace(/(\d{2})(\d{5})(\d{1,4})/, "($1) $2-$3");
+    const d = value.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 2) return d.replace(/(\d{1,2})/, "($1");
+    if (d.length <= 7) return d.replace(/(\d{2})(\d{1,5})/, "($1) $2");
+    return d.replace(/(\d{2})(\d{5})(\d{1,4})/, "($1) $2-$3");
+  }
+
+  function applyCepMask(value: string) {
+    const d = value.replace(/\D/g, "").slice(0, 8);
+    if (d.length <= 5) return d;
+    return d.replace(/(\d{5})(\d{1,3})/, "$1-$2");
   }
 
   function openCreate() {
     setSelectedItem(null);
-    setEditForm({ nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", email: "", telefone: "", ativo: true, endereco: "", observacoes: "" });
+    setEditForm({ nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", razao_social: "", nome_empresa: "", emails: [], telefones: [], cep: "", estado: "", cidade: "", endereco: "", numero: "", bairro: "", complemento: "", observacoes: "", ativo: true });
+    setNewEmail(""); setNewPhone("");
     setDrawerMode("create");
     setDrawerOpen(true);
   }
@@ -527,12 +544,21 @@ function ClientesTab({ search }: { search: string }) {
       nome: selectedItem.nome || "",
       tipo_pessoa: selectedItem.tipo_pessoa || "PJ",
       cpf_cnpj: selectedItem.cpf_cnpj || "",
-      email: selectedItem.email || "",
-      telefone: selectedItem.telefone || "",
-      ativo: selectedItem.ativo ?? true,
+      razao_social: selectedItem.razao_social || "",
+      nome_empresa: selectedItem.nome_empresa || "",
+      emails: selectedItem.emails?.length ? selectedItem.emails : (selectedItem.email ? [selectedItem.email] : []),
+      telefones: selectedItem.telefones?.length ? selectedItem.telefones : (selectedItem.telefone ? [selectedItem.telefone] : []),
+      cep: selectedItem.cep || "",
+      estado: selectedItem.estado || "",
+      cidade: selectedItem.cidade || "",
       endereco: selectedItem.endereco || "",
+      numero: selectedItem.numero || "",
+      bairro: selectedItem.bairro || "",
+      complemento: selectedItem.complemento || "",
       observacoes: selectedItem.observacoes || "",
+      ativo: selectedItem.ativo ?? true,
     });
+    setNewEmail(""); setNewPhone("");
     setDrawerMode("edit");
   }
 
@@ -541,28 +567,58 @@ function ClientesTab({ search }: { search: string }) {
     setDrawerMode("view");
   }
 
+  function addEmail() {
+    const email = newEmail.trim();
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast.error("E-mail inválido"); return; }
+    if (editForm.emails.includes(email)) { toast.error("E-mail já cadastrado"); return; }
+    setEditForm({ ...editForm, emails: [...editForm.emails, email] });
+    setNewEmail("");
+  }
+
+  function removeEmail(idx: number) {
+    setEditForm({ ...editForm, emails: editForm.emails.filter((_, i) => i !== idx) });
+  }
+
+  function addPhone() {
+    const phone = newPhone.trim();
+    if (!phone) return;
+    if (editForm.telefones.includes(phone)) { toast.error("Telefone já cadastrado"); return; }
+    setEditForm({ ...editForm, telefones: [...editForm.telefones, phone] });
+    setNewPhone("");
+  }
+
+  function removePhone(idx: number) {
+    setEditForm({ ...editForm, telefones: editForm.telefones.filter((_, i) => i !== idx) });
+  }
+
   async function handleFormSave() {
     if (!editForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) { toast.error("E-mail inválido"); return; }
+
+    const payload: any = {
+      nome: editForm.nome, tipo_pessoa: editForm.tipo_pessoa, cpf_cnpj: editForm.cpf_cnpj || null,
+      razao_social: editForm.tipo_pessoa === "PJ" ? (editForm.razao_social || null) : null,
+      nome_empresa: editForm.tipo_pessoa === "PJ" ? (editForm.nome_empresa || null) : null,
+      emails: editForm.emails.length > 0 ? editForm.emails : [],
+      telefones: editForm.telefones.length > 0 ? editForm.telefones : [],
+      email: editForm.emails[0] || null,
+      telefone: editForm.telefones[0] || null,
+      cep: editForm.cep || null, estado: editForm.estado || null, cidade: editForm.cidade || null,
+      endereco: editForm.endereco || null, numero: editForm.numero || null, bairro: editForm.bairro || null,
+      complemento: editForm.complemento || null, observacoes: editForm.observacoes || null,
+    };
 
     if (drawerMode === "create") {
-      const { error } = await supabase.from("clientes").insert({
-        nome: editForm.nome, tipo_pessoa: editForm.tipo_pessoa, cpf_cnpj: editForm.cpf_cnpj || null,
-        email: editForm.email || null, telefone: editForm.telefone || null,
-        endereco: editForm.endereco || null, observacoes: editForm.observacoes || null,
-      });
+      const { error } = await supabase.from("clientes").insert(payload);
       if (error) { toast.error("Erro ao salvar"); return; }
       toast.success("Cliente criado!");
       setDrawerOpen(false);
     } else {
-      const { error } = await supabase.from("clientes").update({
-        nome: editForm.nome, tipo_pessoa: editForm.tipo_pessoa, cpf_cnpj: editForm.cpf_cnpj || null,
-        email: editForm.email || null, telefone: editForm.telefone || null, ativo: editForm.ativo,
-        endereco: editForm.endereco || null, observacoes: editForm.observacoes || null,
-      }).eq("id", selectedItem.id);
+      payload.ativo = editForm.ativo;
+      const { error } = await supabase.from("clientes").update(payload).eq("id", selectedItem.id);
       if (error) { toast.error("Erro ao atualizar"); return; }
       toast.success("Cliente atualizado com sucesso");
-      const updated = { ...selectedItem, ...editForm };
+      const updated = { ...selectedItem, ...payload };
       setSelectedItem(updated);
       setDrawerMode("view");
     }
@@ -582,12 +638,35 @@ function ClientesTab({ search }: { search: string }) {
   function handleCopyData() {
     if (!selectedItem) return;
     const docLabel = selectedItem.tipo_pessoa === "PF" ? "CPF" : "CNPJ";
-    const text = `Nome: ${selectedItem.nome}\n${docLabel}: ${formatCpfCnpj(selectedItem.cpf_cnpj, selectedItem.tipo_pessoa)}\nE-mail: ${selectedItem.email || "—"}\nTelefone: ${formatPhone(selectedItem.telefone)}`;
+    const emails = selectedItem.emails?.length ? selectedItem.emails.join(", ") : (selectedItem.email || "—");
+    const phones = selectedItem.telefones?.length ? selectedItem.telefones.map((t: string) => formatPhone(t)).join(", ") : formatPhone(selectedItem.telefone);
+    let text = `Nome: ${selectedItem.nome}`;
+    if (selectedItem.tipo_pessoa === "PJ" && selectedItem.nome_empresa) text += `\nEmpresa: ${selectedItem.nome_empresa}`;
+    text += `\n${docLabel}: ${formatCpfCnpj(selectedItem.cpf_cnpj, selectedItem.tipo_pessoa)}`;
+    text += `\nE-mails: ${emails}`;
+    text += `\nTelefones: ${phones}`;
+    const addr = buildAddressString(selectedItem);
+    if (addr) text += `\nEndereço: ${addr}`;
     navigator.clipboard.writeText(text).then(() => {
       toast.success("Dados do cliente copiados!");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  function buildAddressString(item: any) {
+    const parts: string[] = [];
+    if (item.endereco) {
+      let line = item.endereco;
+      if (item.numero) line += `, ${item.numero}`;
+      if (item.complemento) line += `, ${item.complemento}`;
+      parts.push(line);
+    }
+    if (item.bairro) parts.push(item.bairro);
+    const cityState = [item.cidade, item.estado].filter(Boolean).join("/");
+    if (cityState) parts.push(cityState);
+    if (item.cep) parts.push(item.cep);
+    return parts.join(" - ");
   }
 
   async function toggleAtivo(id: string, ativo: boolean) {
@@ -626,8 +705,8 @@ function ClientesTab({ search }: { search: string }) {
                 <TableCell className="font-medium">{i.nome}</TableCell>
                 <TableCell><Badge variant="outline">{i.tipo_pessoa}</Badge></TableCell>
                 <TableCell className="text-sm text-muted-foreground">{formatCpfCnpj(i.cpf_cnpj, i.tipo_pessoa)}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{i.email || "—"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{formatPhone(i.telefone)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{i.emails?.length ? i.emails[0] : (i.email || "—")}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{i.telefones?.length ? formatPhone(i.telefones[0]) : formatPhone(i.telefone)}</TableCell>
                 <TableCell onClick={e => e.stopPropagation()}><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
                 <TableCell><Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
               </TableRow>
@@ -637,7 +716,7 @@ function ClientesTab({ search }: { search: string }) {
         </Table>
 
         <Sheet open={drawerOpen} onOpenChange={(v) => { setDrawerOpen(v); if (!v) setDrawerMode("view"); }}>
-          <SheetContent className="flex flex-col w-full sm:max-w-[480px] overflow-x-hidden">
+          <SheetContent className="flex flex-col w-full sm:max-w-[520px] overflow-x-hidden">
             <SheetHeader>
               <SheetTitle>{drawerMode === "view" ? "Detalhes do Cliente" : drawerMode === "create" ? "Novo Cliente" : "Editar Cliente"}</SheetTitle>
             </SheetHeader>
@@ -651,16 +730,38 @@ function ClientesTab({ search }: { search: string }) {
                     <div><span className="text-xs text-muted-foreground">Tipo</span><div className="mt-0.5"><Badge variant="outline">{selectedItem.tipo_pessoa === "PF" ? "Pessoa Física" : "Pessoa Jurídica"}</Badge></div></div>
                     <div><span className="text-xs text-muted-foreground">Documento</span><p className="text-sm font-medium mt-0.5">{formatCpfCnpj(selectedItem.cpf_cnpj, selectedItem.tipo_pessoa)}</p></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><span className="text-xs text-muted-foreground">E-mail</span><p className="text-sm font-medium mt-0.5">{selectedItem.email || "—"}</p></div>
-                    <div><span className="text-xs text-muted-foreground">Telefone</span><p className="text-sm font-medium mt-0.5">{formatPhone(selectedItem.telefone)}</p></div>
-                  </div>
+                  {selectedItem.tipo_pessoa === "PJ" && selectedItem.razao_social && (
+                    <div><span className="text-xs text-muted-foreground">Razão Social</span><p className="text-sm font-medium mt-0.5">{selectedItem.razao_social}</p></div>
+                  )}
+                  {selectedItem.tipo_pessoa === "PJ" && selectedItem.nome_empresa && (
+                    <div><span className="text-xs text-muted-foreground">Nome da Empresa</span><p className="text-sm font-medium mt-0.5">{selectedItem.nome_empresa}</p></div>
+                  )}
                   <div><span className="text-xs text-muted-foreground">Status</span><p className="text-sm font-medium mt-0.5">{selectedItem.ativo ? "Ativo" : "Inativo"}</p></div>
-                  {selectedItem.endereco && <div><span className="text-xs text-muted-foreground">Endereço</span><p className="text-sm font-medium mt-0.5">{selectedItem.endereco}</p></div>}
+
+                  <div>
+                    <span className="text-xs text-muted-foreground">E-mails</span>
+                    {(selectedItem.emails?.length > 0) ? (
+                      <div className="space-y-0.5 mt-0.5">{selectedItem.emails.map((e: string, idx: number) => <p key={idx} className="text-sm font-medium">{e}</p>)}</div>
+                    ) : selectedItem.email ? <p className="text-sm font-medium mt-0.5">{selectedItem.email}</p> : <p className="text-sm text-muted-foreground mt-0.5">Nenhum e-mail cadastrado</p>}
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Telefones</span>
+                    {(selectedItem.telefones?.length > 0) ? (
+                      <div className="space-y-0.5 mt-0.5">{selectedItem.telefones.map((t: string, idx: number) => <p key={idx} className="text-sm font-medium">{formatPhone(t)}</p>)}</div>
+                    ) : selectedItem.telefone ? <p className="text-sm font-medium mt-0.5">{formatPhone(selectedItem.telefone)}</p> : <p className="text-sm text-muted-foreground mt-0.5">Nenhum telefone cadastrado</p>}
+                  </div>
+
+                  {(selectedItem.endereco || selectedItem.cep || selectedItem.cidade || selectedItem.estado) && (
+                    <div>
+                      <span className="text-xs text-muted-foreground font-semibold">Endereço</span>
+                      <p className="text-sm font-medium mt-0.5">{buildAddressString(selectedItem) || "—"}</p>
+                    </div>
+                  )}
+
                   {selectedItem.observacoes && <div><span className="text-xs text-muted-foreground">Observações</span><p className="text-sm font-medium mt-0.5 whitespace-pre-wrap">{selectedItem.observacoes}</p></div>}
 
                   <Button variant="outline" className="w-full gap-2" onClick={handleCopyData}>
-                    {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     {copied ? "Copiado!" : "Copiar Dados"}
                   </Button>
                 </div>
@@ -695,8 +796,8 @@ function ClientesTab({ search }: { search: string }) {
             {(drawerMode === "edit" || drawerMode === "create") && (
               <>
                 <div className="flex-1 space-y-4 py-4 overflow-y-auto animate-fade-in">
-                  <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} placeholder="Nome do cliente" /></div>
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Tipo + Documento */}
+                  <div className="grid grid-cols-[2fr_3fr] gap-3">
                     <div><Label>Tipo</Label>
                       <Select value={editForm.tipo_pessoa} onValueChange={v => setEditForm({ ...editForm, tipo_pessoa: v, cpf_cnpj: "" })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -708,12 +809,80 @@ function ClientesTab({ search }: { search: string }) {
                     </div>
                     <div><Label>{editForm.tipo_pessoa === "PF" ? "CPF" : "CNPJ"}</Label><Input value={editForm.cpf_cnpj} onChange={e => setEditForm({ ...editForm, cpf_cnpj: applyCpfCnpjMask(e.target.value, editForm.tipo_pessoa) })} placeholder={editForm.tipo_pessoa === "PF" ? "000.000.000-00" : "00.000.000/0000-00"} /></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label>E-mail</Label><Input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} placeholder="email@exemplo.com" /></div>
-                    <div><Label>Telefone</Label><Input value={editForm.telefone} onChange={e => setEditForm({ ...editForm, telefone: applyPhoneMask(e.target.value) })} placeholder="(00) 00000-0000" /></div>
+
+                  {/* Nome + Razão Social */}
+                  {editForm.tipo_pessoa === "PJ" ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} placeholder="Cliente Teste" /></div>
+                      <div><Label>Razão Social</Label><Input value={editForm.razao_social} onChange={e => setEditForm({ ...editForm, razao_social: e.target.value })} placeholder="Razão social (se PJ)" /></div>
+                    </div>
+                  ) : (
+                    <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} placeholder="Cliente Teste" /></div>
+                  )}
+
+                  {/* Nome da Empresa */}
+                  {editForm.tipo_pessoa === "PJ" && (
+                    <div><Label>Nome da Empresa</Label><Input value={editForm.nome_empresa} onChange={e => setEditForm({ ...editForm, nome_empresa: e.target.value })} placeholder="Nome da empresa" /></div>
+                  )}
+
+                  {/* E-mails */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>E-mails</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addEmail}><Plus className="h-3 w-3" /> Adicionar</Button>
+                    </div>
+                    <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@exemplo.com" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmail())} />
+                    {editForm.emails.length > 0 ? (
+                      <div className="space-y-1 mt-2">{editForm.emails.map((em, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
+                          <span>{em}</span>
+                          <button type="button" className="text-muted-foreground hover:text-destructive transition-colors" onClick={() => removeEmail(idx)}><X className="h-3.5 w-3.5" /></button>
+                        </div>
+                      ))}</div>
+                    ) : <p className="text-xs text-muted-foreground mt-1.5">Nenhum e-mail cadastrado</p>}
                   </div>
-                  <div><Label>Endereço</Label><Input value={editForm.endereco} onChange={e => setEditForm({ ...editForm, endereco: e.target.value })} /></div>
-                  <div><Label>Observações</Label><Textarea value={editForm.observacoes} onChange={e => setEditForm({ ...editForm, observacoes: e.target.value })} /></div>
+
+                  {/* Telefones */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>Telefones</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addPhone}><Plus className="h-3 w-3" /> Adicionar</Button>
+                    </div>
+                    <Input value={newPhone} onChange={e => setNewPhone(applyPhoneMask(e.target.value))} placeholder="(00) 00000-0000" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPhone())} />
+                    {editForm.telefones.length > 0 ? (
+                      <div className="space-y-1 mt-2">{editForm.telefones.map((ph, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
+                          <span>{formatPhone(ph)}</span>
+                          <button type="button" className="text-muted-foreground hover:text-destructive transition-colors" onClick={() => removePhone(idx)}><X className="h-3.5 w-3.5" /></button>
+                        </div>
+                      ))}</div>
+                    ) : <p className="text-xs text-muted-foreground mt-1.5">Nenhum telefone cadastrado</p>}
+                  </div>
+
+                  {/* Endereço */}
+                  <div className="space-y-3">
+                    <Label className="font-semibold text-sm">Endereço</Label>
+                    <div className="grid grid-cols-[2fr_1fr_2fr] gap-3">
+                      <div><Label className="text-xs">CEP</Label><Input value={editForm.cep} onChange={e => setEditForm({ ...editForm, cep: applyCepMask(e.target.value) })} placeholder="00000-000" /></div>
+                      <div><Label className="text-xs">Estado</Label>
+                        <Select value={editForm.estado || "__none__"} onValueChange={v => setEditForm({ ...editForm, estado: v === "__none__" ? "" : v })}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>{[<SelectItem key="__none__" value="__none__">Selecione</SelectItem>, ...ESTADOS_BR.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)]}</SelectContent>
+                        </Select>
+                      </div>
+                      <div><Label className="text-xs">Cidade</Label><Input value={editForm.cidade} onChange={e => setEditForm({ ...editForm, cidade: e.target.value })} placeholder="Cidade" /></div>
+                    </div>
+                    <div className="grid grid-cols-[3fr_1fr_2fr] gap-3">
+                      <div><Label className="text-xs">Endereço</Label><Input value={editForm.endereco} onChange={e => setEditForm({ ...editForm, endereco: e.target.value })} placeholder="Rua, Avenida, etc." /></div>
+                      <div><Label className="text-xs">Número</Label><Input value={editForm.numero} onChange={e => setEditForm({ ...editForm, numero: e.target.value })} placeholder="Nº" /></div>
+                      <div><Label className="text-xs">Bairro</Label><Input value={editForm.bairro} onChange={e => setEditForm({ ...editForm, bairro: e.target.value })} placeholder="Bairro" /></div>
+                    </div>
+                    <div><Label className="text-xs">Complemento</Label><Input value={editForm.complemento} onChange={e => setEditForm({ ...editForm, complemento: e.target.value })} placeholder="Apto, Sala, Bloco, etc." /></div>
+                  </div>
+
+                  {/* Observações */}
+                  <div><Label>Observações</Label><Textarea rows={4} value={editForm.observacoes} onChange={e => setEditForm({ ...editForm, observacoes: e.target.value })} placeholder="Observações gerais sobre o cliente" /></div>
+
                   {drawerMode === "edit" && (
                     <div className="flex items-center gap-2">
                       <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
