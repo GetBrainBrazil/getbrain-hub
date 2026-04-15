@@ -113,6 +113,7 @@ export default function ContasPagar() {
       valor_previsto: parseFloat(form.valor_previsto),
       data_competencia: form.data_competencia,
       data_vencimento: form.data_vencimento,
+      observacoes: form.observacoes || null,
       recorrente: form.recorrente,
       frequencia_recorrencia: form.recorrente ? form.frequencia_recorrencia : null,
       created_by: user?.id,
