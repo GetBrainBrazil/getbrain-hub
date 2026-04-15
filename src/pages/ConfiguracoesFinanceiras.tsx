@@ -264,6 +264,13 @@ function ContasBancariasTab({ search }: { search: string }) {
                   </div>
                   <div><span className="text-xs text-muted-foreground">Saldo Inicial</span><p className="text-sm font-medium mt-0.5">{formatCurrency(Number(selectedItem.saldo_inicial ?? 0))}</p></div>
                   <div><span className="text-xs text-muted-foreground">Status</span><p className="text-sm font-medium mt-0.5">{selectedItem.ativo ? "Ativo" : "Inativo"}</p></div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Chaves PIX</span>
+                    {(selectedItem.chaves_pix && selectedItem.chaves_pix.length > 0) ? (
+                      <div className="space-y-1 mt-1">{selectedItem.chaves_pix.map((k: string, idx: number) => <p key={idx} className="text-sm font-medium">{k}</p>)}</div>
+                    ) : <p className="text-sm text-muted-foreground mt-0.5">Nenhuma</p>}
+                  </div>
+                  {selectedItem.observacoes && <div><span className="text-xs text-muted-foreground">Observações</span><p className="text-sm font-medium mt-0.5 whitespace-pre-wrap">{selectedItem.observacoes}</p></div>}
                 </div>
                 <SheetFooter className="flex-row gap-2 pt-4 border-t">
                   <Button variant="outline" className="flex-1" onClick={() => setDrawerOpen(false)}>Fechar</Button>
