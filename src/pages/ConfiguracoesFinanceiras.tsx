@@ -77,9 +77,10 @@ function ContasBancariasTab({ search }: { search: string }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" });
 
-  // Edit drawer state
-  const [editOpen, setEditOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
+  // Drawer state: view/edit two-step
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<"view" | "edit">("view");
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "", moeda: "BRL", ativo: true });
 
   useEffect(() => { load(); }, []);
@@ -98,19 +99,29 @@ function ContasBancariasTab({ search }: { search: string }) {
     setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" }); load();
   }
 
-  function openEdit(item: any) {
-    setEditId(item.id);
+  function openDrawer(item: any) {
+    setSelectedItem(item);
+    setDrawerMode("view");
+    setDrawerOpen(true);
+  }
+
+  function startEdit() {
+    if (!selectedItem) return;
     setEditForm({
-      nome: item.nome || "",
-      banco: item.banco || "",
-      agencia: item.agencia || "",
-      conta: item.conta || "",
-      tipo: item.tipo || "corrente",
-      saldo_inicial: new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(item.saldo_inicial ?? 0)),
-      moeda: item.moeda || "BRL",
-      ativo: item.ativo ?? true,
+      nome: selectedItem.nome || "",
+      banco: selectedItem.banco || "",
+      agencia: selectedItem.agencia || "",
+      conta: selectedItem.conta || "",
+      tipo: selectedItem.tipo || "corrente",
+      saldo_inicial: new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(selectedItem.saldo_inicial ?? 0)),
+      moeda: selectedItem.moeda || "BRL",
+      ativo: selectedItem.ativo ?? true,
     });
-    setEditOpen(true);
+    setDrawerMode("edit");
+  }
+
+  function cancelEdit() {
+    setDrawerMode("view");
   }
 
   async function handleEditSave() {
@@ -121,15 +132,23 @@ function ContasBancariasTab({ search }: { search: string }) {
     const { error } = await supabase.from("contas_bancarias").update({
       nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
       tipo: editForm.tipo, saldo_inicial: saldo, moeda: editForm.moeda, ativo: editForm.ativo,
-    }).eq("id", editId!);
+    }).eq("id", selectedItem.id);
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Conta atualizada com sucesso");
-    setEditOpen(false); load();
+    // Update selectedItem in place to reflect changes in view mode
+    const updated = { ...selectedItem, ...editForm, saldo_inicial: saldo };
+    setSelectedItem(updated);
+    setDrawerMode("view");
+    load();
   }
 
   async function toggleAtivo(id: string, ativo: boolean) {
     await supabase.from("contas_bancarias").update({ ativo: !ativo }).eq("id", id); load();
   }
+
+  const formatMoeda = (m: string) => m === "USD" ? "Dólar (US$)" : m === "EUR" ? "Euro (€)" : "Real (R$)";
+  const formatMoedaShort = (m: string) => m === "USD" ? "US$" : m === "EUR" ? "€" : "R$";
+  const formatTipo = (t: string) => t === "poupanca" ? "Poupança" : t === "investimento" ? "Investimento" : "Corrente";
 
   return (
     <Card>
@@ -180,62 +199,92 @@ function ContasBancariasTab({ search }: { search: string }) {
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
-              <TableRow key={i.id} className="group cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => openEdit(i)}>
+              <TableRow key={i.id} className="group cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => openDrawer(i)}>
                 <TableCell className="font-medium">{i.nome}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{i.banco || "—"}</TableCell>
                 <TableCell className="text-sm capitalize">{i.tipo}</TableCell>
-                <TableCell className="text-sm">{i.moeda === "USD" ? "US$" : i.moeda === "EUR" ? "€" : "R$"}</TableCell>
+                <TableCell className="text-sm">{formatMoedaShort(i.moeda)}</TableCell>
                 <TableCell className="text-sm">{formatCurrency(Number(i.saldo_inicial))}</TableCell>
                 <TableCell onClick={e => e.stopPropagation()}><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
-                <TableCell><Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
+                <TableCell><Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
               </TableRow>
             ))}
             {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma conta bancária encontrada</TableCell></TableRow>}
           </TableBody>
         </Table>
 
-        <Sheet open={editOpen} onOpenChange={setEditOpen}>
+        <Sheet open={drawerOpen} onOpenChange={(v) => { setDrawerOpen(v); if (!v) setDrawerMode("view"); }}>
           <SheetContent className="flex flex-col">
             <SheetHeader>
-              <SheetTitle>Editar Conta Bancária</SheetTitle>
+              <SheetTitle>{drawerMode === "view" ? "Detalhes da Conta" : "Editar Conta Bancária"}</SheetTitle>
             </SheetHeader>
-            <div className="flex-1 space-y-4 py-4 overflow-y-auto">
-              <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} /></div>
-              <div><Label>Banco *</Label><Input value={editForm.banco} onChange={e => setEditForm({ ...editForm, banco: e.target.value })} /></div>
-              <div><Label>Tipo</Label>
-                <Select value={editForm.tipo} onValueChange={v => setEditForm({ ...editForm, tipo: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="corrente">Corrente</SelectItem>
-                    <SelectItem value="poupanca">Poupança</SelectItem>
-                    <SelectItem value="investimento">Investimento</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Moeda</Label>
-                <Select value={editForm.moeda} onValueChange={v => setEditForm({ ...editForm, moeda: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BRL">Real (R$)</SelectItem>
-                    <SelectItem value="USD">Dólar (US$)</SelectItem>
-                    <SelectItem value="EUR">Euro (€)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Agência</Label><Input value={editForm.agencia} onChange={e => setEditForm({ ...editForm, agencia: e.target.value })} /></div>
-                <div><Label>Conta</Label><Input value={editForm.conta} onChange={e => setEditForm({ ...editForm, conta: e.target.value })} /></div>
-              </div>
-              <div><Label>Saldo Inicial (R$)</Label><Input value={editForm.saldo_inicial} onChange={e => setEditForm({ ...editForm, saldo_inicial: e.target.value })} placeholder="0,00" /></div>
-              <div className="flex items-center gap-3">
-                <Label>Ativo</Label>
-                <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
-              </div>
-            </div>
-            <SheetFooter className="flex-row gap-2 pt-4 border-t">
-              <Button variant="outline" className="flex-1" onClick={() => setEditOpen(false)}>Cancelar</Button>
-              <Button className="flex-1" onClick={handleEditSave}>Salvar Alterações</Button>
-            </SheetFooter>
+
+            {/* View Mode */}
+            {drawerMode === "view" && selectedItem && (
+              <>
+                <div className="flex-1 space-y-5 py-4 overflow-y-auto animate-fade-in">
+                  <div><span className="text-xs text-muted-foreground">Nome</span><p className="text-sm font-medium mt-0.5">{selectedItem.nome}</p></div>
+                  <div><span className="text-xs text-muted-foreground">Banco</span><p className="text-sm font-medium mt-0.5">{selectedItem.banco || "—"}</p></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><span className="text-xs text-muted-foreground">Agência</span><p className="text-sm font-medium mt-0.5">{selectedItem.agencia || "—"}</p></div>
+                    <div><span className="text-xs text-muted-foreground">Conta</span><p className="text-sm font-medium mt-0.5">{selectedItem.conta || "—"}</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><span className="text-xs text-muted-foreground">Tipo</span><p className="text-sm font-medium mt-0.5">{formatTipo(selectedItem.tipo)}</p></div>
+                    <div><span className="text-xs text-muted-foreground">Moeda</span><p className="text-sm font-medium mt-0.5">{formatMoeda(selectedItem.moeda)}</p></div>
+                  </div>
+                  <div><span className="text-xs text-muted-foreground">Saldo Inicial</span><p className="text-sm font-medium mt-0.5">{formatCurrency(Number(selectedItem.saldo_inicial ?? 0))}</p></div>
+                  <div><span className="text-xs text-muted-foreground">Status</span><p className="text-sm font-medium mt-0.5">{selectedItem.ativo ? "Ativo" : "Inativo"}</p></div>
+                </div>
+                <SheetFooter className="flex-row gap-2 pt-4 border-t">
+                  <Button variant="outline" className="flex-1" onClick={() => setDrawerOpen(false)}>Fechar</Button>
+                  <Button className="flex-1 gap-1.5" onClick={startEdit}><Pencil className="h-3.5 w-3.5" /> Editar Conta</Button>
+                </SheetFooter>
+              </>
+            )}
+
+            {/* Edit Mode */}
+            {drawerMode === "edit" && (
+              <>
+                <div className="flex-1 space-y-4 py-4 overflow-y-auto animate-fade-in">
+                  <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} /></div>
+                  <div><Label>Banco *</Label><Input value={editForm.banco} onChange={e => setEditForm({ ...editForm, banco: e.target.value })} /></div>
+                  <div><Label>Tipo</Label>
+                    <Select value={editForm.tipo} onValueChange={v => setEditForm({ ...editForm, tipo: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="corrente">Corrente</SelectItem>
+                        <SelectItem value="poupanca">Poupança</SelectItem>
+                        <SelectItem value="investimento">Investimento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Moeda</Label>
+                    <Select value={editForm.moeda} onValueChange={v => setEditForm({ ...editForm, moeda: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BRL">Real (R$)</SelectItem>
+                        <SelectItem value="USD">Dólar (US$)</SelectItem>
+                        <SelectItem value="EUR">Euro (€)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Agência</Label><Input value={editForm.agencia} onChange={e => setEditForm({ ...editForm, agencia: e.target.value })} /></div>
+                    <div><Label>Conta</Label><Input value={editForm.conta} onChange={e => setEditForm({ ...editForm, conta: e.target.value })} /></div>
+                  </div>
+                  <div><Label>Saldo Inicial (R$)</Label><Input value={editForm.saldo_inicial} onChange={e => setEditForm({ ...editForm, saldo_inicial: e.target.value })} placeholder="0,00" /></div>
+                  <div className="flex items-center gap-3">
+                    <Label>Ativo</Label>
+                    <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
+                  </div>
+                </div>
+                <SheetFooter className="flex-row gap-2 pt-4 border-t">
+                  <Button variant="outline" className="flex-1" onClick={cancelEdit}>Cancelar</Button>
+                  <Button className="flex-1" onClick={handleEditSave}>Salvar Alterações</Button>
+                </SheetFooter>
+              </>
+            )}
           </SheetContent>
         </Sheet>
       </CardContent>
