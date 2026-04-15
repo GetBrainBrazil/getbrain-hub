@@ -787,9 +787,11 @@ export default function Movimentacoes() {
 
       {/* Edit Dialog — same layout as create */}
       <Dialog open={openEdit} onOpenChange={(v) => { setOpenEdit(v); if (!v) resetForm(); }}>
-        <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8 bg-white dark:bg-card">
+        <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-foreground">Editar Movimentação</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+              <span>📄</span> Editar Movimentação
+            </DialogTitle>
           </DialogHeader>
           {renderModalForm(handleEditSave, "Salvar Alterações", () => setOpenEdit(false))}
         </DialogContent>
