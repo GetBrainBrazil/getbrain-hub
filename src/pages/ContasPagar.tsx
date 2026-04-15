@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Plus, ArrowUpFromLine, Search, Check, ChevronsUpDown } from "lucide-react";
+import { usePersistedState } from "@/hooks/use-persisted-state";
+import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -28,8 +30,10 @@ export default function ContasPagar() {
   const [contas, setContas] = useState<any[]>([]);
   const [projetos, setProjetos] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [search, setSearch] = usePersistedState("contas_pagar_search", "");
+  const [statusFilter, setStatusFilter] = usePersistedState("contas_pagar_status", "todos");
+  const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("contas_pagar_period", "month");
+  const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("contas_pagar_period_custom", { start: null, end: null });
   const [openNew, setOpenNew] = useState(false);
   const [openPag, setOpenPag] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
@@ -89,15 +93,27 @@ export default function ContasPagar() {
 
   const selectedFornecedorNome = fornecedores.find(f => f.id === form.fornecedor_id)?.nome;
 
-  const filtered = movs.filter(m => {
+  const periodRange = useMemo(() => getDateRange(periodPreset, periodCustom), [periodPreset, periodCustom]);
+
+  const periodFiltered = useMemo(() => {
+    if (!periodRange.startDate && !periodRange.endDate) return movs;
+    return movs.filter(m => {
+      const d = new Date(m.data_vencimento + "T12:00:00");
+      if (periodRange.startDate && d < periodRange.startDate) return false;
+      if (periodRange.endDate && d > periodRange.endDate) return false;
+      return true;
+    });
+  }, [movs, periodRange]);
+
+  const filtered = periodFiltered.filter(m => {
     if (statusFilter !== "todos" && m.status !== statusFilter) return false;
     if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const totalPendente = movs.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
-  const pagoMes = movs.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado), 0);
-  const vencidos = movs.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0);
+  const totalPendente = periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
+  const pagoMes = periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado), 0);
+  const vencidos = periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0);
 
   async function handleSave() {
     if (!form.descricao || !form.valor_previsto || !form.data_competencia || !form.data_vencimento) {
@@ -363,6 +379,7 @@ export default function ContasPagar() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por descrição..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
             </div>
+            <PeriodFilter preset={periodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
             {["todos", "pendente", "pago", "atrasado", "cancelado"].map(s => (
               <Button key={s} size="sm" variant={statusFilter === s ? "default" : "outline"} onClick={() => setStatusFilter(s)} className="capitalize">
                 {s === "todos" ? "Todos" : s.charAt(0).toUpperCase() + s.slice(1)}
