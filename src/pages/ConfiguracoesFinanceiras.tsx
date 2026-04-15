@@ -74,20 +74,16 @@ export default function ConfiguracoesFinanceiras() {
 /* ─── Contas Bancárias ─── */
 function ContasBancariasTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [] as string[], observacoes: "" });
-  const [newPixKey, setNewPixKey] = useState("");
-
   // Filters
   const [filterBanco, setFilterBanco] = useState("__all__");
   const [filterTipo, setFilterTipo] = useState("__all__");
   const [filterStatus, setFilterStatus] = useState("__all__");
 
-  // Drawer state: view/edit two-step
+  // Unified drawer for create/view/edit
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState<"view" | "edit">("view");
+  const [drawerMode, setDrawerMode] = useState<"view" | "edit" | "create">("view");
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "", moeda: "BRL", ativo: true, chaves_pix: [] as string[], observacoes: "" });
+  const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [] as string[], observacoes: "" });
   const [editNewPixKey, setEditNewPixKey] = useState("");
 
   useEffect(() => { load(); }, []);
@@ -104,18 +100,12 @@ function ContasBancariasTab({ search }: { search: string }) {
     return true;
   });
 
-  async function handleSave() {
-    if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    const saldo = parseFloat(form.saldo_inicial.replace(/\./g, "").replace(",", "."));
-    const { error } = await supabase.from("contas_bancarias").insert({
-      nome: form.nome, banco: form.banco || null, agencia: form.agencia || null, conta: form.conta || null,
-      tipo: form.tipo, saldo_inicial: isNaN(saldo) ? 0 : saldo, moeda: form.moeda,
-      chaves_pix: form.chaves_pix.length > 0 ? form.chaves_pix : null,
-      observacoes: form.observacoes || null,
-    });
-    if (error) { toast.error("Erro ao salvar"); return; }
-    toast.success("Conta bancária criada!");
-    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [], observacoes: "" }); setNewPixKey(""); load();
+  function openCreate() {
+    setSelectedItem(null);
+    setEditForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [], observacoes: "" });
+    setEditNewPixKey("");
+    setDrawerMode("create");
+    setDrawerOpen(true);
   }
 
   function openDrawer(item: any) {
@@ -143,25 +133,38 @@ function ContasBancariasTab({ search }: { search: string }) {
   }
 
   function cancelEdit() {
+    if (drawerMode === "create") { setDrawerOpen(false); return; }
     setDrawerMode("view");
   }
 
-  async function handleEditSave() {
+  async function handleFormSave() {
     if (!editForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!editForm.banco.trim()) { toast.error("Banco é obrigatório"); return; }
     const saldo = parseFloat(editForm.saldo_inicial.replace(/\./g, "").replace(",", "."));
-    if (isNaN(saldo)) { toast.error("Saldo inicial inválido"); return; }
-    const { error } = await supabase.from("contas_bancarias").update({
-      nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
-      tipo: editForm.tipo, saldo_inicial: saldo, moeda: editForm.moeda, ativo: editForm.ativo,
-      chaves_pix: editForm.chaves_pix.length > 0 ? editForm.chaves_pix : null,
-      observacoes: editForm.observacoes || null,
-    }).eq("id", selectedItem.id);
-    if (error) { toast.error("Erro ao atualizar"); return; }
-    toast.success("Conta atualizada com sucesso");
-    const updated = { ...selectedItem, ...editForm, saldo_inicial: saldo };
-    setSelectedItem(updated);
-    setDrawerMode("view");
+
+    if (drawerMode === "create") {
+      const { error } = await supabase.from("contas_bancarias").insert({
+        nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
+        tipo: editForm.tipo, saldo_inicial: isNaN(saldo) ? 0 : saldo, moeda: editForm.moeda,
+        chaves_pix: editForm.chaves_pix.length > 0 ? editForm.chaves_pix : null,
+        observacoes: editForm.observacoes || null,
+      });
+      if (error) { toast.error("Erro ao salvar"); return; }
+      toast.success("Conta bancária criada!");
+      setDrawerOpen(false);
+    } else {
+      if (isNaN(saldo)) { toast.error("Saldo inicial inválido"); return; }
+      const { error } = await supabase.from("contas_bancarias").update({
+        nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
+        tipo: editForm.tipo, saldo_inicial: saldo, moeda: editForm.moeda, ativo: editForm.ativo,
+        chaves_pix: editForm.chaves_pix.length > 0 ? editForm.chaves_pix : null,
+        observacoes: editForm.observacoes || null,
+      }).eq("id", selectedItem.id);
+      if (error) { toast.error("Erro ao atualizar"); return; }
+      toast.success("Conta atualizada com sucesso");
+      const updated = { ...selectedItem, ...editForm, saldo_inicial: saldo };
+      setSelectedItem(updated);
+      setDrawerMode("view");
+    }
     load();
   }
 
@@ -203,66 +206,7 @@ function ContasBancariasTab({ search }: { search: string }) {
               </SelectContent>
             </Select>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Nova Conta</Button></DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Nova Conta Bancária</DialogTitle></DialogHeader>
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-                <div><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Itaú Corrente" /></div>
-                <div className="grid grid-cols-[2fr_3fr] gap-3">
-                  <div><Label>Tipo</Label>
-                    <Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="corrente">Corrente</SelectItem>
-                        <SelectItem value="poupanca">Poupança</SelectItem>
-                        <SelectItem value="investimento">Investimento</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div><Label>Moeda</Label>
-                    <Select value={form.moeda} onValueChange={v => setForm({ ...form, moeda: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BRL">Real (R$)</SelectItem>
-                        <SelectItem value="USD">Dólar (US$)</SelectItem>
-                        <SelectItem value="EUR">Euro (€)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div><Label>Banco</Label><Input value={form.banco} onChange={e => setForm({ ...form, banco: e.target.value })} placeholder="Itaú" /></div>
-                  <div><Label>Agência</Label><Input value={form.agencia} onChange={e => setForm({ ...form, agencia: e.target.value })} placeholder="1234" /></div>
-                  <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: e.target.value })} placeholder="12345-6" /></div>
-                </div>
-                <div><Label>Saldo Inicial</Label><Input value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} placeholder="0,00" /></div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>Chaves PIX</Label>
-                    <div className="flex items-center gap-2">
-                      <Input value={newPixKey} onChange={e => setNewPixKey(e.target.value)} placeholder="CPF, e-mail, telefone..." className="h-8 text-sm w-48" onKeyDown={e => { if (e.key === "Enter" && newPixKey.trim()) { setForm({ ...form, chaves_pix: [...form.chaves_pix, newPixKey.trim()] }); setNewPixKey(""); }}} />
-                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1" onClick={() => { if (newPixKey.trim()) { setForm({ ...form, chaves_pix: [...form.chaves_pix, newPixKey.trim()] }); setNewPixKey(""); }}}><Plus className="h-3 w-3" /> Adicionar</Button>
-                    </div>
-                  </div>
-                  {form.chaves_pix.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-3">Nenhuma chave PIX cadastrada</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {form.chaves_pix.map((k, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-1.5 text-sm">
-                          <span>{k}</span>
-                          <button type="button" onClick={() => setForm({ ...form, chaves_pix: form.chaves_pix.filter((_, j) => j !== idx) })} className="text-muted-foreground hover:text-destructive transition-colors"><X className="h-3.5 w-3.5" /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações sobre a conta..." rows={4} /></div>
-                <Button onClick={handleSave} className="w-full">Salvar</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="gap-1" onClick={openCreate}><Plus className="h-4 w-4" /> Nova Conta</Button>
         </div>
         <Table>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
@@ -285,7 +229,7 @@ function ContasBancariasTab({ search }: { search: string }) {
         <Sheet open={drawerOpen} onOpenChange={(v) => { setDrawerOpen(v); if (!v) setDrawerMode("view"); }}>
           <SheetContent className="flex flex-col">
             <SheetHeader>
-              <SheetTitle>{drawerMode === "view" ? "Detalhes da Conta" : "Editar Conta Bancária"}</SheetTitle>
+              <SheetTitle>{drawerMode === "view" ? "Detalhes da Conta" : drawerMode === "create" ? "Nova Conta Bancária" : "Editar Conta Bancária"}</SheetTitle>
             </SheetHeader>
 
             {/* View Mode */}
@@ -320,7 +264,7 @@ function ContasBancariasTab({ search }: { search: string }) {
             )}
 
             {/* Edit Mode */}
-            {drawerMode === "edit" && (
+            {(drawerMode === "edit" || drawerMode === "create") && (
               <>
                 <div className="flex-1 space-y-4 py-4 overflow-y-auto animate-fade-in">
                   <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} placeholder="Ex: Itaú Corrente" /></div>
@@ -374,14 +318,16 @@ function ContasBancariasTab({ search }: { search: string }) {
                     )}
                   </div>
                   <div><Label>Observações</Label><Textarea value={editForm.observacoes} onChange={e => setEditForm({ ...editForm, observacoes: e.target.value })} placeholder="Observações sobre a conta..." rows={4} /></div>
-                  <div className="flex items-center gap-3">
-                    <Label>Ativo</Label>
-                    <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
-                  </div>
+                  {drawerMode === "edit" && (
+                    <div className="flex items-center gap-3">
+                      <Label>Ativo</Label>
+                      <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
+                    </div>
+                  )}
                 </div>
                 <SheetFooter className="flex-row gap-2 pt-4 border-t">
                   <Button variant="outline" className="flex-1" onClick={cancelEdit}>Cancelar</Button>
-                  <Button className="flex-1" onClick={handleEditSave}>Salvar Alterações</Button>
+                  <Button className="flex-1" onClick={handleFormSave}>{drawerMode === "create" ? "Salvar" : "Salvar Alterações"}</Button>
                 </SheetFooter>
               </>
             )}
