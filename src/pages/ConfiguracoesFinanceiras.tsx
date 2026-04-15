@@ -74,20 +74,16 @@ export default function ConfiguracoesFinanceiras() {
 /* ─── Contas Bancárias ─── */
 function ContasBancariasTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [] as string[], observacoes: "" });
-  const [newPixKey, setNewPixKey] = useState("");
-
   // Filters
   const [filterBanco, setFilterBanco] = useState("__all__");
   const [filterTipo, setFilterTipo] = useState("__all__");
   const [filterStatus, setFilterStatus] = useState("__all__");
 
-  // Drawer state: view/edit two-step
+  // Unified drawer for create/view/edit
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState<"view" | "edit">("view");
+  const [drawerMode, setDrawerMode] = useState<"view" | "edit" | "create">("view");
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "", moeda: "BRL", ativo: true, chaves_pix: [] as string[], observacoes: "" });
+  const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [] as string[], observacoes: "" });
   const [editNewPixKey, setEditNewPixKey] = useState("");
 
   useEffect(() => { load(); }, []);
