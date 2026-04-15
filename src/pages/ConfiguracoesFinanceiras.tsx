@@ -140,10 +140,11 @@ function ContasBancariasTab({ search }: { search: string }) {
     const { error } = await supabase.from("contas_bancarias").update({
       nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
       tipo: editForm.tipo, saldo_inicial: saldo, moeda: editForm.moeda, ativo: editForm.ativo,
+      chaves_pix: editForm.chaves_pix.length > 0 ? editForm.chaves_pix : null,
+      observacoes: editForm.observacoes || null,
     }).eq("id", selectedItem.id);
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Conta atualizada com sucesso");
-    // Update selectedItem in place to reflect changes in view mode
     const updated = { ...selectedItem, ...editForm, saldo_inicial: saldo };
     setSelectedItem(updated);
     setDrawerMode("view");
