@@ -9,7 +9,7 @@ import Login from "./pages/Login";
 import Index from "./pages/Index";
 import FinanceiroVisaoGeral from "./pages/FinanceiroVisaoGeral";
 import Movimentacoes from "./pages/Movimentacoes";
-import Transacoes from "./pages/Transacoes";
+
 import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
 import Projetos from "./pages/Projetos";
@@ -46,7 +46,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroVisaoGeral /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes" element={<ProtectedRoute><Movimentacoes /></ProtectedRoute>} />
-            <Route path="/financeiro/transacoes" element={<ProtectedRoute><Transacoes /></ProtectedRoute>} />
+            
             <Route path="/financeiro/orcamento" element={<ProtectedRoute><Orcamento /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
             <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
