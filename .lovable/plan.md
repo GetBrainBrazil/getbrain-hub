@@ -1,46 +1,39 @@
 
 
-## Plano: Submódulo "Configurações" no módulo Financeiro
+## Plano: Submódulo "Extratos Bancários" no módulo Financeiro
 
 ### O que será feito
 
-Criar uma nova página `Configurações Financeiras` dentro do módulo Financeiro (`/financeiro/configuracoes`) com as abas: **Contas Bancárias**, **Plano de Contas**, **Clientes**, **Fornecedores**, **Centros de Custo** e **Categorias** — conforme os prints de referência. Os dados cadastrados aqui alimentarão os selects e campos do módulo financeiro.
+Criar uma nova página de Extratos Bancários (`/financeiro/extratos`) que permite visualizar o extrato de movimentações por conta bancária, com filtros de período e conta, saldo acumulado e exportação.
+
+### Funcionalidades
+
+- **Seletor de conta bancária** no topo (dropdown com as contas cadastradas em `contas_bancarias`)
+- **Filtro de período** reutilizando o componente `PeriodFilter` existente
+- **Tabela de extrato** com colunas: Data, Descrição, Categoria, Entrada, Saída, Saldo
+- **KPIs no topo**: Saldo Inicial, Total Entradas, Total Saídas, Saldo Final
+- **Dados**: consulta a tabela `movimentacoes` filtrando por `conta_bancaria_id` e período, ordenando por data
+- **Cálculo de saldo**: saldo inicial da conta + acumulado linha a linha
+- Tab ativa persistida com `usePersistedState`
 
 ### Mudanças
 
-1. **Criar `src/pages/ConfiguracoesFinanceiras.tsx`**
-   - Layout: título "Configurações Financeiras" + subtítulo + botão dinâmico ("+ Nova Conta", "+ Novo Cliente", etc.)
-   - Tabs horizontais: Contas Bancárias | Plano de Contas | Clientes | Fornecedores | Centros de Custo | Categorias
-   - Barra de busca global abaixo das tabs (filtra a tab ativa)
-   - Cada tab com sua tabela, filtros específicos e dialog de criação
-   - Migrar/reutilizar a lógica existente de `Configuracoes.tsx` (ContasBancariasTab, CategoriasTab, CentrosCustoTab, FornecedoresTab) + adicionar Clientes e Plano de Contas
-   - Tab ativa persistida com `usePersistedState`
+1. **Criar `src/pages/ExtratosBancarios.tsx`**
+   - Dropdown de conta bancária (busca de `contas_bancarias`)
+   - PeriodFilter para filtro de datas
+   - 4 KPI cards (Saldo Inicial, Entradas, Saídas, Saldo Final)
+   - Tabela com saldo acumulado calculado linha a linha
+   - Cabeçalhos ordenáveis com `SortableTableHead`
 
-2. **Atualizar sidebar** (`src/components/AppSidebar.tsx`)
-   - Adicionar "Configurações" ao array `financeiroItems` com url `/financeiro/configuracoes`
+2. **Atualizar `src/components/AppSidebar.tsx`**
+   - Adicionar `{ title: "Extratos Bancários", url: "/financeiro/extratos" }` após "Relatórios" no array `financeiroItems`
 
-3. **Atualizar rotas** (`src/App.tsx`)
-   - Adicionar rota `/financeiro/configuracoes` apontando para `ConfiguracoesFinanceiras`
-   - Importar o novo componente
-
-4. **Remover duplicações de `Configuracoes.tsx`**
-   - Manter apenas a aba "Minha Conta" e "Meios de Pagamento" na página geral de Configurações (itens que não são financeiros)
-   - As tabs financeiras (Contas Bancárias, Categorias, Centros de Custo, Fornecedores) serão movidas para a nova página
-
-### Detalhes das tabs (conforme prints)
-
-| Tab | Colunas da tabela | Filtros | Botão |
-|---|---|---|---|
-| Contas Bancárias | Nome, Banco, Tipo, Moeda, Saldo Inicial | Todos os Bancos, Todos os Tipos, Todas | + Nova Conta |
-| Plano de Contas | Código, Nome, Tipo, Natureza | — | + Novo Plano |
-| Clientes | Nome, Tipo, Documento, Contato, Cidade/UF | Todos os tipos | + Novo Cliente |
-| Fornecedores | Nome, Tipo, Documento, Email, Telefone, Cidade/UF | Todos os tipos | + Novo Fornecedor |
-| Centros de Custo | Código, Nome, Descrição | Todos responsáveis | + Novo Centro |
-| Categorias | Nome, Tipo, Ativo | — | + Nova |
+3. **Atualizar `src/App.tsx`**
+   - Importar `ExtratosBancarios`
+   - Adicionar rota `/financeiro/extratos`
 
 ### Arquivos
-- `src/pages/ConfiguracoesFinanceiras.tsx` — novo
+- `src/pages/ExtratosBancarios.tsx` — novo
 - `src/components/AppSidebar.tsx` — adicionar item no menu
 - `src/App.tsx` — adicionar rota
-- `src/pages/Configuracoes.tsx` — simplificar (remover tabs financeiras)
 
