@@ -78,6 +78,11 @@ function ContasBancariasTab({ search }: { search: string }) {
   const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [] as string[], observacoes: "" });
   const [newPixKey, setNewPixKey] = useState("");
 
+  // Filters
+  const [filterBanco, setFilterBanco] = useState("__all__");
+  const [filterTipo, setFilterTipo] = useState("__all__");
+  const [filterStatus, setFilterStatus] = useState("__all__");
+
   // Drawer state: view/edit two-step
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<"view" | "edit">("view");
@@ -88,7 +93,16 @@ function ContasBancariasTab({ search }: { search: string }) {
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("contas_bancarias").select("*").order("nome"); setItems(data || []); }
 
-  const filtered = items.filter(i => !search || i.nome.toLowerCase().includes(search.toLowerCase()) || (i.banco || "").toLowerCase().includes(search.toLowerCase()));
+  const bancos = Array.from(new Set(items.map(i => i.banco).filter(Boolean))).sort();
+
+  const filtered = items.filter(i => {
+    if (search && !i.nome.toLowerCase().includes(search.toLowerCase()) && !(i.banco || "").toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterBanco !== "__all__" && i.banco !== filterBanco) return false;
+    if (filterTipo !== "__all__" && i.tipo !== filterTipo) return false;
+    if (filterStatus === "ativas" && !i.ativo) return false;
+    if (filterStatus === "inativas" && i.ativo) return false;
+    return true;
+  });
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
@@ -224,6 +238,32 @@ function ContasBancariasTab({ search }: { search: string }) {
             </DialogContent>
           </Dialog>
         </div>
+        <div className="flex items-center gap-3 mb-4">
+          <Select value={filterBanco} onValueChange={setFilterBanco}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Todos os Bancos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos os Bancos</SelectItem>
+              {bancos.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterTipo} onValueChange={setFilterTipo}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Todos os Tipos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos os Tipos</SelectItem>
+              <SelectItem value="corrente">Corrente</SelectItem>
+              <SelectItem value="poupanca">Poupança</SelectItem>
+              <SelectItem value="investimento">Investimento</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Todas" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas</SelectItem>
+              <SelectItem value="ativas">Ativas</SelectItem>
+              <SelectItem value="inativas">Inativas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Table>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
@@ -238,7 +278,7 @@ function ContasBancariasTab({ search }: { search: string }) {
                 <TableCell><Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma conta bancária encontrada</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma conta encontrada para os filtros selecionados</TableCell></TableRow>}
           </TableBody>
         </Table>
 
