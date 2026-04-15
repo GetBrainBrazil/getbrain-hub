@@ -456,75 +456,279 @@ function PlanoContasTab({ search }: { search: string }) {
 /* ─── Clientes ─── */
 function ClientesTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", email: "", telefone: "", endereco: "", observacoes: "" });
+  const [filterTipo, setFilterTipo] = useState("__all__");
+  const [filterStatus, setFilterStatus] = useState("__all__");
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<"view" | "edit" | "create">("view");
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", email: "", telefone: "", ativo: true, endereco: "", observacoes: "" });
+  const [copied, setCopied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("clientes").select("*").order("nome"); setItems(data || []); }
 
-  const filtered = items.filter(i => !search || i.nome.toLowerCase().includes(search.toLowerCase()) || (i.cpf_cnpj || "").includes(search) || (i.email || "").toLowerCase().includes(search.toLowerCase()));
+  const filtered = items.filter(i => {
+    if (search && !i.nome.toLowerCase().includes(search.toLowerCase()) && !(i.cpf_cnpj || "").includes(search) && !(i.email || "").toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterTipo !== "__all__" && i.tipo_pessoa !== filterTipo) return false;
+    if (filterStatus === "ativo" && !i.ativo) return false;
+    if (filterStatus === "inativo" && i.ativo) return false;
+    return true;
+  });
 
-  async function handleSave() {
-    if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    const { error } = await supabase.from("clientes").insert({
-      nome: form.nome, tipo_pessoa: form.tipo_pessoa, cpf_cnpj: form.cpf_cnpj || null,
-      email: form.email || null, telefone: form.telefone || null,
-      endereco: form.endereco || null, observacoes: form.observacoes || null,
+  function formatCpfCnpj(value: string | null, tipo: string) {
+    if (!value) return "—";
+    const digits = value.replace(/\D/g, "");
+    if (tipo === "PF" && digits.length === 11) return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    if (tipo === "PJ" && digits.length === 14) return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    return value;
+  }
+
+  function formatPhone(value: string | null) {
+    if (!value) return "—";
+    const digits = value.replace(/\D/g, "");
+    if (digits.length === 11) return digits.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+    return value;
+  }
+
+  function applyCpfCnpjMask(value: string, tipo: string) {
+    const digits = value.replace(/\D/g, "");
+    if (tipo === "PF") {
+      return digits.slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    }
+    return digits.slice(0, 14).replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1/$2").replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+  }
+
+  function applyPhoneMask(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 2) return digits.replace(/(\d{1,2})/, "($1");
+    if (digits.length <= 7) return digits.replace(/(\d{2})(\d{1,5})/, "($1) $2");
+    return digits.replace(/(\d{2})(\d{5})(\d{1,4})/, "($1) $2-$3");
+  }
+
+  function openCreate() {
+    setSelectedItem(null);
+    setEditForm({ nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", email: "", telefone: "", ativo: true, endereco: "", observacoes: "" });
+    setDrawerMode("create");
+    setDrawerOpen(true);
+  }
+
+  function openDrawer(item: any) {
+    setSelectedItem(item);
+    setDrawerMode("view");
+    setDrawerOpen(true);
+  }
+
+  function startEdit() {
+    if (!selectedItem) return;
+    setEditForm({
+      nome: selectedItem.nome || "",
+      tipo_pessoa: selectedItem.tipo_pessoa || "PJ",
+      cpf_cnpj: selectedItem.cpf_cnpj || "",
+      email: selectedItem.email || "",
+      telefone: selectedItem.telefone || "",
+      ativo: selectedItem.ativo ?? true,
+      endereco: selectedItem.endereco || "",
+      observacoes: selectedItem.observacoes || "",
     });
-    if (error) { toast.error("Erro ao salvar"); return; }
-    toast.success("Cliente criado!");
-    setOpen(false); setForm({ nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", email: "", telefone: "", endereco: "", observacoes: "" }); load();
+    setDrawerMode("edit");
+  }
+
+  function cancelEdit() {
+    if (drawerMode === "create") { setDrawerOpen(false); return; }
+    setDrawerMode("view");
+  }
+
+  async function handleFormSave() {
+    if (!editForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) { toast.error("E-mail inválido"); return; }
+
+    if (drawerMode === "create") {
+      const { error } = await supabase.from("clientes").insert({
+        nome: editForm.nome, tipo_pessoa: editForm.tipo_pessoa, cpf_cnpj: editForm.cpf_cnpj || null,
+        email: editForm.email || null, telefone: editForm.telefone || null,
+        endereco: editForm.endereco || null, observacoes: editForm.observacoes || null,
+      });
+      if (error) { toast.error("Erro ao salvar"); return; }
+      toast.success("Cliente criado!");
+      setDrawerOpen(false);
+    } else {
+      const { error } = await supabase.from("clientes").update({
+        nome: editForm.nome, tipo_pessoa: editForm.tipo_pessoa, cpf_cnpj: editForm.cpf_cnpj || null,
+        email: editForm.email || null, telefone: editForm.telefone || null, ativo: editForm.ativo,
+        endereco: editForm.endereco || null, observacoes: editForm.observacoes || null,
+      }).eq("id", selectedItem.id);
+      if (error) { toast.error("Erro ao atualizar"); return; }
+      toast.success("Cliente atualizado com sucesso");
+      const updated = { ...selectedItem, ...editForm };
+      setSelectedItem(updated);
+      setDrawerMode("view");
+    }
+    load();
+  }
+
+  async function handleDelete() {
+    if (!selectedItem) return;
+    const { error } = await supabase.from("clientes").delete().eq("id", selectedItem.id);
+    if (error) { toast.error("Erro ao excluir cliente"); return; }
+    toast.success("Cliente excluído com sucesso");
+    setDeleteDialogOpen(false);
+    setDrawerOpen(false);
+    load();
+  }
+
+  function handleCopyData() {
+    if (!selectedItem) return;
+    const docLabel = selectedItem.tipo_pessoa === "PF" ? "CPF" : "CNPJ";
+    const text = `Nome: ${selectedItem.nome}\n${docLabel}: ${formatCpfCnpj(selectedItem.cpf_cnpj, selectedItem.tipo_pessoa)}\nE-mail: ${selectedItem.email || "—"}\nTelefone: ${formatPhone(selectedItem.telefone)}`;
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("Dados do cliente copiados!");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  async function toggleAtivo(id: string, ativo: boolean) {
+    await supabase.from("clientes").update({ ativo: !ativo }).eq("id", id); load();
   }
 
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex justify-end mb-4">
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Novo Cliente</Button></DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Novo Cliente</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Tipo</Label>
-                    <Select value={form.tipo_pessoa} onValueChange={v => setForm({ ...form, tipo_pessoa: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
-                        <SelectItem value="PF">Pessoa Física</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div><Label>CPF/CNPJ</Label><Input value={form.cpf_cnpj} onChange={e => setForm({ ...form, cpf_cnpj: e.target.value })} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>E-mail</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-                  <div><Label>Telefone</Label><Input value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} /></div>
-                </div>
-                <div><Label>Endereço</Label><Input value={form.endereco} onChange={e => setForm({ ...form, endereco: e.target.value })} /></div>
-                <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} /></div>
-                <Button onClick={handleSave} className="w-full">Salvar</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+        <div className="flex items-center justify-between mb-4 gap-3">
+          <div className="flex items-center gap-3">
+            <Select value={filterTipo} onValueChange={setFilterTipo}>
+              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Todos os Tipos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos os Tipos</SelectItem>
+                <SelectItem value="PF">Pessoa Física</SelectItem>
+                <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[170px]"><SelectValue placeholder="Todos os Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos os Status</SelectItem>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" className="gap-1" onClick={openCreate}><Plus className="h-4 w-4" /> Novo Cliente</Button>
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Documento</TableHead><TableHead>E-mail</TableHead><TableHead>Telefone</TableHead><TableHead>Ativo</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Documento</TableHead><TableHead>E-mail</TableHead><TableHead>Telefone</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
-              <TableRow key={i.id}>
+              <TableRow key={i.id} className="group cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => openDrawer(i)}>
                 <TableCell className="font-medium">{i.nome}</TableCell>
                 <TableCell><Badge variant="outline">{i.tipo_pessoa}</Badge></TableCell>
-                <TableCell className="text-sm text-muted-foreground">{i.cpf_cnpj || "—"}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{formatCpfCnpj(i.cpf_cnpj, i.tipo_pessoa)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{i.email || "—"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{i.telefone || "—"}</TableCell>
-                <TableCell><Badge variant="outline" className={i.ativo ? "bg-success/10 text-success" : ""}>{i.ativo ? "Ativo" : "Inativo"}</Badge></TableCell>
+                <TableCell className="text-sm text-muted-foreground">{formatPhone(i.telefone)}</TableCell>
+                <TableCell onClick={e => e.stopPropagation()}><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
+                <TableCell><Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado para os filtros selecionados</TableCell></TableRow>}
           </TableBody>
         </Table>
+
+        <Sheet open={drawerOpen} onOpenChange={(v) => { setDrawerOpen(v); if (!v) setDrawerMode("view"); }}>
+          <SheetContent className="flex flex-col w-full sm:max-w-[480px] overflow-x-hidden">
+            <SheetHeader>
+              <SheetTitle>{drawerMode === "view" ? "Detalhes do Cliente" : drawerMode === "create" ? "Novo Cliente" : "Editar Cliente"}</SheetTitle>
+            </SheetHeader>
+
+            {/* View Mode */}
+            {drawerMode === "view" && selectedItem && (
+              <>
+                <div className="flex-1 space-y-5 py-4 overflow-y-auto animate-fade-in">
+                  <div><span className="text-xs text-muted-foreground">Nome</span><p className="text-sm font-medium mt-0.5">{selectedItem.nome}</p></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><span className="text-xs text-muted-foreground">Tipo</span><div className="mt-0.5"><Badge variant="outline">{selectedItem.tipo_pessoa === "PF" ? "Pessoa Física" : "Pessoa Jurídica"}</Badge></div></div>
+                    <div><span className="text-xs text-muted-foreground">Documento</span><p className="text-sm font-medium mt-0.5">{formatCpfCnpj(selectedItem.cpf_cnpj, selectedItem.tipo_pessoa)}</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><span className="text-xs text-muted-foreground">E-mail</span><p className="text-sm font-medium mt-0.5">{selectedItem.email || "—"}</p></div>
+                    <div><span className="text-xs text-muted-foreground">Telefone</span><p className="text-sm font-medium mt-0.5">{formatPhone(selectedItem.telefone)}</p></div>
+                  </div>
+                  <div><span className="text-xs text-muted-foreground">Status</span><p className="text-sm font-medium mt-0.5">{selectedItem.ativo ? "Ativo" : "Inativo"}</p></div>
+                  {selectedItem.endereco && <div><span className="text-xs text-muted-foreground">Endereço</span><p className="text-sm font-medium mt-0.5">{selectedItem.endereco}</p></div>}
+                  {selectedItem.observacoes && <div><span className="text-xs text-muted-foreground">Observações</span><p className="text-sm font-medium mt-0.5 whitespace-pre-wrap">{selectedItem.observacoes}</p></div>}
+
+                  <Button variant="outline" className="w-full gap-2" onClick={handleCopyData}>
+                    {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                    {copied ? "Copiado!" : "Copiar Dados"}
+                  </Button>
+                </div>
+                <SheetFooter className="flex-row !justify-between gap-2 pt-4 border-t">
+                  <Button variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="h-3.5 w-3.5" /> Excluir
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setDrawerOpen(false)}>Fechar</Button>
+                    <Button className="gap-1.5" onClick={startEdit}><Pencil className="h-3.5 w-3.5" /> Editar Cliente</Button>
+                  </div>
+                </SheetFooter>
+
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir cliente</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir o cliente <strong>{selectedItem.nome}</strong>? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>Excluir Cliente</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            )}
+
+            {/* Edit/Create Mode */}
+            {(drawerMode === "edit" || drawerMode === "create") && (
+              <>
+                <div className="flex-1 space-y-4 py-4 overflow-y-auto animate-fade-in">
+                  <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} placeholder="Nome do cliente" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Tipo</Label>
+                      <Select value={editForm.tipo_pessoa} onValueChange={v => setEditForm({ ...editForm, tipo_pessoa: v, cpf_cnpj: "" })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
+                          <SelectItem value="PF">Pessoa Física</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div><Label>{editForm.tipo_pessoa === "PF" ? "CPF" : "CNPJ"}</Label><Input value={editForm.cpf_cnpj} onChange={e => setEditForm({ ...editForm, cpf_cnpj: applyCpfCnpjMask(e.target.value, editForm.tipo_pessoa) })} placeholder={editForm.tipo_pessoa === "PF" ? "000.000.000-00" : "00.000.000/0000-00"} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>E-mail</Label><Input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} placeholder="email@exemplo.com" /></div>
+                    <div><Label>Telefone</Label><Input value={editForm.telefone} onChange={e => setEditForm({ ...editForm, telefone: applyPhoneMask(e.target.value) })} placeholder="(00) 00000-0000" /></div>
+                  </div>
+                  <div><Label>Endereço</Label><Input value={editForm.endereco} onChange={e => setEditForm({ ...editForm, endereco: e.target.value })} /></div>
+                  <div><Label>Observações</Label><Textarea value={editForm.observacoes} onChange={e => setEditForm({ ...editForm, observacoes: e.target.value })} /></div>
+                  {drawerMode === "edit" && (
+                    <div className="flex items-center gap-2">
+                      <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
+                      <Label>{editForm.ativo ? "Ativo" : "Inativo"}</Label>
+                    </div>
+                  )}
+                </div>
+                <SheetFooter className="flex-row justify-end gap-2 pt-4 border-t">
+                  <Button variant="outline" onClick={cancelEdit}>Cancelar</Button>
+                  <Button onClick={handleFormSave}>{drawerMode === "create" ? "Salvar" : "Salvar Alterações"}</Button>
+                </SheetFooter>
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
       </CardContent>
     </Card>
   );
