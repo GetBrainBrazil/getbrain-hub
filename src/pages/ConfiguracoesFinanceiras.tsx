@@ -219,12 +219,13 @@ function ContasBancariasTab({ search }: { search: string }) {
                 <SelectItem value="investimento">Investimento</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Todas" /></SelectTrigger>
+            <Select value={filterMoeda} onValueChange={setFilterMoeda}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Todas as Moedas" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">Todas</SelectItem>
-                <SelectItem value="ativas">Ativas</SelectItem>
-                <SelectItem value="inativas">Inativas</SelectItem>
+                <SelectItem value="__all__">Todas as Moedas</SelectItem>
+                <SelectItem value="BRL">Real (R$)</SelectItem>
+                <SelectItem value="USD">Dólar (US$)</SelectItem>
+                <SelectItem value="EUR">Euro (€)</SelectItem>
               </SelectContent>
             </Select>
           </div>
