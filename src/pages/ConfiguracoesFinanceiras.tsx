@@ -74,7 +74,7 @@ export default function ConfiguracoesFinanceiras() {
 function ContasBancariasTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", cor: "#3B82F6" });
+  const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" });
 
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("contas_bancarias").select("*").order("nome"); setItems(data || []); }
@@ -85,11 +85,11 @@ function ContasBancariasTab({ search }: { search: string }) {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     const { error } = await supabase.from("contas_bancarias").insert({
       nome: form.nome, banco: form.banco || null, agencia: form.agencia || null, conta: form.conta || null,
-      tipo: form.tipo, saldo_inicial: parseFloat(form.saldo_inicial) || 0, cor: form.cor,
+      tipo: form.tipo, saldo_inicial: parseFloat(form.saldo_inicial) || 0, moeda: form.moeda,
     });
     if (error) { toast.error("Erro ao salvar"); return; }
     toast.success("Conta bancária criada!");
-    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", cor: "#3B82F6" }); load();
+    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" }); load();
   }
 
   async function toggleAtivo(id: string, ativo: boolean) {
@@ -124,8 +124,17 @@ function ContasBancariasTab({ search }: { search: string }) {
                   <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: e.target.value })} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Saldo Inicial (R$)</Label><Input type="number" step="0.01" value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} /></div>
-                  <div><Label>Cor</Label><Input type="color" value={form.cor} onChange={e => setForm({ ...form, cor: e.target.value })} className="h-10" /></div>
+                  <div><Label>Saldo Inicial</Label><Input type="number" step="0.01" value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} /></div>
+                  <div><Label>Moeda</Label>
+                    <Select value={form.moeda} onValueChange={v => setForm({ ...form, moeda: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BRL">Real (R$)</SelectItem>
+                        <SelectItem value="USD">Dólar (US$)</SelectItem>
+                        <SelectItem value="EUR">Euro (€)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <Button onClick={handleSave} className="w-full">Salvar</Button>
               </div>
@@ -133,14 +142,14 @@ function ContasBancariasTab({ search }: { search: string }) {
           </Dialog>
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Cor</TableHead><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
               <TableRow key={i.id}>
-                <TableCell><div className="w-4 h-4 rounded-full" style={{ backgroundColor: i.cor }} /></TableCell>
                 <TableCell className="font-medium">{i.nome}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{i.banco || "—"}</TableCell>
                 <TableCell className="text-sm capitalize">{i.tipo}</TableCell>
+                <TableCell className="text-sm">{i.moeda === "USD" ? "US$" : i.moeda === "EUR" ? "€" : "R$"}</TableCell>
                 <TableCell className="text-sm">{formatCurrency(Number(i.saldo_inicial))}</TableCell>
                 <TableCell><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
               </TableRow>

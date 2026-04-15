@@ -172,9 +172,9 @@ export type Database = {
           ativo: boolean | null
           banco: string | null
           conta: string | null
-          cor: string | null
           created_at: string | null
           id: string
+          moeda: string
           nome: string
           saldo_inicial: number | null
           tipo: string | null
@@ -185,9 +185,9 @@ export type Database = {
           ativo?: boolean | null
           banco?: string | null
           conta?: string | null
-          cor?: string | null
           created_at?: string | null
           id?: string
+          moeda?: string
           nome: string
           saldo_inicial?: number | null
           tipo?: string | null
@@ -198,9 +198,9 @@ export type Database = {
           ativo?: boolean | null
           banco?: string | null
           conta?: string | null
-          cor?: string | null
           created_at?: string | null
           id?: string
+          moeda?: string
           nome?: string
           saldo_inicial?: number | null
           tipo?: string | null
