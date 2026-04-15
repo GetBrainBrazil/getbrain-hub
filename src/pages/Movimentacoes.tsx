@@ -460,7 +460,7 @@ export default function Movimentacoes() {
                     {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
                   </Button>
                 )}
-                <Button variant="outline" className="gap-1.5">
+                <Button variant="outline" className="gap-1.5" onClick={() => openEditModal(detailMov)}>
                   <Pencil className="h-4 w-4" /> Editar
                 </Button>
                 <Button
