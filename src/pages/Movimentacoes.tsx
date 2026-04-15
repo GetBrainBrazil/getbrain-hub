@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus } from "lucide-react";
+import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2 } from "lucide-react";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import { formatCurrency, formatDate, StatusType } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,6 +34,7 @@ export default function Movimentacoes() {
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
+  const [detailMov, setDetailMov] = useState<any>(null);
   const [form, setForm] = useState({
     descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "",
     valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "",
@@ -43,6 +46,7 @@ export default function Movimentacoes() {
   useEffect(() => { loadAll(); }, [tab]);
 
   const tipo = tab === "pagar" ? "despesa" : "receita";
+  const isPagar = tab === "pagar";
 
   async function loadAll() {
     await supabase.rpc("update_status_atrasado" as any);
@@ -77,7 +81,6 @@ export default function Movimentacoes() {
   const totalRecebidoPago = movs.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0);
   const totalAtrasado = movs.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0);
 
-  const isPagar = tab === "pagar";
   const entityLabel = isPagar ? "Fornecedor" : "Cliente";
 
   async function handleSave() {
@@ -149,6 +152,7 @@ export default function Movimentacoes() {
 
     toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
     setOpenBaixa(false);
+    setDetailMov(null);
     loadAll();
   }
 
@@ -156,6 +160,7 @@ export default function Movimentacoes() {
     if (!confirm("Excluir esta movimentação?")) return;
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
+    setDetailMov(null);
     loadAll();
   }
 
@@ -217,13 +222,13 @@ export default function Movimentacoes() {
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-border">
         <button
-          onClick={() => { setTab("pagar"); setStatusFilter("todas"); }}
+          onClick={() => { setTab("pagar"); setStatusFilter("todas"); setDetailMov(null); }}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Pagar
         </button>
         <button
-          onClick={() => { setTab("receber"); setStatusFilter("todas"); }}
+          onClick={() => { setTab("receber"); setStatusFilter("todas"); setDetailMov(null); }}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Receber
@@ -265,18 +270,21 @@ export default function Movimentacoes() {
                   <TableHead>Vencimento</TableHead>
                   <TableHead>{isPagar ? "Pagamento" : "Recebimento"}</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhuma movimentação encontrada com os filtros atuais.
                     </TableCell>
                   </TableRow>
                 ) : filtered.map(m => (
-                  <TableRow key={m.id} className={m.status === "atrasado" ? "bg-destructive/5" : ""}>
+                  <TableRow
+                    key={m.id}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${m.status === "atrasado" ? "bg-destructive/5" : ""} ${detailMov?.id === m.id ? "bg-muted" : ""}`}
+                    onClick={() => setDetailMov(m)}
+                  >
                     <TableCell className="text-sm text-muted-foreground">
                       {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
                     </TableCell>
@@ -286,16 +294,6 @@ export default function Movimentacoes() {
                     <TableCell className="text-sm">{formatDate(m.data_vencimento)}</TableCell>
                     <TableCell className="text-sm">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
                     <TableCell><StatusBadge status={m.status as StatusType} /></TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {m.status !== "pago" && m.status !== "cancelado" && (
-                          <Button size="sm" variant="outline" onClick={() => openDarBaixa(m)}>
-                            {isPagar ? "Pagar" : "Receber"}
-                          </Button>
-                        )}
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(m.id)}>Excluir</Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -303,6 +301,138 @@ export default function Movimentacoes() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Detail Sheet */}
+      <Sheet open={!!detailMov} onOpenChange={open => { if (!open) setDetailMov(null); }}>
+        <SheetContent side="right" className="w-[420px] sm:w-[460px] p-0 overflow-y-auto">
+          {detailMov && (
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 pb-0">
+                <div className="flex items-center gap-2">
+                  {isPagar ? <TrendingDown className="h-5 w-5 text-destructive" /> : <TrendingUp className="h-5 w-5 text-success" />}
+                  <StatusBadge status={detailMov.status as StatusType} />
+                  <span className="text-sm text-muted-foreground">{isPagar ? "A Pagar" : "A Receber"}</span>
+                </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailMov(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Value */}
+              <div className="px-5 pt-3 pb-4">
+                <span className={`text-3xl font-bold font-mono ${detailMov.status === "atrasado" ? "text-destructive" : isPagar ? "text-foreground" : "text-success"}`}>
+                  {formatCurrency(Number(detailMov.valor_previsto))}
+                </span>
+                {detailMov.valor_realizado && Number(detailMov.valor_realizado) > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Valor {isPagar ? "pago" : "recebido"}: <span className="font-mono font-medium text-foreground">{formatCurrency(Number(detailMov.valor_realizado))}</span>
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Description */}
+              <div className="px-5 py-4 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descrição</p>
+                  <p className="text-sm">{detailMov.descricao}</p>
+                </div>
+
+                {/* Entity */}
+                {(isPagar ? (detailMov.fornecedores as any)?.nome : (detailMov.clientes as any)?.nome) && (
+                  <div className="flex items-start gap-3 bg-muted/50 rounded-lg p-3">
+                    <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">{entityLabel}</p>
+                      <p className="text-sm font-medium">{isPagar ? (detailMov.fornecedores as any)?.nome : (detailMov.clientes as any)?.nome}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Project */}
+                {(detailMov.projetos as any)?.nome && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Projeto</p>
+                    <p className="text-sm">{(detailMov.projetos as any).nome}</p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Dates */}
+              <div className="px-5 py-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Datas</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Vencimento</p>
+                    <p className="text-sm font-medium">{formatDate(detailMov.data_vencimento)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Competência</p>
+                    <p className="text-sm font-medium">{formatDate(detailMov.data_competencia)}</p>
+                  </div>
+                  {detailMov.data_pagamento && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">{isPagar ? "Pagamento" : "Recebimento"}</p>
+                      <p className="text-sm font-medium">{formatDate(detailMov.data_pagamento)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Category */}
+              {(detailMov.categorias as any)?.nome && (
+                <>
+                  <div className="px-5 py-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Classificação</p>
+                    <span className="inline-block text-xs bg-muted px-3 py-1.5 rounded-full font-medium">
+                      {(detailMov.categorias as any).nome}
+                    </span>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {/* Observations */}
+              {detailMov.observacoes && (
+                <>
+                  <div className="px-5 py-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Observações</p>
+                    <p className="text-sm text-muted-foreground">{detailMov.observacoes}</p>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {/* Actions */}
+              <div className="mt-auto p-5 flex items-center gap-2">
+                {detailMov.status !== "pago" && detailMov.status !== "cancelado" && (
+                  <Button
+                    className="gap-1.5 bg-success hover:bg-success/90 text-white"
+                    onClick={() => { openDarBaixa(detailMov); }}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
+                  </Button>
+                )}
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="ml-auto"
+                  onClick={() => handleDelete(detailMov.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Baixa Dialog */}
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
