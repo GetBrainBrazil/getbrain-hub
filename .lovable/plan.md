@@ -1,35 +1,30 @@
 
 
-## Plano: Copiar exatamente o estilo clean do modal da referência
-
-### Problema
-O modal atual tem inputs com fundo bege (`bg-[#FDF8F4]`), botão marrom escuro, e um estilo "pesado" que não combina com o layout limpo da referência.
+## Plano: Recorrência com seleção de período e quantidade
 
 ### O que muda
 
-**Estilo dos inputs:**
-- Remover `bg-[#FDF8F4]` de todos os inputs — usar fundo branco/transparente com borda simples (`border-gray-300`)
-- Altura e tipografia mais leves
+**Form state:**
+- Adicionar `quantidade_recorrencia: number` (default 1) ao form state
+- Mudar `frequencia_recorrencia` para aceitar `"diario" | "mensal" | "anual"` (default `"mensal"`)
 
-**Título do modal:**
-- Ícone de documento (📄) + "Nova Conta a Pagar" no header, estilo simples como na referência
+**UI — Seção de recorrência (linhas 479-486):**
+- Manter o Switch "Conta recorrente"
+- Quando ativado, exibir abaixo:
+  - Input numérico para quantidade (ex: "12")
+  - Select com opções: "Dia(s)", "Mês(es)", "Ano(s)"
+  - Texto: "A cada X dia(s)/mês(es)/ano(s)"
 
-**Seções:**
-- Headers "DADOS PRINCIPAIS" e "PRAZOS E VALORES" com ícone pequeno + texto cinza, exatamente como no print
-- Separadores finos e discretos
+**Lógica de criação (linhas 179-194):**
+- Usar `quantidade_recorrencia` como número de repetições (em vez de fixo 11)
+- Calcular datas com base na frequência:
+  - `diario`: addDays
+  - `mensal`: addMonths
+  - `anual`: addYears
 
-**Campos — sem Empresa Proprietária:**
-- Fornecedor (largura total menos o botão "+") + botão "+"
-- Descrição da Movimentação (largura total)
-- 3 colunas: Valor Previsto | Data de Competência | Data de Vencimento
-- Conta Bancária (select pequeno, alinhado à esquerda)
-
-**Botão principal:**
-- Trocar o marrom (`bg-[#7C2D12]`) por um estilo mais clean/escuro ou manter consistente com o tema do app
-
-**Remover:**
-- Seção de Observações Internas e Recorrência do visual imediato (ou mover para baixo, discreto) — o print não mostra essas seções
+**resetForm e edit prefill:**
+- Incluir `quantidade_recorrencia` no reset e no carregamento de edição
 
 ### Arquivo
-- `src/pages/Movimentacoes.tsx` — função `renderModalForm` (linhas 327-506) e os DialogContent dos modais de criação e edição
+- `src/pages/Movimentacoes.tsx`
 
