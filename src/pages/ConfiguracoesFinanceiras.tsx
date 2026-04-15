@@ -78,7 +78,7 @@ function ContasBancariasTab({ search }: { search: string }) {
   // Filters
   const [filterBanco, setFilterBanco] = useState("__all__");
   const [filterTipo, setFilterTipo] = useState("__all__");
-  const [filterStatus, setFilterStatus] = useState("__all__");
+  const [filterMoeda, setFilterMoeda] = useState("__all__");
 
   // Unified drawer for create/view/edit
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -97,8 +97,7 @@ function ContasBancariasTab({ search }: { search: string }) {
     if (search && !i.nome.toLowerCase().includes(search.toLowerCase()) && !(i.banco || "").toLowerCase().includes(search.toLowerCase())) return false;
     if (filterBanco !== "__all__" && i.banco !== filterBanco) return false;
     if (filterTipo !== "__all__" && i.tipo !== filterTipo) return false;
-    if (filterStatus === "ativas" && !i.ativo) return false;
-    if (filterStatus === "inativas" && i.ativo) return false;
+    if (filterMoeda !== "__all__" && i.moeda !== filterMoeda) return false;
     return true;
   });
 
@@ -220,12 +219,13 @@ function ContasBancariasTab({ search }: { search: string }) {
                 <SelectItem value="investimento">Investimento</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Todas" /></SelectTrigger>
+            <Select value={filterMoeda} onValueChange={setFilterMoeda}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Todas as Moedas" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">Todas</SelectItem>
-                <SelectItem value="ativas">Ativas</SelectItem>
-                <SelectItem value="inativas">Inativas</SelectItem>
+                <SelectItem value="__all__">Todas as Moedas</SelectItem>
+                <SelectItem value="BRL">Real (R$)</SelectItem>
+                <SelectItem value="USD">Dólar (US$)</SelectItem>
+                <SelectItem value="EUR">Euro (€)</SelectItem>
               </SelectContent>
             </Select>
           </div>
