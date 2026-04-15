@@ -318,10 +318,12 @@ function ContasBancariasTab({ search }: { search: string }) {
                     )}
                   </div>
                   <div><Label>Observações</Label><Textarea value={editForm.observacoes} onChange={e => setEditForm({ ...editForm, observacoes: e.target.value })} placeholder="Observações sobre a conta..." rows={4} /></div>
-                  <div className="flex items-center gap-3">
-                    <Label>Ativo</Label>
-                    <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
-                  </div>
+                  {drawerMode === "edit" && (
+                    <div className="flex items-center gap-3">
+                      <Label>Ativo</Label>
+                      <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
+                    </div>
+                  )}
                 </div>
                 <SheetFooter className="flex-row gap-2 pt-4 border-t">
                   <Button variant="outline" className="flex-1" onClick={cancelEdit}>Cancelar</Button>
