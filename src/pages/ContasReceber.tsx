@@ -30,6 +30,7 @@ export default function ContasReceber() {
   const [statusFilter, setStatusFilter] = usePersistedState("contas_receber_status", "todos");
   const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("contas_receber_period", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("contas_receber_period_custom", { start: null, end: null });
+  const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("contas_receber_sort", { key: null, direction: null });
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
@@ -73,11 +74,11 @@ export default function ContasReceber() {
     });
   }, [movs, periodRange]);
 
-  const filtered = periodFiltered.filter(m => {
+  const filtered = applySorting(periodFiltered.filter(m => {
     if (statusFilter !== "todos" && m.status !== statusFilter) return false;
     if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
-  });
+  }), sortConfig);
 
   const totalPendente = periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
   const recebidoMes = periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado), 0);
