@@ -227,7 +227,7 @@ function ContasBancariasTab({ search }: { search: string }) {
         </Table>
 
         <Sheet open={drawerOpen} onOpenChange={(v) => { setDrawerOpen(v); if (!v) setDrawerMode("view"); }}>
-          <SheetContent className="flex flex-col">
+          <SheetContent className="flex flex-col w-full sm:max-w-[480px] overflow-x-hidden">
             <SheetHeader>
               <SheetTitle>{drawerMode === "view" ? "Detalhes da Conta" : drawerMode === "create" ? "Nova Conta Bancária" : "Editar Conta Bancária"}</SheetTitle>
             </SheetHeader>
