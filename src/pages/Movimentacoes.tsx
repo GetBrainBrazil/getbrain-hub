@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus } from "lucide-react";
+import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2 } from "lucide-react";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -32,10 +32,8 @@ export default function Movimentacoes() {
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
-  const [form, setForm] = useState({
-    descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "",
-    valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "",
-  });
+  const [detailMov, setDetailMov] = useState<any>(null);
+  const [editingMov, setEditingMov] = useState<any>(null);
   const [baixaForm, setBaixaForm] = useState({
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
   });
