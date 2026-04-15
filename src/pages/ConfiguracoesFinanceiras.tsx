@@ -264,7 +264,7 @@ function ContasBancariasTab({ search }: { search: string }) {
             )}
 
             {/* Edit Mode */}
-            {drawerMode === "edit" && (
+            {(drawerMode === "edit" || drawerMode === "create") && (
               <>
                 <div className="flex-1 space-y-4 py-4 overflow-y-auto animate-fade-in">
                   <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} placeholder="Ex: Itaú Corrente" /></div>
