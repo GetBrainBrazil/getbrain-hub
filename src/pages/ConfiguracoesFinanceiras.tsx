@@ -264,6 +264,7 @@ function ContasBancariasTab({ search }: { search: string }) {
             </SelectContent>
           </Select>
         </div>
+        <Table>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
