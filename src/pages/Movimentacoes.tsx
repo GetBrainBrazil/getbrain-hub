@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, Clock, TrendingUp, AlertTriangle } from "lucide-react";
+import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -185,7 +185,7 @@ export default function Movimentacoes() {
           <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (v) setTab("pagar"); }}>
             <DialogTrigger asChild>
               <Button variant="destructive" className="gap-1.5" onClick={() => setTab("pagar")}>
-                <Plus className="h-4 w-4" /> Conta a Pagar
+                <TrendingDown className="h-4 w-4" /> Conta a Pagar
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -196,7 +196,7 @@ export default function Movimentacoes() {
           <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (v) setTab("receber"); }}>
             <DialogTrigger asChild>
               <Button className="gap-1.5 bg-success hover:bg-success/90 text-white" onClick={() => setTab("receber")}>
-                <Plus className="h-4 w-4" /> Conta a Receber
+                <TrendingUp className="h-4 w-4" /> Conta a Receber
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
