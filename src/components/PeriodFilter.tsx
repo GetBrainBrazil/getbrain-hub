@@ -56,39 +56,68 @@ export function getDateRange(preset: PeriodPreset, customRange: { start: string 
   }
 }
 
+function InlineDatePicker({ date, onSelect, placeholder, disabledFn }: {
+  date: Date | undefined;
+  onSelect: (d: Date | undefined) => void;
+  placeholder: string;
+  disabledFn?: (d: Date) => boolean;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            "h-9 px-3 text-sm font-normal border-input gap-2 min-w-[140px] justify-start",
+            !date && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          {date ? format(date, "dd/MM/yyyy") : <span>{placeholder}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={onSelect}
+          disabled={disabledFn}
+          locale={ptBR}
+          className={cn("p-3 pointer-events-auto")}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function PeriodFilter({ preset, customRange, onPresetChange, onCustomRangeChange }: PeriodFilterProps) {
   const [open, setOpen] = useState(false);
 
   const displayLabel = useMemo(() => {
-    if (preset === "custom" && customRange.start && customRange.end) {
-      const s = format(new Date(customRange.start + "T12:00:00"), "dd/MM/yy");
-      const e = format(new Date(customRange.end + "T12:00:00"), "dd/MM/yy");
-      return `${s} - ${e}`;
-    }
     return presetLabels[preset];
-  }, [preset, customRange]);
+  }, [preset]);
 
   function handlePreset(p: PeriodPreset) {
     onPresetChange(p);
-    if (p !== "custom") setOpen(false);
+    setOpen(false);
   }
 
   const customStartDate = customRange.start ? new Date(customRange.start + "T12:00:00") : undefined;
   const customEndDate = customRange.end ? new Date(customRange.end + "T12:00:00") : undefined;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 h-9 px-3 text-sm font-normal border-input">
-          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-          <span>{displayLabel}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <div className="flex">
-          {/* Preset list */}
-          <div className="border-r border-border p-2 min-w-[160px]">
+    <div className="flex items-center gap-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2 h-9 px-3 text-sm font-normal border-input">
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            <span>{displayLabel}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <div className="p-2 min-w-[160px]">
             {(Object.keys(presetLabels) as PeriodPreset[]).map(p => (
               <button
                 key={p}
@@ -102,50 +131,29 @@ export function PeriodFilter({ preset, customRange, onPresetChange, onCustomRang
               </button>
             ))}
           </div>
+        </PopoverContent>
+      </Popover>
 
-          {/* Custom date pickers */}
-          {preset === "custom" && (
-            <div className="p-3 space-y-3">
-              <div className="flex gap-3">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Data Início</p>
-                  <Calendar
-                    mode="single"
-                    selected={customStartDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        onCustomRangeChange({ ...customRange, start: format(date, "yyyy-MM-dd") });
-                      }
-                    }}
-                    className={cn("p-2 pointer-events-auto")}
-                    locale={ptBR}
-                  />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Data Fim</p>
-                  <Calendar
-                    mode="single"
-                    selected={customEndDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        onCustomRangeChange({ ...customRange, end: format(date, "yyyy-MM-dd") });
-                      }
-                    }}
-                    disabled={(date) => customStartDate ? date < customStartDate : false}
-                    className={cn("p-2 pointer-events-auto")}
-                    locale={ptBR}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button size="sm" onClick={() => setOpen(false)} disabled={!customRange.start || !customRange.end}>
-                  Aplicar
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+      {preset === "custom" && (
+        <>
+          <InlineDatePicker
+            date={customStartDate}
+            onSelect={(d) => {
+              if (d) onCustomRangeChange({ ...customRange, start: format(d, "yyyy-MM-dd") });
+            }}
+            placeholder="dd/mm/aaaa"
+          />
+          <span className="text-sm text-muted-foreground">a</span>
+          <InlineDatePicker
+            date={customEndDate}
+            onSelect={(d) => {
+              if (d) onCustomRangeChange({ ...customRange, end: format(d, "yyyy-MM-dd") });
+            }}
+            placeholder="dd/mm/aaaa"
+            disabledFn={(d) => customStartDate ? d < customStartDate : false}
+          />
+        </>
+      )}
+    </div>
   );
 }
