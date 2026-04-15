@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatters";
@@ -76,6 +77,11 @@ function ContasBancariasTab({ search }: { search: string }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" });
 
+  // Edit drawer state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "", moeda: "BRL", ativo: true });
+
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("contas_bancarias").select("*").order("nome"); setItems(data || []); }
 
@@ -90,6 +96,35 @@ function ContasBancariasTab({ search }: { search: string }) {
     if (error) { toast.error("Erro ao salvar"); return; }
     toast.success("Conta bancária criada!");
     setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" }); load();
+  }
+
+  function openEdit(item: any) {
+    setEditId(item.id);
+    setEditForm({
+      nome: item.nome || "",
+      banco: item.banco || "",
+      agencia: item.agencia || "",
+      conta: item.conta || "",
+      tipo: item.tipo || "corrente",
+      saldo_inicial: new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(item.saldo_inicial ?? 0)),
+      moeda: item.moeda || "BRL",
+      ativo: item.ativo ?? true,
+    });
+    setEditOpen(true);
+  }
+
+  async function handleEditSave() {
+    if (!editForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (!editForm.banco.trim()) { toast.error("Banco é obrigatório"); return; }
+    const saldo = parseFloat(editForm.saldo_inicial.replace(/\./g, "").replace(",", "."));
+    if (isNaN(saldo)) { toast.error("Saldo inicial inválido"); return; }
+    const { error } = await supabase.from("contas_bancarias").update({
+      nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
+      tipo: editForm.tipo, saldo_inicial: saldo, moeda: editForm.moeda, ativo: editForm.ativo,
+    }).eq("id", editId!);
+    if (error) { toast.error("Erro ao atualizar"); return; }
+    toast.success("Conta atualizada com sucesso");
+    setEditOpen(false); load();
   }
 
   async function toggleAtivo(id: string, ativo: boolean) {
@@ -142,21 +177,67 @@ function ContasBancariasTab({ search }: { search: string }) {
           </Dialog>
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
-              <TableRow key={i.id}>
+              <TableRow key={i.id} className="group cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => openEdit(i)}>
                 <TableCell className="font-medium">{i.nome}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{i.banco || "—"}</TableCell>
                 <TableCell className="text-sm capitalize">{i.tipo}</TableCell>
                 <TableCell className="text-sm">{i.moeda === "USD" ? "US$" : i.moeda === "EUR" ? "€" : "R$"}</TableCell>
                 <TableCell className="text-sm">{formatCurrency(Number(i.saldo_inicial))}</TableCell>
-                <TableCell><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
+                <TableCell onClick={e => e.stopPropagation()}><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
+                <TableCell><Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma conta bancária encontrada</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma conta bancária encontrada</TableCell></TableRow>}
           </TableBody>
         </Table>
+
+        <Sheet open={editOpen} onOpenChange={setEditOpen}>
+          <SheetContent className="flex flex-col">
+            <SheetHeader>
+              <SheetTitle>Editar Conta Bancária</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 space-y-4 py-4 overflow-y-auto">
+              <div><Label>Nome *</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} /></div>
+              <div><Label>Banco *</Label><Input value={editForm.banco} onChange={e => setEditForm({ ...editForm, banco: e.target.value })} /></div>
+              <div><Label>Tipo</Label>
+                <Select value={editForm.tipo} onValueChange={v => setEditForm({ ...editForm, tipo: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="corrente">Corrente</SelectItem>
+                    <SelectItem value="poupanca">Poupança</SelectItem>
+                    <SelectItem value="investimento">Investimento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Moeda</Label>
+                <Select value={editForm.moeda} onValueChange={v => setEditForm({ ...editForm, moeda: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">Real (R$)</SelectItem>
+                    <SelectItem value="USD">Dólar (US$)</SelectItem>
+                    <SelectItem value="EUR">Euro (€)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Agência</Label><Input value={editForm.agencia} onChange={e => setEditForm({ ...editForm, agencia: e.target.value })} /></div>
+                <div><Label>Conta</Label><Input value={editForm.conta} onChange={e => setEditForm({ ...editForm, conta: e.target.value })} /></div>
+              </div>
+              <div><Label>Saldo Inicial (R$)</Label><Input value={editForm.saldo_inicial} onChange={e => setEditForm({ ...editForm, saldo_inicial: e.target.value })} placeholder="0,00" /></div>
+              <div className="flex items-center gap-3">
+                <Label>Ativo</Label>
+                <Switch checked={editForm.ativo} onCheckedChange={v => setEditForm({ ...editForm, ativo: v })} />
+              </div>
+            </div>
+            <SheetFooter className="flex-row gap-2 pt-4 border-t">
+              <Button variant="outline" className="flex-1" onClick={() => setEditOpen(false)}>Cancelar</Button>
+              <Button className="flex-1" onClick={handleEditSave}>Salvar Alterações</Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       </CardContent>
     </Card>
   );
