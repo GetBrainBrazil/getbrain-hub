@@ -75,13 +75,15 @@ export default function ConfiguracoesFinanceiras() {
 function ContasBancariasTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" });
+  const [form, setForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [] as string[], observacoes: "" });
+  const [newPixKey, setNewPixKey] = useState("");
 
   // Drawer state: view/edit two-step
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<"view" | "edit">("view");
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "", moeda: "BRL", ativo: true });
+  const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "", moeda: "BRL", ativo: true, chaves_pix: [] as string[], observacoes: "" });
+  const [editNewPixKey, setEditNewPixKey] = useState("");
 
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("contas_bancarias").select("*").order("nome"); setItems(data || []); }
