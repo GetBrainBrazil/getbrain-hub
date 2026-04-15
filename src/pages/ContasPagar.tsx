@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, ArrowUpFromLine, Search } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, ArrowUpFromLine, Search, Check, ChevronsUpDown } from "lucide-react";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { formatCurrency, formatDate, StatusType } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 export default function ContasPagar() {
   const { user } = useAuth();
@@ -28,9 +33,15 @@ export default function ContasPagar() {
   const [openNew, setOpenNew] = useState(false);
   const [openPag, setOpenPag] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
+
+  // Fornecedor combobox state
+  const [fornecedorOpen, setFornecedorOpen] = useState(false);
+  const [fornecedorSearch, setFornecedorSearch] = useState("");
+
   const [form, setForm] = useState({
-    descricao: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "",
-    valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "",
+    descricao: "", fornecedor_id: "", conta_bancaria_id: "",
+    valor_previsto: "", data_competencia: "", data_vencimento: "",
+    recorrente: false, frequencia_recorrencia: "mensal",
   });
   const [pagForm, setPagForm] = useState({
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
@@ -42,7 +53,7 @@ export default function ContasPagar() {
     await supabase.rpc("update_status_atrasado" as any);
     const [r1, r2, r3, r4, r5, r6] = await Promise.all([
       supabase.from("movimentacoes").select("*, fornecedores(nome), projetos(nome)").eq("tipo", "despesa").order("data_vencimento", { ascending: false }),
-      supabase.from("fornecedores").select("*").eq("ativo", true),
+      supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
       supabase.from("categorias").select("*").eq("ativo", true).in("tipo", ["despesa", "ambos"]),
       supabase.from("contas_bancarias").select("*").eq("ativo", true),
       supabase.from("projetos").select("*"),
@@ -56,6 +67,28 @@ export default function ContasPagar() {
     setMeios(r6.data || []);
   }
 
+  const filteredFornecedores = useMemo(() => {
+    if (!fornecedorSearch) return fornecedores;
+    return fornecedores.filter(f => f.nome.toLowerCase().includes(fornecedorSearch.toLowerCase()));
+  }, [fornecedores, fornecedorSearch]);
+
+  const showCreateFornecedor = fornecedorSearch.trim().length > 0 &&
+    !fornecedores.some(f => f.nome.toLowerCase() === fornecedorSearch.trim().toLowerCase());
+
+  async function handleCreateFornecedor() {
+    const nome = fornecedorSearch.trim();
+    if (!nome) return;
+    const { data, error } = await supabase.from("fornecedores").insert({ nome }).select().single();
+    if (error) { toast.error("Erro ao criar fornecedor"); return; }
+    toast.success(`Fornecedor "${nome}" criado!`);
+    setFornecedores(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm(prev => ({ ...prev, fornecedor_id: data.id }));
+    setFornecedorSearch("");
+    setFornecedorOpen(false);
+  }
+
+  const selectedFornecedorNome = fornecedores.find(f => f.id === form.fornecedor_id)?.nome;
+
   const filtered = movs.filter(m => {
     if (statusFilter !== "todos" && m.status !== statusFilter) return false;
     if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
@@ -67,24 +100,56 @@ export default function ContasPagar() {
   const vencidos = movs.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0);
 
   async function handleSave() {
-    const { error } = await supabase.from("movimentacoes").insert({
-      tipo: "despesa",
+    if (!form.descricao || !form.valor_previsto || !form.data_competencia || !form.data_vencimento) {
+      toast.error("Preencha os campos obrigatórios");
+      return;
+    }
+
+    const baseRecord = {
+      tipo: "despesa" as const,
       descricao: form.descricao,
       fornecedor_id: form.fornecedor_id || null,
-      projeto_id: form.projeto_id || null,
-      categoria_id: form.categoria_id || null,
       conta_bancaria_id: form.conta_bancaria_id || null,
       valor_previsto: parseFloat(form.valor_previsto),
       data_competencia: form.data_competencia,
       data_vencimento: form.data_vencimento,
-      observacoes: form.observacoes || null,
+      recorrente: form.recorrente,
+      frequencia_recorrencia: form.recorrente ? form.frequencia_recorrencia : null,
       created_by: user?.id,
-    });
+    };
+
+    // Insert the first record
+    const { data: parentData, error } = await supabase.from("movimentacoes").insert(baseRecord).select().single();
     if (error) { toast.error("Erro ao salvar"); return; }
-    toast.success("Conta a pagar criada!");
+
+    // If recorrente, create 11 more months (total 12)
+    if (form.recorrente && parentData) {
+      const recurrences: any[] = [];
+      for (let i = 1; i <= 11; i++) {
+        const competencia = addMonths(form.data_competencia, i);
+        const vencimento = addMonths(form.data_vencimento, i);
+        recurrences.push({
+          ...baseRecord,
+          data_competencia: competencia,
+          data_vencimento: vencimento,
+          movimentacao_pai_id: parentData.id,
+        });
+      }
+      const { error: recError } = await supabase.from("movimentacoes").insert(recurrences);
+      if (recError) { toast.error("Erro ao criar recorrências"); }
+    }
+
+    toast.success(form.recorrente ? "Conta recorrente criada (12 meses)!" : "Conta a pagar criada!");
     setOpenNew(false);
-    setForm({ descricao: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "" });
+    setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal" });
+    setFornecedorSearch("");
     loadAll();
+  }
+
+  function addMonths(dateStr: string, months: number): string {
+    const d = new Date(dateStr + "T12:00:00");
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString().split("T")[0];
   }
 
   function openRegistrarPag(m: any) {
@@ -141,46 +206,124 @@ export default function ContasPagar() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Contas a Pagar</h1>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
+        <Dialog open={openNew} onOpenChange={(v) => { setOpenNew(v); if (!v) setFornecedorSearch(""); }}>
           <DialogTrigger asChild>
             <Button className="gap-1"><Plus className="h-4 w-4" /> Nova Conta a Pagar</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Nova Conta a Pagar</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div><Label>Descrição *</Label><Input value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} /></div>
-              <div><Label>Fornecedor</Label>
-                <Select value={form.fornecedor_id} onValueChange={v => setForm({...form, fornecedor_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>{fornecedores.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Projeto</Label>
-                <Select value={form.projeto_id} onValueChange={v => setForm({...form, projeto_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>{projetos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Categoria</Label>
-                <Select value={form.categoria_id} onValueChange={v => setForm({...form, categoria_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>{categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Valor Previsto (R$) *</Label><Input type="number" step="0.01" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Data Competência *</Label><Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} /></div>
-                <div><Label>Data Vencimento *</Label><Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} /></div>
-              </div>
-              <div><Label>Conta Bancária</Label>
-                <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} /></div>
-              <Button onClick={handleSave} className="w-full">Salvar</Button>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle className="flex items-center gap-2 text-lg">Nova Conta a Pagar</DialogTitle></DialogHeader>
+
+            {/* DADOS PRINCIPAIS */}
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase flex items-center gap-1.5">
+                📋 Dados Principais
+              </p>
+              <Separator />
             </div>
+
+            <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+              <div>
+                <Label>Fornecedor *</Label>
+                <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal">
+                      {selectedFornecedorNome || "Selecione..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Buscar..." value={fornecedorSearch} onValueChange={setFornecedorSearch} />
+                      <CommandList>
+                        <CommandEmpty>
+                          {fornecedorSearch.trim() ? "Nenhum fornecedor encontrado" : "Digite para buscar"}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {filteredFornecedores.map(f => (
+                            <CommandItem key={f.id} value={f.id} onSelect={() => {
+                              setForm(prev => ({ ...prev, fornecedor_id: f.id }));
+                              setFornecedorOpen(false);
+                              setFornecedorSearch("");
+                            }}>
+                              <Check className={cn("mr-2 h-4 w-4", form.fornecedor_id === f.id ? "opacity-100" : "opacity-0")} />
+                              {f.nome}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        {showCreateFornecedor && (
+                          <CommandGroup>
+                            <CommandItem onSelect={handleCreateFornecedor} className="text-primary font-medium">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Criar "{fornecedorSearch.trim()}"
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => {
+                setFornecedorOpen(true);
+                setFornecedorSearch("");
+              }}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div>
+              <Label>Descrição da Movimentação *</Label>
+              <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} />
+            </div>
+
+            {/* PRAZOS E VALORES */}
+            <div className="space-y-1 mt-2">
+              <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase flex items-center gap-1.5">
+                📅 Prazos e Valores
+              </p>
+              <Separator />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Valor Previsto (R$) *</Label>
+                <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} />
+              </div>
+              <div>
+                <Label>Data de Competência *</Label>
+                <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} />
+              </div>
+              <div>
+                <Label>Data de Vencimento *</Label>
+                <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} />
+              </div>
+            </div>
+
+            <div>
+              <Label>Conta Bancária</Label>
+              <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            {/* RECORRÊNCIA */}
+            <div className="space-y-1 mt-2">
+              <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase flex items-center gap-1.5">
+                🔄 Recorrência
+              </p>
+              <Separator />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Conta recorrente</p>
+                <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 12 meses</p>
+              </div>
+              <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
+            </div>
+
+            <Button onClick={handleSave} className="w-full mt-2">Salvar</Button>
           </DialogContent>
         </Dialog>
       </div>
