@@ -85,11 +85,11 @@ function ContasBancariasTab({ search }: { search: string }) {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     const { error } = await supabase.from("contas_bancarias").insert({
       nome: form.nome, banco: form.banco || null, agencia: form.agencia || null, conta: form.conta || null,
-      tipo: form.tipo, saldo_inicial: parseFloat(form.saldo_inicial) || 0, cor: form.cor,
+      tipo: form.tipo, saldo_inicial: parseFloat(form.saldo_inicial) || 0, moeda: form.moeda,
     });
     if (error) { toast.error("Erro ao salvar"); return; }
     toast.success("Conta bancária criada!");
-    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", cor: "#3B82F6" }); load();
+    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" }); load();
   }
 
   async function toggleAtivo(id: string, ativo: boolean) {
