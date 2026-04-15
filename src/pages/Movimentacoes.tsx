@@ -324,7 +324,7 @@ export default function Movimentacoes() {
                 <p className={`text-2xl font-semibold ${detailMov.status === "atrasado" ? "text-destructive" : isPagar ? "text-destructive" : "text-success"}`}>
                   {formatCurrency(Number(detailMov.valor_previsto))}
                 </p>
-                {detailMov.valor_realizado && Number(detailMov.valor_realizado) > 0 && (
+                {detailMov.valor_realizado != null && Number(detailMov.valor_realizado) > 0 && (
                   <p className="text-sm text-muted-foreground mt-1">
                     Valor {isPagar ? "pago" : "recebido"}: <span className="font-medium text-foreground">{formatCurrency(Number(detailMov.valor_realizado))}</span>
                   </p>
