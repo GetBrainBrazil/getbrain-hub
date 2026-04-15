@@ -124,8 +124,17 @@ function ContasBancariasTab({ search }: { search: string }) {
                   <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: e.target.value })} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Saldo Inicial (R$)</Label><Input type="number" step="0.01" value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} /></div>
-                  <div><Label>Cor</Label><Input type="color" value={form.cor} onChange={e => setForm({ ...form, cor: e.target.value })} className="h-10" /></div>
+                  <div><Label>Saldo Inicial</Label><Input type="number" step="0.01" value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} /></div>
+                  <div><Label>Moeda</Label>
+                    <Select value={form.moeda} onValueChange={v => setForm({ ...form, moeda: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BRL">Real (R$)</SelectItem>
+                        <SelectItem value="USD">Dólar (US$)</SelectItem>
+                        <SelectItem value="EUR">Euro (€)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <Button onClick={handleSave} className="w-full">Salvar</Button>
               </div>
