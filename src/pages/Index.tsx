@@ -132,7 +132,7 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">{formatDate(m.data_vencimento)}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`text-sm font-mono font-semibold ${m.tipo === "receita" ? "text-success" : "text-destructive"}`}>
+                      <p className={`text-sm font-semibold ${m.tipo === "receita" ? "text-success" : "text-destructive"}`}>
                         {m.tipo === "despesa" ? "-" : "+"}{formatCurrency(Number(m.valor_previsto))}
                       </p>
                       <StatusBadge status={m.status as StatusType} />

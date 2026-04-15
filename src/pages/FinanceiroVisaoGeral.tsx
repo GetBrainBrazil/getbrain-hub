@@ -129,7 +129,7 @@ export default function FinanceiroVisaoGeral() {
                 <AlertTriangle className="h-4 w-4 text-destructive" />
                 <span className="text-sm">{vencidas} conta(s) a pagar atrasada(s)</span>
               </div>
-              <span className="font-mono text-sm font-bold">{formatCurrency(valorVencido)}</span>
+              <span className="text-sm font-bold">{formatCurrency(valorVencido)}</span>
             </div>
           </CardContent>
         </Card>
@@ -207,7 +207,7 @@ export default function FinanceiroVisaoGeral() {
                       <p className="text-sm font-medium">{c.nome}</p>
                       <p className="text-xs text-muted-foreground">{c.banco} • {c.tipo}</p>
                     </div>
-                    <span className="font-mono text-sm font-semibold">{formatCurrency(c.saldo)}</span>
+                    <span className="text-sm font-semibold">{formatCurrency(c.saldo)}</span>
                   </div>
                 ))}
               </div>
@@ -228,7 +228,7 @@ export default function FinanceiroVisaoGeral() {
                     <p className="text-sm truncate max-w-[200px]">{m.descricao}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(m.data_pagamento!)}</p>
                   </div>
-                  <span className={`font-mono text-sm font-semibold ${m.tipo === "receita" ? "text-success" : "text-destructive"}`}>
+                  <span className={`text-sm font-semibold ${m.tipo === "receita" ? "text-success" : "text-destructive"}`}>
                     {m.tipo === "despesa" ? "-" : "+"}{formatCurrency(Number(m.valor_realizado))}
                   </span>
                 </div>
