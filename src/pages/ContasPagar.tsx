@@ -392,12 +392,12 @@ export default function ContasPagar() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead className="text-right">Valor Previsto</TableHead>
-                  <TableHead className="text-right">Valor Pago</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead label="Vencimento" sortKey="data_vencimento" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Descrição" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Fornecedor" sortKey="fornecedores" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Valor Previsto" sortKey="valor_previsto" currentSort={sortConfig} onSort={setSortConfig} className="text-right" />
+                  <SortableTableHead label="Valor Pago" sortKey="valor_realizado" currentSort={sortConfig} onSort={setSortConfig} className="text-right" />
+                  <SortableTableHead label="Status" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} />
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>

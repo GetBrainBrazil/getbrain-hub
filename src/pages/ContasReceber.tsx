@@ -230,12 +230,12 @@ export default function ContasReceber() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Valor Previsto</TableHead>
-                  <TableHead className="text-right">Valor Recebido</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead label="Vencimento" sortKey="data_vencimento" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Descrição" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Cliente" sortKey="clientes" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Valor Previsto" sortKey="valor_previsto" currentSort={sortConfig} onSort={setSortConfig} className="text-right" />
+                  <SortableTableHead label="Valor Recebido" sortKey="valor_realizado" currentSort={sortConfig} onSort={setSortConfig} className="text-right" />
+                  <SortableTableHead label="Status" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} />
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
