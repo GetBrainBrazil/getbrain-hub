@@ -1,18 +1,41 @@
 
 
-## Plano: Bolinhas pontuais no Fluxo de Caixa Projetado
+## Plano: Refazer modal "Nova Conta a Pagar" seguindo exatamente o layout da referência
 
-### Problema
-Atualmente, o gráfico exibe bolinhas (`dot`) em **todos os 13 pontos** de dados (a cada 5 dias), criando poluição visual.
+### O que será feito
 
-### Solução
-Exibir bolinhas apenas nos pontos-chave: **dia 0 (hoje), dia 15, dia 30, dia 45 e dia 60** — ou seja, a cada 15 dias. Isso dá contexto temporal sem sobrecarregar a linha.
+Reescrever completamente o conteúdo do modal em `src/pages/ContasPagar.tsx` para seguir pixel a pixel o layout das imagens enviadas:
 
-### Mudança
-**`src/pages/FinanceiroVisaoGeral.tsx`**:
-1. Marcar nos dados do `fluxoData` quais pontos são "âncora" (dias 0, 15, 30, 45, 60)
-2. Trocar `dot={{ r: 5, ... }}` por uma função customizada que só renderiza o ponto quando o índice corresponde a um ponto âncora
-3. Manter `activeDot` para hover em qualquer ponto
+### Layout exato baseado nas imagens
 
-Resultado: linha suave com 5 bolinhas bem espaçadas nos marcos de tempo.
+**Seção 1 — DADOS PRINCIPAIS**
+- Header: ícone 📋 + "DADOS PRINCIPAIS" (uppercase, small, muted)
+- Linha com separador
+- Row 1: **Fornecedor \*** (ocupa ~70% largura) + botão **"+"** (ao lado direito) — sem campo "Empresa Proprietária"
+- Row 2: **Descrição da Movimentação \*** (largura total)
+
+**Seção 2 — PRAZOS E VALORES**
+- Header: ícone 📅 + "PRAZOS E VALORES" (uppercase, small, muted)
+- Linha com separador
+- Row 1 (3 colunas iguais): **Valor Previsto (R$) \*** | **Data de Competência \*** | **Data de Vencimento \***
+- Row 2: **Conta Bancária** (select, ~1/3 da largura, alinhado à esquerda)
+
+**Seção 3 — OBSERVAÇÕES INTERNAS**
+- Header: "OBSERVAÇÕES INTERNAS" (uppercase, small, muted, cor primária/cyan)
+- Textarea com placeholder "Observações adicionais..."
+
+**Seção 4 — RECORRÊNCIA** (manter como está, abaixo)
+
+**Footer** — separado por border-top:
+- Botões alinhados à direita: **"Cancelar"** (outline) + **"Confirmar Cadastro"** (primário/vermelho escuro como na ref)
+
+### Ajustes visuais
+- Modal largo (`max-w-[820px]`), padding generoso (`p-8`)
+- Labels com `text-[13px] font-semibold` e cor escura
+- Inputs com fundo levemente bege/warm (`bg-[#FDF8F4]` ou similar, bordas suaves)
+- Botão "Confirmar Cadastro" com fundo escuro/marrom (`bg-[#7C2D12]` ou similar)
+- Adicionar campo `observacoes` ao form state (texto livre, salvo na coluna `observacoes` da tabela movimentacoes)
+
+### Arquivo editado
+- `src/pages/ContasPagar.tsx`
 
