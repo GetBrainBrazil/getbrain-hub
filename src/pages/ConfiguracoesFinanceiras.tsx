@@ -97,8 +97,7 @@ function ContasBancariasTab({ search }: { search: string }) {
     if (search && !i.nome.toLowerCase().includes(search.toLowerCase()) && !(i.banco || "").toLowerCase().includes(search.toLowerCase())) return false;
     if (filterBanco !== "__all__" && i.banco !== filterBanco) return false;
     if (filterTipo !== "__all__" && i.tipo !== filterTipo) return false;
-    if (filterStatus === "ativas" && !i.ativo) return false;
-    if (filterStatus === "inativas" && i.ativo) return false;
+    if (filterMoeda !== "__all__" && i.moeda !== filterMoeda) return false;
     return true;
   });
 
