@@ -52,7 +52,7 @@ export default function Movimentacoes() {
   const [form, setForm] = useState({
     descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "",
     valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "",
-    recorrente: false, frequencia_recorrencia: "mensal",
+    recorrente: false, frequencia_recorrencia: "mensal", quantidade_recorrencia: "12",
   });
   const [baixaForm, setBaixaForm] = useState({
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
@@ -150,6 +150,24 @@ export default function Movimentacoes() {
     return d.toISOString().split("T")[0];
   }
 
+  function addDays(dateStr: string, days: number): string {
+    const d = new Date(dateStr + "T12:00:00");
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split("T")[0];
+  }
+
+  function addYears(dateStr: string, years: number): string {
+    const d = new Date(dateStr + "T12:00:00");
+    d.setFullYear(d.getFullYear() + years);
+    return d.toISOString().split("T")[0];
+  }
+
+  function addByFrequency(dateStr: string, amount: number, freq: string): string {
+    if (freq === "diario") return addDays(dateStr, amount);
+    if (freq === "anual") return addYears(dateStr, amount);
+    return addMonths(dateStr, amount);
+  }
+
   async function handleSave() {
     if (!form.descricao || !form.valor_previsto || !form.data_competencia || !form.data_vencimento) {
       toast.error("Preencha os campos obrigatórios");
@@ -176,12 +194,13 @@ export default function Movimentacoes() {
     const { data: parentData, error } = await supabase.from("movimentacoes").insert(baseRecord).select().single();
     if (error) { toast.error("Erro ao salvar"); return; }
 
-    // If recorrente, create 11 more months (total 12)
-    if (form.recorrente && parentData) {
+    // If recorrente, create additional occurrences
+    const qtdRecorrencia = parseInt(form.quantidade_recorrencia) || 1;
+    if (form.recorrente && parentData && qtdRecorrencia > 1) {
       const recurrences: any[] = [];
-      for (let i = 1; i <= 11; i++) {
-        const competencia = addMonths(form.data_competencia, i);
-        const vencimento = addMonths(form.data_vencimento, i);
+      for (let i = 1; i < qtdRecorrencia; i++) {
+        const competencia = addByFrequency(form.data_competencia, i, form.frequencia_recorrencia);
+        const vencimento = addByFrequency(form.data_vencimento, i, form.frequencia_recorrencia);
         recurrences.push({
           ...baseRecord,
           data_competencia: competencia,
@@ -193,9 +212,10 @@ export default function Movimentacoes() {
       if (recError) { toast.error("Erro ao criar recorrências"); }
     }
 
+    const freqLabel = form.frequencia_recorrencia === "diario" ? "dias" : form.frequencia_recorrencia === "anual" ? "anos" : "meses";
     toast.success(
       form.recorrente
-        ? `${isPagar ? "Conta a pagar" : "Conta a receber"} recorrente criada (12 meses)!`
+        ? `${isPagar ? "Conta a pagar" : "Conta a receber"} recorrente criada (${qtdRecorrencia} ${freqLabel})!`
         : `${isPagar ? "Conta a pagar" : "Conta a receber"} criada!`
     );
     setOpenNew(false);
@@ -204,7 +224,7 @@ export default function Movimentacoes() {
   }
 
   function resetForm() {
-    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "", recorrente: false, frequencia_recorrencia: "mensal" });
+    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "", recorrente: false, frequencia_recorrencia: "mensal", quantidade_recorrencia: "12" });
     setFornecedorSearch("");
     setClienteSearch("");
   }
@@ -278,6 +298,7 @@ export default function Movimentacoes() {
       observacoes: m.observacoes || "",
       recorrente: m.recorrente || false,
       frequencia_recorrencia: m.frequencia_recorrencia || "mensal",
+      quantidade_recorrencia: "12",
     });
     setSelectedMov(m);
     setOpenEdit(true);
@@ -477,12 +498,36 @@ export default function Movimentacoes() {
         </div>
 
         {/* RECORRÊNCIA */}
-        <div className="flex items-center justify-between rounded-lg border border-input p-3">
-          <div>
-            <p className="text-sm font-medium text-foreground">Conta recorrente</p>
-            <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 12 meses</p>
+        <div className="rounded-lg border border-input p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Conta recorrente</p>
+              <p className="text-xs text-muted-foreground">Cria automaticamente múltiplas ocorrências</p>
+            </div>
+            <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
           </div>
-          <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
+          {form.recorrente && (
+            <div className="flex items-center gap-3 pt-1">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">A cada</span>
+              <Input
+                type="number"
+                min="1"
+                value={form.quantidade_recorrencia}
+                onChange={e => setForm({...form, quantidade_recorrencia: e.target.value})}
+                className="w-20 h-9 text-sm"
+              />
+              <Select value={form.frequencia_recorrencia} onValueChange={v => setForm({...form, frequencia_recorrencia: v})}>
+                <SelectTrigger className="w-[130px] h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="diario">Dia(s)</SelectItem>
+                  <SelectItem value="mensal">Mês(es)</SelectItem>
+                  <SelectItem value="anual">Ano(s)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* FOOTER */}
