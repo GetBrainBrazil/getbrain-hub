@@ -210,23 +210,25 @@ export default function ContasPagar() {
           <DialogTrigger asChild>
             <Button className="gap-1"><Plus className="h-4 w-4" /> Nova Conta a Pagar</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle className="flex items-center gap-2 text-lg">Nova Conta a Pagar</DialogTitle></DialogHeader>
+          <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8">
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">Nova Conta a Pagar</DialogTitle>
+            </DialogHeader>
 
             {/* DADOS PRINCIPAIS */}
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase flex items-center gap-1.5">
-                📋 Dados Principais
+            <div className="mt-4 mb-3">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5">
+                📋 DADOS PRINCIPAIS
               </p>
-              <Separator />
+              <Separator className="mt-1.5" />
             </div>
 
-            <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+            <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
               <div>
-                <Label>Fornecedor *</Label>
+                <Label className="text-[13px] font-medium">Fornecedor *</Label>
                 <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal">
+                    <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal h-10 text-sm">
                       {selectedFornecedorNome || "Selecione..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -263,7 +265,7 @@ export default function ContasPagar() {
                   </PopoverContent>
                 </Popover>
               </div>
-              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => {
+              <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => {
                 setFornecedorOpen(true);
                 setFornecedorSearch("");
               }}>
@@ -271,48 +273,48 @@ export default function ContasPagar() {
               </Button>
             </div>
 
-            <div>
-              <Label>Descrição da Movimentação *</Label>
-              <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} />
+            <div className="mt-3">
+              <Label className="text-[13px] font-medium">Descrição da Movimentação *</Label>
+              <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} className="h-10 text-sm" />
             </div>
 
             {/* PRAZOS E VALORES */}
-            <div className="space-y-1 mt-2">
-              <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase flex items-center gap-1.5">
-                📅 Prazos e Valores
+            <div className="mt-6 mb-3">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5">
+                📅 PRAZOS E VALORES
               </p>
-              <Separator />
+              <Separator className="mt-1.5" />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label>Valor Previsto (R$) *</Label>
-                <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} />
+                <Label className="text-[13px] font-medium">Valor Previsto (R$) *</Label>
+                <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} className="h-10 text-sm" />
               </div>
               <div>
-                <Label>Data de Competência *</Label>
-                <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} />
+                <Label className="text-[13px] font-medium">Data de Competência *</Label>
+                <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} className="h-10 text-sm" />
               </div>
               <div>
-                <Label>Data de Vencimento *</Label>
-                <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} />
+                <Label className="text-[13px] font-medium">Data de Vencimento *</Label>
+                <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} className="h-10 text-sm" />
               </div>
             </div>
 
-            <div>
-              <Label>Conta Bancária</Label>
+            <div className="mt-3 max-w-[240px]">
+              <Label className="text-[13px] font-medium">Conta Bancária</Label>
               <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                 <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
             {/* RECORRÊNCIA */}
-            <div className="space-y-1 mt-2">
-              <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase flex items-center gap-1.5">
-                🔄 Recorrência
+            <div className="mt-6 mb-3">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5">
+                🔄 RECORRÊNCIA
               </p>
-              <Separator />
+              <Separator className="mt-1.5" />
             </div>
 
             <div className="flex items-center justify-between">
@@ -323,9 +325,9 @@ export default function ContasPagar() {
               <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
             </div>
 
-            <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
-              <Button variant="outline" onClick={() => setOpenNew(false)}>Cancelar</Button>
-              <Button onClick={handleSave}>Confirmar Cadastro</Button>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+              <Button variant="outline" onClick={() => setOpenNew(false)} className="px-6">Cancelar</Button>
+              <Button onClick={handleSave} className="px-6">Confirmar Cadastro</Button>
             </div>
           </DialogContent>
         </Dialog>
