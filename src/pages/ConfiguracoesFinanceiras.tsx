@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Pencil, Eye, X, Copy, Check, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Eye, X, Copy, Check, Trash2, Landmark, ListTree, Users, Truck, Target, Tags } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -19,12 +19,12 @@ import { formatCurrency } from "@/lib/formatters";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 
 const tabConfig = {
-  contas: { label: "Contas Bancárias", button: "+ Nova Conta" },
-  plano: { label: "Plano de Contas", button: "+ Novo Plano" },
-  clientes: { label: "Clientes", button: "+ Novo Cliente" },
-  fornecedores: { label: "Fornecedores", button: "+ Novo Fornecedor" },
-  centros: { label: "Centros de Custo", button: "+ Novo Centro" },
-  categorias: { label: "Categorias", button: "+ Nova" },
+  contas: { label: "Contas Bancárias", button: "+ Nova Conta", icon: Landmark },
+  plano: { label: "Plano de Contas", button: "+ Novo Plano", icon: ListTree },
+  clientes: { label: "Clientes", button: "+ Novo Cliente", icon: Users },
+  fornecedores: { label: "Fornecedores", button: "+ Novo Fornecedor", icon: Truck },
+  centros: { label: "Centros de Custo", button: "+ Novo Centro", icon: Target },
+  categorias: { label: "Categorias", button: "+ Nova", icon: Tags },
 };
 
 type TabKey = keyof typeof tabConfig;
@@ -44,7 +44,7 @@ export default function ConfiguracoesFinanceiras() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <TabsList>
             {Object.entries(tabConfig).map(([key, cfg]) => (
-              <TabsTrigger key={key} value={key}>{cfg.label}</TabsTrigger>
+              <TabsTrigger key={key} value={key} className="gap-1.5"><cfg.icon className="h-4 w-4" />{cfg.label}</TabsTrigger>
             ))}
           </TabsList>
         </div>
