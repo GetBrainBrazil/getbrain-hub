@@ -86,7 +86,8 @@ function ContasBancariasTab({ search }: { search: string }) {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [editForm, setEditForm] = useState({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [] as string[], observacoes: "" });
   const [editNewPixKey, setEditNewPixKey] = useState("");
-
+  const [copied, setCopied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   useEffect(() => { load(); }, []);
   async function load() { const { data } = await supabase.from("contas_bancarias").select("*").order("nome"); setItems(data || []); }
 
