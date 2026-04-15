@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
 import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown } from "lucide-react";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
@@ -39,6 +40,7 @@ export default function Movimentacoes() {
   const [statusFilter, setStatusFilter] = usePersistedState("movimentacoes_status", "todas");
   const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("movimentacoes_period", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
+  const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -145,14 +147,14 @@ export default function Movimentacoes() {
     });
   }, [movs, periodRange]);
 
-  const filtered = periodFiltered.filter(m => {
+  const filtered = applySorting(periodFiltered.filter(m => {
     if (statusFilter === "pendentes" && m.status !== "pendente") return false;
     if (statusFilter === "recebidas" && m.status !== "pago") return false;
     if (statusFilter === "pagas" && m.status !== "pago") return false;
     if (statusFilter === "atrasadas" && m.status !== "atrasado") return false;
     if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
-  });
+  }), sortConfig);
 
   const totalPendente = periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
   const totalRecebidoPago = periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0);
@@ -649,13 +651,13 @@ export default function Movimentacoes() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{entityLabel}</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>{isPagar ? "Pagamento" : "Recebimento"}</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead label={entityLabel} sortKey={isPagar ? "fornecedores" : "clientes"} currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Descrição" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Categoria" sortKey="categorias" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Valor" sortKey="valor_previsto" currentSort={sortConfig} onSort={setSortConfig} className="text-right" />
+                  <SortableTableHead label="Vencimento" sortKey="data_vencimento" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label={isPagar ? "Pagamento" : "Recebimento"} sortKey="data_pagamento" currentSort={sortConfig} onSort={setSortConfig} />
+                  <SortableTableHead label="Status" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} />
                 </TableRow>
               </TableHeader>
               <TableBody>
