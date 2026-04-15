@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
+import { RouteTracker, getLastRoute } from "@/components/RouteTracker";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import FinanceiroVisaoGeral from "./pages/FinanceiroVisaoGeral";
@@ -34,6 +35,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+/** Redirects "/" to the last visited route (sessionStorage) if available */
+function HomeRedirect() {
+  const lastRoute = getLastRoute();
+  if (lastRoute && lastRoute !== "/") {
+    return <Navigate to={lastRoute} replace />;
+  }
+  return <ProtectedRoute><Index /></ProtectedRoute>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -41,9 +51,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <RouteTracker />
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/" element={<HomeRedirect />} />
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroVisaoGeral /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes" element={<ProtectedRoute><Movimentacoes /></ProtectedRoute>} />
             
