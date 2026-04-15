@@ -165,6 +165,45 @@ export default function Movimentacoes() {
     loadAll();
   }
 
+  function openEditModal(m: any) {
+    setForm({
+      descricao: m.descricao || "",
+      cliente_id: m.cliente_id || "",
+      fornecedor_id: m.fornecedor_id || "",
+      projeto_id: m.projeto_id || "",
+      categoria_id: m.categoria_id || "",
+      conta_bancaria_id: m.conta_bancaria_id || "",
+      valor_previsto: String(m.valor_previsto || ""),
+      data_competencia: m.data_competencia || "",
+      data_vencimento: m.data_vencimento || "",
+      observacoes: m.observacoes || "",
+    });
+    setSelectedMov(m);
+    setOpenEdit(true);
+  }
+
+  async function handleEditSave() {
+    if (!selectedMov) return;
+    const { error } = await supabase.from("movimentacoes").update({
+      descricao: form.descricao,
+      cliente_id: !isPagar ? (form.cliente_id || null) : null,
+      fornecedor_id: isPagar ? (form.fornecedor_id || null) : null,
+      projeto_id: form.projeto_id || null,
+      categoria_id: form.categoria_id || null,
+      conta_bancaria_id: form.conta_bancaria_id || null,
+      valor_previsto: parseFloat(form.valor_previsto),
+      data_competencia: form.data_competencia,
+      data_vencimento: form.data_vencimento,
+      observacoes: form.observacoes || null,
+    }).eq("id", selectedMov.id);
+    if (error) { toast.error("Erro ao atualizar"); return; }
+    toast.success("Movimentação atualizada!");
+    setOpenEdit(false);
+    setDetailMov(null);
+    resetForm();
+    loadAll();
+  }
+
   const statusButtons = isPagar
     ? [
         { key: "todas", label: "Todas" },
