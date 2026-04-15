@@ -238,7 +238,32 @@ function ContasBancariasTab({ search }: { search: string }) {
             </DialogContent>
           </Dialog>
         </div>
-        <Table>
+        <div className="flex items-center gap-3 mb-4">
+          <Select value={filterBanco} onValueChange={setFilterBanco}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Todos os Bancos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos os Bancos</SelectItem>
+              {bancos.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterTipo} onValueChange={setFilterTipo}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Todos os Tipos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos os Tipos</SelectItem>
+              <SelectItem value="corrente">Corrente</SelectItem>
+              <SelectItem value="poupanca">Poupança</SelectItem>
+              <SelectItem value="investimento">Investimento</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Todas" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas</SelectItem>
+              <SelectItem value="ativas">Ativas</SelectItem>
+              <SelectItem value="inativas">Inativas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
