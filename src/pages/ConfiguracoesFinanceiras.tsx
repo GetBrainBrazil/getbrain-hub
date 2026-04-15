@@ -285,7 +285,7 @@ function ContasBancariasTab({ search }: { search: string }) {
                   </div>
                   {selectedItem.observacoes && <div><span className="text-xs text-muted-foreground">Observações</span><p className="text-sm font-medium mt-0.5 whitespace-pre-wrap">{selectedItem.observacoes}</p></div>}
                 </div>
-                <SheetFooter className="flex-row justify-between gap-2 pt-4 border-t">
+                <SheetFooter className="flex-row !justify-between gap-2 pt-4 border-t">
                   <Button variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteDialogOpen(true)}>
                     <Trash2 className="h-3.5 w-3.5" /> Excluir
                   </Button>
