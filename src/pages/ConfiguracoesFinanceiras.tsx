@@ -100,18 +100,12 @@ function ContasBancariasTab({ search }: { search: string }) {
     return true;
   });
 
-  async function handleSave() {
-    if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    const saldo = parseFloat(form.saldo_inicial.replace(/\./g, "").replace(",", "."));
-    const { error } = await supabase.from("contas_bancarias").insert({
-      nome: form.nome, banco: form.banco || null, agencia: form.agencia || null, conta: form.conta || null,
-      tipo: form.tipo, saldo_inicial: isNaN(saldo) ? 0 : saldo, moeda: form.moeda,
-      chaves_pix: form.chaves_pix.length > 0 ? form.chaves_pix : null,
-      observacoes: form.observacoes || null,
-    });
-    if (error) { toast.error("Erro ao salvar"); return; }
-    toast.success("Conta bancária criada!");
-    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [], observacoes: "" }); setNewPixKey(""); load();
+  function openCreate() {
+    setSelectedItem(null);
+    setEditForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [], observacoes: "" });
+    setEditNewPixKey("");
+    setDrawerMode("create");
+    setDrawerOpen(true);
   }
 
   function openDrawer(item: any) {
@@ -139,25 +133,38 @@ function ContasBancariasTab({ search }: { search: string }) {
   }
 
   function cancelEdit() {
+    if (drawerMode === "create") { setDrawerOpen(false); return; }
     setDrawerMode("view");
   }
 
-  async function handleEditSave() {
+  async function handleFormSave() {
     if (!editForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!editForm.banco.trim()) { toast.error("Banco é obrigatório"); return; }
     const saldo = parseFloat(editForm.saldo_inicial.replace(/\./g, "").replace(",", "."));
-    if (isNaN(saldo)) { toast.error("Saldo inicial inválido"); return; }
-    const { error } = await supabase.from("contas_bancarias").update({
-      nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
-      tipo: editForm.tipo, saldo_inicial: saldo, moeda: editForm.moeda, ativo: editForm.ativo,
-      chaves_pix: editForm.chaves_pix.length > 0 ? editForm.chaves_pix : null,
-      observacoes: editForm.observacoes || null,
-    }).eq("id", selectedItem.id);
-    if (error) { toast.error("Erro ao atualizar"); return; }
-    toast.success("Conta atualizada com sucesso");
-    const updated = { ...selectedItem, ...editForm, saldo_inicial: saldo };
-    setSelectedItem(updated);
-    setDrawerMode("view");
+
+    if (drawerMode === "create") {
+      const { error } = await supabase.from("contas_bancarias").insert({
+        nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
+        tipo: editForm.tipo, saldo_inicial: isNaN(saldo) ? 0 : saldo, moeda: editForm.moeda,
+        chaves_pix: editForm.chaves_pix.length > 0 ? editForm.chaves_pix : null,
+        observacoes: editForm.observacoes || null,
+      });
+      if (error) { toast.error("Erro ao salvar"); return; }
+      toast.success("Conta bancária criada!");
+      setDrawerOpen(false);
+    } else {
+      if (isNaN(saldo)) { toast.error("Saldo inicial inválido"); return; }
+      const { error } = await supabase.from("contas_bancarias").update({
+        nome: editForm.nome, banco: editForm.banco || null, agencia: editForm.agencia || null, conta: editForm.conta || null,
+        tipo: editForm.tipo, saldo_inicial: saldo, moeda: editForm.moeda, ativo: editForm.ativo,
+        chaves_pix: editForm.chaves_pix.length > 0 ? editForm.chaves_pix : null,
+        observacoes: editForm.observacoes || null,
+      }).eq("id", selectedItem.id);
+      if (error) { toast.error("Erro ao atualizar"); return; }
+      toast.success("Conta atualizada com sucesso");
+      const updated = { ...selectedItem, ...editForm, saldo_inicial: saldo };
+      setSelectedItem(updated);
+      setDrawerMode("view");
+    }
     load();
   }
 
