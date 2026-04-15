@@ -1,30 +1,39 @@
 
 
-## Plano: Recorrência com seleção de período e quantidade
+## Plano: Filtro de período com persistência global
 
-### O que muda
+### O que será feito
 
-**Form state:**
-- Adicionar `quantidade_recorrencia: number` (default 1) ao form state
-- Mudar `frequencia_recorrencia` para aceitar `"diario" | "mensal" | "anual"` (default `"mensal"`)
+1. **Criar hook reutilizável `usePersistedState`** (`src/hooks/use-persisted-state.ts`)
+   - Hook genérico que salva/lê estado do `localStorage`
+   - Assinatura: `usePersistedState<T>(key: string, defaultValue: T)`
+   - Será usado para persistir TODOS os filtros do sistema (busca, status, período, aba, etc.)
 
-**UI — Seção de recorrência (linhas 479-486):**
-- Manter o Switch "Conta recorrente"
-- Quando ativado, exibir abaixo:
-  - Input numérico para quantidade (ex: "12")
-  - Select com opções: "Dia(s)", "Mês(es)", "Ano(s)"
-  - Texto: "A cada X dia(s)/mês(es)/ano(s)"
+2. **Criar componente `PeriodFilter`** (`src/components/PeriodFilter.tsx`)
+   - Dropdown estilizado como no print: ícone de calendário + texto do filtro selecionado + seta
+   - Opções: "Todo o Período", "Hoje", "Esta Semana", "Este Mês" (default), "Este Ano", "Últimos 30 dias", "Personalizado"
+   - Ao selecionar "Personalizado": exibe dois campos de data (dd/mm/aaaa) com DatePicker usando o Calendar do shadcn
+   - Retorna `{ startDate: Date | null, endDate: Date | null }` para o componente pai
 
-**Lógica de criação (linhas 179-194):**
-- Usar `quantidade_recorrencia` como número de repetições (em vez de fixo 11)
-- Calcular datas com base na frequência:
-  - `diario`: addDays
-  - `mensal`: addMonths
-  - `anual`: addYears
+3. **Integrar em `Movimentacoes.tsx`**
+   - Colocar `PeriodFilter` ao lado do campo de busca, na toolbar superior
+   - Filtrar a lista `movs` pelo período selecionado (usando `data_vencimento`)
+   - Os KPIs (totalPendente, totalRecebidoPago, totalAtrasado) serão recalculados com base nos dados filtrados
+   - Substituir `useState` por `usePersistedState` em: `search`, `statusFilter`, `tab`, e o novo filtro de período
 
-**resetForm e edit prefill:**
-- Incluir `quantidade_recorrencia` no reset e no carregamento de edição
+4. **Integrar em `ContasPagar.tsx` e `ContasReceber.tsx`**
+   - Mesmo componente `PeriodFilter` ao lado da busca
+   - Mesma lógica de filtragem e recálculo de KPIs
+   - Persistência dos filtros com `usePersistedState`
 
-### Arquivo
-- `src/pages/Movimentacoes.tsx`
+### Persistência (regra global)
+- Cada filtro terá uma key única no localStorage (ex: `movimentacoes_tab`, `movimentacoes_period`, `contas_pagar_search`)
+- O estado sobrevive a troca de aba, refresh e fechamento do navegador
+
+### Arquivos
+- `src/hooks/use-persisted-state.ts` — novo
+- `src/components/PeriodFilter.tsx` — novo
+- `src/pages/Movimentacoes.tsx` — adicionar filtro + persistência
+- `src/pages/ContasPagar.tsx` — adicionar filtro + persistência
+- `src/pages/ContasReceber.tsx` — adicionar filtro + persistência
 
