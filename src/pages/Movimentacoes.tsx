@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown } from "lucide-react";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { formatCurrency, formatDate, StatusType } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 type TabType = "pagar" | "receber";
 
@@ -36,9 +40,19 @@ export default function Movimentacoes() {
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
   const [detailMov, setDetailMov] = useState<any>(null);
+
+  // Fornecedor combobox state
+  const [fornecedorOpen, setFornecedorOpen] = useState(false);
+  const [fornecedorSearch, setFornecedorSearch] = useState("");
+
+  // Cliente combobox state
+  const [clienteOpen, setClienteOpen] = useState(false);
+  const [clienteSearch, setClienteSearch] = useState("");
+
   const [form, setForm] = useState({
     descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "",
     valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "",
+    recorrente: false, frequencia_recorrencia: "mensal",
   });
   const [baixaForm, setBaixaForm] = useState({
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
@@ -53,8 +67,8 @@ export default function Movimentacoes() {
     await supabase.rpc("update_status_atrasado" as any);
     const [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
       supabase.from("movimentacoes").select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)").eq("tipo", tipo).order("data_vencimento", { ascending: false }),
-      supabase.from("clientes").select("*").eq("ativo", true),
-      supabase.from("fornecedores").select("*").eq("ativo", true),
+      supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
+      supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
       supabase.from("categorias").select("*").eq("ativo", true),
       supabase.from("contas_bancarias").select("*").eq("ativo", true),
       supabase.from("projetos").select("*"),
@@ -68,6 +82,52 @@ export default function Movimentacoes() {
     setProjetos(r6.data || []);
     setMeios(r7.data || []);
   }
+
+  // Fornecedor combobox helpers
+  const filteredFornecedores = useMemo(() => {
+    if (!fornecedorSearch) return fornecedores;
+    return fornecedores.filter(f => f.nome.toLowerCase().includes(fornecedorSearch.toLowerCase()));
+  }, [fornecedores, fornecedorSearch]);
+
+  const showCreateFornecedor = fornecedorSearch.trim().length > 0 &&
+    !fornecedores.some(f => f.nome.toLowerCase() === fornecedorSearch.trim().toLowerCase());
+
+  async function handleCreateFornecedor() {
+    const nome = fornecedorSearch.trim();
+    if (!nome) return;
+    const { data, error } = await supabase.from("fornecedores").insert({ nome }).select().single();
+    if (error) { toast.error("Erro ao criar fornecedor"); return; }
+    toast.success(`Fornecedor "${nome}" criado!`);
+    setFornecedores(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm(prev => ({ ...prev, fornecedor_id: data.id }));
+    setFornecedorSearch("");
+    setFornecedorOpen(false);
+  }
+
+  const selectedFornecedorNome = fornecedores.find(f => f.id === form.fornecedor_id)?.nome;
+
+  // Cliente combobox helpers
+  const filteredClientes = useMemo(() => {
+    if (!clienteSearch) return clientes;
+    return clientes.filter(c => c.nome.toLowerCase().includes(clienteSearch.toLowerCase()));
+  }, [clientes, clienteSearch]);
+
+  const showCreateCliente = clienteSearch.trim().length > 0 &&
+    !clientes.some(c => c.nome.toLowerCase() === clienteSearch.trim().toLowerCase());
+
+  async function handleCreateCliente() {
+    const nome = clienteSearch.trim();
+    if (!nome) return;
+    const { data, error } = await supabase.from("clientes").insert({ nome }).select().single();
+    if (error) { toast.error("Erro ao criar cliente"); return; }
+    toast.success(`Cliente "${nome}" criado!`);
+    setClientes(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm(prev => ({ ...prev, cliente_id: data.id }));
+    setClienteSearch("");
+    setClienteOpen(false);
+  }
+
+  const selectedClienteNome = clientes.find(c => c.id === form.cliente_id)?.nome;
 
   const filtered = movs.filter(m => {
     if (statusFilter === "pendentes" && m.status !== "pendente") return false;
@@ -84,8 +144,19 @@ export default function Movimentacoes() {
 
   const entityLabel = isPagar ? "Fornecedor" : "Cliente";
 
+  function addMonths(dateStr: string, months: number): string {
+    const d = new Date(dateStr + "T12:00:00");
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString().split("T")[0];
+  }
+
   async function handleSave() {
-    const { error } = await supabase.from("movimentacoes").insert({
+    if (!form.descricao || !form.valor_previsto || !form.data_competencia || !form.data_vencimento) {
+      toast.error("Preencha os campos obrigatórios");
+      return;
+    }
+
+    const baseRecord = {
       tipo,
       descricao: form.descricao,
       cliente_id: !isPagar ? (form.cliente_id || null) : null,
@@ -97,17 +168,45 @@ export default function Movimentacoes() {
       data_competencia: form.data_competencia,
       data_vencimento: form.data_vencimento,
       observacoes: form.observacoes || null,
+      recorrente: form.recorrente,
+      frequencia_recorrencia: form.recorrente ? form.frequencia_recorrencia : null,
       created_by: user?.id,
-    });
+    };
+
+    const { data: parentData, error } = await supabase.from("movimentacoes").insert(baseRecord).select().single();
     if (error) { toast.error("Erro ao salvar"); return; }
-    toast.success(isPagar ? "Conta a pagar criada!" : "Conta a receber criada!");
+
+    // If recorrente, create 11 more months (total 12)
+    if (form.recorrente && parentData) {
+      const recurrences: any[] = [];
+      for (let i = 1; i <= 11; i++) {
+        const competencia = addMonths(form.data_competencia, i);
+        const vencimento = addMonths(form.data_vencimento, i);
+        recurrences.push({
+          ...baseRecord,
+          data_competencia: competencia,
+          data_vencimento: vencimento,
+          movimentacao_pai_id: parentData.id,
+        });
+      }
+      const { error: recError } = await supabase.from("movimentacoes").insert(recurrences);
+      if (recError) { toast.error("Erro ao criar recorrências"); }
+    }
+
+    toast.success(
+      form.recorrente
+        ? `${isPagar ? "Conta a pagar" : "Conta a receber"} recorrente criada (12 meses)!`
+        : `${isPagar ? "Conta a pagar" : "Conta a receber"} criada!`
+    );
     setOpenNew(false);
     resetForm();
     loadAll();
   }
 
   function resetForm() {
-    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "" });
+    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "", recorrente: false, frequencia_recorrencia: "mensal" });
+    setFornecedorSearch("");
+    setClienteSearch("");
   }
 
   function openDarBaixa(m: any) {
@@ -177,6 +276,8 @@ export default function Movimentacoes() {
       data_competencia: m.data_competencia || "",
       data_vencimento: m.data_vencimento || "",
       observacoes: m.observacoes || "",
+      recorrente: m.recorrente || false,
+      frequencia_recorrencia: m.frequencia_recorrencia || "mensal",
     });
     setSelectedMov(m);
     setOpenEdit(true);
@@ -184,6 +285,10 @@ export default function Movimentacoes() {
 
   async function handleEditSave() {
     if (!selectedMov) return;
+    if (!form.descricao || !form.valor_previsto || !form.data_competencia || !form.data_vencimento) {
+      toast.error("Preencha os campos obrigatórios");
+      return;
+    }
     const { error } = await supabase.from("movimentacoes").update({
       descricao: form.descricao,
       cliente_id: !isPagar ? (form.cliente_id || null) : null,
@@ -218,6 +323,188 @@ export default function Movimentacoes() {
         { key: "atrasadas", label: "Atrasadas" },
       ];
 
+  // Shared modal form content for both create and edit
+  function renderModalForm(onSave: () => void, saveLabel: string, onCancel: () => void) {
+    return (
+      <>
+        {/* DADOS PRINCIPAIS */}
+        <div className="mt-5 mb-2">
+          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
+            📋 DADOS PRINCIPAIS
+          </p>
+          <Separator className="mt-2" />
+        </div>
+
+        {/* Entity field: Fornecedor or Cliente */}
+        <div className="grid grid-cols-[1fr_auto] gap-2 items-end mt-1">
+          <div>
+            <Label className="text-[13px] font-semibold text-foreground mb-1 block">
+              {isPagar ? "Fornecedor *" : "Cliente *"}
+            </Label>
+            {isPagar ? (
+              <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50">
+                    {selectedFornecedorNome || "Selecione..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput placeholder="Buscar..." value={fornecedorSearch} onValueChange={setFornecedorSearch} />
+                    <CommandList>
+                      <CommandEmpty>
+                        {fornecedorSearch.trim() ? "Nenhum fornecedor encontrado" : "Digite para buscar"}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {filteredFornecedores.map(f => (
+                          <CommandItem key={f.id} value={f.id} onSelect={() => {
+                            setForm(prev => ({ ...prev, fornecedor_id: f.id }));
+                            setFornecedorOpen(false);
+                            setFornecedorSearch("");
+                          }}>
+                            <Check className={cn("mr-2 h-4 w-4", form.fornecedor_id === f.id ? "opacity-100" : "opacity-0")} />
+                            {f.nome}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                      {showCreateFornecedor && (
+                        <CommandGroup>
+                          <CommandItem onSelect={handleCreateFornecedor} className="text-primary font-medium">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Criar "{fornecedorSearch.trim()}"
+                          </CommandItem>
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={clienteOpen} className="w-full justify-between font-normal h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50">
+                    {selectedClienteNome || "Selecione..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput placeholder="Buscar..." value={clienteSearch} onValueChange={setClienteSearch} />
+                    <CommandList>
+                      <CommandEmpty>
+                        {clienteSearch.trim() ? "Nenhum cliente encontrado" : "Digite para buscar"}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {filteredClientes.map(c => (
+                          <CommandItem key={c.id} value={c.id} onSelect={() => {
+                            setForm(prev => ({ ...prev, cliente_id: c.id }));
+                            setClienteOpen(false);
+                            setClienteSearch("");
+                          }}>
+                            <Check className={cn("mr-2 h-4 w-4", form.cliente_id === c.id ? "opacity-100" : "opacity-0")} />
+                            {c.nome}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                      {showCreateCliente && (
+                        <CommandGroup>
+                          <CommandItem onSelect={handleCreateCliente} className="text-primary font-medium">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Criar "{clienteSearch.trim()}"
+                          </CommandItem>
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+          <Button variant="outline" size="icon" className="h-10 w-10 border-border/50" onClick={() => {
+            if (isPagar) { setFornecedorOpen(true); setFornecedorSearch(""); }
+            else { setClienteOpen(true); setClienteSearch(""); }
+          }}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="mt-4">
+          <Label className="text-[13px] font-semibold text-foreground mb-1 block">Descrição da Movimentação *</Label>
+          <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+        </div>
+
+        {/* PRAZOS E VALORES */}
+        <div className="mt-7 mb-2">
+          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
+            📅 PRAZOS E VALORES
+          </p>
+          <Separator className="mt-2" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mt-1">
+          <div>
+            <Label className="text-[13px] font-semibold text-foreground mb-1 block">Valor Previsto (R$) *</Label>
+            <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+          </div>
+          <div>
+            <Label className="text-[13px] font-semibold text-foreground mb-1 block">Data de Competência *</Label>
+            <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+          </div>
+          <div>
+            <Label className="text-[13px] font-semibold text-foreground mb-1 block">Data de Vencimento *</Label>
+            <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50" />
+          </div>
+        </div>
+
+        <div className="mt-4 max-w-[240px]">
+          <Label className="text-[13px] font-semibold text-foreground mb-1 block">Conta Bancária</Label>
+          <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
+            <SelectTrigger className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+            <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+
+        {/* OBSERVAÇÕES INTERNAS */}
+        <div className="mt-7 mb-2">
+          <p className="text-[11px] font-semibold text-primary tracking-[0.15em] uppercase flex items-center gap-1.5">
+            💬 OBSERVAÇÕES INTERNAS
+          </p>
+          <Separator className="mt-2" />
+        </div>
+
+        <Textarea
+          placeholder="Observações adicionais..."
+          value={form.observacoes}
+          onChange={e => setForm({...form, observacoes: e.target.value})}
+          className="min-h-[80px] text-sm bg-[#FDF8F4] dark:bg-muted border-border/50 resize-none"
+        />
+
+        {/* RECORRÊNCIA */}
+        <div className="mt-7 mb-2">
+          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
+            🔄 RECORRÊNCIA
+          </p>
+          <Separator className="mt-2" />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">Conta recorrente</p>
+            <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 12 meses</p>
+          </div>
+          <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
+        </div>
+
+        {/* FOOTER */}
+        <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-border">
+          <Button variant="outline" onClick={onCancel} className="px-6 h-10">Cancelar</Button>
+          <Button onClick={onSave} className="px-6 h-10 bg-[#7C2D12] hover:bg-[#63240e] text-white">{saveLabel}</Button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -227,26 +514,30 @@ export default function Movimentacoes() {
           <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (v) setTab("pagar"); }}>
+          <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("pagar"); }}>
             <DialogTrigger asChild>
               <Button variant="outline" className="gap-1.5 border-border text-foreground hover:bg-muted" onClick={() => setTab("pagar")}>
                 <Plus className="h-4 w-4" /> Conta a Pagar
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Nova Conta a Pagar</DialogTitle></DialogHeader>
-              <NewForm isPagar form={form} setForm={setForm} fornecedores={fornecedores} clientes={clientes} projetos={projetos} categorias={categorias.filter(c => ["despesa","ambos"].includes(c.tipo))} contas={contas} onSave={handleSave} />
+            <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8 bg-white dark:bg-card">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold text-foreground">Nova Conta a Pagar</DialogTitle>
+              </DialogHeader>
+              {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
             </DialogContent>
           </Dialog>
-          <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (v) setTab("receber"); }}>
+          <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("receber"); }}>
             <DialogTrigger asChild>
               <Button className="gap-1.5 bg-sidebar text-sidebar-foreground hover:bg-sidebar/90" onClick={() => setTab("receber")}>
                 <Plus className="h-4 w-4" /> Conta a Receber
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Nova Conta a Receber</DialogTitle></DialogHeader>
-              <NewForm isPagar={false} form={form} setForm={setForm} fornecedores={fornecedores} clientes={clientes} projetos={projetos} categorias={categorias.filter(c => ["receita","ambos"].includes(c.tipo))} contas={contas} onSave={handleSave} />
+            <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8 bg-white dark:bg-card">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold text-foreground">Nova Conta a Receber</DialogTitle>
+              </DialogHeader>
+              {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
             </DialogContent>
           </Dialog>
         </div>
@@ -501,73 +792,15 @@ export default function Movimentacoes() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog — same layout as create */}
       <Dialog open={openEdit} onOpenChange={(v) => { setOpenEdit(v); if (!v) resetForm(); }}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Editar Movimentação</DialogTitle></DialogHeader>
-          <NewForm
-            isPagar={isPagar}
-            form={form}
-            setForm={setForm}
-            fornecedores={fornecedores}
-            clientes={clientes}
-            projetos={projetos}
-            categorias={categorias}
-            contas={contas}
-            onSave={handleEditSave}
-            saveLabel="Salvar Alterações"
-          />
+        <DialogContent className="sm:max-w-[820px] max-h-[85vh] overflow-y-auto p-8 bg-white dark:bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">Editar Movimentação</DialogTitle>
+          </DialogHeader>
+          {renderModalForm(handleEditSave, "Salvar Alterações", () => setOpenEdit(false))}
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-/* Sub-component for the new entry form */
-function NewForm({ isPagar, form, setForm, fornecedores, clientes, projetos, categorias, contas, onSave, saveLabel = "Salvar" }: any) {
-  return (
-    <div className="space-y-4">
-      <div><Label>Descrição *</Label><Input value={form.descricao} onChange={(e: any) => setForm({...form, descricao: e.target.value})} /></div>
-      {isPagar ? (
-        <div><Label>Fornecedor</Label>
-          <Select value={form.fornecedor_id} onValueChange={(v: string) => setForm({...form, fornecedor_id: v})}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>{fornecedores.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-      ) : (
-        <div><Label>Cliente</Label>
-          <Select value={form.cliente_id} onValueChange={(v: string) => setForm({...form, cliente_id: v})}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>{clientes.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-      )}
-      <div><Label>Projeto</Label>
-        <Select value={form.projeto_id} onValueChange={(v: string) => setForm({...form, projeto_id: v})}>
-          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-          <SelectContent>{projetos.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <div><Label>Categoria</Label>
-        <Select value={form.categoria_id} onValueChange={(v: string) => setForm({...form, categoria_id: v})}>
-          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-          <SelectContent>{categorias.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <div><Label>Valor Previsto (R$) *</Label><Input type="number" step="0.01" value={form.valor_previsto} onChange={(e: any) => setForm({...form, valor_previsto: e.target.value})} /></div>
-      <div className="grid grid-cols-2 gap-3">
-        <div><Label>Data Competência *</Label><Input type="date" value={form.data_competencia} onChange={(e: any) => setForm({...form, data_competencia: e.target.value})} /></div>
-        <div><Label>Data Vencimento *</Label><Input type="date" value={form.data_vencimento} onChange={(e: any) => setForm({...form, data_vencimento: e.target.value})} /></div>
-      </div>
-      <div><Label>Conta Bancária</Label>
-        <Select value={form.conta_bancaria_id} onValueChange={(v: string) => setForm({...form, conta_bancaria_id: v})}>
-          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-          <SelectContent>{contas.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={(e: any) => setForm({...form, observacoes: e.target.value})} /></div>
-      <Button onClick={onSave} className="w-full">{saveLabel}</Button>
     </div>
   );
 }
