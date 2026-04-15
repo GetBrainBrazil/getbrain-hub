@@ -194,7 +194,6 @@ function ContasBancariasTab({ search }: { search: string }) {
       setTimeout(() => setCopied(false), 2000);
     });
   }
-  }
 
   const formatMoeda = (m: string) => m === "USD" ? "Dólar (US$)" : m === "EUR" ? "Euro (€)" : "Real (R$)";
   const formatMoedaShort = (m: string) => m === "USD" ? "US$" : m === "EUR" ? "€" : "R$";
