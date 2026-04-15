@@ -524,7 +524,7 @@ export default function Movimentacoes() {
 }
 
 /* Sub-component for the new entry form */
-function NewForm({ isPagar, form, setForm, fornecedores, clientes, projetos, categorias, contas, onSave }: any) {
+function NewForm({ isPagar, form, setForm, fornecedores, clientes, projetos, categorias, contas, onSave, saveLabel = "Salvar" }: any) {
   return (
     <div className="space-y-4">
       <div><Label>Descrição *</Label><Input value={form.descricao} onChange={(e: any) => setForm({...form, descricao: e.target.value})} /></div>
