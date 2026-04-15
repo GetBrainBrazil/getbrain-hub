@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus } from "lucide-react";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -184,8 +184,8 @@ export default function Movimentacoes() {
         <div className="flex gap-2">
           <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (v) setTab("pagar"); }}>
             <DialogTrigger asChild>
-              <Button variant="destructive" className="gap-1.5" onClick={() => setTab("pagar")}>
-                <TrendingDown className="h-4 w-4" /> Conta a Pagar
+              <Button variant="outline" className="gap-1.5 border-border text-foreground hover:bg-muted" onClick={() => setTab("pagar")}>
+                <Plus className="h-4 w-4" /> Conta a Pagar
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -195,8 +195,8 @@ export default function Movimentacoes() {
           </Dialog>
           <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (v) setTab("receber"); }}>
             <DialogTrigger asChild>
-              <Button className="gap-1.5 bg-success hover:bg-success/90 text-white" onClick={() => setTab("receber")}>
-                <TrendingUp className="h-4 w-4" /> Conta a Receber
+              <Button className="gap-1.5 bg-sidebar text-sidebar-foreground hover:bg-sidebar/90" onClick={() => setTab("receber")}>
+                <Plus className="h-4 w-4" /> Conta a Receber
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
