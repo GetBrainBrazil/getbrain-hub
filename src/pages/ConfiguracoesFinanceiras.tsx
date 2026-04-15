@@ -92,13 +92,16 @@ function ContasBancariasTab({ search }: { search: string }) {
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    const saldo = parseFloat(form.saldo_inicial.replace(/\./g, "").replace(",", "."));
     const { error } = await supabase.from("contas_bancarias").insert({
       nome: form.nome, banco: form.banco || null, agencia: form.agencia || null, conta: form.conta || null,
-      tipo: form.tipo, saldo_inicial: parseFloat(form.saldo_inicial) || 0, moeda: form.moeda,
+      tipo: form.tipo, saldo_inicial: isNaN(saldo) ? 0 : saldo, moeda: form.moeda,
+      chaves_pix: form.chaves_pix.length > 0 ? form.chaves_pix : null,
+      observacoes: form.observacoes || null,
     });
     if (error) { toast.error("Erro ao salvar"); return; }
     toast.success("Conta bancária criada!");
-    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0", moeda: "BRL" }); load();
+    setOpen(false); setForm({ nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", chaves_pix: [], observacoes: "" }); setNewPixKey(""); load();
   }
 
   function openDrawer(item: any) {
