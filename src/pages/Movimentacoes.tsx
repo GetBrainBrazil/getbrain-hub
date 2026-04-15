@@ -567,7 +567,7 @@ function NewForm({ isPagar, form, setForm, fornecedores, clientes, projetos, cat
         </Select>
       </div>
       <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={(e: any) => setForm({...form, observacoes: e.target.value})} /></div>
-      <Button onClick={onSave} className="w-full">Salvar</Button>
+      <Button onClick={onSave} className="w-full">{saveLabel}</Button>
     </div>
   );
 }
