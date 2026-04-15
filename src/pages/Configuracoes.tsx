@@ -199,7 +199,7 @@ function ContasBancariasTab() {
                 <TableCell className="font-medium">{i.nome}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{i.banco || "—"}</TableCell>
                 <TableCell className="text-sm capitalize">{i.tipo}</TableCell>
-                <TableCell className="font-mono text-sm">{formatCurrency(Number(i.saldo_inicial))}</TableCell>
+                <TableCell className="text-sm">{formatCurrency(Number(i.saldo_inicial))}</TableCell>
                 <TableCell><Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} /></TableCell>
               </TableRow>
             ))}

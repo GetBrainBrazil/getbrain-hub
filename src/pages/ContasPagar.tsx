@@ -225,8 +225,8 @@ export default function ContasPagar() {
                     <TableCell className="text-sm">{formatDate(m.data_vencimento)}</TableCell>
                     <TableCell className="text-sm font-medium">{m.descricao}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{(m.fornecedores as any)?.nome || "—"}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{formatCurrency(Number(m.valor_previsto))}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{Number(m.valor_realizado) > 0 ? formatCurrency(Number(m.valor_realizado)) : "—"}</TableCell>
+                    <TableCell className="text-right text-sm">{formatCurrency(Number(m.valor_previsto))}</TableCell>
+                    <TableCell className="text-right text-sm">{Number(m.valor_realizado) > 0 ? formatCurrency(Number(m.valor_realizado)) : "—"}</TableCell>
                     <TableCell><StatusBadge status={m.status as StatusType} /></TableCell>
                     <TableCell>
                       <div className="flex gap-1">

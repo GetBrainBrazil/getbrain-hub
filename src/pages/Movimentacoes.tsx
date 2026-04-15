@@ -290,7 +290,7 @@ export default function Movimentacoes() {
                     </TableCell>
                     <TableCell className="text-sm font-medium">{m.descricao}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{(m.categorias as any)?.nome || "—"}</TableCell>
-                    <TableCell className="text-right font-mono text-sm font-semibold">{formatCurrency(Number(m.valor_previsto))}</TableCell>
+                    <TableCell className="text-right text-sm font-semibold">{formatCurrency(Number(m.valor_previsto))}</TableCell>
                     <TableCell className="text-sm">{formatDate(m.data_vencimento)}</TableCell>
                     <TableCell className="text-sm">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
                     <TableCell><StatusBadge status={m.status as StatusType} /></TableCell>

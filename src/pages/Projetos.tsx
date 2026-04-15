@@ -109,7 +109,7 @@ export default function Projetos() {
               </CardHeader>
               <CardContent>
                 {p.valor_contrato && (
-                  <p className="text-lg font-mono font-bold mb-2">{formatCurrency(Number(p.valor_contrato))}</p>
+                  <p className="text-lg font-bold mb-2">{formatCurrency(Number(p.valor_contrato))}</p>
                 )}
                 {p.data_inicio && (
                   <p className="text-xs text-muted-foreground">{formatDate(p.data_inicio)} {p.data_fim ? `— ${formatDate(p.data_fim)}` : ""}</p>
