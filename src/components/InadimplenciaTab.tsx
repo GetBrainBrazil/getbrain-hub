@@ -42,12 +42,19 @@ type SortKey = "nome" | "qtd" | "valor" | "antigo" | "pct";
 type SortDir = "asc" | "desc";
 
 const AGING_RANGES = [
-  { label: "1 a 15 dias", min: 1, max: 15, color: "hsl(45, 93%, 47%)" },
-  { label: "16 a 30 dias", min: 16, max: 30, color: "hsl(30, 90%, 50%)" },
-  { label: "31 a 60 dias", min: 31, max: 60, color: "hsl(0, 70%, 60%)" },
-  { label: "61 a 90 dias", min: 61, max: 90, color: "hsl(0, 80%, 45%)" },
-  { label: "Acima de 90 dias", min: 91, max: 99999, color: "hsl(0, 60%, 30%)" },
+  { label: "1 a 15 dias", min: 1, max: 15, color: "hsl(187, 82%, 55%, 0.35)" },
+  { label: "16 a 30 dias", min: 16, max: 30, color: "hsl(187, 82%, 55%, 0.6)" },
+  { label: "31 a 60 dias", min: 31, max: 60, color: "hsl(187, 82%, 55%, 0.8)" },
+  { label: "61 a 90 dias", min: 61, max: 90, color: "hsl(187, 82%, 55%)" },
+  { label: "Acima de 90 dias", min: 91, max: 99999, color: "hsl(222, 84%, 11%)" },
 ];
+
+function getAgingBadgeClass(dias: number): string {
+  if (dias <= 15) return "bg-accent/20 text-accent";
+  if (dias <= 30) return "bg-accent/40 text-accent-foreground";
+  if (dias <= 60) return "bg-accent/60 text-accent-foreground";
+  return "bg-primary/80 text-primary-foreground";
+}
 
 export default function InadimplenciaTab() {
   const navigate = useNavigate();
@@ -432,7 +439,7 @@ export default function InadimplenciaTab() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{formatDate(g.oldest)}</span>
-                          <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">{diasOldest} dias</span>
+                          <span className={cn("text-xs px-2 py-0.5 rounded-full", getAgingBadgeClass(diasOldest))}>{diasOldest} dias</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -455,7 +462,7 @@ export default function InadimplenciaTab() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="text-sm">{formatDate(item.data_vencimento)}</span>
-                              <span className="text-xs text-destructive">{dias} dias</span>
+                              <span className={cn("text-xs px-2 py-0.5 rounded-full", getAgingBadgeClass(dias))}>{dias} dias</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -552,8 +559,14 @@ export default function InadimplenciaTab() {
                   labelFormatter={(label) => label}
                 />
                 <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="valor" name="Total em Atraso" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
-                <Line yAxisId="right" type="monotone" dataKey="taxa" name="Taxa de Inadimplência (%)" stroke="hsl(var(--warning))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
+                <defs>
+                  <linearGradient id="inadAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <Line yAxisId="left" type="monotone" dataKey="valor" name="Total em Atraso" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--background))", stroke: "hsl(var(--accent))", strokeWidth: 2 }} activeDot={{ r: 6 }} fill="url(#inadAreaGradient)" />
+                <Line yAxisId="right" type="monotone" dataKey="taxa" name="Taxa de Inadimplência (%)" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3, fill: "hsl(var(--background))", stroke: "hsl(var(--primary))", strokeWidth: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
