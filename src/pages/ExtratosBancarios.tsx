@@ -64,6 +64,24 @@ export default function ExtratosBancarios() {
     enabled: contas.length > 0,
   });
 
+  // Lookup data for inline editing
+  const { data: categorias = [] } = useQuery({
+    queryKey: ["categorias_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("categorias").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+  });
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["clientes_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+  });
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ["fornecedores_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+  });
+  const { data: centrosCusto = [] } = useQuery({
+    queryKey: ["centros_custo_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("centros_custo").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+  });
+
   // Fetch linked extrato_transacoes for detail drawer
   const { data: extratoTransacoes = [] } = useQuery({
     queryKey: ["extrato_transacoes", contaId, dateRange.startDate?.toISOString(), dateRange.endDate?.toISOString()],
