@@ -902,26 +902,7 @@ export default function Movimentacoes() {
                         <TableCell className="text-right text-xs font-mono font-semibold text-success py-2">
                           {formatCurrency(valorPago)}
                         </TableCell>
-                        <TableCell colSpan={3} className="py-2"></TableCell>
-                      </TableRow>
-                      <TableRow
-                        className="bg-muted/20 hover:bg-muted/30 border-b border-border/60 cursor-pointer"
-                        onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
-                      >
-                        <TableCell className="pl-5 py-2"></TableCell>
-                        <TableCell className="py-2">
-                          <div className="flex items-center gap-2 pl-5">
-                            <span className="inline-block h-px w-3 bg-border" />
-                            <span className="text-xs text-muted-foreground">Restante</span>
-                          </div>
-                        </TableCell>
-                        <TableCell colSpan={2} className="text-xs text-muted-foreground py-2">
-                          {valorRestante === 0 ? "Quitado" : "Em aberto"}
-                        </TableCell>
-                        <TableCell className={cn("text-right text-xs font-mono font-semibold py-2", valorRestante === 0 ? "text-muted-foreground" : valueColor)}>
-                          {formatCurrency(valorRestante)}
-                        </TableCell>
-                        <TableCell colSpan={3} className="py-2"></TableCell>
+                        <TableCell colSpan={4} className="py-2"></TableCell>
                       </TableRow>
                     </>
                   )}
