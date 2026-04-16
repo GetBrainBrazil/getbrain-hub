@@ -730,7 +730,7 @@ export default function Movimentacoes() {
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
                   <TableHead className="w-10 pl-5">
-                    <input type="checkbox" disabled className="h-4 w-4 rounded border-input accent-primary cursor-not-allowed opacity-60" />
+                    <input type="checkbox" disabled className="h-4 w-4 rounded-full border-input accent-primary cursor-not-allowed opacity-60 appearance-none border bg-background" />
                   </TableHead>
                   <SortableTableHead label={entityLabel.toUpperCase()} sortKey={isPagar ? "fornecedores" : "clientes"} currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
                   <SortableTableHead label="DESCRIÇÃO" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
