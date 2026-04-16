@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
 import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
@@ -30,6 +31,7 @@ export default function Movimentacoes() {
   const { user } = useAuth();
   const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
   const [movs, setMovs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -70,23 +72,29 @@ export default function Movimentacoes() {
   const isPagar = tab === "pagar";
 
   async function loadAll() {
-    await supabase.rpc("update_status_atrasado" as any);
-    const [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
-      supabase.from("movimentacoes").select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)").eq("tipo", tipo).order("data_vencimento", { ascending: false }),
-      supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
-      supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
-      supabase.from("categorias").select("*").eq("ativo", true),
-      supabase.from("contas_bancarias").select("*").eq("ativo", true),
-      supabase.from("projetos").select("*"),
-      supabase.from("meios_pagamento").select("*").eq("ativo", true),
-    ]);
-    setMovs(r1.data || []);
-    setClientes(r2.data || []);
-    setFornecedores(r3.data || []);
-    setCategorias(r4.data || []);
-    setContas(r5.data || []);
-    setProjetos(r6.data || []);
-    setMeios(r7.data || []);
+    setLoading(true);
+    setMovs([]);
+    try {
+      const [, r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
+        supabase.rpc("update_status_atrasado" as any),
+        supabase.from("movimentacoes").select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)").eq("tipo", tipo).order("data_vencimento", { ascending: false }),
+        supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
+        supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
+        supabase.from("categorias").select("*").eq("ativo", true),
+        supabase.from("contas_bancarias").select("*").eq("ativo", true),
+        supabase.from("projetos").select("*"),
+        supabase.from("meios_pagamento").select("*").eq("ativo", true),
+      ]);
+      setMovs(r1.data || []);
+      setClientes(r2.data || []);
+      setFornecedores(r3.data || []);
+      setCategorias(r4.data || []);
+      setContas(r5.data || []);
+      setProjetos(r6.data || []);
+      setMeios(r7.data || []);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Fornecedor combobox helpers
@@ -601,9 +609,19 @@ export default function Movimentacoes() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KPICard title="Total Pendente" value={totalPendente} icon={Clock} />
-        <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" />
-        <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" />
+        {loading ? (
+          <>
+            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+          </>
+        ) : (
+          <>
+            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} />
+            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" />
+            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" />
+          </>
+        )}
       </div>
 
       {/* Tabs */}
@@ -661,7 +679,15 @@ export default function Movimentacoes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhuma movimentação encontrada com os filtros atuais.
