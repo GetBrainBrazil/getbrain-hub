@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,13 +14,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2, ChevronRight, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -56,11 +49,6 @@ export default function CategoriasTab({ search }: { search: string }) {
   const [newName, setNewName] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-
-  const [novaModal, setNovaModal] = useState<null | "sub" | "conta">(null);
-  const [novaForm, setNovaForm] = useState<{ tipo: TipoCategoria; pai_id: string; nome: string }>({
-    tipo: "despesas", pai_id: "", nome: "",
-  });
 
   useEffect(() => { loadAll(); }, []);
 
@@ -185,27 +173,8 @@ export default function CategoriasTab({ search }: { search: string }) {
     loadAll();
   }
 
-  async function saveNovaModal() {
-    const nome = novaForm.nome.trim();
-    if (!nome) { toast.error("Nome é obrigatório"); return; }
-    if (novaModal === "conta" && !novaForm.pai_id) { toast.error("Selecione a subcategoria"); return; }
-    const payload = novaModal === "sub"
-      ? { nome, tipo: novaForm.tipo, categoria_pai_id: null, ativo: true }
-      : { nome, tipo: novaForm.tipo, categoria_pai_id: novaForm.pai_id, ativo: true };
-    const { error } = await supabase.from("categorias").insert(payload);
-    if (error) { toast.error("Erro ao criar"); return; }
-    toast.success(novaModal === "sub" ? "Subcategoria criada!" : "Conta criada!");
-    setExpandedTipos(new Set([...expandedTipos, novaForm.tipo]));
-    if (novaModal === "conta") setExpandedSubs(new Set([...expandedSubs, novaForm.pai_id]));
-    setNovaModal(null);
-    setNovaForm({ tipo: "despesas", pai_id: "", nome: "" });
-    loadAll();
-  }
 
-  const subsForNovaConta = useMemo(
-    () => items.filter(i => !i.categoria_pai_id && i.tipo === novaForm.tipo).sort((a, b) => a.nome.localeCompare(b.nome)),
-    [items, novaForm.tipo],
-  );
+
 
   // ── Render rows for the table ──
   type Row =
@@ -345,22 +314,8 @@ export default function CategoriasTab({ search }: { search: string }) {
             </SelectContent>
           </Select>
 
-          <div className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="gap-1 h-9"><Plus className="h-4 w-4" /> Nova</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => { setNovaForm({ tipo: "despesas", pai_id: "", nome: "" }); setNovaModal("sub"); }}>
-                  Nova Subcategoria
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setNovaForm({ tipo: "despesas", pai_id: "", nome: "" }); setNovaModal("conta"); }}>
-                  Nova Conta
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         </div>
+
 
         {/* Hierarchical table */}
         <div className="rounded-md border border-border overflow-hidden">
@@ -411,7 +366,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                               setNewName("");
                             }}
                           >
-                            <Plus className="h-3.5 w-3.5" /> Filho
+                            <Plus className="h-3.5 w-3.5" /> Subcategoria
                           </Button>
                         </div>
                       </TableCell>
@@ -522,7 +477,7 @@ export default function CategoriasTab({ search }: { search: string }) {
 
                 // creating row
                 return (
-                  <TableRow key={`new-${idx}`} className="bg-muted/20 border-b border-border/60">
+                  <TableRow key={`new-${idx}`} className="bg-sky-50/60 dark:bg-sky-500/5 border-b border-border/60 animate-accordion-down">
                     <TableCell className="py-2.5">
                       <span className={cn("font-mono text-xs text-muted-foreground block", row.level === 3 && "pl-[26px]")}>
                         {row.codigo}
@@ -580,50 +535,12 @@ export default function CategoriasTab({ search }: { search: string }) {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* "+ Nova" modal */}
-        <Dialog open={!!novaModal} onOpenChange={(o) => !o && setNovaModal(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{novaModal === "sub" ? "Nova Subcategoria" : "Nova Conta"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div>
-                <Label className="text-xs">Tipo *</Label>
-                <Select value={novaForm.tipo} onValueChange={(v: TipoCategoria) => setNovaForm({ ...novaForm, tipo: v, pai_id: "" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_CATEGORIA.map(t => (
-                      <SelectItem key={t.key} value={t.key}>{t.label.charAt(0) + t.label.slice(1).toLowerCase()}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {novaModal === "conta" && (
-                <div>
-                  <Label className="text-xs">Subcategoria *</Label>
-                  <Select value={novaForm.pai_id} onValueChange={(v) => setNovaForm({ ...novaForm, pai_id: v })}>
-                    <SelectTrigger><SelectValue placeholder={subsForNovaConta.length ? "Selecione..." : "Nenhuma subcategoria neste tipo"} /></SelectTrigger>
-                    <SelectContent>
-                      {subsForNovaConta.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label className="text-xs">Nome *</Label>
-                <Input value={novaForm.nome} onChange={e => setNovaForm({ ...novaForm, nome: e.target.value })} placeholder={novaModal === "sub" ? "Ex: Marketing" : "Ex: Mídias Sociais"} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setNovaModal(null)}>Cancelar</Button>
-              <Button onClick={saveNovaModal}>Salvar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
   );
 }
+
+// (closing braces below replaced — keep only what's needed)
 
 // ── Inline name form ──
 function InlineNameForm({
@@ -634,12 +551,12 @@ function InlineNameForm({
 }) {
   return (
     <div className={cn("flex items-center gap-1", className)}>
-      <Input
+      <input
         autoFocus
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-7 text-sm"
+        className="h-7 text-sm flex-1 bg-transparent border-0 border-b border-border focus:border-primary focus:outline-none focus:ring-0 px-0 py-1 placeholder:text-muted-foreground/60"
         onKeyDown={(e) => {
           if (e.key === "Enter") { e.preventDefault(); onSave(); }
           if (e.key === "Escape") { e.preventDefault(); onCancel(); }
@@ -648,7 +565,7 @@ function InlineNameForm({
       <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10" onClick={onSave}>
         <Check className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onCancel}>
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={onCancel}>
         <X className="h-4 w-4" />
       </Button>
     </div>
@@ -665,7 +582,7 @@ function RowActions({
     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
       {showAdd && onAddChild && (
         <Button variant="ghost" size="sm" className="h-7 px-1.5 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={onAddChild}>
-          <Plus className="h-3.5 w-3.5" /> Filho
+          <Plus className="h-3.5 w-3.5" /> Conta
         </Button>
       )}
       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onEdit}>
