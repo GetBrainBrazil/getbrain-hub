@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   TrendingUp, TrendingDown, DollarSign, MinusCircle, BarChart3, Percent,
   ChevronDown, ChevronRight, Eye, Download, CalendarIcon, FileText, FileSpreadsheet,
-  X
+  X, AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/formatters";
@@ -590,14 +590,8 @@ export default function Relatorios() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="inadimplencia">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="text-4xl mb-4">📈</div>
-              <h3 className="text-lg font-semibold mb-2">Análise de Inadimplência em desenvolvimento</h3>
-              <p className="text-muted-foreground">Em breve.</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="inadimplencia" className="space-y-6 mt-4">
+          <InadimplenciaTab />
         </TabsContent>
       </Tabs>
 
