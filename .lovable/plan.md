@@ -1,39 +1,31 @@
 
 
-## Plano: Submódulo "Extratos Bancários" no módulo Financeiro
+## Diagnóstico
 
-### O que será feito
+Ao trocar entre as abas "A Pagar" e "A Receber", o `useEffect` na linha 67 dispara `loadAll()`, que faz 7 queries ao banco + 1 RPC call (`update_status_atrasado`). Durante esse tempo de carregamento:
 
-Criar uma nova página de Extratos Bancários (`/financeiro/extratos`) que permite visualizar o extrato de movimentações por conta bancária, com filtros de período e conta, saldo acumulado e exportação.
+1. Os **KPIs** e a **tabela** continuam mostrando os dados antigos (da aba anterior) até a resposta chegar, causando um "flash" de dados incorretos
+2. A RPC `update_status_atrasado` é síncrona e bloqueia todas as outras queries (ela roda antes do `Promise.all`)
+3. Não há indicador de loading — o usuário vê dados velhos "congelados" até tudo atualizar de uma vez
 
-### Funcionalidades
+## Plano de correção
 
-- **Seletor de conta bancária** no topo (dropdown com as contas cadastradas em `contas_bancarias`)
-- **Filtro de período** reutilizando o componente `PeriodFilter` existente
-- **Tabela de extrato** com colunas: Data, Descrição, Categoria, Entrada, Saída, Saldo
-- **KPIs no topo**: Saldo Inicial, Total Entradas, Total Saídas, Saldo Final
-- **Dados**: consulta a tabela `movimentacoes` filtrando por `conta_bancaria_id` e período, ordenando por data
-- **Cálculo de saldo**: saldo inicial da conta + acumulado linha a linha
-- Tab ativa persistida com `usePersistedState`
+### 1. Adicionar estado de loading e limpar dados ao trocar de aba
 
-### Mudanças
+- Adicionar `const [loading, setLoading] = useState(true)` 
+- No início de `loadAll()`, setar `setLoading(true)` e `setMovs([])` para zerar imediatamente os dados da aba anterior
+- No final de `loadAll()`, setar `setLoading(false)`
 
-1. **Criar `src/pages/ExtratosBancarios.tsx`**
-   - Dropdown de conta bancária (busca de `contas_bancarias`)
-   - PeriodFilter para filtro de datas
-   - 4 KPI cards (Saldo Inicial, Entradas, Saídas, Saldo Final)
-   - Tabela com saldo acumulado calculado linha a linha
-   - Cabeçalhos ordenáveis com `SortableTableHead`
+### 2. Otimizar a função `loadAll()`
 
-2. **Atualizar `src/components/AppSidebar.tsx`**
-   - Adicionar `{ title: "Extratos Bancários", url: "/financeiro/extratos" }` após "Relatórios" no array `financeiroItems`
+- Mover a RPC `update_status_atrasado` para dentro do `Promise.all` em vez de executá-la antes de tudo (ela é independente das queries)
+- Isso elimina a espera sequencial
 
-3. **Atualizar `src/App.tsx`**
-   - Importar `ExtratosBancarios`
-   - Adicionar rota `/financeiro/extratos`
+### 3. Mostrar skeleton/loading nos KPIs e tabela
 
-### Arquivos
-- `src/pages/ExtratosBancarios.tsx` — novo
-- `src/components/AppSidebar.tsx` — adicionar item no menu
-- `src/App.tsx` — adicionar rota
+- Enquanto `loading === true`, exibir os KPIs com valor "—" ou skeleton pulse
+- Na tabela, mostrar um estado de carregamento em vez de dados antigos
+
+### Arquivo editado
+- `src/pages/Movimentacoes.tsx` — adicionar estado loading, limpar movs ao trocar aba, paralelizar RPC, mostrar indicador visual durante carregamento
 
