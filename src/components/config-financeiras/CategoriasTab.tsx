@@ -245,6 +245,14 @@ export default function CategoriasTab({ search }: { search: string }) {
               codigo: `${subCodigo}.${sub.contas.length + 1}`,
               tipo: tipoNode.config.key,
             });
+          } else if (naturezaFilter !== "sintetica") {
+            // fixed "Adicionar conta..." placeholder
+            out.push({
+              kind: "add-placeholder",
+              level: 3,
+              tipo: tipoNode.config.key,
+              subId: sub.id,
+            });
           }
         }
       });
@@ -255,6 +263,13 @@ export default function CategoriasTab({ search }: { search: string }) {
           kind: "creating",
           level: 2,
           codigo: `${tipoCodigo}.${String(tipoNode.subcategorias.length + 1).padStart(2, "0")}`,
+          tipo: tipoNode.config.key,
+        });
+      } else if (naturezaFilter !== "analitica") {
+        // fixed "Adicionar subcategoria..." placeholder
+        out.push({
+          kind: "add-placeholder",
+          level: 2,
           tipo: tipoNode.config.key,
         });
       }
