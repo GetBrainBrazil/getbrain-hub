@@ -477,7 +477,7 @@ export default function CategoriasTab({ search }: { search: string }) {
 
                 // creating row
                 return (
-                  <TableRow key={`new-${idx}`} className="bg-muted/20 border-b border-border/60">
+                  <TableRow key={`new-${idx}`} className="bg-sky-50/60 dark:bg-sky-500/5 border-b border-border/60 animate-accordion-down">
                     <TableCell className="py-2.5">
                       <span className={cn("font-mono text-xs text-muted-foreground block", row.level === 3 && "pl-[26px]")}>
                         {row.codigo}
