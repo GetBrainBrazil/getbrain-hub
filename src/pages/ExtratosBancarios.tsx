@@ -50,7 +50,7 @@ export default function ExtratosBancarios() {
     queryFn: async () => {
       let q = supabase
         .from("movimentacoes")
-        .select("id, descricao, tipo, valor_realizado, valor_previsto, data_pagamento, data_vencimento, data_competencia, status, conciliado, observacoes, categorias(nome), clientes(nome), fornecedores(nome), centros_custo(nome), conta_bancaria_id")
+        .select("id, descricao, tipo, valor_realizado, valor_previsto, data_pagamento, data_vencimento, data_competencia, status, conciliado, observacoes, categoria_id, cliente_id, fornecedor_id, centro_custo_id, categorias(nome), clientes(nome), fornecedores(nome), centros_custo(nome), conta_bancaria_id")
         .order("data_pagamento", { ascending: true, nullsFirst: false });
 
       if (contaId !== "all") q = q.eq("conta_bancaria_id", contaId);
