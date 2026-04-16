@@ -82,7 +82,7 @@ interface FormPageShellProps {
 }
 export function FormPageShell({ title, subtitle, onBack, footer, children }: FormPageShellProps) {
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 animate-fade-in pb-6">
+    <div className="w-full space-y-4 animate-fade-in pb-6">
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" onClick={onBack} className="mt-0.5 h-8 w-8 shrink-0">
           <ArrowLeft className="h-4 w-4" />
