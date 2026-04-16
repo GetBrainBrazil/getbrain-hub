@@ -723,63 +723,79 @@ export default function Movimentacoes() {
       </div>
 
       {/* Table */}
-      <Card>
-        <CardContent className="pt-4">
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <SortableTableHead label={entityLabel} sortKey={isPagar ? "fornecedores" : "clientes"} currentSort={sortConfig} onSort={setSortConfig} />
-                  <SortableTableHead label="Descrição" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} />
-                  <SortableTableHead label="Categoria" sortKey="categorias" currentSort={sortConfig} onSort={setSortConfig} />
-                  <SortableTableHead label="Valor" sortKey="valor_previsto" currentSort={sortConfig} onSort={setSortConfig} className="text-right" />
-                  <SortableTableHead label="Vencimento" sortKey="data_vencimento" currentSort={sortConfig} onSort={setSortConfig} />
-                  <SortableTableHead label={isPagar ? "Pagamento" : "Recebimento"} sortKey="data_pagamento" currentSort={sortConfig} onSort={setSortConfig} />
-                  <SortableTableHead label="Status" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} />
+                <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
+                  <TableHead className="w-10 pl-5">
+                    <input type="checkbox" disabled className="h-4 w-4 rounded border-input accent-primary cursor-not-allowed opacity-60" />
+                  </TableHead>
+                  <SortableTableHead label={entityLabel.toUpperCase()} sortKey={isPagar ? "fornecedores" : "clientes"} currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
+                  <SortableTableHead label="DESCRIÇÃO" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
+                  <SortableTableHead label="CATEGORIA" sortKey="categorias" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
+                  <SortableTableHead label="VALOR" sortKey="valor_previsto" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground text-right" />
+                  <SortableTableHead label="VENCIMENTO" sortKey="data_vencimento" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
+                  <SortableTableHead label={isPagar ? "PAGAMENTO" : "RECEBIMENTO"} sortKey="data_pagamento" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
+                  <SortableTableHead label="STATUS" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
-                        <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                      {Array.from({ length: 8 }).map((_, j) => (
+                        <TableCell key={j} className="py-4"><Skeleton className="h-4 w-full" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground text-sm">
                       Nenhuma movimentação encontrada com os filtros atuais.
                     </TableCell>
                   </TableRow>
-                ) : filtered.map(m => (
+                ) : filtered.map(m => {
+                  const valueColor = isPagar ? "text-destructive" : "text-success";
+                  return (
                   <TableRow
                     key={m.id}
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${m.status === "atrasado" ? "bg-destructive/5" : ""}`}
+                    className="cursor-pointer transition-colors hover:bg-muted/40 border-b border-border/60 last:border-0"
                     onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
                   >
-                    <TableCell className="text-sm text-muted-foreground">
-                      {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
+                    <TableCell className="pl-5 py-4" onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" className="h-4 w-4 rounded border-input accent-primary cursor-pointer" />
                     </TableCell>
-                    <TableCell className="text-sm font-medium">{m.descricao}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{(m.categorias as any)?.nome || "—"}</TableCell>
-                    <TableCell className="text-right text-sm font-semibold">
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">
+                          {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-foreground py-4">{m.descricao}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground py-4">{(m.categorias as any)?.nome || "—"}</TableCell>
+                    <TableCell className={cn("text-right text-sm font-semibold font-mono py-4", valueColor)}>
                       {showSaldosParciais ? (
-                        <span className="font-mono">
+                        <span>
                           <span className="text-success">{formatCurrency(Number(m.valor_realizado || 0))}</span>
                           <span className="text-muted-foreground"> / </span>
-                          <span>{formatCurrency(Number(m.valor_previsto))}</span>
+                          <span className={valueColor}>{formatCurrency(Number(m.valor_previsto))}</span>
                         </span>
                       ) : (
                         formatCurrency(Number(m.valor_previsto))
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">{formatDate(m.data_vencimento)}</TableCell>
-                    <TableCell className="text-sm">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
-                    <TableCell><StatusBadge status={m.status as StatusType} /></TableCell>
+                    <TableCell className="text-sm text-foreground py-4">{formatDate(m.data_vencimento)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground py-4">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
+                    <TableCell className="py-4"><StatusBadge status={m.status as StatusType} className="rounded-full px-3 py-0.5" /></TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
