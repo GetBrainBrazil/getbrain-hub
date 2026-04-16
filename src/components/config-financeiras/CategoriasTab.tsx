@@ -31,14 +31,14 @@ type DeleteTarget =
   | { kind: "with-children"; cat: CategoriaRaw; childrenCount: number }
   | { kind: "in-use"; cat: CategoriaRaw; usageCount: number };
 
-type NaturezaFilter = "todas" | "sintetica" | "analitica";
+
 
 export default function CategoriasTab({ search }: { search: string }) {
   const [items, setItems] = useState<CategoriaRaw[]>([]);
   const [usageMap, setUsageMap] = useState<Map<string, number>>(new Map());
   const [tipoFilter, setTipoFilter] = useState<"todos" | TipoCategoria>("todos");
   const [statusFilter, setStatusFilter] = useState<"todas" | "ativas" | "inativas">("todas");
-  const [naturezaFilter, setNaturezaFilter] = useState<NaturezaFilter>("todas");
+  
 
   const [expandedTipos, setExpandedTipos] = useState<Set<string>>(new Set(TIPOS_CATEGORIA.map(t => t.key)));
   const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
@@ -230,28 +230,18 @@ export default function CategoriasTab({ search }: { search: string }) {
         const subOpen = expandedSubs.has(sub.id);
         const isAnalitica = sub.contas.length === 0;
 
-        // natureza filter applies to sub & conta
-        const subPasses =
-          naturezaFilter === "todas" ||
-          (naturezaFilter === "sintetica" && !isAnalitica) ||
-          (naturezaFilter === "analitica" && isAnalitica);
-
-        if (subPasses) {
-          out.push({
-            kind: "sub",
-            codigo: subCodigo,
-            cat: sub,
-            tipo: tipoNode.config.key,
-            hasChildren: !isAnalitica,
-            open: subOpen,
-            isAnalitica,
-          });
-        }
+        out.push({
+          kind: "sub",
+          codigo: subCodigo,
+          cat: sub,
+          tipo: tipoNode.config.key,
+          hasChildren: !isAnalitica,
+          open: subOpen,
+          isAnalitica,
+        });
 
         if (subOpen) {
           sub.contas.forEach((conta, cIdx) => {
-            // contas are always analitica
-            if (naturezaFilter === "sintetica") return;
             out.push({
               kind: "conta",
               codigo: `${subCodigo}.${cIdx + 1}`,
@@ -260,28 +250,24 @@ export default function CategoriasTab({ search }: { search: string }) {
             });
           });
           // fixed "+ Adicionar" placeholder for contas
-          if (naturezaFilter !== "sintetica") {
-            out.push({
-              kind: "add-placeholder",
-              level: 3,
-              tipo: tipoNode.config.key,
-              subId: sub.id,
-            });
-          }
+          out.push({
+            kind: "add-placeholder",
+            level: 3,
+            tipo: tipoNode.config.key,
+            subId: sub.id,
+          });
         }
       });
 
       // fixed "+ Adicionar" placeholder for subcategorias
-      if (naturezaFilter !== "analitica") {
-        out.push({
-          kind: "add-placeholder",
-          level: 2,
-          tipo: tipoNode.config.key,
-        });
-      }
+      out.push({
+        kind: "add-placeholder",
+        level: 2,
+        tipo: tipoNode.config.key,
+      });
     });
     return out;
-  }, [tree, tipoFilter, naturezaFilter, expandedTipos, expandedSubs]);
+  }, [tree, tipoFilter, expandedTipos, expandedSubs]);
 
   function tipoBadge(tipo: TipoCategoria) {
     const map: Record<TipoCategoria, { label: string; className: string }> = {
@@ -295,13 +281,6 @@ export default function CategoriasTab({ search }: { search: string }) {
     return <Badge variant="outline" className={cn("font-medium text-[10.5px] px-1.5 py-0", m.className)}>{m.label}</Badge>;
   }
 
-  function naturezaBadge(isAnalitica: boolean) {
-    return (
-      <Badge variant="outline" className="font-normal text-[10.5px] px-1.5 py-0 bg-muted text-muted-foreground border-border">
-        {isAnalitica ? "Analítica" : "Sintética"}
-      </Badge>
-    );
-  }
 
   return (
     <Card>
@@ -327,15 +306,6 @@ export default function CategoriasTab({ search }: { search: string }) {
             </SelectContent>
           </Select>
 
-          <Select value={naturezaFilter} onValueChange={(v: NaturezaFilter) => setNaturezaFilter(v)}>
-            <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as naturezas</SelectItem>
-              <SelectItem value="sintetica">Sintética</SelectItem>
-              <SelectItem value="analitica">Analítica</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Button
             className="ml-auto h-9 gap-1.5"
             onClick={() => openCreateModal({ kind: "categoria" })}
@@ -353,7 +323,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                 <TableHead className="w-[110px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Código</TableHead>
                 <TableHead className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Nome</TableHead>
                 <TableHead className="w-[140px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Tipo</TableHead>
-                <TableHead className="w-[110px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Natureza</TableHead>
+                
                 <TableHead className="w-[80px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9 text-right pr-4">Ativo</TableHead>
               </TableRow>
             </TableHeader>
