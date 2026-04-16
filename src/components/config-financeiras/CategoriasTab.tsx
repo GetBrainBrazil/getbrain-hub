@@ -551,12 +551,12 @@ function InlineNameForm({
 }) {
   return (
     <div className={cn("flex items-center gap-1", className)}>
-      <Input
+      <input
         autoFocus
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-7 text-sm"
+        className="h-7 text-sm flex-1 bg-transparent border-0 border-b border-border focus:border-primary focus:outline-none focus:ring-0 px-0 py-1 placeholder:text-muted-foreground/60"
         onKeyDown={(e) => {
           if (e.key === "Enter") { e.preventDefault(); onSave(); }
           if (e.key === "Escape") { e.preventDefault(); onCancel(); }
@@ -565,7 +565,7 @@ function InlineNameForm({
       <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10" onClick={onSave}>
         <Check className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onCancel}>
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={onCancel}>
         <X className="h-4 w-4" />
       </Button>
     </div>
