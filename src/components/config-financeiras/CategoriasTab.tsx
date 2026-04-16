@@ -181,7 +181,8 @@ export default function CategoriasTab({ search }: { search: string }) {
     | { kind: "tipo"; codigo: string; tipoIdx: number; label: string; tipo: TipoCategoria; hasChildren: boolean; open: boolean }
     | { kind: "sub"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria; hasChildren: boolean; open: boolean; isAnalitica: boolean }
     | { kind: "conta"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria }
-    | { kind: "creating"; level: 2 | 3; codigo: string; tipo: TipoCategoria };
+    | { kind: "creating"; level: 2 | 3; codigo: string; tipo: TipoCategoria }
+    | { kind: "add-placeholder"; level: 2 | 3; tipo: TipoCategoria; subId?: string };
 
   const rows: Row[] = useMemo(() => {
     const out: Row[] = [];
@@ -244,6 +245,14 @@ export default function CategoriasTab({ search }: { search: string }) {
               codigo: `${subCodigo}.${sub.contas.length + 1}`,
               tipo: tipoNode.config.key,
             });
+          } else if (naturezaFilter !== "sintetica") {
+            // fixed "Adicionar conta..." placeholder
+            out.push({
+              kind: "add-placeholder",
+              level: 3,
+              tipo: tipoNode.config.key,
+              subId: sub.id,
+            });
           }
         }
       });
@@ -254,6 +263,13 @@ export default function CategoriasTab({ search }: { search: string }) {
           kind: "creating",
           level: 2,
           codigo: `${tipoCodigo}.${String(tipoNode.subcategorias.length + 1).padStart(2, "0")}`,
+          tipo: tipoNode.config.key,
+        });
+      } else if (naturezaFilter !== "analitica") {
+        // fixed "Adicionar subcategoria..." placeholder
+        out.push({
+          kind: "add-placeholder",
+          level: 2,
           tipo: tipoNode.config.key,
         });
       }
@@ -354,21 +370,8 @@ export default function CategoriasTab({ search }: { search: string }) {
                           <span className="font-mono text-xs">{row.codigo}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-2.5 group">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-foreground">{row.label}</span>
-                          <Button
-                            variant="ghost" size="sm"
-                            className="h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
-                            onClick={() => {
-                              setExpandedTipos(new Set([...expandedTipos, row.tipo]));
-                              setCreatingChild({ level: 2, tipo: row.tipo });
-                              setNewName("");
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Subcategoria
-                          </Button>
-                        </div>
+                      <TableCell className="py-2.5">
+                        <span className="font-bold text-sm text-foreground">{row.label}</span>
                       </TableCell>
                       <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
                       <TableCell className="py-2.5">
@@ -413,14 +416,8 @@ export default function CategoriasTab({ search }: { search: string }) {
                                 {row.cat.nome}
                               </span>
                               <RowActions
-                                onAddChild={() => {
-                                  setExpandedSubs(new Set([...expandedSubs, row.cat.id]));
-                                  setCreatingChild({ level: 3, subId: row.cat.id, tipo: row.tipo });
-                                  setNewName("");
-                                }}
                                 onEdit={() => { setEditingId(row.cat.id); setEditingName(row.cat.nome); }}
                                 onDelete={() => requestDelete(row.cat)}
-                                showAdd
                               />
                             </>
                           )}
@@ -475,29 +472,65 @@ export default function CategoriasTab({ search }: { search: string }) {
                   );
                 }
 
-                // creating row
+                if (row.kind === "creating") {
+                  return (
+                    <TableRow key={`new-${idx}`} className="bg-sky-50/60 dark:bg-sky-500/5 border-b border-border/60 animate-accordion-down">
+                      <TableCell className="py-2.5">
+                        <span className={cn("font-mono text-xs text-muted-foreground block", row.level === 3 && "pl-[26px]")}>
+                          {row.codigo}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-2.5">
+                        <div style={{ paddingLeft: row.level === 2 ? 24 : 48 }}>
+                          <InlineNameForm
+                            value={newName}
+                            onChange={setNewName}
+                            onSave={saveNewChild}
+                            onCancel={() => { setCreatingChild(null); setNewName(""); }}
+                            placeholder={row.level === 2 ? "Nome da subcategoria" : "Nome da conta"}
+                            className="max-w-md"
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
+                      <TableCell className="py-2.5">{naturezaBadge(row.level === 3)}</TableCell>
+                      <TableCell className="py-2.5 text-right pr-4"><span className="text-xs text-muted-foreground">—</span></TableCell>
+                    </TableRow>
+                  );
+                }
+
+                // add-placeholder row (fixed "Adicionar..." row)
+                const isSub = row.level === 2;
                 return (
-                  <TableRow key={`new-${idx}`} className="bg-sky-50/60 dark:bg-sky-500/5 border-b border-border/60 animate-accordion-down">
-                    <TableCell className="py-2.5">
-                      <span className={cn("font-mono text-xs text-muted-foreground block", row.level === 3 && "pl-[26px]")}>
-                        {row.codigo}
+                  <TableRow
+                    key={`add-${row.tipo}-${row.subId ?? "root"}-${idx}`}
+                    className="border-b border-border/60 opacity-60 hover:opacity-90 cursor-text transition-opacity"
+                    onClick={() => {
+                      if (isSub) {
+                        setExpandedTipos(new Set([...expandedTipos, row.tipo]));
+                        setCreatingChild({ level: 2, tipo: row.tipo });
+                      } else {
+                        setExpandedSubs(new Set([...expandedSubs, row.subId!]));
+                        setCreatingChild({ level: 3, subId: row.subId!, tipo: row.tipo });
+                      }
+                      setNewName("");
+                    }}
+                  >
+                    <TableCell className="py-2">
+                      <span className={cn("flex items-center justify-center w-5 h-5", !isSub && "ml-[26px]")}>
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground/60" />
                       </span>
                     </TableCell>
-                    <TableCell className="py-2.5">
-                      <div style={{ paddingLeft: row.level === 2 ? 24 : 48 }}>
-                        <InlineNameForm
-                          value={newName}
-                          onChange={setNewName}
-                          onSave={saveNewChild}
-                          onCancel={() => { setCreatingChild(null); setNewName(""); }}
-                          placeholder={row.level === 2 ? "Nome da subcategoria" : "Nome da conta"}
-                          className="max-w-md"
-                        />
+                    <TableCell className="py-2">
+                      <div style={{ paddingLeft: isSub ? 24 : 48 }}>
+                        <span className="text-sm italic text-muted-foreground/70">
+                          {isSub ? "Adicionar subcategoria..." : "Adicionar conta..."}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
-                    <TableCell className="py-2.5">{naturezaBadge(row.level === 3)}</TableCell>
-                    <TableCell className="py-2.5 text-right pr-4"><span className="text-xs text-muted-foreground">—</span></TableCell>
+                    <TableCell className="py-2"></TableCell>
+                    <TableCell className="py-2"></TableCell>
+                    <TableCell className="py-2 text-right pr-4"></TableCell>
                   </TableRow>
                 );
               })}
