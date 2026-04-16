@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import InadimplenciaTab from "@/components/InadimplenciaTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   TrendingUp, TrendingDown, DollarSign, MinusCircle, BarChart3, Percent,
   ChevronDown, ChevronRight, Eye, Download, CalendarIcon, FileText, FileSpreadsheet,
-  X
+  X, AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/formatters";
@@ -446,7 +447,7 @@ export default function Relatorios() {
         <TabsList>
           <TabsTrigger value="dre"><BarChart3 className="h-4 w-4 mr-1.5" />DRE</TabsTrigger>
           <TabsTrigger value="fluxo" disabled>Fluxo de Caixa</TabsTrigger>
-          <TabsTrigger value="inadimplencia" disabled>Análise de Inadimplência</TabsTrigger>
+          <TabsTrigger value="inadimplencia"><AlertTriangle className="h-4 w-4 mr-1.5" />Análise de Inadimplência</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dre" className="space-y-6 mt-4">
@@ -590,14 +591,8 @@ export default function Relatorios() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="inadimplencia">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="text-4xl mb-4">📈</div>
-              <h3 className="text-lg font-semibold mb-2">Análise de Inadimplência em desenvolvimento</h3>
-              <p className="text-muted-foreground">Em breve.</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="inadimplencia" className="space-y-6 mt-4">
+          <InadimplenciaTab />
         </TabsContent>
       </Tabs>
 
