@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Index from "./pages/Index";
 import FinanceiroVisaoGeral from "./pages/FinanceiroVisaoGeral";
 import Movimentacoes from "./pages/Movimentacoes";
+import MovimentacaoDetalhe from "./pages/MovimentacaoDetalhe";
 
 import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroVisaoGeral /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes" element={<ProtectedRoute><Movimentacoes /></ProtectedRoute>} />
+            <Route path="/financeiro/movimentacoes/:id" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
             
             <Route path="/financeiro/orcamento" element={<ProtectedRoute><Orcamento /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
