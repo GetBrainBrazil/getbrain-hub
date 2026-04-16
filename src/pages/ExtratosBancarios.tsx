@@ -200,14 +200,9 @@ export default function ExtratosBancarios() {
 
   return (
     <div className="space-y-6 animate-fade-slide">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold font-heading">Extratos Bancários</h1>
-          <p className="text-muted-foreground text-sm">Conciliação e controle de extratos por conta bancária</p>
-        </div>
-        <Button onClick={() => setImportOpen(true)} className="gap-2">
-          <Upload className="h-4 w-4" /> Importar Extrato
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold font-heading">Extratos Bancários</h1>
+        <p className="text-muted-foreground text-sm">Conciliação e controle de extratos por conta bancária</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -221,6 +216,10 @@ export default function ExtratosBancarios() {
           </SelectContent>
         </Select>
         <PeriodFilter preset={preset} customRange={customRange} onPresetChange={setPreset} onCustomRangeChange={setCustomRange} />
+        <div className="flex-1" />
+        <Button onClick={() => setImportOpen(true)} className="gap-2">
+          <Upload className="h-4 w-4" /> Importar Extrato
+        </Button>
       </div>
 
       {/* Divergence alert */}
