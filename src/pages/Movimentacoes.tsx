@@ -853,6 +853,35 @@ export default function Movimentacoes() {
                     <TableCell className="text-sm text-foreground py-4">{formatDate(m.data_vencimento)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground py-4">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
                     <TableCell className="py-4"><StatusBadge status={m.status as StatusType} className="rounded-full px-3 py-0.5" /></TableCell>
+                    <TableCell className="py-4 pr-4 text-right" onClick={e => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          {m.status !== "pago" && (
+                            <DropdownMenuItem onClick={() => openDarBaixa(m)} className="cursor-pointer">
+                              <CheckCircle className="mr-2 h-4 w-4 text-success" />
+                              Liquidar Conta
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => openEditModal(m)} className="cursor-pointer">
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDuplicate(m)} className="cursor-pointer">
+                            <Copy className="mr-2 h-4 w-4" />
+                            Duplicar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(m.id)} className="cursor-pointer text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                   {showSaldosParciais && (
                     <>
