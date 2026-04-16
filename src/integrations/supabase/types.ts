@@ -199,6 +199,90 @@ export type Database = {
         }
         Relationships: []
       }
+      colaboradores: {
+        Row: {
+          agencia: string | null
+          ativo: boolean | null
+          bairro: string | null
+          banco: string | null
+          cargo: string | null
+          cep: string | null
+          chaves_pix: string[] | null
+          cidade: string | null
+          complemento: string | null
+          conta: string | null
+          cpf: string | null
+          created_at: string | null
+          created_by: string | null
+          data_admissao: string | null
+          emails: string[] | null
+          endereco: string | null
+          estado: string | null
+          id: string
+          nome: string
+          numero: string | null
+          observacoes: string | null
+          salario_base: number | null
+          telefones: string[] | null
+          tipo_conta: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agencia?: string | null
+          ativo?: boolean | null
+          bairro?: string | null
+          banco?: string | null
+          cargo?: string | null
+          cep?: string | null
+          chaves_pix?: string[] | null
+          cidade?: string | null
+          complemento?: string | null
+          conta?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_admissao?: string | null
+          emails?: string[] | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          nome: string
+          numero?: string | null
+          observacoes?: string | null
+          salario_base?: number | null
+          telefones?: string[] | null
+          tipo_conta?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agencia?: string | null
+          ativo?: boolean | null
+          bairro?: string | null
+          banco?: string | null
+          cargo?: string | null
+          cep?: string | null
+          chaves_pix?: string[] | null
+          cidade?: string | null
+          complemento?: string | null
+          conta?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_admissao?: string | null
+          emails?: string[] | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          nome?: string
+          numero?: string | null
+          observacoes?: string | null
+          salario_base?: number | null
+          telefones?: string[] | null
+          tipo_conta?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       contas_bancarias: {
         Row: {
           agencia: string | null
