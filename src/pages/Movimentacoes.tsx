@@ -609,9 +609,19 @@ export default function Movimentacoes() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KPICard title="Total Pendente" value={totalPendente} icon={Clock} />
-        <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" />
-        <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" />
+        {loading ? (
+          <>
+            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+          </>
+        ) : (
+          <>
+            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} />
+            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" />
+            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" />
+          </>
+        )}
       </div>
 
       {/* Tabs */}
