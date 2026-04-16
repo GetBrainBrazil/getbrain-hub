@@ -935,8 +935,6 @@ export default function Movimentacoes() {
                       <TableCell className="py-3"></TableCell>
                     </TableRow>
                   )}
-                    </>
-                  )}
                   </React.Fragment>
                   );
                 })}
