@@ -51,6 +51,7 @@ export default function Movimentacoes() {
   const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("movimentacoes_period", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
+  const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -631,7 +632,7 @@ export default function Movimentacoes() {
         <div className="flex gap-2">
           <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("pagar"); }}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="gap-1.5 border-border text-foreground hover:bg-muted" onClick={() => setTab("pagar")}>
+              <Button variant="destructive" className="gap-1.5" onClick={() => setTab("pagar")}>
                 <Plus className="h-4 w-4" /> Conta a Pagar
               </Button>
             </DialogTrigger>
@@ -646,7 +647,7 @@ export default function Movimentacoes() {
           </Dialog>
           <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("receber"); }}>
             <DialogTrigger asChild>
-              <Button className="gap-1.5 bg-sidebar text-sidebar-foreground hover:bg-sidebar/90" onClick={() => setTab("receber")}>
+              <Button variant="destructive" className="gap-1.5" onClick={() => setTab("receber")}>
                 <Plus className="h-4 w-4" /> Conta a Receber
               </Button>
             </DialogTrigger>
@@ -702,7 +703,11 @@ export default function Movimentacoes() {
           <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <PeriodFilter preset={periodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
-        <div className="flex gap-1.5 ml-auto">
+        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
+          Exibir Saldos Parciais
+        </label>
+        <div className="flex gap-1.5">
           {statusButtons.map(s => (
             <Button
               key={s.key}
@@ -759,7 +764,17 @@ export default function Movimentacoes() {
                     </TableCell>
                     <TableCell className="text-sm font-medium">{m.descricao}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{(m.categorias as any)?.nome || "—"}</TableCell>
-                    <TableCell className="text-right text-sm font-semibold">{formatCurrency(Number(m.valor_previsto))}</TableCell>
+                    <TableCell className="text-right text-sm font-semibold">
+                      {showSaldosParciais ? (
+                        <span className="font-mono">
+                          <span className="text-success">{formatCurrency(Number(m.valor_realizado || 0))}</span>
+                          <span className="text-muted-foreground"> / </span>
+                          <span>{formatCurrency(Number(m.valor_previsto))}</span>
+                        </span>
+                      ) : (
+                        formatCurrency(Number(m.valor_previsto))
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm">{formatDate(m.data_vencimento)}</TableCell>
                     <TableCell className="text-sm">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
                     <TableCell><StatusBadge status={m.status as StatusType} /></TableCell>
