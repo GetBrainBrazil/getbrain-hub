@@ -479,48 +479,25 @@ export default function CategoriasTab({ search }: { search: string }) {
                   );
                 }
 
-                if (row.kind === "creating") {
-                  return (
-                    <TableRow key={`new-${idx}`} className="bg-sky-50/60 dark:bg-sky-500/5 border-b border-border/60 animate-accordion-down">
-                      <TableCell className="py-2.5">
-                        <span className={cn("font-mono text-xs text-muted-foreground block", row.level === 3 && "pl-[26px]")}>
-                          {row.codigo}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-2.5">
-                        <div style={{ paddingLeft: row.level === 2 ? 24 : 48 }}>
-                          <InlineNameForm
-                            value={newName}
-                            onChange={setNewName}
-                            onSave={saveNewChild}
-                            onCancel={() => { setCreatingChild(null); setNewName(""); }}
-                            placeholder={row.level === 2 ? "Nome da subcategoria" : "Nome da conta"}
-                            className="max-w-md"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
-                      <TableCell className="py-2.5">{naturezaBadge(row.level === 3)}</TableCell>
-                      <TableCell className="py-2.5 text-right pr-4"><span className="text-xs text-muted-foreground">—</span></TableCell>
-                    </TableRow>
-                  );
-                }
-
-                // add-placeholder row (fixed "Adicionar..." row)
+                // add-placeholder row (fixed "+ Adicionar" row)
                 const isSub = row.level === 2;
+                const paiSub = !isSub
+                  ? items.find(i => i.id === row.subId)
+                  : null;
                 return (
                   <TableRow
                     key={`add-${row.tipo}-${row.subId ?? "root"}-${idx}`}
-                    className="border-b border-border/60 opacity-60 hover:opacity-90 cursor-text transition-opacity"
+                    className="border-b border-border/60 opacity-60 hover:opacity-90 cursor-pointer transition-opacity"
                     onClick={() => {
                       if (isSub) {
-                        setExpandedTipos(new Set([...expandedTipos, row.tipo]));
-                        setCreatingChild({ level: 2, tipo: row.tipo });
+                        openCreateModal({ kind: "categoria", tipo: row.tipo });
                       } else {
-                        setExpandedSubs(new Set([...expandedSubs, row.subId!]));
-                        setCreatingChild({ level: 3, subId: row.subId!, tipo: row.tipo });
+                        openCreateModal({
+                          kind: "subcategoria",
+                          tipo: row.tipo,
+                          paiId: row.subId,
+                        });
                       }
-                      setNewName("");
                     }}
                   >
                     <TableCell className="py-2">
@@ -531,7 +508,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                     <TableCell className="py-2">
                       <div style={{ paddingLeft: isSub ? 24 : 48 }}>
                         <span className="text-sm italic text-muted-foreground/70">
-                          {isSub ? "Adicionar subcategoria..." : "Adicionar conta..."}
+                          + Adicionar
                         </span>
                       </div>
                     </TableCell>
