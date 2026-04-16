@@ -181,7 +181,8 @@ export default function CategoriasTab({ search }: { search: string }) {
     | { kind: "tipo"; codigo: string; tipoIdx: number; label: string; tipo: TipoCategoria; hasChildren: boolean; open: boolean }
     | { kind: "sub"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria; hasChildren: boolean; open: boolean; isAnalitica: boolean }
     | { kind: "conta"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria }
-    | { kind: "creating"; level: 2 | 3; codigo: string; tipo: TipoCategoria };
+    | { kind: "creating"; level: 2 | 3; codigo: string; tipo: TipoCategoria }
+    | { kind: "add-placeholder"; level: 2 | 3; tipo: TipoCategoria; subId?: string };
 
   const rows: Row[] = useMemo(() => {
     const out: Row[] = [];
