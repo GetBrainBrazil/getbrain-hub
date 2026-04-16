@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -485,9 +486,12 @@ export default function MovimentacaoDetalhe() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Nenhuma —</SelectItem>
-                    {categoriasFiltradas.map((c) => (
+                    {categoriasFiltradas.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.nome}
+                        <span className="flex items-center gap-1.5">
+                          {c.level === 3 && <span className="text-muted-foreground text-xs">└─</span>}
+                          {c.label}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
