@@ -106,24 +106,30 @@ export type Database = {
       centros_custo: {
         Row: {
           ativo: boolean | null
+          codigo: string | null
           created_at: string | null
           descricao: string | null
           id: string
           nome: string
+          responsavel: string | null
         }
         Insert: {
           ativo?: boolean | null
+          codigo?: string | null
           created_at?: string | null
           descricao?: string | null
           id?: string
           nome: string
+          responsavel?: string | null
         }
         Update: {
           ativo?: boolean | null
+          codigo?: string | null
           created_at?: string | null
           descricao?: string | null
           id?: string
           nome?: string
+          responsavel?: string | null
         }
         Relationships: []
       }
