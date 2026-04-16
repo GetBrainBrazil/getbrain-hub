@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 type TabType = "pagar" | "receber";
 
@@ -34,6 +35,7 @@ const tipoByTab: Record<TabType, "despesa" | "receita"> = {
 
 export default function Movimentacoes() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
   const [loadingByTab, setLoadingByTab] = useState<Record<TabType, boolean>>({ pagar: true, receber: true });
@@ -53,7 +55,7 @@ export default function Movimentacoes() {
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
-  const [detailMov, setDetailMov] = useState<any>(null);
+  
 
   // Fornecedor combobox state
   const [fornecedorOpen, setFornecedorOpen] = useState(false);
@@ -354,7 +356,6 @@ export default function Movimentacoes() {
 
     toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
     setOpenBaixa(false);
-    setDetailMov(null);
     void refreshTabs([tab]);
   }
 
@@ -362,7 +363,6 @@ export default function Movimentacoes() {
     if (!confirm("Excluir esta movimentação?")) return;
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
-    setDetailMov(null);
     void refreshTabs([tab]);
   }
 
@@ -407,7 +407,6 @@ export default function Movimentacoes() {
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Movimentação atualizada!");
     setOpenEdit(false);
-    setDetailMov(null);
     resetForm();
     void refreshTabs([tab]);
   }
@@ -683,13 +682,13 @@ export default function Movimentacoes() {
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-border">
         <button
-          onClick={() => { setTab("pagar"); setStatusFilter("todas"); setDetailMov(null); }}
+          onClick={() => { setTab("pagar"); setStatusFilter("todas"); }}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Pagar
         </button>
         <button
-          onClick={() => { setTab("receber"); setStatusFilter("todas"); setDetailMov(null); }}
+          onClick={() => { setTab("receber"); setStatusFilter("todas"); }}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Receber
@@ -752,8 +751,8 @@ export default function Movimentacoes() {
                 ) : filtered.map(m => (
                   <TableRow
                     key={m.id}
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${m.status === "atrasado" ? "bg-destructive/5" : ""} ${detailMov?.id === m.id ? "bg-muted" : ""}`}
-                    onClick={() => setDetailMov(m)}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${m.status === "atrasado" ? "bg-destructive/5" : ""}`}
+                    onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
                   >
                     <TableCell className="text-sm text-muted-foreground">
                       {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
@@ -771,141 +770,6 @@ export default function Movimentacoes() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Detail Sheet */}
-      <Sheet open={!!detailMov} onOpenChange={open => { if (!open) setDetailMov(null); }}>
-        <SheetContent side="right" className="w-[420px] sm:w-[460px] p-0 overflow-y-auto">
-          {detailMov && (
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="flex items-center justify-between p-5 pb-0">
-                <div className="flex items-center gap-2">
-                  {isPagar ? <TrendingDown className="h-5 w-5 text-destructive" /> : <TrendingUp className="h-5 w-5 text-success" />}
-                  <StatusBadge status={detailMov.status as StatusType} />
-                  <span className="text-sm text-muted-foreground">{isPagar ? "A Pagar" : "A Receber"}</span>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailMov(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Value */}
-              <div className="px-5 pt-2 pb-4">
-                <p className={`text-2xl font-semibold ${detailMov.status === "atrasado" ? "text-destructive" : isPagar ? "text-destructive" : "text-success"}`}>
-                  {formatCurrency(Number(detailMov.valor_previsto))}
-                </p>
-                {detailMov.valor_realizado != null && Number(detailMov.valor_realizado) > 0 && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Valor {isPagar ? "pago" : "recebido"}: <span className="font-medium text-foreground">{formatCurrency(Number(detailMov.valor_realizado))}</span>
-                  </p>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Description */}
-              <div className="px-5 py-4 space-y-4">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descrição</p>
-                  <p className="text-sm">{detailMov.descricao}</p>
-                </div>
-
-                {/* Entity */}
-                {(isPagar ? (detailMov.fornecedores as any)?.nome : (detailMov.clientes as any)?.nome) && (
-                  <div className="flex items-start gap-3 bg-muted/50 rounded-lg p-3">
-                    <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">{entityLabel}</p>
-                      <p className="text-sm font-medium">{isPagar ? (detailMov.fornecedores as any)?.nome : (detailMov.clientes as any)?.nome}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Project */}
-                {(detailMov.projetos as any)?.nome && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Projeto</p>
-                    <p className="text-sm">{(detailMov.projetos as any).nome}</p>
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Dates */}
-              <div className="px-5 py-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Datas</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Vencimento</p>
-                    <p className="text-sm font-medium">{formatDate(detailMov.data_vencimento)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Competência</p>
-                    <p className="text-sm font-medium">{formatDate(detailMov.data_competencia)}</p>
-                  </div>
-                  {detailMov.data_pagamento && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">{isPagar ? "Pagamento" : "Recebimento"}</p>
-                      <p className="text-sm font-medium">{formatDate(detailMov.data_pagamento)}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Category */}
-              {(detailMov.categorias as any)?.nome && (
-                <>
-                  <div className="px-5 py-4">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Classificação</p>
-                    <span className="inline-block text-xs bg-muted px-3 py-1.5 rounded-full font-medium">
-                      {(detailMov.categorias as any).nome}
-                    </span>
-                  </div>
-                  <Separator />
-                </>
-              )}
-
-              {/* Observations */}
-              {detailMov.observacoes && (
-                <>
-                  <div className="px-5 py-4">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Observações</p>
-                    <p className="text-sm text-muted-foreground">{detailMov.observacoes}</p>
-                  </div>
-                  <Separator />
-                </>
-              )}
-
-              {/* Actions */}
-              <div className="px-5 pt-2 pb-5 flex items-center gap-2">
-                {detailMov.status !== "pago" && detailMov.status !== "cancelado" && (
-                  <Button
-                    className="gap-1.5 bg-success hover:bg-success/90 text-white"
-                    onClick={() => { openDarBaixa(detailMov); }}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
-                  </Button>
-                )}
-                <Button variant="outline" className="gap-1.5" onClick={() => openEditModal(detailMov)}>
-                  <Pencil className="h-4 w-4" /> Editar
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="ml-auto"
-                  onClick={() => handleDelete(detailMov.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
 
       {/* Baixa Dialog */}
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
