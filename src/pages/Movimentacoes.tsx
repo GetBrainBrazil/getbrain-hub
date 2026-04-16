@@ -27,11 +27,17 @@ import { cn } from "@/lib/utils";
 
 type TabType = "pagar" | "receber";
 
+const tipoByTab: Record<TabType, "despesa" | "receita"> = {
+  pagar: "despesa",
+  receber: "receita",
+};
+
 export default function Movimentacoes() {
   const { user } = useAuth();
   const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
-  const [movs, setMovs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
+  const [loadingByTab, setLoadingByTab] = useState<Record<TabType, boolean>>({ pagar: true, receber: true });
+  const [referencesLoading, setReferencesLoading] = useState(true);
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -66,34 +72,80 @@ export default function Movimentacoes() {
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
   });
 
-  useEffect(() => { loadAll(); }, [tab]);
-
-  const tipo = tab === "pagar" ? "despesa" : "receita";
+  const tipo = tipoByTab[tab];
   const isPagar = tab === "pagar";
+  const movs = movsByTab[tab];
+  const loading = referencesLoading || loadingByTab[tab];
 
-  async function loadAll() {
-    setLoading(true);
-    setMovs([]);
+  useEffect(() => {
+    void loadInitialData();
+  }, []);
+
+  function setTabsLoading(targetTabs: TabType[], value: boolean) {
+    setLoadingByTab((prev) => {
+      const next = { ...prev };
+      targetTabs.forEach((targetTab) => {
+        next[targetTab] = value;
+      });
+      return next;
+    });
+  }
+
+  function getMovimentacoesQuery(targetTab: TabType) {
+    return supabase
+      .from("movimentacoes")
+      .select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)")
+      .eq("tipo", tipoByTab[targetTab])
+      .order("data_vencimento", { ascending: false });
+  }
+
+  async function loadReferenceData() {
+    const [rClientes, rFornecedores, rCategorias, rContas, rProjetos, rMeios] = await Promise.all([
+      supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
+      supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
+      supabase.from("categorias").select("*").eq("ativo", true),
+      supabase.from("contas_bancarias").select("*").eq("ativo", true),
+      supabase.from("projetos").select("*"),
+      supabase.from("meios_pagamento").select("*").eq("ativo", true),
+    ]);
+
+    setClientes(rClientes.data || []);
+    setFornecedores(rFornecedores.data || []);
+    setCategorias(rCategorias.data || []);
+    setContas(rContas.data || []);
+    setProjetos(rProjetos.data || []);
+    setMeios(rMeios.data || []);
+  }
+
+  async function refreshTabs(targetTabs: TabType[]) {
+    setTabsLoading(targetTabs, true);
     try {
-      const [, r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
+      const results = await Promise.all([
         supabase.rpc("update_status_atrasado" as any),
-        supabase.from("movimentacoes").select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)").eq("tipo", tipo).order("data_vencimento", { ascending: false }),
-        supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
-        supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
-        supabase.from("categorias").select("*").eq("ativo", true),
-        supabase.from("contas_bancarias").select("*").eq("ativo", true),
-        supabase.from("projetos").select("*"),
-        supabase.from("meios_pagamento").select("*").eq("ativo", true),
+        ...targetTabs.map((targetTab) => getMovimentacoesQuery(targetTab)),
       ]);
-      setMovs(r1.data || []);
-      setClientes(r2.data || []);
-      setFornecedores(r3.data || []);
-      setCategorias(r4.data || []);
-      setContas(r5.data || []);
-      setProjetos(r6.data || []);
-      setMeios(r7.data || []);
+
+      setMovsByTab((prev) => {
+        const next = { ...prev };
+        targetTabs.forEach((targetTab, index) => {
+          next[targetTab] = (results[index + 1] as any)?.data || [];
+        });
+        return next;
+      });
     } finally {
-      setLoading(false);
+      setTabsLoading(targetTabs, false);
+    }
+  }
+
+  async function loadInitialData() {
+    setReferencesLoading(true);
+    try {
+      await Promise.all([
+        loadReferenceData(),
+        refreshTabs(["pagar", "receber"]),
+      ]);
+    } finally {
+      setReferencesLoading(false);
     }
   }
 
@@ -155,18 +207,22 @@ export default function Movimentacoes() {
     });
   }, [movs, periodRange]);
 
-  const filtered = applySorting(periodFiltered.filter(m => {
-    if (statusFilter === "pendentes" && m.status !== "pendente") return false;
-    if (statusFilter === "recebidas" && m.status !== "pago") return false;
-    if (statusFilter === "pagas" && m.status !== "pago") return false;
-    if (statusFilter === "atrasadas" && m.status !== "atrasado") return false;
-    if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  }), sortConfig);
+  const filtered = useMemo(() => (
+    applySorting(periodFiltered.filter(m => {
+      if (statusFilter === "pendentes" && m.status !== "pendente") return false;
+      if (statusFilter === "recebidas" && m.status !== "pago") return false;
+      if (statusFilter === "pagas" && m.status !== "pago") return false;
+      if (statusFilter === "atrasadas" && m.status !== "atrasado") return false;
+      if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    }), sortConfig)
+  ), [periodFiltered, search, sortConfig, statusFilter]);
 
-  const totalPendente = periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
-  const totalRecebidoPago = periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0);
-  const totalAtrasado = periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0);
+  const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => ({
+    totalPendente: periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0),
+    totalRecebidoPago: periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0),
+    totalAtrasado: periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0),
+  }), [periodFiltered]);
 
   const entityLabel = isPagar ? "Fornecedor" : "Cliente";
 
@@ -246,7 +302,7 @@ export default function Movimentacoes() {
     );
     setOpenNew(false);
     resetForm();
-    loadAll();
+    void refreshTabs([tab]);
   }
 
   function resetForm() {
@@ -299,7 +355,7 @@ export default function Movimentacoes() {
     toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
     setOpenBaixa(false);
     setDetailMov(null);
-    loadAll();
+    void refreshTabs([tab]);
   }
 
   async function handleDelete(id: string) {
@@ -307,7 +363,7 @@ export default function Movimentacoes() {
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
     setDetailMov(null);
-    loadAll();
+    void refreshTabs([tab]);
   }
 
   function openEditModal(m: any) {
@@ -353,7 +409,7 @@ export default function Movimentacoes() {
     setOpenEdit(false);
     setDetailMov(null);
     resetForm();
-    loadAll();
+    void refreshTabs([tab]);
   }
 
   const statusButtons = isPagar
