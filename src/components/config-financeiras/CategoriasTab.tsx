@@ -50,11 +50,6 @@ export default function CategoriasTab({ search }: { search: string }) {
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const [novaModal, setNovaModal] = useState<null | "sub" | "conta">(null);
-  const [novaForm, setNovaForm] = useState<{ tipo: TipoCategoria; pai_id: string; nome: string }>({
-    tipo: "despesas", pai_id: "", nome: "",
-  });
-
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
