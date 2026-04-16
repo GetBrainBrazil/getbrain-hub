@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { PeriodFilter, PeriodPreset, getDateRange } from "@/components/PeriodFilter";
@@ -10,29 +10,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Wallet, TrendingUp, TrendingDown, Landmark, Upload, CheckCircle2, Clock, AlertTriangle, ShieldCheck, X, FileText, Building2, Pencil, AlertCircle } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Landmark, Upload, CheckCircle2, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
 import { ImportExtratoWizard } from "@/components/ImportExtratoWizard";
-import { toast } from "sonner";
 
 export default function ExtratosBancarios() {
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [contaId, setContaId] = usePersistedState<string>("extrato_conta_id", "all");
   const [preset, setPreset] = usePersistedState<PeriodPreset>("extrato_preset", "month");
   const [customRange, setCustomRange] = usePersistedState<{ start: string | null; end: string | null }>("extrato_custom_range", { start: null, end: null });
   const [sort, setSort] = useState<SortConfig>({ key: null, direction: null });
   const [subTab, setSubTab] = usePersistedState<string>("extrato_subtab", "todas");
   const [importOpen, setImportOpen] = useState(false);
-  const [detailMov, setDetailMov] = useState<any>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ descricao: "", categoria_id: "", cliente_id: "", fornecedor_id: "", centro_custo_id: "", observacoes: "" });
-  const [saving, setSaving] = useState(false);
 
   const { data: contas = [] } = useQuery({
     queryKey: ["contas_bancarias_extrato"],
