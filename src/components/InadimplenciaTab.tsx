@@ -91,35 +91,58 @@ export default function InadimplenciaTab() {
   }, [period, customStart, customEnd]);
 
   // Load data
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const startStr = format(dateRange.start, "yyyy-MM-dd");
-      const endStr = format(dateRange.end, "yyyy-MM-dd");
+  async function loadData() {
+    setLoading(true);
+    const startStr = format(dateRange.start, "yyyy-MM-dd");
+    const endStr = format(dateRange.end, "yyyy-MM-dd");
 
-      // Atrasados: receita, vencimento passed, not pago
-      const { data: atr } = await supabase
-        .from("movimentacoes")
-        .select("id, descricao, valor_previsto, data_vencimento, cliente_id, status")
-        .eq("tipo", "receita")
-        .in("status", ["atrasado", "pendente"])
-        .lte("data_vencimento", format(new Date(), "yyyy-MM-dd"))
-        .gte("data_vencimento", startStr)
-        .lte("data_vencimento", endStr);
-      setAtrasados(atr || []);
+    const { data: atr } = await supabase
+      .from("movimentacoes")
+      .select("id, descricao, valor_previsto, data_vencimento, cliente_id, status")
+      .eq("tipo", "receita")
+      .in("status", ["atrasado", "pendente"])
+      .lte("data_vencimento", format(new Date(), "yyyy-MM-dd"))
+      .gte("data_vencimento", startStr)
+      .lte("data_vencimento", endStr);
+    setAtrasados(atr || []);
 
-      // Total faturado no período (all receita)
-      const { data: faturados } = await supabase
-        .from("movimentacoes")
-        .select("valor_previsto")
-        .eq("tipo", "receita")
-        .gte("data_vencimento", startStr)
-        .lte("data_vencimento", endStr);
-      setTotalFaturado((faturados || []).reduce((s, m) => s + (m.valor_previsto || 0), 0));
-      setLoading(false);
-    }
-    load();
-  }, [dateRange]);
+    const { data: faturados } = await supabase
+      .from("movimentacoes")
+      .select("valor_previsto")
+      .eq("tipo", "receita")
+      .gte("data_vencimento", startStr)
+      .lte("data_vencimento", endStr);
+    setTotalFaturado((faturados || []).reduce((s, m) => s + (m.valor_previsto || 0), 0));
+    setLoading(false);
+  }
+
+  useEffect(() => { loadData(); }, [dateRange]);
+
+  function openDarBaixa(mov: InadMovimentacao) {
+    setSelectedMov(mov);
+    setBaixaForm({
+      valor_realizado: String(mov.valor_previsto),
+      data_pagamento: new Date().toISOString().split("T")[0],
+      conta_bancaria_id: "",
+      meio_pagamento_id: "",
+    });
+    setOpenBaixa(true);
+  }
+
+  async function handleBaixa() {
+    if (!selectedMov) return;
+    const { error } = await supabase.from("movimentacoes").update({
+      status: "pago",
+      valor_realizado: parseFloat(baixaForm.valor_realizado),
+      data_pagamento: baixaForm.data_pagamento,
+      conta_bancaria_id: baixaForm.conta_bancaria_id || null,
+      meio_pagamento_id: baixaForm.meio_pagamento_id || null,
+    }).eq("id", selectedMov.id);
+    if (error) { toast.error("Erro ao registrar pagamento"); return; }
+    toast.success("Pagamento registrado com sucesso!");
+    setOpenBaixa(false);
+    loadData();
+  }
 
   const clienteMap = useMemo(() => {
     const m: Record<string, string> = {};
