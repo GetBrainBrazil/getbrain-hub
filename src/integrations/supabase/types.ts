@@ -17,6 +17,7 @@ export type Database = {
       anexos: {
         Row: {
           created_at: string | null
+          descricao: string | null
           id: string
           movimentacao_id: string | null
           nome_arquivo: string
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          descricao?: string | null
           id?: string
           movimentacao_id?: string | null
           nome_arquivo: string
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          descricao?: string | null
           id?: string
           movimentacao_id?: string | null
           nome_arquivo?: string
@@ -465,6 +468,7 @@ export type Database = {
           data_competencia: string
           data_pagamento: string | null
           data_vencimento: string
+          desconto_previsto: number | null
           descricao: string
           fornecedor_id: string | null
           frequencia_recorrencia: string | null
@@ -504,6 +508,7 @@ export type Database = {
           data_competencia: string
           data_pagamento?: string | null
           data_vencimento: string
+          desconto_previsto?: number | null
           descricao: string
           fornecedor_id?: string | null
           frequencia_recorrencia?: string | null
@@ -543,6 +548,7 @@ export type Database = {
           data_competencia?: string
           data_pagamento?: string | null
           data_vencimento?: string
+          desconto_previsto?: number | null
           descricao?: string
           fornecedor_id?: string | null
           frequencia_recorrencia?: string | null
