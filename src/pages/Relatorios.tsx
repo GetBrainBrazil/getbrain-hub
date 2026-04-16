@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import InadimplenciaTab from "@/components/InadimplenciaTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
