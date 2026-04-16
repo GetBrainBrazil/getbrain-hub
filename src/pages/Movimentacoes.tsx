@@ -765,7 +765,11 @@ export default function Movimentacoes() {
                   </TableRow>
                 ) : filtered.map(m => {
                   const valueColor = isPagar ? "text-destructive" : "text-success";
+                  const valorPrevisto = Number(m.valor_previsto) || 0;
+                  const valorPago = Number(m.valor_realizado) || 0;
+                  const valorRestante = Math.max(valorPrevisto - valorPago, 0);
                   return (
+                  <>
                   <TableRow
                     key={m.id}
                     className="cursor-pointer transition-colors hover:bg-muted/40 border-b border-border/60 last:border-0"
@@ -788,20 +792,55 @@ export default function Movimentacoes() {
                     <TableCell className="text-sm text-foreground py-4">{m.descricao}</TableCell>
                     <TableCell className="text-sm text-muted-foreground py-4">{(m.categorias as any)?.nome || "—"}</TableCell>
                     <TableCell className={cn("text-right text-sm font-semibold font-mono py-4", valueColor)}>
-                      {showSaldosParciais ? (
-                        <span>
-                          <span className="text-success">{formatCurrency(Number(m.valor_realizado || 0))}</span>
-                          <span className="text-muted-foreground"> / </span>
-                          <span className={valueColor}>{formatCurrency(Number(m.valor_previsto))}</span>
-                        </span>
-                      ) : (
-                        formatCurrency(Number(m.valor_previsto))
-                      )}
+                      {formatCurrency(valorPrevisto)}
                     </TableCell>
                     <TableCell className="text-sm text-foreground py-4">{formatDate(m.data_vencimento)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground py-4">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
                     <TableCell className="py-4"><StatusBadge status={m.status as StatusType} className="rounded-full px-3 py-0.5" /></TableCell>
                   </TableRow>
+                  {showSaldosParciais && (
+                    <>
+                      <TableRow
+                        className="bg-muted/20 hover:bg-muted/30 border-b border-border/40 cursor-pointer"
+                        onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
+                      >
+                        <TableCell className="pl-5 py-2"></TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-2 pl-5">
+                            <span className="inline-block h-px w-3 bg-border" />
+                            <span className="text-xs text-muted-foreground">{isPagar ? "Pago" : "Recebido"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell colSpan={2} className="text-xs text-muted-foreground py-2">
+                          {m.data_pagamento ? `em ${formatDate(m.data_pagamento)}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-mono font-semibold text-success py-2">
+                          {formatCurrency(valorPago)}
+                        </TableCell>
+                        <TableCell colSpan={3} className="py-2"></TableCell>
+                      </TableRow>
+                      <TableRow
+                        className="bg-muted/20 hover:bg-muted/30 border-b border-border/60 cursor-pointer"
+                        onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
+                      >
+                        <TableCell className="pl-5 py-2"></TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-2 pl-5">
+                            <span className="inline-block h-px w-3 bg-border" />
+                            <span className="text-xs text-muted-foreground">Restante</span>
+                          </div>
+                        </TableCell>
+                        <TableCell colSpan={2} className="text-xs text-muted-foreground py-2">
+                          {valorRestante === 0 ? "Quitado" : "Em aberto"}
+                        </TableCell>
+                        <TableCell className={cn("text-right text-xs font-mono font-semibold py-2", valorRestante === 0 ? "text-muted-foreground" : valueColor)}>
+                          {formatCurrency(valorRestante)}
+                        </TableCell>
+                        <TableCell colSpan={3} className="py-2"></TableCell>
+                      </TableRow>
+                    </>
+                  )}
+                  </>
                   );
                 })}
               </TableBody>
