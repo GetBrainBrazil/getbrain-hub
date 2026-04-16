@@ -463,7 +463,7 @@ export default function InadimplenciaTab() {
                               variant="ghost"
                               size="sm"
                               className="text-xs"
-                              onClick={(e) => { e.stopPropagation(); navigate("/financeiro/contas-receber"); }}
+                              onClick={(e) => { e.stopPropagation(); openDarBaixa(item); }}
                             >
                               <ExternalLink className="h-3 w-3 mr-1" />Registrar
                             </Button>
