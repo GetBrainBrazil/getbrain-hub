@@ -244,6 +244,120 @@ export type Database = {
         }
         Relationships: []
       }
+      extrato_importacoes: {
+        Row: {
+          conta_bancaria_id: string
+          created_at: string
+          created_by: string | null
+          data_fim: string
+          data_inicio: string
+          id: string
+          nome_arquivo: string
+          status: string
+          total_transacoes: number
+          transacoes_conciliadas: number
+          transacoes_criadas: number
+        }
+        Insert: {
+          conta_bancaria_id: string
+          created_at?: string
+          created_by?: string | null
+          data_fim: string
+          data_inicio: string
+          id?: string
+          nome_arquivo: string
+          status?: string
+          total_transacoes?: number
+          transacoes_conciliadas?: number
+          transacoes_criadas?: number
+        }
+        Update: {
+          conta_bancaria_id?: string
+          created_at?: string
+          created_by?: string | null
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          nome_arquivo?: string
+          status?: string
+          total_transacoes?: number
+          transacoes_conciliadas?: number
+          transacoes_criadas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extrato_importacoes_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extrato_transacoes: {
+        Row: {
+          conciliado: boolean
+          conta_bancaria_id: string
+          created_at: string
+          data_transacao: string
+          descricao_banco: string
+          id: string
+          importacao_id: string
+          movimentacao_id: string | null
+          status_match: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          conciliado?: boolean
+          conta_bancaria_id: string
+          created_at?: string
+          data_transacao: string
+          descricao_banco: string
+          id?: string
+          importacao_id: string
+          movimentacao_id?: string | null
+          status_match?: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          conciliado?: boolean
+          conta_bancaria_id?: string
+          created_at?: string
+          data_transacao?: string
+          descricao_banco?: string
+          id?: string
+          importacao_id?: string
+          movimentacao_id?: string | null
+          status_match?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extrato_transacoes_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extrato_transacoes_importacao_id_fkey"
+            columns: ["importacao_id"]
+            isOneToOne: false
+            referencedRelation: "extrato_importacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extrato_transacoes_movimentacao_id_fkey"
+            columns: ["movimentacao_id"]
+            isOneToOne: false
+            referencedRelation: "movimentacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           ativo: boolean | null
