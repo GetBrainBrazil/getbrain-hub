@@ -446,7 +446,7 @@ export default function Relatorios() {
         <TabsList>
           <TabsTrigger value="dre"><BarChart3 className="h-4 w-4 mr-1.5" />DRE</TabsTrigger>
           <TabsTrigger value="fluxo" disabled>Fluxo de Caixa</TabsTrigger>
-          <TabsTrigger value="inadimplencia" disabled>Análise de Inadimplência</TabsTrigger>
+          <TabsTrigger value="inadimplencia"><AlertTriangle className="h-4 w-4 mr-1.5" />Análise de Inadimplência</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dre" className="space-y-6 mt-4">

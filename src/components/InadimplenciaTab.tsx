@@ -161,7 +161,7 @@ export default function InadimplenciaTab() {
         case "pct": va = totalGeral > 0 ? ga.total / totalGeral : 0; vb = totalGeral > 0 ? gb.total / totalGeral : 0; break;
         default: va = ga.total; vb = gb.total;
       }
-      if (sortKey === "nome") return 0;
+      if ((sortKey as string) === "nome") return 0;
       return sortDir === "asc" ? va - vb : vb - va;
     });
   }, [clientGroups, sortKey, sortDir, kpis.totalAtraso]);
