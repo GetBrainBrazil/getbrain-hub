@@ -62,6 +62,13 @@ export default function InadimplenciaTab() {
   const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
   const [sortKey, setSortKey] = useState<SortKey>("valor");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [contasBancarias, setContasBancarias] = useState<any[]>([]);
+  const [meiosPagamento, setMeiosPagamento] = useState<any[]>([]);
+  const [openBaixa, setOpenBaixa] = useState(false);
+  const [selectedMov, setSelectedMov] = useState<InadMovimentacao | null>(null);
+  const [baixaForm, setBaixaForm] = useState({
+    valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
+  });
 
   // Load clientes
   useEffect(() => {
