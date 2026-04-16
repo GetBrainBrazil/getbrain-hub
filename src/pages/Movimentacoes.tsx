@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 type TabType = "pagar" | "receber";
 
@@ -34,6 +35,7 @@ const tipoByTab: Record<TabType, "despesa" | "receita"> = {
 
 export default function Movimentacoes() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
   const [loadingByTab, setLoadingByTab] = useState<Record<TabType, boolean>>({ pagar: true, receber: true });
@@ -53,7 +55,7 @@ export default function Movimentacoes() {
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
-  const [detailMov, setDetailMov] = useState<any>(null);
+  
 
   // Fornecedor combobox state
   const [fornecedorOpen, setFornecedorOpen] = useState(false);
@@ -354,7 +356,6 @@ export default function Movimentacoes() {
 
     toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
     setOpenBaixa(false);
-    setDetailMov(null);
     void refreshTabs([tab]);
   }
 
@@ -362,7 +363,6 @@ export default function Movimentacoes() {
     if (!confirm("Excluir esta movimentação?")) return;
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
-    setDetailMov(null);
     void refreshTabs([tab]);
   }
 
@@ -407,7 +407,6 @@ export default function Movimentacoes() {
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Movimentação atualizada!");
     setOpenEdit(false);
-    setDetailMov(null);
     resetForm();
     void refreshTabs([tab]);
   }
@@ -683,13 +682,13 @@ export default function Movimentacoes() {
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-border">
         <button
-          onClick={() => { setTab("pagar"); setStatusFilter("todas"); setDetailMov(null); }}
+          onClick={() => { setTab("pagar"); setStatusFilter("todas"); }}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Pagar
         </button>
         <button
-          onClick={() => { setTab("receber"); setStatusFilter("todas"); setDetailMov(null); }}
+          onClick={() => { setTab("receber"); setStatusFilter("todas"); }}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Receber
@@ -752,8 +751,8 @@ export default function Movimentacoes() {
                 ) : filtered.map(m => (
                   <TableRow
                     key={m.id}
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${m.status === "atrasado" ? "bg-destructive/5" : ""} ${detailMov?.id === m.id ? "bg-muted" : ""}`}
-                    onClick={() => setDetailMov(m)}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${m.status === "atrasado" ? "bg-destructive/5" : ""}`}
+                    onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
                   >
                     <TableCell className="text-sm text-muted-foreground">
                       {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
