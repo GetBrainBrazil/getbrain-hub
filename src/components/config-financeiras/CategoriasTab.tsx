@@ -535,50 +535,12 @@ export default function CategoriasTab({ search }: { search: string }) {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* "+ Nova" modal */}
-        <Dialog open={!!novaModal} onOpenChange={(o) => !o && setNovaModal(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{novaModal === "sub" ? "Nova Subcategoria" : "Nova Conta"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div>
-                <Label className="text-xs">Tipo *</Label>
-                <Select value={novaForm.tipo} onValueChange={(v: TipoCategoria) => setNovaForm({ ...novaForm, tipo: v, pai_id: "" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_CATEGORIA.map(t => (
-                      <SelectItem key={t.key} value={t.key}>{t.label.charAt(0) + t.label.slice(1).toLowerCase()}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {novaModal === "conta" && (
-                <div>
-                  <Label className="text-xs">Subcategoria *</Label>
-                  <Select value={novaForm.pai_id} onValueChange={(v) => setNovaForm({ ...novaForm, pai_id: v })}>
-                    <SelectTrigger><SelectValue placeholder={subsForNovaConta.length ? "Selecione..." : "Nenhuma subcategoria neste tipo"} /></SelectTrigger>
-                    <SelectContent>
-                      {subsForNovaConta.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label className="text-xs">Nome *</Label>
-                <Input value={novaForm.nome} onChange={e => setNovaForm({ ...novaForm, nome: e.target.value })} placeholder={novaModal === "sub" ? "Ex: Marketing" : "Ex: Mídias Sociais"} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setNovaModal(null)}>Cancelar</Button>
-              <Button onClick={saveNovaModal}>Salvar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
   );
 }
+
+// (closing braces below replaced — keep only what's needed)
 
 // ── Inline name form ──
 function InlineNameForm({
