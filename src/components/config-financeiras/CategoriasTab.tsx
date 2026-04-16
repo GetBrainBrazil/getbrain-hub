@@ -582,7 +582,7 @@ function RowActions({
     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
       {showAdd && onAddChild && (
         <Button variant="ghost" size="sm" className="h-7 px-1.5 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={onAddChild}>
-          <Plus className="h-3.5 w-3.5" /> Filho
+          <Plus className="h-3.5 w-3.5" /> Conta
         </Button>
       )}
       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onEdit}>
