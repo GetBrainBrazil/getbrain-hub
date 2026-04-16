@@ -332,26 +332,59 @@ export default function Movimentacoes() {
     setOpenBaixa(true);
   }
 
+  const baixaTotals = useMemo(() => {
+    const base = parseFloat(baixaForm.valor_realizado) || 0;
+    const desconto = parseFloat(baixaForm.desconto) || 0;
+    const juros = parseFloat(baixaForm.juros) || 0;
+    const multa = parseFloat(baixaForm.multa) || 0;
+    const taxas = parseFloat(baixaForm.taxas) || 0;
+    const pis = parseFloat(baixaForm.pis) || 0;
+    const cofins = parseFloat(baixaForm.cofins) || 0;
+    const csll = parseFloat(baixaForm.csll) || 0;
+    const iss = parseFloat(baixaForm.iss) || 0;
+    const ir = parseFloat(baixaForm.ir) || 0;
+    const inss = parseFloat(baixaForm.inss) || 0;
+    const impostos = pis + cofins + csll + iss + ir + inss;
+    const totalPago = base - desconto + juros + multa + taxas;
+    const valorOriginal = Number(selectedMov?.valor_previsto) || 0;
+    const diferenca = totalPago - valorOriginal;
+    return { base, desconto, juros, multa, taxas, impostos, totalPago, valorOriginal, diferenca, ajustes: -desconto + juros + multa + taxas };
+  }, [baixaForm, selectedMov]);
+
   async function handleBaixa() {
     if (!selectedMov) return;
-    const valorRec = parseFloat(baixaForm.valor_realizado);
+    const totalPago = baixaTotals.totalPago;
     const valorPrev = Number(selectedMov.valor_previsto);
 
     const { error } = await supabase.from("movimentacoes").update({
       status: "pago",
-      valor_realizado: valorRec,
+      valor_realizado: totalPago,
       data_pagamento: baixaForm.data_pagamento,
       conta_bancaria_id: baixaForm.conta_bancaria_id || null,
       meio_pagamento_id: baixaForm.meio_pagamento_id || null,
+      desconto_previsto: parseFloat(baixaForm.desconto) || null,
+      juros: parseFloat(baixaForm.juros) || null,
+      multa: parseFloat(baixaForm.multa) || null,
+      taxas_adm: parseFloat(baixaForm.taxas) || null,
+      pis: parseFloat(baixaForm.pis) || null,
+      cofins: parseFloat(baixaForm.cofins) || null,
+      csll: parseFloat(baixaForm.csll) || null,
+      iss: parseFloat(baixaForm.iss) || null,
+      ir: parseFloat(baixaForm.ir) || null,
+      inss: parseFloat(baixaForm.inss) || null,
+      observacoes: baixaForm.observacoes_pagamento
+        ? `${selectedMov.observacoes ? selectedMov.observacoes + "\n\n" : ""}[Pagamento] ${baixaForm.observacoes_pagamento}`
+        : selectedMov.observacoes,
     }).eq("id", selectedMov.id);
 
     if (error) { toast.error("Erro ao registrar"); return; }
 
-    if (valorRec < valorPrev) {
+    const baseValue = parseFloat(baixaForm.valor_realizado) || 0;
+    if (baseValue < valorPrev) {
       await supabase.from("movimentacoes").insert({
         tipo,
         descricao: `${selectedMov.descricao} (Saldo)`,
-        valor_previsto: valorPrev - valorRec,
+        valor_previsto: valorPrev - baseValue,
         data_competencia: selectedMov.data_competencia,
         data_vencimento: selectedMov.data_vencimento,
         cliente_id: selectedMov.cliente_id,
@@ -371,6 +404,22 @@ export default function Movimentacoes() {
     if (!confirm("Excluir esta movimentação?")) return;
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
+    void refreshTabs([tab]);
+  }
+
+  async function handleDuplicate(m: any) {
+    const { id, created_at, updated_at, clientes, fornecedores, categorias, projetos, ...rest } = m;
+    const { error } = await supabase.from("movimentacoes").insert({
+      ...rest,
+      descricao: `${m.descricao} (Cópia)`,
+      status: "pendente",
+      valor_realizado: null,
+      data_pagamento: null,
+      conciliado: false,
+      created_by: user?.id,
+    });
+    if (error) { toast.error("Erro ao duplicar"); return; }
+    toast.success("Movimentação duplicada!");
     void refreshTabs([tab]);
   }
 
