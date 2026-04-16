@@ -30,6 +30,7 @@ export default function Movimentacoes() {
   const { user } = useAuth();
   const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
   const [movs, setMovs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
