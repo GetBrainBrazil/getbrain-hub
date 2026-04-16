@@ -190,8 +190,12 @@ export default function MovimentacaoDetalhe() {
   const isPagar = mov?.tipo === "despesa";
 
   const categoriasFiltradas = useMemo(() => {
-    if (!mov) return categorias;
-    return categorias.filter((c) => !c.tipo || c.tipo === mov.tipo);
+    if (!mov) return [] as any[];
+    // Mapear tipo da movimentação (receita/despesa) para o novo enum (receitas/despesas)
+    const tipoFiltro = mov.tipo === "receita" ? "receitas" : "despesas";
+    const restrict = [tipoFiltro] as any;
+    // Importação local do helper hierárquico
+    return getHierarchicalOptions(categorias as any, restrict);
   }, [categorias, mov]);
 
   const selectedFornecedorNome = fornecedores.find((f) => f.id === form.fornecedor_id)?.nome;

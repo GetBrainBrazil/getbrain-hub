@@ -186,8 +186,8 @@ export default function Relatorios() {
         const cat = catMap.get(m.categoria_id);
         if (!cat) return;
         const catTipo = cat.tipo?.toLowerCase();
-        if (tipo === "receita" && catTipo !== "receita") return;
-        if (tipo === "despesa" && catTipo !== "despesa") return;
+        if (tipo === "receita" && catTipo !== "receitas") return;
+        if (tipo === "despesa" && catTipo !== "despesas") return;
 
         const val = Math.abs(m.valor_realizado || 0);
         // Try exact match first

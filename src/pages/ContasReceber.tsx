@@ -49,7 +49,7 @@ export default function ContasReceber() {
     const [r1, r2, r3, r4, r5, r6] = await Promise.all([
       supabase.from("movimentacoes").select("*, clientes(nome), projetos(nome)").eq("tipo", "receita").order("data_vencimento", { ascending: false }),
       supabase.from("clientes").select("*").eq("ativo", true),
-      supabase.from("categorias").select("*").eq("ativo", true).in("tipo", ["receita", "ambos"]),
+      supabase.from("categorias").select("*").eq("ativo", true),
       supabase.from("contas_bancarias").select("*").eq("ativo", true),
       supabase.from("projetos").select("*"),
       supabase.from("meios_pagamento").select("*").eq("ativo", true),
