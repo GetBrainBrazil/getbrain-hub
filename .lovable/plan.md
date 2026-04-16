@@ -1,52 +1,86 @@
 
 
 ## Objetivo
-Replicar na aba **Fornecedores** o mesmo padrão de drawer (visualização → edição) já usado em **Clientes**, garantindo paridade visual e funcional total.
+Reformular a página `/financeiro/movimentacoes/:id` (e o modal de criação) para ter **exatamente** o layout dos prints, com todas as variáveis funcionais. Também aplicar pequenas mudanças na lista externa (toggle "Exibir Saldos Parciais" + estilo dos botões).
+
+Sem campo "Empresa", sem "Rateio".
 
 ## Mudanças no banco
-A tabela `fornecedores` hoje só tem `email`/`telefone` (texto único) e não tem campos de endereço estruturados. Precisamos migrar para suportar múltiplos contatos e endereço completo (mesmas colunas de `clientes`):
 
-**Migração** (adicionar colunas, preservando os campos atuais):
-- `razao_social text`
-- `emails text[] default '{}'`
-- `telefones text[] default '{}'`
-- `cep text`, `estado text`, `cidade text`, `numero text`, `bairro text`, `complemento text`, `endereco text`
+**Migração** (apenas duas colunas novas):
+- `movimentacoes.desconto_previsto numeric default 0` — para o campo "Desconto Previsto (-)"
+- `anexos.descricao text` — para a descrição editável de cada anexo
 
-(Os campos `email` e `telefone` antigos continuam, sincronizados com `emails[0]`/`telefones[0]` no save, igual ao padrão de Clientes.)
+**Bucket de Storage**: criar bucket privado `anexos-movimentacoes` (o atual `comprovantes` é genérico; usar um dedicado deixa as policies mais limpas) com RLS para usuários autenticados (read/write/delete).
 
-## Mudanças em `src/pages/ConfiguracoesFinanceiras.tsx`
+## Mudanças em `src/pages/MovimentacaoDetalhe.tsx` (reescrita completa)
 
-Reescrever apenas o componente `FornecedoresTab` (linhas 906–981), espelhando o `ClientesTab` (linhas ~520–900):
+### Header
+- Ícone de documento + título **"Editar Movimentação"** + subtítulo "Preencha os dados da movimentação financeira"
+- Botão de voltar (seta) à esquerda
 
-1. **Estados**: `drawerOpen`, `drawerMode` (`view` | `create` | `edit`), `selectedItem`, `editForm`, `deleteDialogOpen`, `copied`, `newEmail`, `newPhone`, `filterTipo`, `filterStatus`.
+### Card único organizado em seções (cada seção com label maiúscula em cinza, ícone à esquerda, separador):
 
-2. **Tabela**:
-   - Linhas com `cursor-pointer hover:bg-muted/50` e ícone `Eye` que aparece no hover (`opacity-0 group-hover:opacity-100`).
-   - Switch de Ativo/Inativo com `stopPropagation`.
-   - Mensagem vazia: "Nenhum fornecedor encontrado para os filtros selecionados".
+**1. DADOS PRINCIPAIS** (📄)
+- Descrição da Movimentação * (input largo)
+- Fornecedor * (combobox com botão `+`)
+- *(Sem campo Empresa, conforme solicitado)*
 
-3. **Filtros** (acima da tabela, antes do botão "Novo Fornecedor"):
-   - Dropdown `Todos os Tipos` (Todos / PF / PJ).
-   - Dropdown `Todos os Status` (Todos / Ativo / Inativo).
-   - Combinados com o `search` global (nome, CPF/CNPJ, e-mail).
+**2. CLASSIFICAÇÃO FINANCEIRA** (🏷️)
+- Categoria * (select)
+- Centro de Custo (select com opção "Nenhum")
 
-4. **Drawer** (`Sheet` lateral direito, largura 520px):
-   - **Modo View**: Nome, Tipo (badge), Razão Social (se PJ), Documento formatado, lista de E-mails, lista de Telefones formatados, Endereço completo formatado, Observações, Status. Botão `Copiar Dados` com troca de ícone Copy↔Check por 2s e toast "Dados do fornecedor copiados!". Footer: `Excluir` (esquerda, destrutivo) | `Fechar` + `Editar Fornecedor` (direita).
-   - **Modo Edit/Create** (mesmo layout do form de Clientes adaptado):
-     - Linha: Nome* + Tipo (PF/PJ).
-     - Linha: Razão Social (apenas se PJ) + Documento (label CPF/CNPJ dinâmico, máscara correspondente).
-     - E-mails: label + botão "+ Adicionar", input com Enter, lista removível, fallback "Nenhum e-mail cadastrado". Validação de formato.
-     - Telefones: idem com máscara `(00) 00000-0000`.
-     - Seção **Endereço** (título bold): CEP + Estado (dropdown UFs) + Cidade na primeira linha; Endereço + Número + Bairro na segunda; Complemento na terceira (largura total).
-     - Observações (textarea ~4 linhas).
-     - Toggle Ativo/Inativo (apenas em edit).
-     - Botões: `Cancelar` (volta para view) | `Salvar Alterações`. Toast "Fornecedor atualizado com sucesso".
+**3. DATAS E CONDIÇÕES** (📅)
+- Data de Competência *
+- Data de Vencimento *
+- Forma de Pagamento (select: meios_pagamento)
+- Conta Bancária (select)
+- **Status** (StatusBadge logo abaixo, somente leitura)
 
-5. **Exclusão**: `AlertDialog` "Tem certeza que deseja excluir o fornecedor [Nome]? Esta ação não pode ser desfeita." → toast "Fornecedor excluído com sucesso".
+**4. VALORES E ENCARGOS** (💲)
+- Valor Base (R$) * — `valor_previsto`
+- Desconto Previsto (-) — `desconto_previsto` (novo)
+- Juros Previstos (+) — `juros`
+- Multa Prevista (+) — `multa`
+- Taxas ADM (+) — `taxas_adm`
+- **Valor Total Previsto** (faixa cinza no rodapé do card, calculado em tempo real: `base - desconto + juros + multa + taxas`, em destaque vermelho/verde conforme tipo)
 
-6. **Reuso**: aproveitar as helpers já presentes no arquivo (`formatCpfCnpj`, `applyCpfCnpjMask`, `formatPhone`, `applyPhoneMask`, `applyCepMask`, `ESTADOS_BR`, `buildAddressString`) — extraí-las para escopo de módulo se ainda estiverem dentro de `ClientesTab`, ou referenciá-las diretamente.
+**5. IMPOSTOS RETIDOS NA FONTE (-)** (em card com fundo rosa claro)
+- "Não interferem no valor total previsto"
+- 6 inputs lado a lado: PIS, COFINS, CSLL, ISS, IR, INSS
+
+**6. OBSERVAÇÕES INTERNAS**
+- Textarea
+
+**7. ANEXOS** (📎)
+- Lista de anexos existentes — cada linha: ícone + nome do arquivo (link) + input de descrição editável + tamanho + botão `X` para remover
+- Linha final: dropzone "Clique para anexar arquivo" (upload via Storage para `anexos-movimentacoes`, registra em `anexos` com `movimentacao_id` e `descricao`)
+- Salvar a descrição dispara `update` na linha de `anexos` correspondente
+
+### Rodapé fixo
+- Esquerda: **Excluir** (vermelho destrutivo, ícone lixeira) + **Registrar Pagamento/Recebimento** (verde outline, condicional ao status)
+- Direita: **Cancelar** (outline) + **Salvar e Fechar** (outline) + **Salvar** (vermelho primário)
+- "Salvar e Fechar" = salva e navega para `/financeiro/movimentacoes`
+- "Cancelar" = navega de volta sem salvar
+
+### Comportamento
+- Carregamento paralelo (já estava): adicionar `anexos` à query inicial
+- Cálculo de "Valor Total Previsto" memoizado
+- Toast em todas as ações
+- Modo edição direto ao abrir (sem botão "Editar")
+
+## Mudanças em `src/pages/Movimentacoes.tsx` (lista externa)
+
+1. **Botões do header**: trocar estilo dos botões "Conta a Pagar" e "Conta a Receber" para variante destructive (vermelho), conforme print 38.
+2. **Toggle "Exibir Saldos Parciais"** no lado direito da barra de filtros (antes dos botões de status). Quando ligado, a coluna "Valor" da tabela passa a mostrar `valor_realizado / valor_previsto` (parcial pago/total) em vez do valor total. Estado persistido com `usePersistedState`.
+3. **KPI "Total Pago"**: já está condicional (Pago/Recebido) — manter.
+4. *(Sem botão "Todas as Empresas", já que não vamos ter o campo Empresa)*
+
+## Modal de criação ("Nova Conta a Pagar/Receber")
+Manter o modal atual simples (apenas campos essenciais) — o formulário completo fica na página de edição. Se quiser unificar depois, fazemos em outro passo.
 
 ## Arquivos
-- **Migração**: adicionar colunas em `fornecedores`.
-- **Editado**: `src/pages/ConfiguracoesFinanceiras.tsx` (apenas o componente `FornecedoresTab`; nenhuma outra aba é tocada).
+- **Migração**: adicionar `movimentacoes.desconto_previsto`, `anexos.descricao`, criar bucket `anexos-movimentacoes` + RLS.
+- **Reescrito**: `src/pages/MovimentacaoDetalhe.tsx` (layout completo dos prints)
+- **Editado**: `src/pages/Movimentacoes.tsx` (toggle saldos parciais + estilo dos botões)
 
