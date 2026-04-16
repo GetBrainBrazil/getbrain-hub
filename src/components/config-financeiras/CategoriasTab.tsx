@@ -356,9 +356,6 @@ export default function CategoriasTab({ search }: { search: string }) {
                         <span className="font-bold text-sm text-foreground">{row.label}</span>
                       </TableCell>
                       <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
-                      <TableCell className="py-2.5">
-                        <Badge variant="outline" className="font-normal text-[10.5px] px-1.5 py-0 bg-muted text-muted-foreground border-border">Sintética</Badge>
-                      </TableCell>
                       <TableCell className="py-2.5 text-right pr-4">
                         <span className="text-xs text-muted-foreground">—</span>
                       </TableCell>
@@ -406,7 +403,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                         </div>
                       </TableCell>
                       <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
-                      <TableCell className="py-2.5">{naturezaBadge(row.isAnalitica)}</TableCell>
+                      
                       <TableCell className="py-2.5 text-right pr-4">
                         <Switch checked={row.cat.ativo} onCheckedChange={() => toggleAtivo(row.cat)} />
                       </TableCell>
@@ -446,7 +443,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                         </div>
                       </TableCell>
                       <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
-                      <TableCell className="py-2.5">{naturezaBadge(true)}</TableCell>
+                      
                       <TableCell className="py-2.5 text-right pr-4">
                         <Switch checked={row.cat.ativo} onCheckedChange={() => toggleAtivo(row.cat)} />
                       </TableCell>
@@ -484,7 +481,6 @@ export default function CategoriasTab({ search }: { search: string }) {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="py-2"></TableCell>
                     <TableCell className="py-2"></TableCell>
                     <TableCell className="py-2 text-right pr-4"></TableCell>
                   </TableRow>
