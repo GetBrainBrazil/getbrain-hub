@@ -20,7 +20,7 @@ import { usePersistedState } from "@/hooks/use-persisted-state";
 
 const tabConfig = {
   contas: { label: "Contas Bancárias", button: "+ Nova Conta", icon: Landmark },
-  plano: { label: "Plano de Contas", button: "+ Novo Plano", icon: ListTree },
+  colaboradores: { label: "Colaboradores", button: "+ Novo Colaborador", icon: UserRound },
   clientes: { label: "Clientes", button: "+ Novo Cliente", icon: Users },
   fornecedores: { label: "Fornecedores", button: "+ Novo Fornecedor", icon: Truck },
   centros: { label: "Centros de Custo", button: "+ Novo Centro", icon: Target },
@@ -31,6 +31,8 @@ type TabKey = keyof typeof tabConfig;
 
 export default function ConfiguracoesFinanceiras() {
   const [activeTab, setActiveTab] = usePersistedState<TabKey>("fin_config_tab", "contas");
+  // Migrate legacy "plano" value to "colaboradores"
+  useEffect(() => { if ((activeTab as string) === "plano") setActiveTab("colaboradores"); }, []);
   const [search, setSearch] = useState("");
 
   return (
@@ -62,7 +64,7 @@ export default function ConfiguracoesFinanceiras() {
         </div>
 
         <TabsContent value="contas"><ContasBancariasTab search={search} /></TabsContent>
-        <TabsContent value="plano"><PlanoContasTab search={search} /></TabsContent>
+        <TabsContent value="colaboradores"><ColaboradoresTab search={search} /></TabsContent>
         <TabsContent value="clientes"><ClientesTab search={search} /></TabsContent>
         <TabsContent value="fornecedores"><FornecedoresTab search={search} /></TabsContent>
         <TabsContent value="centros"><CentrosCustoTab search={search} /></TabsContent>
