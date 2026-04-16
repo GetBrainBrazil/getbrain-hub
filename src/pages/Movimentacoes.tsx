@@ -765,7 +765,10 @@ export default function Movimentacoes() {
                     onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
                   >
                     <TableCell className="pl-5 py-4" onClick={e => e.stopPropagation()}>
-                      <input type="checkbox" className="h-4 w-4 rounded border-input accent-primary cursor-pointer" />
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 appearance-none rounded-full border border-input bg-background cursor-pointer transition-colors checked:border-primary checked:bg-primary checked:bg-[radial-gradient(circle,hsl(var(--primary-foreground))_35%,transparent_40%)]"
+                      />
                     </TableCell>
                     <TableCell className="py-4">
                       <div className="flex items-center gap-2">
