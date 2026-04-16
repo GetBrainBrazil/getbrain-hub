@@ -934,26 +934,134 @@ export default function Movimentacoes() {
         </CardContent>
       </Card>
 
-      {/* Baixa Dialog */}
+      {/* Baixa / Registrar Pagamento Dialog */}
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{isPagar ? "Registrar Pagamento" : "Dar Baixa"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div><Label>Valor {isPagar ? "Pago" : "Recebido"} (R$)</Label><Input type="number" step="0.01" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({...baixaForm, valor_realizado: e.target.value})} /></div>
-            <div><Label>Data do {isPagar ? "Pagamento" : "Recebimento"}</Label><Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({...baixaForm, data_pagamento: e.target.value})} /></div>
-            <div><Label>Conta Bancária</Label>
-              <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({...baixaForm, conta_bancaria_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-              </Select>
+        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-7">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-success flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            {/* Linha 1: Data, Forma, Conta */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
+                  Data do {isPagar ? "Pagamento" : "Recebimento"}
+                </Label>
+                <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} className="h-10 text-sm" />
+              </div>
+              <div>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Forma de Pagamento</Label>
+                <Select value={baixaForm.meio_pagamento_id} onValueChange={v => setBaixaForm({ ...baixaForm, meio_pagamento_id: v })}>
+                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>{meios.map(m => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Conta Bancária</Label>
+                <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
+                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
-            <div><Label>Meio de {isPagar ? "Pagamento" : "Recebimento"}</Label>
-              <Select value={baixaForm.meio_pagamento_id} onValueChange={v => setBaixaForm({...baixaForm, meio_pagamento_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>{meios.map(m => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}</SelectContent>
-              </Select>
+
+            {/* Bloco Valor + ajustes */}
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <div className="grid grid-cols-5 gap-3">
+                <div>
+                  <Label className="text-[11px] font-medium text-foreground mb-1.5 block">Valor Base (R$) *</Label>
+                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })} className="h-10 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Desconto (-)</Label>
+                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.desconto} onChange={e => setBaixaForm({ ...baixaForm, desconto: e.target.value })} className="h-10 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Juros (+)</Label>
+                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.juros} onChange={e => setBaixaForm({ ...baixaForm, juros: e.target.value })} className="h-10 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Multa (+)</Label>
+                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.multa} onChange={e => setBaixaForm({ ...baixaForm, multa: e.target.value })} className="h-10 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Taxas (+)</Label>
+                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.taxas} onChange={e => setBaixaForm({ ...baixaForm, taxas: e.target.value })} className="h-10 text-sm" />
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-md bg-muted/40 px-4 py-2.5">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                  Valor Total {isPagar ? "Pago" : "Recebido"}
+                </span>
+                <span className="text-lg font-bold font-mono text-foreground">{formatCurrency(baixaTotals.totalPago)}</span>
+              </div>
             </div>
-            <Button onClick={handleBaixa} className="w-full">Confirmar</Button>
+
+            {/* Impostos retidos */}
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+              <p className="text-[11px] font-semibold text-destructive uppercase tracking-widest">Impostos Retidos</p>
+              <div className="grid grid-cols-6 gap-3">
+                {(["pis", "cofins", "csll", "iss", "ir", "inss"] as const).map(k => (
+                  <div key={k}>
+                    <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block uppercase">{k}</Label>
+                    <Input type="number" step="0.01" placeholder="0,00" value={baixaForm[k]} onChange={e => setBaixaForm({ ...baixaForm, [k]: e.target.value })} className="h-10 text-sm" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Resumo */}
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 grid grid-cols-6 gap-3 text-center">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Previsão Original</p>
+                <p className="text-xs font-semibold text-foreground">{selectedMov?.data_vencimento ? formatDate(selectedMov.data_vencimento) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Valor Original</p>
+                <p className="text-xs font-semibold text-foreground font-mono">{formatCurrency(baixaTotals.valorOriginal)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Descontos</p>
+                <p className="text-xs font-semibold text-success font-mono">- {formatCurrency(baixaTotals.desconto)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Juros/Multas/Taxas</p>
+                <p className="text-xs font-semibold text-warning font-mono">+ {formatCurrency(baixaTotals.juros + baixaTotals.multa + baixaTotals.taxas)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Impostos Retidos</p>
+                <p className="text-xs font-semibold text-destructive font-mono">- {formatCurrency(baixaTotals.impostos)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Diferença</p>
+                <p className={cn("text-xs font-semibold font-mono", baixaTotals.diferenca === 0 ? "text-muted-foreground" : baixaTotals.diferenca > 0 ? "text-success" : "text-destructive")}>
+                  {baixaTotals.diferenca >= 0 ? "+ " : "- "}{formatCurrency(Math.abs(baixaTotals.diferenca))}
+                </p>
+              </div>
+            </div>
+
+            {/* Observações */}
+            <div>
+              <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Observações deste {isPagar ? "Pagamento" : "Recebimento"}</Label>
+              <Textarea
+                placeholder={`Observações deste ${isPagar ? "pagamento" : "recebimento"}...`}
+                value={baixaForm.observacoes_pagamento}
+                onChange={e => setBaixaForm({ ...baixaForm, observacoes_pagamento: e.target.value })}
+                className="min-h-[72px] text-sm resize-none"
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 pt-2 border-t border-border">
+              <Button variant="outline" onClick={() => setOpenBaixa(false)} className="px-5 h-10">Cancelar</Button>
+              <Button onClick={handleBaixa} className="px-5 h-10 bg-success text-success-foreground hover:bg-success/90">
+                Confirmar {isPagar ? "Pagamento" : "Recebimento"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
