@@ -124,22 +124,38 @@ export default function CategoriasTab({ search }: { search: string }) {
     loadAll();
   }
 
-  async function saveNewChild() {
-    if (!creatingChild) return;
-    const nome = newName.trim();
+  function openCreateModal(opts?: { kind?: "categoria" | "subcategoria"; tipo?: TipoCategoria; paiId?: string }) {
+    setCreateKind(opts?.kind ?? "categoria");
+    setCreateTipo(opts?.tipo ?? "despesas");
+    setCreatePaiId(opts?.paiId ?? "");
+    setCreateNome("");
+    setCreateOpen(true);
+  }
+
+  async function submitCreate() {
+    const nome = createNome.trim();
     if (!nome) { toast.error("Nome é obrigatório"); return; }
-    const payload = creatingChild.level === 2
-      ? { nome, tipo: creatingChild.tipo, categoria_pai_id: null, ativo: true }
-      : { nome, tipo: creatingChild.tipo, categoria_pai_id: creatingChild.subId, ativo: true };
-    const { error } = await supabase.from("categorias").insert(payload);
-    if (error) { toast.error("Erro ao criar"); return; }
-    toast.success(creatingChild.level === 2 ? "Subcategoria criada!" : "Conta criada!");
-    if (creatingChild.level === 3) {
-      setExpandedSubs(new Set([...expandedSubs, creatingChild.subId]));
-    } else {
-      setExpandedTipos(new Set([...expandedTipos, creatingChild.tipo]));
+    if (createKind === "subcategoria" && !createPaiId) {
+      toast.error("Selecione a categoria pai"); return;
     }
-    setCreatingChild(null); setNewName("");
+    setCreateSaving(true);
+    const payload = createKind === "categoria"
+      ? { nome, tipo: createTipo, categoria_pai_id: null, ativo: true }
+      : { nome, tipo: createTipo, categoria_pai_id: createPaiId, ativo: true };
+    const { data, error } = await supabase.from("categorias").insert(payload).select("id").single();
+    setCreateSaving(false);
+    if (error) { toast.error("Erro ao criar"); return; }
+    toast.success(createKind === "categoria" ? "Categoria criada com sucesso" : "Subcategoria criada com sucesso");
+    if (createKind === "subcategoria") {
+      setExpandedSubs(new Set([...expandedSubs, createPaiId]));
+    } else {
+      setExpandedTipos(new Set([...expandedTipos, createTipo]));
+    }
+    setCreateOpen(false);
+    if (data?.id) {
+      setHighlightId(data.id);
+      setTimeout(() => setHighlightId(null), 1600);
+    }
     loadAll();
   }
 
