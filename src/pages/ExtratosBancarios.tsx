@@ -29,6 +29,9 @@ export default function ExtratosBancarios() {
   const [subTab, setSubTab] = usePersistedState<string>("extrato_subtab", "todas");
   const [importOpen, setImportOpen] = useState(false);
   const [detailMov, setDetailMov] = useState<any>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ descricao: "", categoria_id: "", cliente_id: "", fornecedor_id: "", centro_custo_id: "", observacoes: "" });
+  const [saving, setSaving] = useState(false);
 
   const { data: contas = [] } = useQuery({
     queryKey: ["contas_bancarias_extrato"],
