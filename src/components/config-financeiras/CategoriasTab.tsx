@@ -336,6 +336,12 @@ export default function CategoriasTab({ search }: { search: string }) {
             </SelectContent>
           </Select>
 
+          <Button
+            className="ml-auto h-9 gap-1.5"
+            onClick={() => openCreateModal({ kind: "categoria" })}
+          >
+            <Plus className="h-4 w-4" /> Nova Categoria
+          </Button>
         </div>
 
 
