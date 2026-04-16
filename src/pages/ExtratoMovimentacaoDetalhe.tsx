@@ -427,7 +427,7 @@ export default function ExtratoMovimentacaoDetalhe() {
           <Separator />
 
           {/* SEÇÃO 2 — Transação no Extrato */}
-          <section className="rounded-lg bg-slate-50 dark:bg-muted/30 border border-border/60 p-5">
+          <section className="rounded-lg bg-muted/40 border border-border/60 p-5">
             <div className="flex items-center gap-2 mb-1">
               <Building2 className="h-4 w-4 text-accent" />
               <h2 className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
