@@ -14,7 +14,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ChevronRight, Check, X } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Pencil, Trash2, ChevronRight, Check, X, Folder, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   TIPOS_CATEGORIA, type TipoCategoria, type CategoriaRaw,
@@ -40,13 +45,15 @@ export default function CategoriasTab({ search }: { search: string }) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  // pending child create: parentTipoKey for level-2, parentSubId for level-3
-  const [creatingChild, setCreatingChild] = useState<
-    | { level: 2; tipo: TipoCategoria }
-    | { level: 3; subId: string; tipo: TipoCategoria }
-    | null
-  >(null);
-  const [newName, setNewName] = useState("");
+
+  // Create modal state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createKind, setCreateKind] = useState<"categoria" | "subcategoria">("categoria");
+  const [createTipo, setCreateTipo] = useState<TipoCategoria>("despesas");
+  const [createPaiId, setCreatePaiId] = useState<string>("");
+  const [createNome, setCreateNome] = useState("");
+  const [createSaving, setCreateSaving] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
