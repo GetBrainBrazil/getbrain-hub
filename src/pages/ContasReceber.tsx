@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
 import { Plus, ArrowDownToLine, Search, Filter } from "lucide-react";
 import { usePersistedState } from "@/hooks/use-persisted-state";
@@ -49,7 +50,7 @@ export default function ContasReceber() {
     const [r1, r2, r3, r4, r5, r6] = await Promise.all([
       supabase.from("movimentacoes").select("*, clientes(nome), projetos(nome)").eq("tipo", "receita").order("data_vencimento", { ascending: false }),
       supabase.from("clientes").select("*").eq("ativo", true),
-      supabase.from("categorias").select("*").eq("ativo", true).in("tipo", ["receita", "ambos"]),
+      supabase.from("categorias").select("*").eq("ativo", true),
       supabase.from("contas_bancarias").select("*").eq("ativo", true),
       supabase.from("projetos").select("*"),
       supabase.from("meios_pagamento").select("*").eq("ativo", true),
@@ -185,7 +186,16 @@ export default function ContasReceber() {
               <div><Label>Categoria</Label>
                 <Select value={form.categoria_id} onValueChange={v => setForm({...form, categoria_id: v})}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>{categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {getHierarchicalOptions(categorias as any, ["receitas"]).map(o => (
+                      <SelectItem key={o.id} value={o.id}>
+                        <span className="flex items-center gap-1.5">
+                          {o.level === 3 && <span className="text-muted-foreground text-xs">└─</span>}
+                          {o.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div><Label>Valor Previsto (R$) *</Label><Input type="number" step="0.01" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} /></div>

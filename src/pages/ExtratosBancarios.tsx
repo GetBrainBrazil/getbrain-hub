@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedState } from "@/hooks/use-persisted-state";
@@ -67,7 +68,7 @@ export default function ExtratosBancarios() {
   // Lookup data for inline editing
   const { data: categorias = [] } = useQuery({
     queryKey: ["categorias_lookup"],
-    queryFn: async () => { const { data } = await supabase.from("categorias").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+    queryFn: async () => { const { data } = await supabase.from("categorias").select("id, nome, tipo, categoria_pai_id, ativo").eq("ativo", true).order("nome"); return data || []; },
   });
   const { data: clientes = [] } = useQuery({
     queryKey: ["clientes_lookup"],
@@ -351,7 +352,14 @@ export default function ExtratosBancarios() {
                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">Nenhuma</SelectItem>
-                          {categorias.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                          {getHierarchicalOptions(categorias as any).map(o => (
+                            <SelectItem key={o.id} value={o.id}>
+                              <span className="flex items-center gap-1.5">
+                                {o.level === 3 && <span className="text-muted-foreground text-xs">└─</span>}
+                                {o.label}
+                              </span>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

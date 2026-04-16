@@ -60,7 +60,7 @@ export default function ContasPagar() {
     const [r1, r2, r3, r4, r5, r6] = await Promise.all([
       supabase.from("movimentacoes").select("*, fornecedores(nome), projetos(nome)").eq("tipo", "despesa").order("data_vencimento", { ascending: false }),
       supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
-      supabase.from("categorias").select("*").eq("ativo", true).in("tipo", ["despesa", "ambos"]),
+      supabase.from("categorias").select("*").eq("ativo", true),
       supabase.from("contas_bancarias").select("*").eq("ativo", true),
       supabase.from("projetos").select("*"),
       supabase.from("meios_pagamento").select("*").eq("ativo", true),

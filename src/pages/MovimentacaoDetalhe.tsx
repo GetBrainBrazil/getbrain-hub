@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -190,8 +191,12 @@ export default function MovimentacaoDetalhe() {
   const isPagar = mov?.tipo === "despesa";
 
   const categoriasFiltradas = useMemo(() => {
-    if (!mov) return categorias;
-    return categorias.filter((c) => !c.tipo || c.tipo === mov.tipo);
+    if (!mov) return [] as any[];
+    // Mapear tipo da movimentação (receita/despesa) para o novo enum (receitas/despesas)
+    const tipoFiltro = mov.tipo === "receita" ? "receitas" : "despesas";
+    const restrict = [tipoFiltro] as any;
+    // Importação local do helper hierárquico
+    return getHierarchicalOptions(categorias as any, restrict);
   }, [categorias, mov]);
 
   const selectedFornecedorNome = fornecedores.find((f) => f.id === form.fornecedor_id)?.nome;
@@ -481,9 +486,12 @@ export default function MovimentacaoDetalhe() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Nenhuma —</SelectItem>
-                    {categoriasFiltradas.map((c) => (
+                    {categoriasFiltradas.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.nome}
+                        <span className="flex items-center gap-1.5">
+                          {c.level === 3 && <span className="text-muted-foreground text-xs">└─</span>}
+                          {c.label}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
