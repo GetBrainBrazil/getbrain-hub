@@ -314,22 +314,8 @@ export default function CategoriasTab({ search }: { search: string }) {
             </SelectContent>
           </Select>
 
-          <div className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="gap-1 h-9"><Plus className="h-4 w-4" /> Nova</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => { setNovaForm({ tipo: "despesas", pai_id: "", nome: "" }); setNovaModal("sub"); }}>
-                  Nova Subcategoria
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setNovaForm({ tipo: "despesas", pai_id: "", nome: "" }); setNovaModal("conta"); }}>
-                  Nova Conta
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         </div>
+
 
         {/* Hierarchical table */}
         <div className="rounded-md border border-border overflow-hidden">
