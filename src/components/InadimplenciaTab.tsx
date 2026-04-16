@@ -559,6 +559,55 @@ export default function InadimplenciaTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog Registrar Pagamento */}
+      <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
+          </DialogHeader>
+          {selectedMov && (
+            <div className="space-y-4">
+              <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
+                <p><span className="text-muted-foreground">Descrição:</span> {selectedMov.descricao}</p>
+                <p><span className="text-muted-foreground">Cliente:</span> {selectedMov.cliente_id ? clienteMap[selectedMov.cliente_id] || "—" : "—"}</p>
+                <p><span className="text-muted-foreground">Valor Previsto:</span> {formatCurrency(selectedMov.valor_previsto)}</p>
+                <p><span className="text-muted-foreground">Vencimento:</span> {formatDate(selectedMov.data_vencimento)}</p>
+              </div>
+              <div>
+                <Label>Valor Recebido (R$) *</Label>
+                <Input type="number" step="0.01" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })} />
+              </div>
+              <div>
+                <Label>Data do Pagamento *</Label>
+                <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} />
+              </div>
+              <div>
+                <Label>Conta Bancária</Label>
+                <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {contasBancarias.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Meio de Pagamento</Label>
+                <Select value={baixaForm.meio_pagamento_id} onValueChange={v => setBaixaForm({ ...baixaForm, meio_pagamento_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {meiosPagamento.map(m => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setOpenBaixa(false)}>Cancelar</Button>
+                <Button onClick={handleBaixa} disabled={!baixaForm.valor_realizado || !baixaForm.data_pagamento}>Confirmar</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
