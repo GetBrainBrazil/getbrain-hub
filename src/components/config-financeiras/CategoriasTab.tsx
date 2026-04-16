@@ -260,16 +260,8 @@ export default function CategoriasTab({ search }: { search: string }) {
               tipo: tipoNode.config.key,
             });
           });
-          // creating row for this sub (level 3)
-          if (creatingChild?.level === 3 && creatingChild.subId === sub.id && naturezaFilter !== "sintetica") {
-            out.push({
-              kind: "creating",
-              level: 3,
-              codigo: `${subCodigo}.${sub.contas.length + 1}`,
-              tipo: tipoNode.config.key,
-            });
-          } else if (naturezaFilter !== "sintetica") {
-            // fixed "Adicionar conta..." placeholder
+          // fixed "+ Adicionar" placeholder for contas
+          if (naturezaFilter !== "sintetica") {
             out.push({
               kind: "add-placeholder",
               level: 3,
@@ -280,16 +272,8 @@ export default function CategoriasTab({ search }: { search: string }) {
         }
       });
 
-      // creating row at end of tipo (level 2)
-      if (creatingChild?.level === 2 && creatingChild.tipo === tipoNode.config.key && naturezaFilter !== "analitica") {
-        out.push({
-          kind: "creating",
-          level: 2,
-          codigo: `${tipoCodigo}.${String(tipoNode.subcategorias.length + 1).padStart(2, "0")}`,
-          tipo: tipoNode.config.key,
-        });
-      } else if (naturezaFilter !== "analitica") {
-        // fixed "Adicionar subcategoria..." placeholder
+      // fixed "+ Adicionar" placeholder for subcategorias
+      if (naturezaFilter !== "analitica") {
         out.push({
           kind: "add-placeholder",
           level: 2,
@@ -298,7 +282,7 @@ export default function CategoriasTab({ search }: { search: string }) {
       }
     });
     return out;
-  }, [tree, tipoFilter, naturezaFilter, expandedTipos, expandedSubs, creatingChild]);
+  }, [tree, tipoFilter, naturezaFilter, expandedTipos, expandedSubs]);
 
   function tipoBadge(tipo: TipoCategoria) {
     const map: Record<TipoCategoria, { label: string; className: string }> = {
