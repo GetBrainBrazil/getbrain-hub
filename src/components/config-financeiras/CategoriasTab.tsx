@@ -277,18 +277,19 @@ export default function CategoriasTab({ search }: { search: string }) {
         </div>
 
         {/* ── Tree ── */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {filteredTree.map(tipoNode => {
             const open = expandedTipos.has(tipoNode.config.key);
             const subCount = tipoNode.subcategorias.length;
+            const tipoLabelCap = tipoNode.config.label.charAt(0) + tipoNode.config.label.slice(1).toLowerCase();
             return (
-              <div key={tipoNode.config.key} className={cn("rounded-lg border overflow-hidden", "border-l-4", tipoNode.config.borderClass)}>
-                {/* Tipo header */}
-                <div className={cn("flex items-center gap-2 px-3 py-2.5 group", tipoNode.config.bgClass)}>
+              <div key={tipoNode.config.key} className="rounded-md border border-border overflow-hidden bg-card">
+                {/* Tipo header — neutro, com barra colorida fina à esquerda */}
+                <div className={cn("flex items-center gap-2 px-3 py-2 group bg-muted/40 border-l-[3px]", tipoNode.config.borderClass)}>
                   <button onClick={() => toggleTipo(tipoNode.config.key)} className="flex items-center gap-2 flex-1 text-left">
-                    <ChevronRight className={cn("h-4 w-4 transition-transform", open && "rotate-90", tipoNode.config.textClass)} />
-                    <span className={cn("font-bold text-xs tracking-wider", tipoNode.config.textClass)}>
-                      {tipoNode.config.label} ({subCount})
+                    <ChevronRight className={cn("h-4 w-4 transition-transform text-muted-foreground", open && "rotate-90")} />
+                    <span className="font-semibold text-sm text-foreground">
+                      {tipoLabelCap} <span className="text-muted-foreground font-normal">({subCount})</span>
                     </span>
                   </button>
                   {creatingSubFor === tipoNode.config.key ? (
@@ -302,7 +303,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                   ) : (
                     <Button
                       variant="ghost" size="sm"
-                      className={cn("h-7 gap-1 text-xs opacity-0 group-hover:opacity-100 focus:opacity-100", tipoNode.config.textClass)}
+                      className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 focus:opacity-100"
                       onClick={() => { setCreatingSubFor(tipoNode.config.key); setNewName(""); setExpandedTipos(new Set([...expandedTipos, tipoNode.config.key])); }}
                     >
                       <Plus className="h-3.5 w-3.5" /> Subcategoria
@@ -312,18 +313,17 @@ export default function CategoriasTab({ search }: { search: string }) {
 
                 {/* Subcategorias */}
                 {open && (
-                  <div className="bg-card">
+                  <div>
                     {tipoNode.subcategorias.length === 0 && (
-                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">Nenhuma subcategoria. Clique em "+ Subcategoria" acima.</div>
+                      <div className="px-4 py-5 text-center text-xs text-muted-foreground">Nenhuma subcategoria. Clique em "+ Subcategoria" acima.</div>
                     )}
                     {tipoNode.subcategorias.map(sub => {
                       const subOpen = expandedSubs.has(sub.id);
                       const isEditing = editingId === sub.id;
-                      const usage = usageMap.get(sub.id) || 0;
                       return (
                         <div key={sub.id}>
                           {/* Linha da subcategoria */}
-                          <div className="group flex items-center gap-2 pl-8 pr-3 py-2 border-t hover:bg-muted/40 transition-colors border-l-2 border-l-dashed border-l-border ml-4">
+                          <div className={cn("group flex items-center gap-2 pl-6 pr-3 py-2 border-t border-border/60 hover:bg-muted/50 transition-colors border-l-2", tipoNode.config.borderClass, "ml-3")}>
                             <button
                               onClick={() => sub.contas.length > 0 && toggleSub(sub.id)}
                               className={cn("h-5 w-5 flex items-center justify-center rounded hover:bg-muted", sub.contas.length === 0 && "opacity-0 pointer-events-none")}
@@ -342,20 +342,20 @@ export default function CategoriasTab({ search }: { search: string }) {
                               />
                             ) : (
                               <>
-                                <span className={cn("text-sm flex-1", !sub.ativo && "text-muted-foreground line-through")}>
+                                <span className={cn("text-sm text-foreground flex-1", !sub.ativo && "text-muted-foreground line-through")}>
                                   {sub.nome}
                                   {sub.contas.length > 0 && <span className="text-muted-foreground ml-1.5 text-xs">({sub.contas.length})</span>}
                                 </span>
                                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                   {creatingContaFor === sub.id ? null : (
-                                    <Button variant="ghost" size="sm" className="h-7 px-1.5 gap-1 text-xs" onClick={() => { setCreatingContaFor(sub.id); setNewName(""); }}>
+                                    <Button variant="ghost" size="sm" className="h-7 px-1.5 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => { setCreatingContaFor(sub.id); setNewName(""); }}>
                                       <Plus className="h-3.5 w-3.5" /> Conta
                                     </Button>
                                   )}
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingId(sub.id); setEditingName(sub.nome); }}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => { setEditingId(sub.id); setEditingName(sub.nome); }}>
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(sub)}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(sub)}>
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
@@ -366,7 +366,7 @@ export default function CategoriasTab({ search }: { search: string }) {
 
                           {/* Form inline para criar conta dentro desta sub */}
                           {creatingContaFor === sub.id && (
-                            <div className="flex items-center gap-2 pl-16 pr-3 py-2 border-t bg-muted/20">
+                            <div className={cn("flex items-center gap-2 pl-14 pr-3 py-2 border-t border-border/60 bg-muted/20 border-l-2 ml-3", tipoNode.config.borderClass)}>
                               <Tag className="h-4 w-4 text-muted-foreground" />
                               <InlineNameForm
                                 placeholder="Nome da conta"
@@ -383,7 +383,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                           {subOpen && sub.contas.map(conta => {
                             const contaEditing = editingId === conta.id;
                             return (
-                              <div key={conta.id} className="group flex items-center gap-2 pl-16 pr-3 py-2 border-t hover:bg-muted/40 transition-colors border-l-2 border-l-dashed border-l-border ml-4">
+                              <div key={conta.id} className={cn("group flex items-center gap-2 pl-14 pr-3 py-2 border-t border-border/60 hover:bg-muted/50 transition-colors border-l-2 ml-3", tipoNode.config.borderClass)}>
                                 <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                 {contaEditing ? (
                                   <InlineNameForm
@@ -396,12 +396,12 @@ export default function CategoriasTab({ search }: { search: string }) {
                                   />
                                 ) : (
                                   <>
-                                    <span className={cn("text-sm flex-1", !conta.ativo && "text-muted-foreground line-through")}>{conta.nome}</span>
+                                    <span className={cn("text-sm text-foreground flex-1", !conta.ativo && "text-muted-foreground line-through")}>{conta.nome}</span>
                                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingId(conta.id); setEditingName(conta.nome); }}>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => { setEditingId(conta.id); setEditingName(conta.nome); }}>
                                         <Pencil className="h-3.5 w-3.5" />
                                       </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(conta)}>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(conta)}>
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </Button>
                                     </div>
