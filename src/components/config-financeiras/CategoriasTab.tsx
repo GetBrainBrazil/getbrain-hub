@@ -399,7 +399,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                 if (row.kind === "sub") {
                   const isEditing = editingId === row.cat.id;
                   return (
-                    <TableRow key={`s-${row.cat.id}`} className="border-b border-border/60 hover:bg-muted/30 group">
+                    <TableRow key={`s-${row.cat.id}`} className={cn("border-b border-border/60 hover:bg-muted/30 group transition-colors", highlightId === row.cat.id && "bg-primary/10 animate-pulse")}>
                       <TableCell className="py-2.5">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -447,7 +447,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                 if (row.kind === "conta") {
                   const isEditing = editingId === row.cat.id;
                   return (
-                    <TableRow key={`c-${row.cat.id}`} className="border-b border-border/60 hover:bg-muted/30 group">
+                    <TableRow key={`c-${row.cat.id}`} className={cn("border-b border-border/60 hover:bg-muted/30 group transition-colors", highlightId === row.cat.id && "bg-primary/10 animate-pulse")}>
                       <TableCell className="py-2.5">
                         <span className="font-mono text-xs text-muted-foreground pl-[26px] block">{row.codigo}</span>
                       </TableCell>
@@ -553,6 +553,109 @@ export default function CategoriasTab({ search }: { search: string }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Create modal */}
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="max-w-[460px]">
+            <DialogHeader>
+              <DialogTitle>Nova Categoria</DialogTitle>
+            </DialogHeader>
+
+            {/* Choice cards */}
+            <div className="grid grid-cols-2 gap-3 mt-1">
+              {([
+                { key: "categoria", icon: Folder, label: "Categoria", sub: "Criar uma nova categoria principal" },
+                { key: "subcategoria", icon: FileText, label: "Subcategoria", sub: "Criar dentro de uma categoria existente" },
+              ] as const).map(opt => {
+                const selected = createKind === opt.key;
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => { setCreateKind(opt.key); if (opt.key === "categoria") setCreatePaiId(""); }}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 p-3 h-[88px] transition-all text-center",
+                      selected
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border bg-background hover:border-border/80 text-muted-foreground"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5", selected ? "text-primary" : "text-muted-foreground")} />
+                    <span className={cn("text-sm font-semibold", selected ? "text-foreground" : "text-foreground/80")}>{opt.label}</span>
+                    <span className="text-[11px] leading-tight text-muted-foreground px-1">{opt.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Fields */}
+            <div className="space-y-3 mt-4 transition-opacity duration-150">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tipo *</Label>
+                <Select
+                  value={createTipo}
+                  onValueChange={(v: TipoCategoria) => { setCreateTipo(v); setCreatePaiId(""); }}
+                >
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_CATEGORIA.map(t => (
+                      <SelectItem key={t.key} value={t.key}>
+                        {t.label.charAt(0) + t.label.slice(1).toLowerCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {createKind === "subcategoria" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Categoria pai *</Label>
+                  <Select value={createPaiId} onValueChange={setCreatePaiId}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione a categoria pai" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {items
+                        .filter(i => i.tipo === createTipo && !i.categoria_pai_id && i.ativo)
+                        .sort((a, b) => a.nome.localeCompare(b.nome))
+                        .map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                        ))}
+                      {items.filter(i => i.tipo === createTipo && !i.categoria_pai_id && i.ativo).length === 0 && (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">
+                          Nenhuma categoria deste tipo. Crie uma primeiro.
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Nome *</Label>
+                <Input
+                  autoFocus
+                  value={createNome}
+                  onChange={e => setCreateNome(e.target.value)}
+                  placeholder={createKind === "categoria"
+                    ? "Ex: Vendas, Administrativo, SAAS..."
+                    : "Ex: Contabilidade, CRM, Mídias Sociais..."}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitCreate(); } }}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-2">
+              <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={createSaving}>
+                Cancelar
+              </Button>
+              <Button onClick={submitCreate} disabled={createSaving}>
+                {createSaving ? "Criando..." : "Criar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </CardContent>
     </Card>
