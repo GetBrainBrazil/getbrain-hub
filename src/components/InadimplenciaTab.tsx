@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { format, subDays, startOfYear, differenceInDays, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, Cell } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -42,11 +42,11 @@ type SortKey = "nome" | "qtd" | "valor" | "antigo" | "pct";
 type SortDir = "asc" | "desc";
 
 const AGING_RANGES = [
-  { label: "1 a 15 dias", min: 1, max: 15, color: "hsl(187, 82%, 55%, 0.35)" },
-  { label: "16 a 30 dias", min: 16, max: 30, color: "hsl(187, 82%, 55%, 0.6)" },
-  { label: "31 a 60 dias", min: 31, max: 60, color: "hsl(187, 82%, 55%, 0.8)" },
-  { label: "61 a 90 dias", min: 61, max: 90, color: "hsl(187, 82%, 55%)" },
-  { label: "Acima de 90 dias", min: 91, max: 99999, color: "hsl(222, 84%, 11%)" },
+  { label: "1 a 15 dias", min: 1, max: 15, color: "#B2E0F0" },
+  { label: "16 a 30 dias", min: 16, max: 30, color: "#38BDF8" },
+  { label: "31 a 60 dias", min: 31, max: 60, color: "#0284C7" },
+  { label: "61 a 90 dias", min: 61, max: 90, color: "#1E3A5F" },
+  { label: "Acima de 90 dias", min: 91, max: 99999, color: "#0F172A" },
 ];
 
 function getAgingBadgeClass(dias: number): string {
@@ -503,7 +503,7 @@ export default function InadimplenciaTab() {
                   <Tooltip formatter={(v: number) => formatCurrency(v)} />
                   <Bar dataKey="valor" name="Valor" radius={[0, 4, 4, 0]}>
                     {agingData.map((entry, i) => (
-                      <rect key={i} fill={entry.color} />
+                      <Cell key={i} fill={entry.color} />
                     ))}
                   </Bar>
                 </BarChart>
