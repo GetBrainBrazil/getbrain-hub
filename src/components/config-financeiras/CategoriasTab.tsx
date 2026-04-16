@@ -370,21 +370,8 @@ export default function CategoriasTab({ search }: { search: string }) {
                           <span className="font-mono text-xs">{row.codigo}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-2.5 group">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-foreground">{row.label}</span>
-                          <Button
-                            variant="ghost" size="sm"
-                            className="h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
-                            onClick={() => {
-                              setExpandedTipos(new Set([...expandedTipos, row.tipo]));
-                              setCreatingChild({ level: 2, tipo: row.tipo });
-                              setNewName("");
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Subcategoria
-                          </Button>
-                        </div>
+                      <TableCell className="py-2.5">
+                        <span className="font-bold text-sm text-foreground">{row.label}</span>
                       </TableCell>
                       <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
                       <TableCell className="py-2.5">
@@ -429,14 +416,8 @@ export default function CategoriasTab({ search }: { search: string }) {
                                 {row.cat.nome}
                               </span>
                               <RowActions
-                                onAddChild={() => {
-                                  setExpandedSubs(new Set([...expandedSubs, row.cat.id]));
-                                  setCreatingChild({ level: 3, subId: row.cat.id, tipo: row.tipo });
-                                  setNewName("");
-                                }}
                                 onEdit={() => { setEditingId(row.cat.id); setEditingName(row.cat.nome); }}
                                 onDelete={() => requestDelete(row.cat)}
-                                showAdd
                               />
                             </>
                           )}
