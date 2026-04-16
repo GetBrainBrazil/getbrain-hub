@@ -73,6 +73,8 @@ export default function InadimplenciaTab() {
   // Load clientes
   useEffect(() => {
     supabase.from("clientes").select("id, nome").then(({ data }) => setClientes(data || []));
+    supabase.from("contas_bancarias").select("*").eq("ativo", true).then(({ data }) => setContasBancarias(data || []));
+    supabase.from("meios_pagamento").select("*").eq("ativo", true).then(({ data }) => setMeiosPagamento(data || []));
   }, []);
 
   // Compute date range
