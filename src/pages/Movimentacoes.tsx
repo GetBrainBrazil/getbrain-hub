@@ -325,6 +325,9 @@ export default function Movimentacoes() {
       data_pagamento: new Date().toISOString().split("T")[0],
       conta_bancaria_id: m.conta_bancaria_id || "",
       meio_pagamento_id: "",
+      desconto: "", juros: "", multa: "", taxas: "",
+      pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
+      observacoes_pagamento: "",
     });
     setOpenBaixa(true);
   }
