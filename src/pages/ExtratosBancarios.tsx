@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Wallet, TrendingUp, TrendingDown, Landmark, Upload, CheckCircle2, Clock, AlertTriangle, ShieldCheck, X, FileText, Building2, Pencil, AlertCircle } from "lucide-react";
 import { ImportExtratoWizard } from "@/components/ImportExtratoWizard";
@@ -27,6 +29,9 @@ export default function ExtratosBancarios() {
   const [subTab, setSubTab] = usePersistedState<string>("extrato_subtab", "todas");
   const [importOpen, setImportOpen] = useState(false);
   const [detailMov, setDetailMov] = useState<any>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ descricao: "", categoria_id: "", cliente_id: "", fornecedor_id: "", centro_custo_id: "", observacoes: "" });
+  const [saving, setSaving] = useState(false);
 
   const { data: contas = [] } = useQuery({
     queryKey: ["contas_bancarias_extrato"],
@@ -45,7 +50,7 @@ export default function ExtratosBancarios() {
     queryFn: async () => {
       let q = supabase
         .from("movimentacoes")
-        .select("id, descricao, tipo, valor_realizado, valor_previsto, data_pagamento, data_vencimento, data_competencia, status, conciliado, observacoes, categorias(nome), clientes(nome), fornecedores(nome), centros_custo(nome), conta_bancaria_id")
+        .select("id, descricao, tipo, valor_realizado, valor_previsto, data_pagamento, data_vencimento, data_competencia, status, conciliado, observacoes, categoria_id, cliente_id, fornecedor_id, centro_custo_id, categorias(nome), clientes(nome), fornecedores(nome), centros_custo(nome), conta_bancaria_id")
         .order("data_pagamento", { ascending: true, nullsFirst: false });
 
       if (contaId !== "all") q = q.eq("conta_bancaria_id", contaId);
@@ -57,6 +62,24 @@ export default function ExtratosBancarios() {
       return data || [];
     },
     enabled: contas.length > 0,
+  });
+
+  // Lookup data for inline editing
+  const { data: categorias = [] } = useQuery({
+    queryKey: ["categorias_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("categorias").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+  });
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["clientes_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+  });
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ["fornecedores_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
+  });
+  const { data: centrosCusto = [] } = useQuery({
+    queryKey: ["centros_custo_lookup"],
+    queryFn: async () => { const { data } = await supabase.from("centros_custo").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
   });
 
   // Fetch linked extrato_transacoes for detail drawer
@@ -124,6 +147,37 @@ export default function ExtratosBancarios() {
   const divergencias = movimentacoes.filter((m: any) => !m.conciliado);
 
   const [confirmDesfazer, setConfirmDesfazer] = useState(false);
+
+  const startEdit = () => {
+    if (!detailMov) return;
+    setEditForm({
+      descricao: detailMov.descricao || "",
+      categoria_id: detailMov.categoria_id || "",
+      cliente_id: detailMov.cliente_id || "",
+      fornecedor_id: detailMov.fornecedor_id || "",
+      centro_custo_id: detailMov.centro_custo_id || "",
+      observacoes: detailMov.observacoes || "",
+    });
+    setEditMode(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!detailMov) return;
+    setSaving(true);
+    const { error } = await supabase.from("movimentacoes").update({
+      descricao: editForm.descricao,
+      categoria_id: editForm.categoria_id || null,
+      cliente_id: editForm.cliente_id || null,
+      fornecedor_id: editForm.fornecedor_id || null,
+      centro_custo_id: editForm.centro_custo_id || null,
+      observacoes: editForm.observacoes || null,
+    }).eq("id", detailMov.id);
+    setSaving(false);
+    if (error) { toast.error("Erro ao salvar alterações."); return; }
+    toast.success("Lançamento atualizado com sucesso");
+    setEditMode(false);
+    queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
+  };
 
   const handleDesfazerConciliacao = async (movId: string) => {
     await supabase.from("movimentacoes").update({ conciliado: false }).eq("id", movId);
@@ -261,7 +315,7 @@ export default function ExtratosBancarios() {
       <ImportExtratoWizard open={importOpen} onOpenChange={setImportOpen} contas={contas} />
 
       {/* Detail Drawer */}
-      <Sheet open={!!detailMov} onOpenChange={(open) => !open && setDetailMov(null)}>
+      <Sheet open={!!detailMov} onOpenChange={(open) => { if (!open) { setDetailMov(null); setEditMode(false); } }}>
         <SheetContent className="sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Detalhes da Movimentação</SheetTitle>
@@ -278,38 +332,102 @@ export default function ExtratosBancarios() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <DetailRow label="Descrição" value={detailMov.descricao} />
-                  <DetailRow label="Tipo">
-                    <Badge className={detailMov.tipo === "receita" ? "bg-success/15 text-success border-success/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
-                      {detailMov.tipo === "receita" ? "Entrada" : "Saída"}
-                    </Badge>
-                  </DetailRow>
-                  <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
-                  <DetailRow label="Data de Vencimento" value={detailMov.data_vencimento ? formatDate(detailMov.data_vencimento) : "—"} />
-                  <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
-                  <DetailRow label="Categoria" value={detailMov.categoria_nome} />
-                  <DetailRow label="Cliente" value={(detailMov as any).clientes?.nome ?? "—"} />
-                  <DetailRow label="Fornecedor" value={(detailMov as any).fornecedores?.nome ?? "—"} />
-                  {(detailMov as any).centros_custo?.nome && (
-                    <DetailRow label="Centro de Custo" value={(detailMov as any).centros_custo.nome} />
-                  )}
-                  {(detailMov as any).observacoes && (
-                    <DetailRow label="Observações" value={(detailMov as any).observacoes} />
-                  )}
-                </div>
+                {editMode ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Descrição</p>
+                      <Input value={editForm.descricao} onChange={(e) => setEditForm((f) => ({ ...f, descricao: e.target.value }))} />
+                    </div>
+                    <DetailRow label="Tipo">
+                      <Badge className={detailMov.tipo === "receita" ? "bg-success/15 text-success border-success/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
+                        {detailMov.tipo === "receita" ? "Entrada" : "Saída"}
+                      </Badge>
+                    </DetailRow>
+                    <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
+                    <DetailRow label="Data de Vencimento" value={detailMov.data_vencimento ? formatDate(detailMov.data_vencimento) : "—"} />
+                    <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Categoria</p>
+                      <Select value={editForm.categoria_id} onValueChange={(v) => setEditForm((f) => ({ ...f, categoria_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhuma</SelectItem>
+                          {categorias.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {detailMov.tipo === "receita" && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Cliente</p>
+                        <Select value={editForm.cliente_id} onValueChange={(v) => setEditForm((f) => ({ ...f, cliente_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nenhum</SelectItem>
+                            {clientes.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {detailMov.tipo === "despesa" && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Fornecedor</p>
+                        <Select value={editForm.fornecedor_id} onValueChange={(v) => setEditForm((f) => ({ ...f, fornecedor_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nenhum</SelectItem>
+                            {fornecedores.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Centro de Custo</p>
+                      <Select value={editForm.centro_custo_id} onValueChange={(v) => setEditForm((f) => ({ ...f, centro_custo_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {centrosCusto.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Observações</p>
+                      <Textarea value={editForm.observacoes} onChange={(e) => setEditForm((f) => ({ ...f, observacoes: e.target.value }))} rows={3} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <DetailRow label="Descrição" value={detailMov.descricao} />
+                    <DetailRow label="Tipo">
+                      <Badge className={detailMov.tipo === "receita" ? "bg-success/15 text-success border-success/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
+                        {detailMov.tipo === "receita" ? "Entrada" : "Saída"}
+                      </Badge>
+                    </DetailRow>
+                    <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
+                    <DetailRow label="Data de Vencimento" value={detailMov.data_vencimento ? formatDate(detailMov.data_vencimento) : "—"} />
+                    <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
+                    <DetailRow label="Categoria" value={detailMov.categoria_nome} />
+                    <DetailRow label="Cliente" value={(detailMov as any).clientes?.nome ?? "—"} />
+                    <DetailRow label="Fornecedor" value={(detailMov as any).fornecedores?.nome ?? "—"} />
+                    {(detailMov as any).centros_custo?.nome && (
+                      <DetailRow label="Centro de Custo" value={(detailMov as any).centros_custo.nome} />
+                    )}
+                    {(detailMov as any).observacoes && (
+                      <DetailRow label="Observações" value={(detailMov as any).observacoes} />
+                    )}
+                  </div>
+                )}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => {
-                    const path = detailMov.tipo === "receita" ? "/financeiro/contas-receber" : "/financeiro/contas-pagar";
-                    window.location.href = path;
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Editar Lançamento
-                </Button>
+                {editMode ? (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>Cancelar</Button>
+                    <Button size="sm" onClick={handleSaveEdit} disabled={saving}>{saving ? "Salvando..." : "Salvar Alterações"}</Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
+                    <Pencil className="h-3.5 w-3.5" /> Editar Lançamento
+                  </Button>
+                )}
               </div>
 
               <Separator />
