@@ -5,7 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -17,11 +21,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, ChevronRight, Folder, Tag, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronRight, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   TIPOS_CATEGORIA, type TipoCategoria, type CategoriaRaw,
-  buildCategoriasTree, getTipoConfig,
+  buildCategoriasTree,
 } from "@/lib/categorias-hierarchy";
 
 type DeleteTarget =
@@ -29,27 +33,30 @@ type DeleteTarget =
   | { kind: "with-children"; cat: CategoriaRaw; childrenCount: number }
   | { kind: "in-use"; cat: CategoriaRaw; usageCount: number };
 
+type NaturezaFilter = "todas" | "sintetica" | "analitica";
+
 export default function CategoriasTab({ search }: { search: string }) {
   const [items, setItems] = useState<CategoriaRaw[]>([]);
   const [usageMap, setUsageMap] = useState<Map<string, number>>(new Map());
   const [tipoFilter, setTipoFilter] = useState<"todos" | TipoCategoria>("todos");
   const [statusFilter, setStatusFilter] = useState<"todas" | "ativas" | "inativas">("todas");
+  const [naturezaFilter, setNaturezaFilter] = useState<NaturezaFilter>("todas");
 
-  // expand state per type and per subcategory
   const [expandedTipos, setExpandedTipos] = useState<Set<string>>(new Set(TIPOS_CATEGORIA.map(t => t.key)));
   const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
 
-  // inline edit / create state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [creatingSubFor, setCreatingSubFor] = useState<TipoCategoria | null>(null);
-  const [creatingContaFor, setCreatingContaFor] = useState<string | null>(null);
+  // pending child create: parentTipoKey for level-2, parentSubId for level-3
+  const [creatingChild, setCreatingChild] = useState<
+    | { level: 2; tipo: TipoCategoria }
+    | { level: 3; subId: string; tipo: TipoCategoria }
+    | null
+  >(null);
   const [newName, setNewName] = useState("");
 
-  // delete dialog
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  // top-level "+ Nova" modal
   const [novaModal, setNovaModal] = useState<null | "sub" | "conta">(null);
   const [novaForm, setNovaForm] = useState<{ tipo: TipoCategoria; pai_id: string; nome: string }>({
     tipo: "despesas", pai_id: "", nome: "",
@@ -71,49 +78,34 @@ export default function CategoriasTab({ search }: { search: string }) {
     setUsageMap(m);
   }
 
-  // ---- Tree (filtered by search/filters, auto-expand on search) ----
-  const filteredTree = useMemo(() => {
+  // Build tree (filtered by search/status). Tipo & natureza filters applied at render.
+  const tree = useMemo(() => {
     let filtered = items;
     if (statusFilter === "ativas") filtered = filtered.filter(i => i.ativo);
     if (statusFilter === "inativas") filtered = filtered.filter(i => !i.ativo);
 
-    const tree = buildCategoriasTree(filtered);
-    if (!search.trim() && tipoFilter === "todos") return tree;
+    const built = buildCategoriasTree(filtered);
+    if (!search.trim()) return built;
 
     const q = search.trim().toLowerCase();
-    const autoExpandTipos = new Set<string>();
-    const autoExpandSubs = new Set<string>();
-
-    const result = tree
-      .filter(node => tipoFilter === "todos" || node.config.key === tipoFilter)
+    return built
       .map(node => {
-        const tipoMatch = q ? node.config.label.toLowerCase().includes(q) : true;
+        const tipoMatch = node.config.label.toLowerCase().includes(q);
         const subs = node.subcategorias
           .map(sub => {
-            const subMatch = q ? sub.nome.toLowerCase().includes(q) : true;
-            const contas = q ? sub.contas.filter(c => c.nome.toLowerCase().includes(q)) : sub.contas;
-            const keep = tipoMatch || subMatch || contas.length > 0;
-            if (keep && (subMatch || contas.length > 0)) {
-              autoExpandTipos.add(node.config.key);
-              if (contas.length > 0) autoExpandSubs.add(sub.id);
-            }
-            return keep ? { ...sub, contas: q && !subMatch ? contas : sub.contas } : null;
+            const subMatch = sub.nome.toLowerCase().includes(q);
+            const contas = sub.contas.filter(c => c.nome.toLowerCase().includes(q));
+            if (tipoMatch || subMatch) return sub; // keep all contas
+            if (contas.length > 0) return { ...sub, contas };
+            return null;
           })
           .filter(Boolean) as typeof node.subcategorias;
+        if (tipoMatch) return node;
         return { ...node, subcategorias: subs };
       })
-      .filter(node => node.subcategorias.length > 0 || (q && node.config.label.toLowerCase().includes(q)));
+      .filter(node => node.subcategorias.length > 0 || node.config.label.toLowerCase().includes(q));
+  }, [items, search, statusFilter]);
 
-    // apply auto-expand once
-    if (q) {
-      autoExpandTipos.forEach(k => expandedTipos.add(k));
-      autoExpandSubs.forEach(k => expandedSubs.add(k));
-    }
-    return result;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, search, tipoFilter, statusFilter]);
-
-  // ---- helpers ----
   function toggleTipo(key: string) {
     const next = new Set(expandedTipos);
     next.has(key) ? next.delete(key) : next.add(key);
@@ -125,44 +117,34 @@ export default function CategoriasTab({ search }: { search: string }) {
     setExpandedSubs(next);
   }
 
-  // ---- CRUD ----
+  // ── CRUD ──
   async function saveInlineEdit() {
     if (!editingId) return;
     const nome = editingName.trim();
     if (!nome) { toast.error("Nome é obrigatório"); return; }
     const { error } = await supabase.from("categorias").update({ nome }).eq("id", editingId);
     if (error) { toast.error("Erro ao salvar"); return; }
-    toast.success("Atualizado!");
+    toast.success("Categoria atualizada com sucesso");
     setEditingId(null); setEditingName("");
     loadAll();
   }
 
-  async function saveNewSub() {
-    if (!creatingSubFor) return;
+  async function saveNewChild() {
+    if (!creatingChild) return;
     const nome = newName.trim();
     if (!nome) { toast.error("Nome é obrigatório"); return; }
-    const { error } = await supabase.from("categorias").insert({
-      nome, tipo: creatingSubFor, categoria_pai_id: null, ativo: true,
-    });
+    const payload = creatingChild.level === 2
+      ? { nome, tipo: creatingChild.tipo, categoria_pai_id: null, ativo: true }
+      : { nome, tipo: creatingChild.tipo, categoria_pai_id: creatingChild.subId, ativo: true };
+    const { error } = await supabase.from("categorias").insert(payload);
     if (error) { toast.error("Erro ao criar"); return; }
-    toast.success("Subcategoria criada!");
-    setCreatingSubFor(null); setNewName("");
-    loadAll();
-  }
-
-  async function saveNewConta() {
-    if (!creatingContaFor) return;
-    const pai = items.find(i => i.id === creatingContaFor);
-    if (!pai) return;
-    const nome = newName.trim();
-    if (!nome) { toast.error("Nome é obrigatório"); return; }
-    const { error } = await supabase.from("categorias").insert({
-      nome, tipo: pai.tipo, categoria_pai_id: pai.id, ativo: true,
-    });
-    if (error) { toast.error("Erro ao criar"); return; }
-    toast.success("Conta criada!");
-    setCreatingContaFor(null); setNewName("");
-    setExpandedSubs(new Set([...expandedSubs, pai.id]));
+    toast.success(creatingChild.level === 2 ? "Subcategoria criada!" : "Conta criada!");
+    if (creatingChild.level === 3) {
+      setExpandedSubs(new Set([...expandedSubs, creatingChild.subId]));
+    } else {
+      setExpandedTipos(new Set([...expandedTipos, creatingChild.tipo]));
+    }
+    setCreatingChild(null); setNewName("");
     loadAll();
   }
 
@@ -174,18 +156,11 @@ export default function CategoriasTab({ search }: { search: string }) {
 
   function requestDelete(cat: CategoriaRaw) {
     const usage = usageMap.get(cat.id) || 0;
-    if (usage > 0) {
-      setDeleteTarget({ kind: "in-use", cat, usageCount: usage });
-      return;
-    }
+    if (usage > 0) { setDeleteTarget({ kind: "in-use", cat, usageCount: usage }); return; }
     const children = items.filter(i => i.categoria_pai_id === cat.id);
     if (children.length > 0) {
-      // check if any child is in use
       const childrenInUse = children.reduce((s, c) => s + (usageMap.get(c.id) || 0), 0);
-      if (childrenInUse > 0) {
-        setDeleteTarget({ kind: "in-use", cat, usageCount: childrenInUse });
-        return;
-      }
+      if (childrenInUse > 0) { setDeleteTarget({ kind: "in-use", cat, usageCount: childrenInUse }); return; }
       setDeleteTarget({ kind: "with-children", cat, childrenCount: children.length });
       return;
     }
@@ -195,12 +170,10 @@ export default function CategoriasTab({ search }: { search: string }) {
   async function confirmDelete() {
     if (!deleteTarget) return;
     if (deleteTarget.kind === "in-use") {
-      // desativar
       const { error } = await supabase.from("categorias").update({ ativo: false }).eq("id", deleteTarget.cat.id);
       if (error) { toast.error("Erro ao desativar"); return; }
       toast.success("Categoria desativada");
     } else {
-      // se tiver filhos, deletar filhos primeiro
       if (deleteTarget.kind === "with-children") {
         await supabase.from("categorias").delete().eq("categoria_pai_id", deleteTarget.cat.id);
       }
@@ -212,7 +185,6 @@ export default function CategoriasTab({ search }: { search: string }) {
     loadAll();
   }
 
-  // ---- Modal "+ Nova" no topo ----
   async function saveNovaModal() {
     const nome = novaForm.nome.trim();
     if (!nome) { toast.error("Nome é obrigatório"); return; }
@@ -235,11 +207,116 @@ export default function CategoriasTab({ search }: { search: string }) {
     [items, novaForm.tipo],
   );
 
+  // ── Render rows for the table ──
+  type Row =
+    | { kind: "tipo"; codigo: string; tipoIdx: number; label: string; tipo: TipoCategoria; hasChildren: boolean; open: boolean }
+    | { kind: "sub"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria; hasChildren: boolean; open: boolean; isAnalitica: boolean }
+    | { kind: "conta"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria }
+    | { kind: "creating"; level: 2 | 3; codigo: string; tipo: TipoCategoria };
+
+  const rows: Row[] = useMemo(() => {
+    const out: Row[] = [];
+    tree.forEach((tipoNode, tIdx) => {
+      // tipo filter
+      if (tipoFilter !== "todos" && tipoNode.config.key !== tipoFilter) return;
+
+      const tipoCodigo = String(tIdx + 1);
+      const tipoOpen = expandedTipos.has(tipoNode.config.key);
+      out.push({
+        kind: "tipo",
+        codigo: tipoCodigo,
+        tipoIdx: tIdx + 1,
+        label: tipoNode.config.label.charAt(0) + tipoNode.config.label.slice(1).toLowerCase(),
+        tipo: tipoNode.config.key,
+        hasChildren: tipoNode.subcategorias.length > 0,
+        open: tipoOpen,
+      });
+      if (!tipoOpen) return;
+
+      tipoNode.subcategorias.forEach((sub, sIdx) => {
+        const subCodigo = `${tipoCodigo}.${String(sIdx + 1).padStart(2, "0")}`;
+        const subOpen = expandedSubs.has(sub.id);
+        const isAnalitica = sub.contas.length === 0;
+
+        // natureza filter applies to sub & conta
+        const subPasses =
+          naturezaFilter === "todas" ||
+          (naturezaFilter === "sintetica" && !isAnalitica) ||
+          (naturezaFilter === "analitica" && isAnalitica);
+
+        if (subPasses) {
+          out.push({
+            kind: "sub",
+            codigo: subCodigo,
+            cat: sub,
+            tipo: tipoNode.config.key,
+            hasChildren: !isAnalitica,
+            open: subOpen,
+            isAnalitica,
+          });
+        }
+
+        if (subOpen) {
+          sub.contas.forEach((conta, cIdx) => {
+            // contas are always analitica
+            if (naturezaFilter === "sintetica") return;
+            out.push({
+              kind: "conta",
+              codigo: `${subCodigo}.${cIdx + 1}`,
+              cat: conta,
+              tipo: tipoNode.config.key,
+            });
+          });
+          // creating row for this sub (level 3)
+          if (creatingChild?.level === 3 && creatingChild.subId === sub.id && naturezaFilter !== "sintetica") {
+            out.push({
+              kind: "creating",
+              level: 3,
+              codigo: `${subCodigo}.${sub.contas.length + 1}`,
+              tipo: tipoNode.config.key,
+            });
+          }
+        }
+      });
+
+      // creating row at end of tipo (level 2)
+      if (creatingChild?.level === 2 && creatingChild.tipo === tipoNode.config.key && naturezaFilter !== "analitica") {
+        out.push({
+          kind: "creating",
+          level: 2,
+          codigo: `${tipoCodigo}.${String(tipoNode.subcategorias.length + 1).padStart(2, "0")}`,
+          tipo: tipoNode.config.key,
+        });
+      }
+    });
+    return out;
+  }, [tree, tipoFilter, naturezaFilter, expandedTipos, expandedSubs, creatingChild]);
+
+  function tipoBadge(tipo: TipoCategoria) {
+    const map: Record<TipoCategoria, { label: string; className: string }> = {
+      receitas:       { label: "Receita",       className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
+      despesas:       { label: "Despesa",       className: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30" },
+      impostos:       { label: "Impostos",      className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30" },
+      retirada:       { label: "Retirada",      className: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30" },
+      transferencias: { label: "Transferências",className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30" },
+    };
+    const m = map[tipo];
+    return <Badge variant="outline" className={cn("font-medium text-[10.5px] px-1.5 py-0", m.className)}>{m.label}</Badge>;
+  }
+
+  function naturezaBadge(isAnalitica: boolean) {
+    return (
+      <Badge variant="outline" className="font-normal text-[10.5px] px-1.5 py-0 bg-muted text-muted-foreground border-border">
+        {isAnalitica ? "Analítica" : "Sintética"}
+      </Badge>
+    );
+  }
+
   return (
     <Card>
       <CardContent className="pt-6">
-        {/* ── Top bar: filters + +Nova ── */}
-        <div className="flex flex-wrap items-center gap-3 mb-5">
+        {/* Top bar */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
           <Select value={tipoFilter} onValueChange={(v: any) => setTipoFilter(v)}>
             <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -259,6 +336,15 @@ export default function CategoriasTab({ search }: { search: string }) {
             </SelectContent>
           </Select>
 
+          <Select value={naturezaFilter} onValueChange={(v: NaturezaFilter) => setNaturezaFilter(v)}>
+            <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as naturezas</SelectItem>
+              <SelectItem value="sintetica">Sintética</SelectItem>
+              <SelectItem value="analitica">Analítica</SelectItem>
+            </SelectContent>
+          </Select>
+
           <div className="ml-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -266,165 +352,205 @@ export default function CategoriasTab({ search }: { search: string }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => { setNovaForm({ tipo: "despesas", pai_id: "", nome: "" }); setNovaModal("sub"); }}>
-                  <Folder className="h-4 w-4 mr-2" /> Nova Subcategoria
+                  Nova Subcategoria
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { setNovaForm({ tipo: "despesas", pai_id: "", nome: "" }); setNovaModal("conta"); }}>
-                  <Tag className="h-4 w-4 mr-2" /> Nova Conta
+                  Nova Conta
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
-        {/* ── Tree ── */}
-        <div className="space-y-4">
-          {filteredTree.map(tipoNode => {
-            const open = expandedTipos.has(tipoNode.config.key);
-            const subCount = tipoNode.subcategorias.length;
-            const tipoLabelCap = tipoNode.config.label.charAt(0) + tipoNode.config.label.slice(1).toLowerCase();
-            return (
-              <div key={tipoNode.config.key} className="rounded-md border border-border overflow-hidden bg-card">
-                {/* Tipo header — neutro, com barra colorida fina à esquerda */}
-                <div className={cn("flex items-center gap-2 px-3 py-2 group bg-muted/40 border-l-[3px]", tipoNode.config.borderClass)}>
-                  <button onClick={() => toggleTipo(tipoNode.config.key)} className="flex items-center gap-2 flex-1 text-left">
-                    <ChevronRight className={cn("h-4 w-4 transition-transform text-muted-foreground", open && "rotate-90")} />
-                    <span className="font-semibold text-sm text-foreground">
-                      {tipoLabelCap} <span className="text-muted-foreground font-normal">({subCount})</span>
-                    </span>
-                  </button>
-                  {creatingSubFor === tipoNode.config.key ? (
-                    <InlineNameForm
-                      placeholder="Nome da subcategoria"
-                      value={newName}
-                      onChange={setNewName}
-                      onSave={saveNewSub}
-                      onCancel={() => { setCreatingSubFor(null); setNewName(""); }}
-                    />
-                  ) : (
-                    <Button
-                      variant="ghost" size="sm"
-                      className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 focus:opacity-100"
-                      onClick={() => { setCreatingSubFor(tipoNode.config.key); setNewName(""); setExpandedTipos(new Set([...expandedTipos, tipoNode.config.key])); }}
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Subcategoria
-                    </Button>
-                  )}
-                </div>
+        {/* Hierarchical table */}
+        <div className="rounded-md border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-[110px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Código</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Nome</TableHead>
+                <TableHead className="w-[140px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Tipo</TableHead>
+                <TableHead className="w-[110px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Natureza</TableHead>
+                <TableHead className="w-[80px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9 text-right pr-4">Ativo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">
+                    Nenhuma categoria encontrada
+                  </TableCell>
+                </TableRow>
+              )}
 
-                {/* Subcategorias */}
-                {open && (
-                  <div>
-                    {tipoNode.subcategorias.length === 0 && (
-                      <div className="px-4 py-5 text-center text-xs text-muted-foreground">Nenhuma subcategoria. Clique em "+ Subcategoria" acima.</div>
-                    )}
-                    {tipoNode.subcategorias.map(sub => {
-                      const subOpen = expandedSubs.has(sub.id);
-                      const isEditing = editingId === sub.id;
-                      return (
-                        <div key={sub.id}>
-                          {/* Linha da subcategoria */}
-                          <div className={cn("group flex items-center gap-2 pl-6 pr-3 py-2 border-t border-border/60 hover:bg-muted/50 transition-colors border-l-2", tipoNode.config.borderClass, "ml-3")}>
-                            <button
-                              onClick={() => sub.contas.length > 0 && toggleSub(sub.id)}
-                              className={cn("h-5 w-5 flex items-center justify-center rounded hover:bg-muted", sub.contas.length === 0 && "opacity-0 pointer-events-none")}
-                            >
-                              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform text-muted-foreground", subOpen && "rotate-90")} />
-                            </button>
-                            <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
-                            {isEditing ? (
-                              <InlineNameForm
-                                placeholder="Nome"
-                                value={editingName}
-                                onChange={setEditingName}
-                                onSave={saveInlineEdit}
-                                onCancel={() => { setEditingId(null); setEditingName(""); }}
-                                className="flex-1"
-                              />
-                            ) : (
-                              <>
-                                <span className={cn("text-sm text-foreground flex-1", !sub.ativo && "text-muted-foreground line-through")}>
-                                  {sub.nome}
-                                  {sub.contas.length > 0 && <span className="text-muted-foreground ml-1.5 text-xs">({sub.contas.length})</span>}
-                                </span>
-                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                  {creatingContaFor === sub.id ? null : (
-                                    <Button variant="ghost" size="sm" className="h-7 px-1.5 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => { setCreatingContaFor(sub.id); setNewName(""); }}>
-                                      <Plus className="h-3.5 w-3.5" /> Conta
-                                    </Button>
-                                  )}
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => { setEditingId(sub.id); setEditingName(sub.nome); }}>
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(sub)}>
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                                <Switch checked={sub.ativo} onCheckedChange={() => toggleAtivo(sub)} className="ml-1" />
-                              </>
-                            )}
-                          </div>
-
-                          {/* Form inline para criar conta dentro desta sub */}
-                          {creatingContaFor === sub.id && (
-                            <div className={cn("flex items-center gap-2 pl-14 pr-3 py-2 border-t border-border/60 bg-muted/20 border-l-2 ml-3", tipoNode.config.borderClass)}>
-                              <Tag className="h-4 w-4 text-muted-foreground" />
-                              <InlineNameForm
-                                placeholder="Nome da conta"
-                                value={newName}
-                                onChange={setNewName}
-                                onSave={saveNewConta}
-                                onCancel={() => { setCreatingContaFor(null); setNewName(""); }}
-                                className="flex-1"
-                              />
-                            </div>
-                          )}
-
-                          {/* Contas (nível 3) */}
-                          {subOpen && sub.contas.map(conta => {
-                            const contaEditing = editingId === conta.id;
-                            return (
-                              <div key={conta.id} className={cn("group flex items-center gap-2 pl-14 pr-3 py-2 border-t border-border/60 hover:bg-muted/50 transition-colors border-l-2 ml-3", tipoNode.config.borderClass)}>
-                                <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                {contaEditing ? (
-                                  <InlineNameForm
-                                    placeholder="Nome"
-                                    value={editingName}
-                                    onChange={setEditingName}
-                                    onSave={saveInlineEdit}
-                                    onCancel={() => { setEditingId(null); setEditingName(""); }}
-                                    className="flex-1"
-                                  />
-                                ) : (
-                                  <>
-                                    <span className={cn("text-sm text-foreground flex-1", !conta.ativo && "text-muted-foreground line-through")}>{conta.nome}</span>
-                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => { setEditingId(conta.id); setEditingName(conta.nome); }}>
-                                        <Pencil className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => requestDelete(conta)}>
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
-                                    <Switch checked={conta.ativo} onCheckedChange={() => toggleAtivo(conta)} className="ml-1" />
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
+              {rows.map((row, idx) => {
+                if (row.kind === "tipo") {
+                  return (
+                    <TableRow key={`t-${row.tipo}`} className="bg-muted/40 hover:bg-muted/40 border-b border-border/60">
+                      <TableCell className="py-2.5 font-bold text-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => toggleTipo(row.tipo)}
+                            className={cn("h-5 w-5 flex items-center justify-center rounded hover:bg-muted/80", !row.hasChildren && "opacity-30 pointer-events-none")}
+                            aria-label="Expandir"
+                          >
+                            <ChevronRight className={cn("h-3.5 w-3.5 transition-transform text-muted-foreground", row.open && "rotate-90")} />
+                          </button>
+                          <span className="font-mono text-xs">{row.codigo}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {filteredTree.length === 0 && (
-            <div className="text-center text-muted-foreground py-12 text-sm">Nenhuma categoria encontrada</div>
-          )}
+                      </TableCell>
+                      <TableCell className="py-2.5 group">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-foreground">{row.label}</span>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
+                            onClick={() => {
+                              setExpandedTipos(new Set([...expandedTipos, row.tipo]));
+                              setCreatingChild({ level: 2, tipo: row.tipo });
+                              setNewName("");
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Filho
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
+                      <TableCell className="py-2.5">
+                        <Badge variant="outline" className="font-normal text-[10.5px] px-1.5 py-0 bg-muted text-muted-foreground border-border">Sintética</Badge>
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right pr-4">
+                        <span className="text-xs text-muted-foreground">—</span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+
+                if (row.kind === "sub") {
+                  const isEditing = editingId === row.cat.id;
+                  return (
+                    <TableRow key={`s-${row.cat.id}`} className="border-b border-border/60 hover:bg-muted/30 group">
+                      <TableCell className="py-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => row.hasChildren && toggleSub(row.cat.id)}
+                            className={cn("h-5 w-5 flex items-center justify-center rounded hover:bg-muted", !row.hasChildren && "opacity-0 pointer-events-none")}
+                          >
+                            <ChevronRight className={cn("h-3.5 w-3.5 transition-transform text-muted-foreground", row.open && "rotate-90")} />
+                          </button>
+                          <span className="font-mono text-xs text-muted-foreground">{row.codigo}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2.5">
+                        <div className="flex items-center justify-between gap-2" style={{ paddingLeft: 24 }}>
+                          {isEditing ? (
+                            <InlineNameForm
+                              value={editingName}
+                              onChange={setEditingName}
+                              onSave={saveInlineEdit}
+                              onCancel={() => { setEditingId(null); setEditingName(""); }}
+                              placeholder="Nome"
+                              className="flex-1"
+                            />
+                          ) : (
+                            <>
+                              <span className={cn("text-sm font-semibold text-foreground", !row.cat.ativo && "text-muted-foreground line-through")}>
+                                {row.cat.nome}
+                              </span>
+                              <RowActions
+                                onAddChild={() => {
+                                  setExpandedSubs(new Set([...expandedSubs, row.cat.id]));
+                                  setCreatingChild({ level: 3, subId: row.cat.id, tipo: row.tipo });
+                                  setNewName("");
+                                }}
+                                onEdit={() => { setEditingId(row.cat.id); setEditingName(row.cat.nome); }}
+                                onDelete={() => requestDelete(row.cat)}
+                                showAdd
+                              />
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
+                      <TableCell className="py-2.5">{naturezaBadge(row.isAnalitica)}</TableCell>
+                      <TableCell className="py-2.5 text-right pr-4">
+                        <Switch checked={row.cat.ativo} onCheckedChange={() => toggleAtivo(row.cat)} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+
+                if (row.kind === "conta") {
+                  const isEditing = editingId === row.cat.id;
+                  return (
+                    <TableRow key={`c-${row.cat.id}`} className="border-b border-border/60 hover:bg-muted/30 group">
+                      <TableCell className="py-2.5">
+                        <span className="font-mono text-xs text-muted-foreground pl-[26px] block">{row.codigo}</span>
+                      </TableCell>
+                      <TableCell className="py-2.5">
+                        <div className="flex items-center justify-between gap-2" style={{ paddingLeft: 48 }}>
+                          {isEditing ? (
+                            <InlineNameForm
+                              value={editingName}
+                              onChange={setEditingName}
+                              onSave={saveInlineEdit}
+                              onCancel={() => { setEditingId(null); setEditingName(""); }}
+                              placeholder="Nome"
+                              className="flex-1"
+                            />
+                          ) : (
+                            <>
+                              <span className={cn("text-sm text-foreground font-normal", !row.cat.ativo && "text-muted-foreground line-through")}>
+                                {row.cat.nome}
+                              </span>
+                              <RowActions
+                                onEdit={() => { setEditingId(row.cat.id); setEditingName(row.cat.nome); }}
+                                onDelete={() => requestDelete(row.cat)}
+                              />
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
+                      <TableCell className="py-2.5">{naturezaBadge(true)}</TableCell>
+                      <TableCell className="py-2.5 text-right pr-4">
+                        <Switch checked={row.cat.ativo} onCheckedChange={() => toggleAtivo(row.cat)} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+
+                // creating row
+                return (
+                  <TableRow key={`new-${idx}`} className="bg-muted/20 border-b border-border/60">
+                    <TableCell className="py-2.5">
+                      <span className={cn("font-mono text-xs text-muted-foreground block", row.level === 3 && "pl-[26px]")}>
+                        {row.codigo}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2.5">
+                      <div style={{ paddingLeft: row.level === 2 ? 24 : 48 }}>
+                        <InlineNameForm
+                          value={newName}
+                          onChange={setNewName}
+                          onSave={saveNewChild}
+                          onCancel={() => { setCreatingChild(null); setNewName(""); }}
+                          placeholder={row.level === 2 ? "Nome da subcategoria" : "Nome da conta"}
+                          className="max-w-md"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
+                    <TableCell className="py-2.5">{naturezaBadge(row.level === 3)}</TableCell>
+                    <TableCell className="py-2.5 text-right pr-4"><span className="text-xs text-muted-foreground">—</span></TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
 
-        {/* ── Delete Dialog ── */}
+        {/* Delete dialog */}
         <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -454,7 +580,7 @@ export default function CategoriasTab({ search }: { search: string }) {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* ── "+ Nova" modal ── */}
+        {/* "+ Nova" modal */}
         <Dialog open={!!novaModal} onOpenChange={(o) => !o && setNovaModal(null)}>
           <DialogContent>
             <DialogHeader>
@@ -499,7 +625,7 @@ export default function CategoriasTab({ search }: { search: string }) {
   );
 }
 
-// ──────────── Inline name form (small) ────────────
+// ── Inline name form ──
 function InlineNameForm({
   value, onChange, onSave, onCancel, placeholder, className,
 }: {
@@ -524,6 +650,29 @@ function InlineNameForm({
       </Button>
       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onCancel}>
         <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+// ── Row hover actions ──
+function RowActions({
+  onEdit, onDelete, onAddChild, showAdd,
+}: {
+  onEdit: () => void; onDelete: () => void; onAddChild?: () => void; showAdd?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      {showAdd && onAddChild && (
+        <Button variant="ghost" size="sm" className="h-7 px-1.5 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={onAddChild}>
+          <Plus className="h-3.5 w-3.5" /> Filho
+        </Button>
+      )}
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onEdit}>
+        <Pencil className="h-3.5 w-3.5" />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={onDelete}>
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </div>
   );
