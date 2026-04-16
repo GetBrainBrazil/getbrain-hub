@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
 import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -839,7 +839,7 @@ export default function Movimentacoes() {
                       </TableRow>
                     </>
                   )}
-                  </>
+                  </React.Fragment>
                   );
                 })}
               </TableBody>
