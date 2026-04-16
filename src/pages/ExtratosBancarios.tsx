@@ -63,7 +63,7 @@ export default function ExtratosBancarios() {
   const { data: extratoTransacoes = [] } = useQuery({
     queryKey: ["extrato_transacoes", contaId, dateRange.startDate?.toISOString(), dateRange.endDate?.toISOString()],
     queryFn: async () => {
-      let q = supabase.from("extrato_transacoes").select("*");
+      let q = supabase.from("extrato_transacoes").select("*, extrato_importacoes(nome_arquivo, created_at, conta_bancaria_id)");
       if (contaId !== "all") q = q.eq("conta_bancaria_id", contaId);
       const { data } = await q;
       return data || [];
