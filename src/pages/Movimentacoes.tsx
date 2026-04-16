@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
-import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown } from "lucide-react";
+import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
@@ -632,8 +632,12 @@ export default function Movimentacoes() {
         <div className="flex gap-2">
           <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("pagar"); }}>
             <DialogTrigger asChild>
-              <Button variant="destructive" className="gap-1.5" onClick={() => setTab("pagar")}>
-                <Plus className="h-4 w-4" /> Conta a Pagar
+              <Button
+                variant="outline"
+                className="gap-1.5 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
+                onClick={() => setTab("pagar")}
+              >
+                <ArrowDown className="h-4 w-4 text-destructive" /> Conta a Pagar
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
@@ -647,8 +651,11 @@ export default function Movimentacoes() {
           </Dialog>
           <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("receber"); }}>
             <DialogTrigger asChild>
-              <Button variant="destructive" className="gap-1.5" onClick={() => setTab("receber")}>
-                <Plus className="h-4 w-4" /> Conta a Receber
+              <Button
+                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => setTab("receber")}
+              >
+                <ArrowUp className="h-4 w-4 text-primary-foreground" /> Conta a Receber
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
