@@ -25,6 +25,7 @@ import {
   TIPOS_CATEGORIA, type TipoCategoria, type CategoriaRaw,
   buildCategoriasTree,
 } from "@/lib/categorias-hierarchy";
+import { TipoBadge } from "@/components/TipoBadge";
 
 type DeleteTarget =
   | { kind: "simple"; cat: CategoriaRaw }
@@ -270,15 +271,7 @@ export default function CategoriasTab({ search }: { search: string }) {
   }, [tree, tipoFilter, expandedTipos, expandedSubs]);
 
   function tipoBadge(tipo: TipoCategoria) {
-    const map: Record<TipoCategoria, { label: string; className: string }> = {
-      receitas:       { label: "Receita",       className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
-      despesas:       { label: "Despesa",       className: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30" },
-      impostos:       { label: "Impostos",      className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30" },
-      retirada:       { label: "Retirada",      className: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30" },
-      transferencias: { label: "Transferências",className: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30" },
-    };
-    const m = map[tipo];
-    return <Badge variant="outline" className={cn("font-medium text-[10.5px] px-1.5 py-0", m.className)}>{m.label}</Badge>;
+    return <TipoBadge tipo={tipo} />;
   }
 
 
