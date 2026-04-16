@@ -1,44 +1,52 @@
 
 
 ## Objetivo
-Substituir o drawer lateral de detalhes em "Contas a Pagar / Receber" por uma **página dedicada** que abre já em **modo de edição** ao clicar em uma transação.
+Replicar na aba **Fornecedores** o mesmo padrão de drawer (visualização → edição) já usado em **Clientes**, garantindo paridade visual e funcional total.
 
-## Fluxo proposto
+## Mudanças no banco
+A tabela `fornecedores` hoje só tem `email`/`telefone` (texto único) e não tem campos de endereço estruturados. Precisamos migrar para suportar múltiplos contatos e endereço completo (mesmas colunas de `clientes`):
 
-1. Clicar em uma linha da tabela → navega para `/financeiro/movimentacoes/:id` (em vez de abrir o `Sheet`)
-2. Nova página carrega a movimentação pelo ID e renderiza um formulário completo já editável
-3. Botão "Voltar" no topo retorna para `/financeiro/movimentacoes` preservando a aba/filtros (já persistidos via `usePersistedState`)
-4. Ações disponíveis na nova página: **Salvar**, **Cancelar/Voltar**, **Registrar Pagamento/Recebimento**, **Excluir**
+**Migração** (adicionar colunas, preservando os campos atuais):
+- `razao_social text`
+- `emails text[] default '{}'`
+- `telefones text[] default '{}'`
+- `cep text`, `estado text`, `cidade text`, `numero text`, `bairro text`, `complemento text`, `endereco text`
 
-## Mudanças
+(Os campos `email` e `telefone` antigos continuam, sincronizados com `emails[0]`/`telefones[0]` no save, igual ao padrão de Clientes.)
 
-### 1. Nova página `src/pages/MovimentacaoDetalhe.tsx`
-- Carrega movimentação + listas de referência (clientes, fornecedores, categorias, contas, projetos, meios de pagamento, centros de custo) em paralelo
-- Header com breadcrumb/voltar, tipo (A Pagar / A Receber), `StatusBadge` e valor em destaque
-- Formulário em cards organizados por seções:
-  - **Informações principais**: Descrição, Valor previsto, Valor realizado, Datas (competência, vencimento, pagamento)
-  - **Vinculações**: Cliente OU Fornecedor (conforme tipo), Projeto, Categoria, Centro de Custo, Conta Bancária, Meio de pagamento
-  - **Observações**
-- Todos os campos já editáveis ao abrir (não precisa clicar em "Editar")
-- Botões fixos no rodapé: `Salvar Alterações`, `Registrar Pagamento/Recebimento` (se ainda pendente), `Excluir`
+## Mudanças em `src/pages/ConfiguracoesFinanceiras.tsx`
 
-### 2. `src/App.tsx`
-- Adicionar rota `<Route path="/financeiro/movimentacoes/:id" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />`
+Reescrever apenas o componente `FornecedoresTab` (linhas 906–981), espelhando o `ClientesTab` (linhas ~520–900):
 
-### 3. `src/pages/Movimentacoes.tsx`
-- Remover o bloco do `Sheet` de detalhes (linhas 775–908) e o estado `detailMov`
-- Trocar `onClick={() => setDetailMov(m)}` na `TableRow` por `navigate(\`/financeiro/movimentacoes/${m.id}\`)`
-- Manter o modal de **criar** novo lançamento intacto
-- Manter o diálogo de "Dar Baixa" (pode ser disparado tanto da página de detalhe quanto da listagem se necessário — na listagem não é mais necessário, então remover seu acionamento via drawer)
+1. **Estados**: `drawerOpen`, `drawerMode` (`view` | `create` | `edit`), `selectedItem`, `editForm`, `deleteDialogOpen`, `copied`, `newEmail`, `newPhone`, `filterTipo`, `filterStatus`.
 
-### Persistência de filtros
-Filtros e aba já usam `usePersistedState`, então ao voltar da página de detalhe a listagem permanece exatamente como estava.
+2. **Tabela**:
+   - Linhas com `cursor-pointer hover:bg-muted/50` e ícone `Eye` que aparece no hover (`opacity-0 group-hover:opacity-100`).
+   - Switch de Ativo/Inativo com `stopPropagation`.
+   - Mensagem vazia: "Nenhum fornecedor encontrado para os filtros selecionados".
 
-### Consistência visual
-- Reutilizar `KPICard`/cards, `StatusBadge`, `formatCurrency`, `formatDate`, mesma tipografia e cores (vermelho saídas, verde entradas, navy destaques)
-- Layout responsivo igual às outras páginas internas do módulo
+3. **Filtros** (acima da tabela, antes do botão "Novo Fornecedor"):
+   - Dropdown `Todos os Tipos` (Todos / PF / PJ).
+   - Dropdown `Todos os Status` (Todos / Ativo / Inativo).
+   - Combinados com o `search` global (nome, CPF/CNPJ, e-mail).
 
-### Arquivos
-- **Criado**: `src/pages/MovimentacaoDetalhe.tsx`
-- **Editado**: `src/App.tsx` (nova rota), `src/pages/Movimentacoes.tsx` (remover Sheet, navegar ao clicar)
+4. **Drawer** (`Sheet` lateral direito, largura 520px):
+   - **Modo View**: Nome, Tipo (badge), Razão Social (se PJ), Documento formatado, lista de E-mails, lista de Telefones formatados, Endereço completo formatado, Observações, Status. Botão `Copiar Dados` com troca de ícone Copy↔Check por 2s e toast "Dados do fornecedor copiados!". Footer: `Excluir` (esquerda, destrutivo) | `Fechar` + `Editar Fornecedor` (direita).
+   - **Modo Edit/Create** (mesmo layout do form de Clientes adaptado):
+     - Linha: Nome* + Tipo (PF/PJ).
+     - Linha: Razão Social (apenas se PJ) + Documento (label CPF/CNPJ dinâmico, máscara correspondente).
+     - E-mails: label + botão "+ Adicionar", input com Enter, lista removível, fallback "Nenhum e-mail cadastrado". Validação de formato.
+     - Telefones: idem com máscara `(00) 00000-0000`.
+     - Seção **Endereço** (título bold): CEP + Estado (dropdown UFs) + Cidade na primeira linha; Endereço + Número + Bairro na segunda; Complemento na terceira (largura total).
+     - Observações (textarea ~4 linhas).
+     - Toggle Ativo/Inativo (apenas em edit).
+     - Botões: `Cancelar` (volta para view) | `Salvar Alterações`. Toast "Fornecedor atualizado com sucesso".
+
+5. **Exclusão**: `AlertDialog` "Tem certeza que deseja excluir o fornecedor [Nome]? Esta ação não pode ser desfeita." → toast "Fornecedor excluído com sucesso".
+
+6. **Reuso**: aproveitar as helpers já presentes no arquivo (`formatCpfCnpj`, `applyCpfCnpjMask`, `formatPhone`, `applyPhoneMask`, `applyCepMask`, `ESTADOS_BR`, `buildAddressString`) — extraí-las para escopo de módulo se ainda estiverem dentro de `ClientesTab`, ou referenciá-las diretamente.
+
+## Arquivos
+- **Migração**: adicionar colunas em `fornecedores`.
+- **Editado**: `src/pages/ConfiguracoesFinanceiras.tsx` (apenas o componente `FornecedoresTab`; nenhuma outra aba é tocada).
 
