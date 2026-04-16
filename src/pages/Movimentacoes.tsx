@@ -71,23 +71,29 @@ export default function Movimentacoes() {
   const isPagar = tab === "pagar";
 
   async function loadAll() {
-    await supabase.rpc("update_status_atrasado" as any);
-    const [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
-      supabase.from("movimentacoes").select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)").eq("tipo", tipo).order("data_vencimento", { ascending: false }),
-      supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
-      supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
-      supabase.from("categorias").select("*").eq("ativo", true),
-      supabase.from("contas_bancarias").select("*").eq("ativo", true),
-      supabase.from("projetos").select("*"),
-      supabase.from("meios_pagamento").select("*").eq("ativo", true),
-    ]);
-    setMovs(r1.data || []);
-    setClientes(r2.data || []);
-    setFornecedores(r3.data || []);
-    setCategorias(r4.data || []);
-    setContas(r5.data || []);
-    setProjetos(r6.data || []);
-    setMeios(r7.data || []);
+    setLoading(true);
+    setMovs([]);
+    try {
+      const [, r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
+        supabase.rpc("update_status_atrasado" as any),
+        supabase.from("movimentacoes").select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)").eq("tipo", tipo).order("data_vencimento", { ascending: false }),
+        supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
+        supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
+        supabase.from("categorias").select("*").eq("ativo", true),
+        supabase.from("contas_bancarias").select("*").eq("ativo", true),
+        supabase.from("projetos").select("*"),
+        supabase.from("meios_pagamento").select("*").eq("ativo", true),
+      ]);
+      setMovs(r1.data || []);
+      setClientes(r2.data || []);
+      setFornecedores(r3.data || []);
+      setCategorias(r4.data || []);
+      setContas(r5.data || []);
+      setProjetos(r6.data || []);
+      setMeios(r7.data || []);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Fornecedor combobox helpers
