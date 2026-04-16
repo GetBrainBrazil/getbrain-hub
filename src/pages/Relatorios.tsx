@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import InadimplenciaTab from "@/components/InadimplenciaTab";
+import FluxoCaixaTab from "@/components/FluxoCaixaTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -446,7 +447,7 @@ export default function Relatorios() {
       <Tabs defaultValue="dre">
         <TabsList>
           <TabsTrigger value="dre"><BarChart3 className="h-4 w-4 mr-1.5" />DRE</TabsTrigger>
-          <TabsTrigger value="fluxo" disabled>Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="fluxo"><TrendingUp className="h-4 w-4 mr-1.5" />Fluxo de Caixa</TabsTrigger>
           <TabsTrigger value="inadimplencia"><AlertTriangle className="h-4 w-4 mr-1.5" />Análise de Inadimplência</TabsTrigger>
         </TabsList>
 
@@ -581,14 +582,8 @@ export default function Relatorios() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="fluxo">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-lg font-semibold mb-2">Fluxo de Caixa em desenvolvimento</h3>
-              <p className="text-muted-foreground">Em breve.</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="fluxo" className="space-y-6 mt-4">
+          <FluxoCaixaTab />
         </TabsContent>
 
         <TabsContent value="inadimplencia" className="space-y-6 mt-4">
