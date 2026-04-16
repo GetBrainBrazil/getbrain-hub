@@ -123,6 +123,8 @@ export default function ExtratosBancarios() {
   // Divergences: movs not conciliadas that probably should be
   const divergencias = movimentacoes.filter((m: any) => !m.conciliado);
 
+  const [confirmDesfazer, setConfirmDesfazer] = useState(false);
+
   const handleDesfazerConciliacao = async (movId: string) => {
     await supabase.from("movimentacoes").update({ conciliado: false }).eq("id", movId);
     const linked = extratoTransacoes.find((et: any) => et.movimentacao_id === movId);
@@ -133,7 +135,14 @@ export default function ExtratosBancarios() {
     queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
     toast.success("Conciliação desfeita.");
     setDetailMov(null);
+    setConfirmDesfazer(false);
   };
+
+  const detailExtrato = detailMov ? extratoByMovId.get(detailMov.id) : null;
+  const detailContaNome = detailExtrato
+    ? contas.find((c) => c.id === detailExtrato.conta_bancaria_id)?.nome ?? "—"
+    : "—";
+  const isManualConciliation = detailMov?.conciliado && !detailExtrato;
 
   return (
     <div className="space-y-6 animate-fade-slide">
@@ -253,40 +262,114 @@ export default function ExtratosBancarios() {
 
       {/* Detail Drawer */}
       <Sheet open={!!detailMov} onOpenChange={(open) => !open && setDetailMov(null)}>
-        <SheetContent className="sm:max-w-md overflow-y-auto">
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Detalhes da Movimentação</SheetTitle>
           </SheetHeader>
           {detailMov && (
-            <div className="space-y-4 mt-4">
-              <DetailRow label="Descrição" value={detailMov.descricao} />
-              <DetailRow label="Tipo" value={detailMov.tipo === "receita" ? "Receita" : "Despesa"} />
-              <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
-              <DetailRow label="Data Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
-              <DetailRow label="Categoria" value={detailMov.categoria_nome} />
-              <DetailRow label="Cliente" value={(detailMov as any).clientes?.nome ?? "—"} />
-              <DetailRow label="Fornecedor" value={(detailMov as any).fornecedores?.nome ?? "—"} />
+            <div className="mt-4 space-y-6">
+              {/* Section 1 — Lançamento no Sistema */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-accent" />
+                  <div>
+                    <h3 className="text-sm font-bold">Lançamento no Sistema</h3>
+                    <p className="text-xs text-muted-foreground">Controle interno — pode ser editado</p>
+                  </div>
+                </div>
 
-              <div className="border-t pt-4">
-                <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                  {detailMov.conciliado ? (
-                    <><CheckCircle2 className="h-4 w-4 text-success" /> Conciliado</>
-                  ) : (
-                    <><Clock className="h-4 w-4 text-warning" /> Pendente de Conciliação</>
+                <div className="space-y-3">
+                  <DetailRow label="Descrição" value={detailMov.descricao} />
+                  <DetailRow label="Tipo">
+                    <Badge className={detailMov.tipo === "receita" ? "bg-success/15 text-success border-success/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
+                      {detailMov.tipo === "receita" ? "Entrada" : "Saída"}
+                    </Badge>
+                  </DetailRow>
+                  <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
+                  <DetailRow label="Data de Vencimento" value={detailMov.data_vencimento ? formatDate(detailMov.data_vencimento) : "—"} />
+                  <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
+                  <DetailRow label="Categoria" value={detailMov.categoria_nome} />
+                  <DetailRow label="Cliente" value={(detailMov as any).clientes?.nome ?? "—"} />
+                  <DetailRow label="Fornecedor" value={(detailMov as any).fornecedores?.nome ?? "—"} />
+                  {(detailMov as any).centros_custo?.nome && (
+                    <DetailRow label="Centro de Custo" value={(detailMov as any).centros_custo.nome} />
                   )}
-                </p>
+                  {(detailMov as any).observacoes && (
+                    <DetailRow label="Observações" value={(detailMov as any).observacoes} />
+                  )}
+                </div>
 
-                {detailMov.conciliado && extratoByMovId.has(detailMov.id) && (
-                  <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1 mb-3">
-                    <p className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Transação no Extrato</p>
-                    <p>{extratoByMovId.get(detailMov.id)?.descricao_banco}</p>
-                    <p className="text-muted-foreground">Data: {formatDate(extratoByMovId.get(detailMov.id)?.data_transacao)}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    const path = detailMov.tipo === "receita" ? "/financeiro/contas-receber" : "/financeiro/contas-pagar";
+                    window.location.href = path;
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Editar Lançamento
+                </Button>
+              </div>
+
+              <Separator />
+
+              {/* Section 2 — Transação no Extrato */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-accent" />
+                  <div>
+                    <h3 className="text-sm font-bold">Transação no Extrato</h3>
+                    <p className="text-xs text-muted-foreground">Dado oficial do banco — não editável</p>
+                  </div>
+                </div>
+
+                {detailExtrato ? (
+                  <div className="rounded-lg border border-border/50 bg-muted/30 p-4 space-y-3">
+                    <DetailRow label="Data de Processamento" value={formatDate(detailExtrato.data_transacao)} />
+                    <DetailRow label="Descrição Original" value={detailExtrato.descricao_banco} />
+                    <DetailRow label="Valor" value={formatCurrency(Math.abs(detailExtrato.valor))} />
+                    <DetailRow label="Identificador (FITID)" value={detailExtrato.id?.slice(0, 12) ?? "—"} />
+                    <DetailRow label="Conta Bancária" value={detailContaNome} />
+                    {detailExtrato.extrato_importacoes && (
+                      <DetailRow label="Arquivo de Origem">
+                        <span className="text-sm text-accent">
+                          {(detailExtrato.extrato_importacoes as any).nome_arquivo}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (importado em {formatDate((detailExtrato.extrato_importacoes as any).created_at)})
+                        </span>
+                      </DetailRow>
+                    )}
+                  </div>
+                ) : isManualConciliation ? (
+                  <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-warning shrink-0" />
+                      <p className="text-sm text-warning font-medium">Conciliação manual — sem vínculo com extrato importado</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-warning shrink-0" />
+                      <p className="text-sm text-warning">Esta movimentação ainda não foi conciliada com um extrato bancário. Importe o extrato correspondente para confirmar a transação.</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => { setDetailMov(null); setImportOpen(true); }}>
+                      <Upload className="h-3.5 w-3.5" /> Importar Extrato
+                    </Button>
                   </div>
                 )}
+              </div>
 
+              <Separator />
+
+              {/* Footer buttons */}
+              <div className="flex items-center justify-between pt-2">
+                <Button variant="outline" onClick={() => setDetailMov(null)}>Fechar</Button>
                 {detailMov.conciliado && (
-                  <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDesfazerConciliacao(detailMov.id)}>
-                    <X className="h-3 w-3 mr-1" /> Desfazer Conciliação
+                  <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setConfirmDesfazer(true)}>
+                    <X className="h-3.5 w-3.5 mr-1" /> Desfazer Conciliação
                   </Button>
                 )}
               </div>
@@ -294,15 +377,33 @@ export default function ExtratosBancarios() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Confirm undo dialog */}
+      <AlertDialog open={confirmDesfazer} onOpenChange={setConfirmDesfazer}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desfazer conciliação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja desfazer a conciliação desta movimentação? O lançamento continuará registrado no sistema, mas voltará ao status de "Pendente de Conciliação".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => detailMov && handleDesfazerConciliacao(detailMov.id)}>
+              Desfazer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value}</p>
+      {children ? <div className="text-sm font-medium flex items-center flex-wrap">{children}</div> : <p className="text-sm font-medium">{value}</p>}
     </div>
   );
 }
