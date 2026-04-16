@@ -6,6 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   AlertTriangle, FileText as FileTextIcon, Clock, Percent, Download,
   CalendarIcon, FileText, FileSpreadsheet, ChevronDown, ChevronRight,
@@ -19,6 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface InadMovimentacao {
   id: string;
@@ -58,10 +62,19 @@ export default function InadimplenciaTab() {
   const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
   const [sortKey, setSortKey] = useState<SortKey>("valor");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [contasBancarias, setContasBancarias] = useState<any[]>([]);
+  const [meiosPagamento, setMeiosPagamento] = useState<any[]>([]);
+  const [openBaixa, setOpenBaixa] = useState(false);
+  const [selectedMov, setSelectedMov] = useState<InadMovimentacao | null>(null);
+  const [baixaForm, setBaixaForm] = useState({
+    valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
+  });
 
   // Load clientes
   useEffect(() => {
     supabase.from("clientes").select("id, nome").then(({ data }) => setClientes(data || []));
+    supabase.from("contas_bancarias").select("*").eq("ativo", true).then(({ data }) => setContasBancarias(data || []));
+    supabase.from("meios_pagamento").select("*").eq("ativo", true).then(({ data }) => setMeiosPagamento(data || []));
   }, []);
 
   // Compute date range
@@ -78,35 +91,58 @@ export default function InadimplenciaTab() {
   }, [period, customStart, customEnd]);
 
   // Load data
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const startStr = format(dateRange.start, "yyyy-MM-dd");
-      const endStr = format(dateRange.end, "yyyy-MM-dd");
+  async function loadData() {
+    setLoading(true);
+    const startStr = format(dateRange.start, "yyyy-MM-dd");
+    const endStr = format(dateRange.end, "yyyy-MM-dd");
 
-      // Atrasados: receita, vencimento passed, not pago
-      const { data: atr } = await supabase
-        .from("movimentacoes")
-        .select("id, descricao, valor_previsto, data_vencimento, cliente_id, status")
-        .eq("tipo", "receita")
-        .in("status", ["atrasado", "pendente"])
-        .lte("data_vencimento", format(new Date(), "yyyy-MM-dd"))
-        .gte("data_vencimento", startStr)
-        .lte("data_vencimento", endStr);
-      setAtrasados(atr || []);
+    const { data: atr } = await supabase
+      .from("movimentacoes")
+      .select("id, descricao, valor_previsto, data_vencimento, cliente_id, status")
+      .eq("tipo", "receita")
+      .in("status", ["atrasado", "pendente"])
+      .lte("data_vencimento", format(new Date(), "yyyy-MM-dd"))
+      .gte("data_vencimento", startStr)
+      .lte("data_vencimento", endStr);
+    setAtrasados(atr || []);
 
-      // Total faturado no período (all receita)
-      const { data: faturados } = await supabase
-        .from("movimentacoes")
-        .select("valor_previsto")
-        .eq("tipo", "receita")
-        .gte("data_vencimento", startStr)
-        .lte("data_vencimento", endStr);
-      setTotalFaturado((faturados || []).reduce((s, m) => s + (m.valor_previsto || 0), 0));
-      setLoading(false);
-    }
-    load();
-  }, [dateRange]);
+    const { data: faturados } = await supabase
+      .from("movimentacoes")
+      .select("valor_previsto")
+      .eq("tipo", "receita")
+      .gte("data_vencimento", startStr)
+      .lte("data_vencimento", endStr);
+    setTotalFaturado((faturados || []).reduce((s, m) => s + (m.valor_previsto || 0), 0));
+    setLoading(false);
+  }
+
+  useEffect(() => { loadData(); }, [dateRange]);
+
+  function openDarBaixa(mov: InadMovimentacao) {
+    setSelectedMov(mov);
+    setBaixaForm({
+      valor_realizado: String(mov.valor_previsto),
+      data_pagamento: new Date().toISOString().split("T")[0],
+      conta_bancaria_id: "",
+      meio_pagamento_id: "",
+    });
+    setOpenBaixa(true);
+  }
+
+  async function handleBaixa() {
+    if (!selectedMov) return;
+    const { error } = await supabase.from("movimentacoes").update({
+      status: "pago",
+      valor_realizado: parseFloat(baixaForm.valor_realizado),
+      data_pagamento: baixaForm.data_pagamento,
+      conta_bancaria_id: baixaForm.conta_bancaria_id || null,
+      meio_pagamento_id: baixaForm.meio_pagamento_id || null,
+    }).eq("id", selectedMov.id);
+    if (error) { toast.error("Erro ao registrar pagamento"); return; }
+    toast.success("Pagamento registrado com sucesso!");
+    setOpenBaixa(false);
+    loadData();
+  }
 
   const clienteMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -427,7 +463,7 @@ export default function InadimplenciaTab() {
                               variant="ghost"
                               size="sm"
                               className="text-xs"
-                              onClick={(e) => { e.stopPropagation(); navigate("/financeiro/contas-receber"); }}
+                              onClick={(e) => { e.stopPropagation(); openDarBaixa(item); }}
                             >
                               <ExternalLink className="h-3 w-3 mr-1" />Registrar
                             </Button>
@@ -523,6 +559,55 @@ export default function InadimplenciaTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog Registrar Pagamento */}
+      <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
+          </DialogHeader>
+          {selectedMov && (
+            <div className="space-y-4">
+              <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
+                <p><span className="text-muted-foreground">Descrição:</span> {selectedMov.descricao}</p>
+                <p><span className="text-muted-foreground">Cliente:</span> {selectedMov.cliente_id ? clienteMap[selectedMov.cliente_id] || "—" : "—"}</p>
+                <p><span className="text-muted-foreground">Valor Previsto:</span> {formatCurrency(selectedMov.valor_previsto)}</p>
+                <p><span className="text-muted-foreground">Vencimento:</span> {formatDate(selectedMov.data_vencimento)}</p>
+              </div>
+              <div>
+                <Label>Valor Recebido (R$) *</Label>
+                <Input type="number" step="0.01" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })} />
+              </div>
+              <div>
+                <Label>Data do Pagamento *</Label>
+                <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} />
+              </div>
+              <div>
+                <Label>Conta Bancária</Label>
+                <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {contasBancarias.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Meio de Pagamento</Label>
+                <Select value={baixaForm.meio_pagamento_id} onValueChange={v => setBaixaForm({ ...baixaForm, meio_pagamento_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {meiosPagamento.map(m => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setOpenBaixa(false)}>Cancelar</Button>
+                <Button onClick={handleBaixa} disabled={!baixaForm.valor_realizado || !baixaForm.data_pagamento}>Confirmar</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
