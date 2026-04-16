@@ -577,7 +577,7 @@ export default function FluxoCaixaTab() {
                   })}
                 </TableBody>
               </Table>
-            </Content>
+            </CardContent>
           </Card>
         </>
       )}
