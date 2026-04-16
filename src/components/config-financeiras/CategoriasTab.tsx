@@ -366,7 +366,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                               setNewName("");
                             }}
                           >
-                            <Plus className="h-3.5 w-3.5" /> Filho
+                            <Plus className="h-3.5 w-3.5" /> Subcategoria
                           </Button>
                         </div>
                       </TableCell>
