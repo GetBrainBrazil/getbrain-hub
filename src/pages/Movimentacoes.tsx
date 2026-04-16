@@ -769,9 +769,8 @@ export default function Movimentacoes() {
                   const valorPago = Number(m.valor_realizado) || 0;
                   const valorRestante = Math.max(valorPrevisto - valorPago, 0);
                   return (
-                  <>
+                  <React.Fragment key={m.id}>
                   <TableRow
-                    key={m.id}
                     className="cursor-pointer transition-colors hover:bg-muted/40 border-b border-border/60 last:border-0"
                     onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
                   >
