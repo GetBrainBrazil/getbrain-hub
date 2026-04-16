@@ -348,7 +348,7 @@ export default function ExtratosBancarios() {
                     <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Categoria</p>
-                      <Select value={editForm.categoria_id} onValueChange={(v) => setEditForm((f) => ({ ...f, categoria_id: v }))}>
+                      <Select value={editForm.categoria_id || "__none__"} onValueChange={(v) => setEditForm((f) => ({ ...f, categoria_id: v === "__none__" ? "" : v }))}>
                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">Nenhuma</SelectItem>
@@ -359,10 +359,10 @@ export default function ExtratosBancarios() {
                     {detailMov.tipo === "receita" && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Cliente</p>
-                        <Select value={editForm.cliente_id} onValueChange={(v) => setEditForm((f) => ({ ...f, cliente_id: v }))}>
+                        <Select value={editForm.cliente_id || "__none__"} onValueChange={(v) => setEditForm((f) => ({ ...f, cliente_id: v === "__none__" ? "" : v }))}>
                           <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nenhum</SelectItem>
+                            <SelectItem value="__none__">Nenhum</SelectItem>
                             {clientes.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -371,10 +371,10 @@ export default function ExtratosBancarios() {
                     {detailMov.tipo === "despesa" && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Fornecedor</p>
-                        <Select value={editForm.fornecedor_id} onValueChange={(v) => setEditForm((f) => ({ ...f, fornecedor_id: v }))}>
+                        <Select value={editForm.fornecedor_id || "__none__"} onValueChange={(v) => setEditForm((f) => ({ ...f, fornecedor_id: v === "__none__" ? "" : v }))}>
                           <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nenhum</SelectItem>
+                            <SelectItem value="__none__">Nenhum</SelectItem>
                             {fornecedores.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -382,10 +382,10 @@ export default function ExtratosBancarios() {
                     )}
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Centro de Custo</p>
-                      <Select value={editForm.centro_custo_id} onValueChange={(v) => setEditForm((f) => ({ ...f, centro_custo_id: v }))}>
+                      <Select value={editForm.centro_custo_id || "__none__"} onValueChange={(v) => setEditForm((f) => ({ ...f, centro_custo_id: v === "__none__" ? "" : v }))}>
                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="__none__">Nenhum</SelectItem>
                           {centrosCusto.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                         </SelectContent>
                       </Select>
