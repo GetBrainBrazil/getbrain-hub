@@ -54,44 +54,6 @@ export default function ExtratosBancarios() {
     enabled: contas.length > 0,
   });
 
-  // Lookup data for inline editing
-  const { data: categorias = [] } = useQuery({
-    queryKey: ["categorias_lookup"],
-    queryFn: async () => { const { data } = await supabase.from("categorias").select("id, nome, tipo, categoria_pai_id, ativo").eq("ativo", true).order("nome"); return data || []; },
-  });
-  const { data: clientes = [] } = useQuery({
-    queryKey: ["clientes_lookup"],
-    queryFn: async () => { const { data } = await supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
-  });
-  const { data: fornecedores = [] } = useQuery({
-    queryKey: ["fornecedores_lookup"],
-    queryFn: async () => { const { data } = await supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
-  });
-  const { data: centrosCusto = [] } = useQuery({
-    queryKey: ["centros_custo_lookup"],
-    queryFn: async () => { const { data } = await supabase.from("centros_custo").select("id, nome").eq("ativo", true).order("nome"); return data || []; },
-  });
-
-  // Fetch linked extrato_transacoes for detail drawer
-  const { data: extratoTransacoes = [] } = useQuery({
-    queryKey: ["extrato_transacoes", contaId, dateRange.startDate?.toISOString(), dateRange.endDate?.toISOString()],
-    queryFn: async () => {
-      let q = supabase.from("extrato_transacoes").select("*, extrato_importacoes(nome_arquivo, created_at, conta_bancaria_id)");
-      if (contaId !== "all") q = q.eq("conta_bancaria_id", contaId);
-      const { data } = await q;
-      return data || [];
-    },
-  });
-
-  // Build extrato link map
-  const extratoByMovId = useMemo(() => {
-    const map = new Map<string, any>();
-    extratoTransacoes.forEach((et: any) => {
-      if (et.movimentacao_id) map.set(et.movimentacao_id, et);
-    });
-    return map;
-  }, [extratoTransacoes]);
-
   // Filter by sub-tab
   const filteredMovs = useMemo(() => {
     if (subTab === "pendentes") return movimentacoes.filter((m: any) => !m.conciliado);
