@@ -1,86 +1,40 @@
 
 
 ## Objetivo
-Reformular a página `/financeiro/movimentacoes/:id` (e o modal de criação) para ter **exatamente** o layout dos prints, com todas as variáveis funcionais. Também aplicar pequenas mudanças na lista externa (toggle "Exibir Saldos Parciais" + estilo dos botões).
-
-Sem campo "Empresa", sem "Rateio".
+Substituir a aba **Plano de Contas** por **Colaboradores** em `ConfiguracoesFinanceiras`, replicando o padrão de drawer (visualização → edição) já usado em Clientes/Fornecedores, com seções extras de **Dados Bancários** e **Informações Contratuais**.
 
 ## Mudanças no banco
 
-**Migração** (apenas duas colunas novas):
-- `movimentacoes.desconto_previsto numeric default 0` — para o campo "Desconto Previsto (-)"
-- `anexos.descricao text` — para a descrição editável de cada anexo
+**Nova tabela `colaboradores`:**
+- `id uuid pk default gen_random_uuid()`
+- `nome text not null`
+- `cargo text`
+- `cpf text`
+- `emails text[] default '{}'`, `telefones text[] default '{}'`
+- Endereço: `cep`, `estado`, `cidade`, `endereco`, `numero`, `bairro`, `complemento` (todos text)
+- Bancário: `banco text`, `agencia text`, `conta text`, `tipo_conta text default 'corrente'`, `chaves_pix text[] default '{}'`
+- Contratual: `data_admissao date`, `salario_base numeric default 0`, `created_by uuid` (para regra de visibilidade do salário)
+- `observacoes text`, `ativo boolean default true`, `created_at`, `updated_at` timestamps
+- RLS: `ALL` para `auth.uid() IS NOT NULL` (mesmo padrão das outras tabelas)
+- Trigger `update_updated_at_column` em update
 
-**Bucket de Storage**: criar bucket privado `anexos-movimentacoes` (o atual `comprovantes` é genérico; usar um dedicado deixa as policies mais limpas) com RLS para usuários autenticados (read/write/delete).
+## Mudanças em `src/pages/ConfiguracoesFinanceiras.tsx`
 
-## Mudanças em `src/pages/MovimentacaoDetalhe.tsx` (reescrita completa)
-
-### Header
-- Ícone de documento + título **"Editar Movimentação"** + subtítulo "Preencha os dados da movimentação financeira"
-- Botão de voltar (seta) à esquerda
-
-### Card único organizado em seções (cada seção com label maiúscula em cinza, ícone à esquerda, separador):
-
-**1. DADOS PRINCIPAIS** (📄)
-- Descrição da Movimentação * (input largo)
-- Fornecedor * (combobox com botão `+`)
-- *(Sem campo Empresa, conforme solicitado)*
-
-**2. CLASSIFICAÇÃO FINANCEIRA** (🏷️)
-- Categoria * (select)
-- Centro de Custo (select com opção "Nenhum")
-
-**3. DATAS E CONDIÇÕES** (📅)
-- Data de Competência *
-- Data de Vencimento *
-- Forma de Pagamento (select: meios_pagamento)
-- Conta Bancária (select)
-- **Status** (StatusBadge logo abaixo, somente leitura)
-
-**4. VALORES E ENCARGOS** (💲)
-- Valor Base (R$) * — `valor_previsto`
-- Desconto Previsto (-) — `desconto_previsto` (novo)
-- Juros Previstos (+) — `juros`
-- Multa Prevista (+) — `multa`
-- Taxas ADM (+) — `taxas_adm`
-- **Valor Total Previsto** (faixa cinza no rodapé do card, calculado em tempo real: `base - desconto + juros + multa + taxas`, em destaque vermelho/verde conforme tipo)
-
-**5. IMPOSTOS RETIDOS NA FONTE (-)** (em card com fundo rosa claro)
-- "Não interferem no valor total previsto"
-- 6 inputs lado a lado: PIS, COFINS, CSLL, ISS, IR, INSS
-
-**6. OBSERVAÇÕES INTERNAS**
-- Textarea
-
-**7. ANEXOS** (📎)
-- Lista de anexos existentes — cada linha: ícone + nome do arquivo (link) + input de descrição editável + tamanho + botão `X` para remover
-- Linha final: dropzone "Clique para anexar arquivo" (upload via Storage para `anexos-movimentacoes`, registra em `anexos` com `movimentacao_id` e `descricao`)
-- Salvar a descrição dispara `update` na linha de `anexos` correspondente
-
-### Rodapé fixo
-- Esquerda: **Excluir** (vermelho destrutivo, ícone lixeira) + **Registrar Pagamento/Recebimento** (verde outline, condicional ao status)
-- Direita: **Cancelar** (outline) + **Salvar e Fechar** (outline) + **Salvar** (vermelho primário)
-- "Salvar e Fechar" = salva e navega para `/financeiro/movimentacoes`
-- "Cancelar" = navega de volta sem salvar
-
-### Comportamento
-- Carregamento paralelo (já estava): adicionar `anexos` à query inicial
-- Cálculo de "Valor Total Previsto" memoizado
-- Toast em todas as ações
-- Modo edição direto ao abrir (sem botão "Editar")
-
-## Mudanças em `src/pages/Movimentacoes.tsx` (lista externa)
-
-1. **Botões do header**: trocar estilo dos botões "Conta a Pagar" e "Conta a Receber" para variante destructive (vermelho), conforme print 38.
-2. **Toggle "Exibir Saldos Parciais"** no lado direito da barra de filtros (antes dos botões de status). Quando ligado, a coluna "Valor" da tabela passa a mostrar `valor_realizado / valor_previsto` (parcial pago/total) em vez do valor total. Estado persistido com `usePersistedState`.
-3. **KPI "Total Pago"**: já está condicional (Pago/Recebido) — manter.
-4. *(Sem botão "Todas as Empresas", já que não vamos ter o campo Empresa)*
-
-## Modal de criação ("Nova Conta a Pagar/Receber")
-Manter o modal atual simples (apenas campos essenciais) — o formulário completo fica na página de edição. Se quiser unificar depois, fazemos em outro passo.
+1. **`tabConfig`**: trocar a entrada `plano` por `colaboradores: { label: "Colaboradores", button: "+ Novo Colaborador", icon: UserRound }`. Importar `UserRound` e `Landmark` (para seção bancária do form) — `Users` permanece para Clientes.
+2. **Remover** completamente o componente `PlanoContasTab` e seu `<TabsContent value="plano">`. Substituir por `<TabsContent value="colaboradores"><ColaboradoresTab search={search} /></TabsContent>`.
+3. **Atualizar `usePersistedState`**: se o valor salvo for `"plano"`, normalizar para `"colaboradores"` na inicialização (evita aba quebrada para quem já usou).
+4. **Novo componente `ColaboradoresTab`** — cópia adaptada do `ClientesTab`/`FornecedoresTab` com:
+   - Estados: `drawerOpen`, `drawerMode`, `selectedItem`, `editForm` (com todos os novos campos), `deleteDialogOpen`, `copied` (apenas para o copy bancário), `newEmail`, `newPhone`, `newPix`, `filterCargo`, `filterStatus`.
+   - Tabela: Nome | Cargo | CPF formatado | E-mail (primeiro) | Telefone (primeiro) | Status | hover Eye + switch ativo (com stopPropagation). Vazio: "Nenhum colaborador encontrado para os filtros selecionados."
+   - Filtros acima da tabela: dropdown **Todos os Cargos** (lista derivada de `items.map(i => i.cargo).filter(Boolean)` única) + dropdown **Todos os Status**, combinados com `search` (nome, CPF, e-mail, cargo).
+   - **Drawer view**: Nome, Cargo, CPF formatado, lista de e-mails, lista de telefones formatados, **seção Dados Bancários** (título bold + ícone `Landmark`) com Banco/Agência/Conta/Tipo da Conta/Chaves PIX, **botão "Copiar Dados Bancários"** (outline, ícone `Copy`↔`Check` por 2s, toast "Dados bancários copiados!" — copia apenas Nome+Banco+Agência+Conta+Tipo+PIX), Endereço completo formatado (ou "Nenhum endereço cadastrado"), Data de Admissão (DD/MM/AAAA), **Salário Base** (formatCurrency, **só renderiza se `selectedItem.created_by === user.id`** — buscar `auth.getUser()` no load), Observações ou "Sem observações", Status. Footer: **Excluir** (esquerda, destrutivo) | **Fechar** + **Editar Colaborador** (direita).
+   - **Drawer edit/create**: Nome (largura total) → Cargo + CPF (máscara reusando `applyCpfCnpjMask` forçando PF) → E-mails (label + "+ Adicionar", lista removível, validação) → Telefones (idem, máscara `(00) 00000-0000`). **Seção Dados Bancários** (título bold + `Landmark`): Banco + Agência + Conta lado a lado → Tipo da Conta (dropdown Corrente/Poupança, largura parcial) → Chaves PIX (label + "+ Adicionar", input placeholder "CPF, e-mail, telefone, chave aleatória...", lista removível). **Seção Endereço**: CEP + Estado (dropdown `ESTADOS_BR`) + Cidade → Endereço + Número + Bairro → Complemento. **Informações contratuais**: Data de Admissão (date input nativo) + Salário Base (input com máscara monetária BRL — usar mesmo padrão usado em outras telas) → Observações (textarea ~4 linhas) → Toggle Ativo/Inativo (apenas em edit). Botões: **Cancelar** (volta para view ou fecha se create) | **Salvar** / **Salvar Alterações** (primário). Toast "Colaborador cadastrado com sucesso" / "Colaborador atualizado com sucesso". No insert, gravar `created_by: (await supabase.auth.getUser()).data.user?.id`.
+   - **Exclusão**: `AlertDialog` "Tem certeza que deseja excluir o colaborador [Nome]? Esta ação não pode ser desfeita." → toast "Colaborador excluído com sucesso".
+   - Reuso das helpers já existentes no arquivo: `applyCpfCnpjMask` (forçando 11 dígitos), `formatPhone`, `applyPhoneMask`, `applyCepMask`, `ESTADOS_BR`, `buildAddressString`. Se estiverem dentro de `ClientesTab`, extrair para escopo de módulo.
 
 ## Arquivos
-- **Migração**: adicionar `movimentacoes.desconto_previsto`, `anexos.descricao`, criar bucket `anexos-movimentacoes` + RLS.
-- **Reescrito**: `src/pages/MovimentacaoDetalhe.tsx` (layout completo dos prints)
-- **Editado**: `src/pages/Movimentacoes.tsx` (toggle saldos parciais + estilo dos botões)
+- **Migração**: criar tabela `colaboradores` + RLS + trigger.
+- **Editado**: `src/pages/ConfiguracoesFinanceiras.tsx` (remover `PlanoContasTab`, adicionar `ColaboradoresTab`, atualizar `tabConfig` e ícones).
+
+Nenhuma outra aba ou funcionalidade é alterada.
 
