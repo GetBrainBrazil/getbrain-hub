@@ -361,43 +361,70 @@ export type Database = {
       fornecedores: {
         Row: {
           ativo: boolean | null
+          bairro: string | null
           categoria_servico: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
           cpf_cnpj: string | null
           created_at: string | null
           email: string | null
+          emails: string[] | null
           endereco: string | null
+          estado: string | null
           id: string
           nome: string
+          numero: string | null
           observacoes: string | null
+          razao_social: string | null
           telefone: string | null
+          telefones: string[] | null
           tipo_pessoa: string | null
           updated_at: string | null
         }
         Insert: {
           ativo?: boolean | null
+          bairro?: string | null
           categoria_servico?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           cpf_cnpj?: string | null
           created_at?: string | null
           email?: string | null
+          emails?: string[] | null
           endereco?: string | null
+          estado?: string | null
           id?: string
           nome: string
+          numero?: string | null
           observacoes?: string | null
+          razao_social?: string | null
           telefone?: string | null
+          telefones?: string[] | null
           tipo_pessoa?: string | null
           updated_at?: string | null
         }
         Update: {
           ativo?: boolean | null
+          bairro?: string | null
           categoria_servico?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           cpf_cnpj?: string | null
           created_at?: string | null
           email?: string | null
+          emails?: string[] | null
           endereco?: string | null
+          estado?: string | null
           id?: string
           nome?: string
+          numero?: string | null
           observacoes?: string | null
+          razao_social?: string | null
           telefone?: string | null
+          telefones?: string[] | null
           tipo_pessoa?: string | null
           updated_at?: string | null
         }
