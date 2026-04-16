@@ -109,15 +109,15 @@ interface FormSectionProps {
 }
 export function FormSection({ icon: Icon, title, action, children }: FormSectionProps) {
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-2 border-b pb-2">
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-2 border-b pb-1.5">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-primary" />
-          <h3 className="text-xs font-bold tracking-wider uppercase text-foreground">{title}</h3>
+          <Icon className="h-3.5 w-3.5 text-primary" />
+          <h3 className="text-[11px] font-bold tracking-wider uppercase text-foreground">{title}</h3>
         </div>
         {action}
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
