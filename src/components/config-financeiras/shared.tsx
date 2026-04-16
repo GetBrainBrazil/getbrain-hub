@@ -82,19 +82,20 @@ interface FormPageShellProps {
 }
 export function FormPageShell({ title, subtitle, onBack, footer, children }: FormPageShellProps) {
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="mx-auto w-full max-w-3xl space-y-4 animate-fade-in pb-6">
       <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack} className="mt-1 h-8 w-8 shrink-0">
+        <Button variant="ghost" size="icon" onClick={onBack} className="mt-0.5 h-8 w-8 shrink-0">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold leading-tight">{title}</h2>
-          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+          <h2 className="text-lg font-bold leading-tight">{title}</h2>
+          {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
       </div>
-      <div className="space-y-6">{children}</div>
-      <Separator />
-      <div className="flex items-center justify-between gap-2 pt-1 pb-4">{footer}</div>
+      <div className="rounded-xl border bg-card shadow-sm p-6 sm:p-8">
+        <div className="space-y-7">{children}</div>
+        <div className="mt-6 pt-4 border-t flex items-center justify-between gap-2">{footer}</div>
+      </div>
     </div>
   );
 }
@@ -108,15 +109,15 @@ interface FormSectionProps {
 }
 export function FormSection({ icon: Icon, title, action, children }: FormSectionProps) {
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-2 border-b pb-2">
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-2 border-b pb-1.5">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-primary" />
-          <h3 className="text-xs font-bold tracking-wider uppercase text-foreground">{title}</h3>
+          <Icon className="h-3.5 w-3.5 text-primary" />
+          <h3 className="text-[11px] font-bold tracking-wider uppercase text-foreground">{title}</h3>
         </div>
         {action}
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
