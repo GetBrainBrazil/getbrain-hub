@@ -825,6 +825,8 @@ export default function Movimentacoes() {
                   const valorPrevisto = Number(m.valor_previsto) || 0;
                   const valorPago = Number(m.valor_realizado) || 0;
                   const valorRestante = Math.max(valorPrevisto - valorPago, 0);
+                  const isPartial = m.status === "pago" && valorPago > 0 && valorPago < valorPrevisto;
+                  const showPartial = showSaldosParciais && isPartial;
                   return (
                   <React.Fragment key={m.id}>
                   <TableRow
@@ -845,10 +847,26 @@ export default function Movimentacoes() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-foreground py-4">{m.descricao}</TableCell>
+                    <TableCell className="text-sm text-foreground py-4">
+                      <div className="flex items-center gap-2">
+                        <span>{m.descricao}</span>
+                        {showPartial && (
+                          <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary whitespace-nowrap">
+                            Paga Parcialmente
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground py-4">{(m.categorias as any)?.nome || "—"}</TableCell>
                     <TableCell className={cn("text-right text-sm font-semibold font-mono py-4", valueColor)}>
-                      {formatCurrency(valorPrevisto)}
+                      <div className="flex flex-col items-end leading-tight">
+                        <span>{formatCurrency(valorPrevisto)}</span>
+                        {showPartial && (
+                          <span className="text-[10px] font-normal text-muted-foreground mt-0.5">
+                            Real: {formatCurrency(valorPago)}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-foreground py-4">{formatDate(m.data_vencimento)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground py-4">{m.data_pagamento ? formatDate(m.data_pagamento) : "—"}</TableCell>
@@ -883,46 +901,40 @@ export default function Movimentacoes() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                  {showSaldosParciais && (
-                    <>
-                      <TableRow
-                        className="bg-muted/20 hover:bg-muted/30 border-b border-border/40 cursor-pointer"
-                        onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
-                      >
-                        <TableCell className="pl-5 py-2"></TableCell>
-                        <TableCell className="py-2">
-                          <div className="flex items-center gap-2 pl-5">
-                            <span className="inline-block h-px w-3 bg-border" />
-                            <span className="text-xs text-muted-foreground">{isPagar ? "Pago" : "Recebido"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell colSpan={2} className="text-xs text-muted-foreground py-2">
-                          {m.data_pagamento ? `em ${formatDate(m.data_pagamento)}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-right text-xs font-mono font-semibold text-success py-2">
-                          {formatCurrency(valorPago)}
-                        </TableCell>
-                        <TableCell colSpan={4} className="py-2"></TableCell>
-                      </TableRow>
-                      <TableRow
-                        className="bg-muted/20 hover:bg-muted/30 border-b border-border/60 cursor-pointer"
-                        onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
-                      >
-                        <TableCell className="pl-5 py-2"></TableCell>
-                        <TableCell className="py-2">
-                          <div className="flex items-center gap-2 pl-5">
-                            <span className="inline-block h-px w-3 bg-border" />
-                            <span className="text-xs text-muted-foreground">Restante</span>
-                          </div>
-                        </TableCell>
-                        <TableCell colSpan={2} className="text-xs text-muted-foreground py-2">
-                          {valorRestante === 0 ? "Quitado" : "Em aberto"}
-                        </TableCell>
-                        <TableCell className={cn("text-right text-xs font-mono font-semibold py-2", valorRestante === 0 ? "text-muted-foreground" : valueColor)}>
-                          {formatCurrency(valorRestante)}
-                        </TableCell>
-                        <TableCell colSpan={4} className="py-2"></TableCell>
-                      </TableRow>
+                  {showPartial && (
+                    <TableRow
+                      className="hover:bg-muted/30 border-b border-border/60 cursor-pointer"
+                      onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
+                    >
+                      <TableCell className="pl-5 py-3"></TableCell>
+                      <TableCell className="py-3">
+                        <div className="flex items-center gap-2 pl-4 text-muted-foreground">
+                          <CornerDownRight className="h-3.5 w-3.5 shrink-0" />
+                          <span className="text-sm font-medium text-foreground">
+                            {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-foreground">{m.descricao} — Saldo Restante</span>
+                          <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning whitespace-nowrap">
+                            Saldo Restante
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground py-3">{(m.categorias as any)?.nome || "—"}</TableCell>
+                      <TableCell className={cn("text-right text-sm font-semibold font-mono py-3", valueColor)}>
+                        {formatCurrency(valorRestante)}
+                      </TableCell>
+                      <TableCell className="text-sm text-foreground py-3">{formatDate(m.data_vencimento)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground py-3">—</TableCell>
+                      <TableCell className="py-3">
+                        <StatusBadge status={(new Date(m.data_vencimento + "T12:00:00") < new Date() ? "atrasado" : "pendente") as StatusType} className="rounded-full px-3 py-0.5" />
+                      </TableCell>
+                      <TableCell className="py-3"></TableCell>
+                    </TableRow>
+                  )}
                     </>
                   )}
                   </React.Fragment>
