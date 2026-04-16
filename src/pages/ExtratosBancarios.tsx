@@ -332,38 +332,102 @@ export default function ExtratosBancarios() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <DetailRow label="Descrição" value={detailMov.descricao} />
-                  <DetailRow label="Tipo">
-                    <Badge className={detailMov.tipo === "receita" ? "bg-success/15 text-success border-success/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
-                      {detailMov.tipo === "receita" ? "Entrada" : "Saída"}
-                    </Badge>
-                  </DetailRow>
-                  <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
-                  <DetailRow label="Data de Vencimento" value={detailMov.data_vencimento ? formatDate(detailMov.data_vencimento) : "—"} />
-                  <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
-                  <DetailRow label="Categoria" value={detailMov.categoria_nome} />
-                  <DetailRow label="Cliente" value={(detailMov as any).clientes?.nome ?? "—"} />
-                  <DetailRow label="Fornecedor" value={(detailMov as any).fornecedores?.nome ?? "—"} />
-                  {(detailMov as any).centros_custo?.nome && (
-                    <DetailRow label="Centro de Custo" value={(detailMov as any).centros_custo.nome} />
-                  )}
-                  {(detailMov as any).observacoes && (
-                    <DetailRow label="Observações" value={(detailMov as any).observacoes} />
-                  )}
-                </div>
+                {editMode ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Descrição</p>
+                      <Input value={editForm.descricao} onChange={(e) => setEditForm((f) => ({ ...f, descricao: e.target.value }))} />
+                    </div>
+                    <DetailRow label="Tipo">
+                      <Badge className={detailMov.tipo === "receita" ? "bg-success/15 text-success border-success/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
+                        {detailMov.tipo === "receita" ? "Entrada" : "Saída"}
+                      </Badge>
+                    </DetailRow>
+                    <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
+                    <DetailRow label="Data de Vencimento" value={detailMov.data_vencimento ? formatDate(detailMov.data_vencimento) : "—"} />
+                    <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Categoria</p>
+                      <Select value={editForm.categoria_id} onValueChange={(v) => setEditForm((f) => ({ ...f, categoria_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhuma</SelectItem>
+                          {categorias.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {detailMov.tipo === "receita" && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Cliente</p>
+                        <Select value={editForm.cliente_id} onValueChange={(v) => setEditForm((f) => ({ ...f, cliente_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nenhum</SelectItem>
+                            {clientes.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {detailMov.tipo === "despesa" && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Fornecedor</p>
+                        <Select value={editForm.fornecedor_id} onValueChange={(v) => setEditForm((f) => ({ ...f, fornecedor_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nenhum</SelectItem>
+                            {fornecedores.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Centro de Custo</p>
+                      <Select value={editForm.centro_custo_id} onValueChange={(v) => setEditForm((f) => ({ ...f, centro_custo_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {centrosCusto.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Observações</p>
+                      <Textarea value={editForm.observacoes} onChange={(e) => setEditForm((f) => ({ ...f, observacoes: e.target.value }))} rows={3} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <DetailRow label="Descrição" value={detailMov.descricao} />
+                    <DetailRow label="Tipo">
+                      <Badge className={detailMov.tipo === "receita" ? "bg-success/15 text-success border-success/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
+                        {detailMov.tipo === "receita" ? "Entrada" : "Saída"}
+                      </Badge>
+                    </DetailRow>
+                    <DetailRow label="Valor" value={formatCurrency(detailMov.entrada || detailMov.saida)} />
+                    <DetailRow label="Data de Vencimento" value={detailMov.data_vencimento ? formatDate(detailMov.data_vencimento) : "—"} />
+                    <DetailRow label="Data de Pagamento" value={detailMov.data_pagamento ? formatDate(detailMov.data_pagamento) : "—"} />
+                    <DetailRow label="Categoria" value={detailMov.categoria_nome} />
+                    <DetailRow label="Cliente" value={(detailMov as any).clientes?.nome ?? "—"} />
+                    <DetailRow label="Fornecedor" value={(detailMov as any).fornecedores?.nome ?? "—"} />
+                    {(detailMov as any).centros_custo?.nome && (
+                      <DetailRow label="Centro de Custo" value={(detailMov as any).centros_custo.nome} />
+                    )}
+                    {(detailMov as any).observacoes && (
+                      <DetailRow label="Observações" value={(detailMov as any).observacoes} />
+                    )}
+                  </div>
+                )}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => {
-                    const path = detailMov.tipo === "receita" ? "/financeiro/contas-receber" : "/financeiro/contas-pagar";
-                    window.location.href = path;
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Editar Lançamento
-                </Button>
+                {editMode ? (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>Cancelar</Button>
+                    <Button size="sm" onClick={handleSaveEdit} disabled={saving}>{saving ? "Salvando..." : "Salvar Alterações"}</Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
+                    <Pencil className="h-3.5 w-3.5" /> Editar Lançamento
+                  </Button>
+                )}
               </div>
 
               <Separator />
