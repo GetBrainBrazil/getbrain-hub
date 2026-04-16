@@ -14,7 +14,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ChevronRight, Check, X } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Pencil, Trash2, ChevronRight, Check, X, Folder, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   TIPOS_CATEGORIA, type TipoCategoria, type CategoriaRaw,
@@ -40,13 +45,15 @@ export default function CategoriasTab({ search }: { search: string }) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  // pending child create: parentTipoKey for level-2, parentSubId for level-3
-  const [creatingChild, setCreatingChild] = useState<
-    | { level: 2; tipo: TipoCategoria }
-    | { level: 3; subId: string; tipo: TipoCategoria }
-    | null
-  >(null);
-  const [newName, setNewName] = useState("");
+
+  // Create modal state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createKind, setCreateKind] = useState<"categoria" | "subcategoria">("categoria");
+  const [createTipo, setCreateTipo] = useState<TipoCategoria>("despesas");
+  const [createPaiId, setCreatePaiId] = useState<string>("");
+  const [createNome, setCreateNome] = useState("");
+  const [createSaving, setCreateSaving] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
@@ -117,22 +124,38 @@ export default function CategoriasTab({ search }: { search: string }) {
     loadAll();
   }
 
-  async function saveNewChild() {
-    if (!creatingChild) return;
-    const nome = newName.trim();
+  function openCreateModal(opts?: { kind?: "categoria" | "subcategoria"; tipo?: TipoCategoria; paiId?: string }) {
+    setCreateKind(opts?.kind ?? "categoria");
+    setCreateTipo(opts?.tipo ?? "despesas");
+    setCreatePaiId(opts?.paiId ?? "");
+    setCreateNome("");
+    setCreateOpen(true);
+  }
+
+  async function submitCreate() {
+    const nome = createNome.trim();
     if (!nome) { toast.error("Nome é obrigatório"); return; }
-    const payload = creatingChild.level === 2
-      ? { nome, tipo: creatingChild.tipo, categoria_pai_id: null, ativo: true }
-      : { nome, tipo: creatingChild.tipo, categoria_pai_id: creatingChild.subId, ativo: true };
-    const { error } = await supabase.from("categorias").insert(payload);
-    if (error) { toast.error("Erro ao criar"); return; }
-    toast.success(creatingChild.level === 2 ? "Subcategoria criada!" : "Conta criada!");
-    if (creatingChild.level === 3) {
-      setExpandedSubs(new Set([...expandedSubs, creatingChild.subId]));
-    } else {
-      setExpandedTipos(new Set([...expandedTipos, creatingChild.tipo]));
+    if (createKind === "subcategoria" && !createPaiId) {
+      toast.error("Selecione a categoria pai"); return;
     }
-    setCreatingChild(null); setNewName("");
+    setCreateSaving(true);
+    const payload = createKind === "categoria"
+      ? { nome, tipo: createTipo, categoria_pai_id: null, ativo: true }
+      : { nome, tipo: createTipo, categoria_pai_id: createPaiId, ativo: true };
+    const { data, error } = await supabase.from("categorias").insert(payload).select("id").single();
+    setCreateSaving(false);
+    if (error) { toast.error("Erro ao criar"); return; }
+    toast.success(createKind === "categoria" ? "Categoria criada com sucesso" : "Subcategoria criada com sucesso");
+    if (createKind === "subcategoria") {
+      setExpandedSubs(new Set([...expandedSubs, createPaiId]));
+    } else {
+      setExpandedTipos(new Set([...expandedTipos, createTipo]));
+    }
+    setCreateOpen(false);
+    if (data?.id) {
+      setHighlightId(data.id);
+      setTimeout(() => setHighlightId(null), 1600);
+    }
     loadAll();
   }
 
@@ -181,7 +204,6 @@ export default function CategoriasTab({ search }: { search: string }) {
     | { kind: "tipo"; codigo: string; tipoIdx: number; label: string; tipo: TipoCategoria; hasChildren: boolean; open: boolean }
     | { kind: "sub"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria; hasChildren: boolean; open: boolean; isAnalitica: boolean }
     | { kind: "conta"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria }
-    | { kind: "creating"; level: 2 | 3; codigo: string; tipo: TipoCategoria }
     | { kind: "add-placeholder"; level: 2 | 3; tipo: TipoCategoria; subId?: string };
 
   const rows: Row[] = useMemo(() => {
@@ -237,16 +259,8 @@ export default function CategoriasTab({ search }: { search: string }) {
               tipo: tipoNode.config.key,
             });
           });
-          // creating row for this sub (level 3)
-          if (creatingChild?.level === 3 && creatingChild.subId === sub.id && naturezaFilter !== "sintetica") {
-            out.push({
-              kind: "creating",
-              level: 3,
-              codigo: `${subCodigo}.${sub.contas.length + 1}`,
-              tipo: tipoNode.config.key,
-            });
-          } else if (naturezaFilter !== "sintetica") {
-            // fixed "Adicionar conta..." placeholder
+          // fixed "+ Adicionar" placeholder for contas
+          if (naturezaFilter !== "sintetica") {
             out.push({
               kind: "add-placeholder",
               level: 3,
@@ -257,16 +271,8 @@ export default function CategoriasTab({ search }: { search: string }) {
         }
       });
 
-      // creating row at end of tipo (level 2)
-      if (creatingChild?.level === 2 && creatingChild.tipo === tipoNode.config.key && naturezaFilter !== "analitica") {
-        out.push({
-          kind: "creating",
-          level: 2,
-          codigo: `${tipoCodigo}.${String(tipoNode.subcategorias.length + 1).padStart(2, "0")}`,
-          tipo: tipoNode.config.key,
-        });
-      } else if (naturezaFilter !== "analitica") {
-        // fixed "Adicionar subcategoria..." placeholder
+      // fixed "+ Adicionar" placeholder for subcategorias
+      if (naturezaFilter !== "analitica") {
         out.push({
           kind: "add-placeholder",
           level: 2,
@@ -275,7 +281,7 @@ export default function CategoriasTab({ search }: { search: string }) {
       }
     });
     return out;
-  }, [tree, tipoFilter, naturezaFilter, expandedTipos, expandedSubs, creatingChild]);
+  }, [tree, tipoFilter, naturezaFilter, expandedTipos, expandedSubs]);
 
   function tipoBadge(tipo: TipoCategoria) {
     const map: Record<TipoCategoria, { label: string; className: string }> = {
@@ -330,6 +336,12 @@ export default function CategoriasTab({ search }: { search: string }) {
             </SelectContent>
           </Select>
 
+          <Button
+            className="ml-auto h-9 gap-1.5"
+            onClick={() => openCreateModal({ kind: "categoria" })}
+          >
+            <Plus className="h-4 w-4" /> Nova Categoria
+          </Button>
         </div>
 
 
@@ -387,7 +399,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                 if (row.kind === "sub") {
                   const isEditing = editingId === row.cat.id;
                   return (
-                    <TableRow key={`s-${row.cat.id}`} className="border-b border-border/60 hover:bg-muted/30 group">
+                    <TableRow key={`s-${row.cat.id}`} className={cn("border-b border-border/60 hover:bg-muted/30 group transition-colors", highlightId === row.cat.id && "bg-primary/10 animate-pulse")}>
                       <TableCell className="py-2.5">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -435,7 +447,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                 if (row.kind === "conta") {
                   const isEditing = editingId === row.cat.id;
                   return (
-                    <TableRow key={`c-${row.cat.id}`} className="border-b border-border/60 hover:bg-muted/30 group">
+                    <TableRow key={`c-${row.cat.id}`} className={cn("border-b border-border/60 hover:bg-muted/30 group transition-colors", highlightId === row.cat.id && "bg-primary/10 animate-pulse")}>
                       <TableCell className="py-2.5">
                         <span className="font-mono text-xs text-muted-foreground pl-[26px] block">{row.codigo}</span>
                       </TableCell>
@@ -472,48 +484,22 @@ export default function CategoriasTab({ search }: { search: string }) {
                   );
                 }
 
-                if (row.kind === "creating") {
-                  return (
-                    <TableRow key={`new-${idx}`} className="bg-sky-50/60 dark:bg-sky-500/5 border-b border-border/60 animate-accordion-down">
-                      <TableCell className="py-2.5">
-                        <span className={cn("font-mono text-xs text-muted-foreground block", row.level === 3 && "pl-[26px]")}>
-                          {row.codigo}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-2.5">
-                        <div style={{ paddingLeft: row.level === 2 ? 24 : 48 }}>
-                          <InlineNameForm
-                            value={newName}
-                            onChange={setNewName}
-                            onSave={saveNewChild}
-                            onCancel={() => { setCreatingChild(null); setNewName(""); }}
-                            placeholder={row.level === 2 ? "Nome da subcategoria" : "Nome da conta"}
-                            className="max-w-md"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2.5">{tipoBadge(row.tipo)}</TableCell>
-                      <TableCell className="py-2.5">{naturezaBadge(row.level === 3)}</TableCell>
-                      <TableCell className="py-2.5 text-right pr-4"><span className="text-xs text-muted-foreground">—</span></TableCell>
-                    </TableRow>
-                  );
-                }
-
-                // add-placeholder row (fixed "Adicionar..." row)
+                // add-placeholder row (fixed "+ Adicionar" row)
                 const isSub = row.level === 2;
                 return (
                   <TableRow
                     key={`add-${row.tipo}-${row.subId ?? "root"}-${idx}`}
-                    className="border-b border-border/60 opacity-60 hover:opacity-90 cursor-text transition-opacity"
+                    className="border-b border-border/60 opacity-60 hover:opacity-90 cursor-pointer transition-opacity"
                     onClick={() => {
                       if (isSub) {
-                        setExpandedTipos(new Set([...expandedTipos, row.tipo]));
-                        setCreatingChild({ level: 2, tipo: row.tipo });
+                        openCreateModal({ kind: "categoria", tipo: row.tipo });
                       } else {
-                        setExpandedSubs(new Set([...expandedSubs, row.subId!]));
-                        setCreatingChild({ level: 3, subId: row.subId!, tipo: row.tipo });
+                        openCreateModal({
+                          kind: "subcategoria",
+                          tipo: row.tipo,
+                          paiId: row.subId,
+                        });
                       }
-                      setNewName("");
                     }}
                   >
                     <TableCell className="py-2">
@@ -524,7 +510,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                     <TableCell className="py-2">
                       <div style={{ paddingLeft: isSub ? 24 : 48 }}>
                         <span className="text-sm italic text-muted-foreground/70">
-                          {isSub ? "Adicionar subcategoria..." : "Adicionar conta..."}
+                          + Adicionar
                         </span>
                       </div>
                     </TableCell>
@@ -567,6 +553,109 @@ export default function CategoriasTab({ search }: { search: string }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Create modal */}
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="max-w-[460px]">
+            <DialogHeader>
+              <DialogTitle>Nova Categoria</DialogTitle>
+            </DialogHeader>
+
+            {/* Choice cards */}
+            <div className="grid grid-cols-2 gap-3 mt-1">
+              {([
+                { key: "categoria", icon: Folder, label: "Categoria", sub: "Criar uma nova categoria principal" },
+                { key: "subcategoria", icon: FileText, label: "Subcategoria", sub: "Criar dentro de uma categoria existente" },
+              ] as const).map(opt => {
+                const selected = createKind === opt.key;
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => { setCreateKind(opt.key); if (opt.key === "categoria") setCreatePaiId(""); }}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 p-3 h-[88px] transition-all text-center",
+                      selected
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border bg-background hover:border-border/80 text-muted-foreground"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5", selected ? "text-primary" : "text-muted-foreground")} />
+                    <span className={cn("text-sm font-semibold", selected ? "text-foreground" : "text-foreground/80")}>{opt.label}</span>
+                    <span className="text-[11px] leading-tight text-muted-foreground px-1">{opt.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Fields */}
+            <div className="space-y-3 mt-4 transition-opacity duration-150">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tipo *</Label>
+                <Select
+                  value={createTipo}
+                  onValueChange={(v: TipoCategoria) => { setCreateTipo(v); setCreatePaiId(""); }}
+                >
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_CATEGORIA.map(t => (
+                      <SelectItem key={t.key} value={t.key}>
+                        {t.label.charAt(0) + t.label.slice(1).toLowerCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {createKind === "subcategoria" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Categoria pai *</Label>
+                  <Select value={createPaiId} onValueChange={setCreatePaiId}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione a categoria pai" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {items
+                        .filter(i => i.tipo === createTipo && !i.categoria_pai_id && i.ativo)
+                        .sort((a, b) => a.nome.localeCompare(b.nome))
+                        .map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                        ))}
+                      {items.filter(i => i.tipo === createTipo && !i.categoria_pai_id && i.ativo).length === 0 && (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">
+                          Nenhuma categoria deste tipo. Crie uma primeiro.
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Nome *</Label>
+                <Input
+                  autoFocus
+                  value={createNome}
+                  onChange={e => setCreateNome(e.target.value)}
+                  placeholder={createKind === "categoria"
+                    ? "Ex: Vendas, Administrativo, SAAS..."
+                    : "Ex: Contabilidade, CRM, Mídias Sociais..."}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitCreate(); } }}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-2">
+              <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={createSaving}>
+                Cancelar
+              </Button>
+              <Button onClick={submitCreate} disabled={createSaving}>
+                {createSaving ? "Criando..." : "Criar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </CardContent>
     </Card>
