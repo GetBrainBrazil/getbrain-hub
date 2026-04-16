@@ -315,7 +315,7 @@ export default function ExtratosBancarios() {
       <ImportExtratoWizard open={importOpen} onOpenChange={setImportOpen} contas={contas} />
 
       {/* Detail Drawer */}
-      <Sheet open={!!detailMov} onOpenChange={(open) => !open && setDetailMov(null)}>
+      <Sheet open={!!detailMov} onOpenChange={(open) => { if (!open) { setDetailMov(null); setEditMode(false); } }}>
         <SheetContent className="sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Detalhes da Movimentação</SheetTitle>
