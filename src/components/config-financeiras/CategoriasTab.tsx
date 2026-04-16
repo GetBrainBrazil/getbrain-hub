@@ -173,27 +173,8 @@ export default function CategoriasTab({ search }: { search: string }) {
     loadAll();
   }
 
-  async function saveNovaModal() {
-    const nome = novaForm.nome.trim();
-    if (!nome) { toast.error("Nome é obrigatório"); return; }
-    if (novaModal === "conta" && !novaForm.pai_id) { toast.error("Selecione a subcategoria"); return; }
-    const payload = novaModal === "sub"
-      ? { nome, tipo: novaForm.tipo, categoria_pai_id: null, ativo: true }
-      : { nome, tipo: novaForm.tipo, categoria_pai_id: novaForm.pai_id, ativo: true };
-    const { error } = await supabase.from("categorias").insert(payload);
-    if (error) { toast.error("Erro ao criar"); return; }
-    toast.success(novaModal === "sub" ? "Subcategoria criada!" : "Conta criada!");
-    setExpandedTipos(new Set([...expandedTipos, novaForm.tipo]));
-    if (novaModal === "conta") setExpandedSubs(new Set([...expandedSubs, novaForm.pai_id]));
-    setNovaModal(null);
-    setNovaForm({ tipo: "despesas", pai_id: "", nome: "" });
-    loadAll();
-  }
 
-  const subsForNovaConta = useMemo(
-    () => items.filter(i => !i.categoria_pai_id && i.tipo === novaForm.tipo).sort((a, b) => a.nome.localeCompare(b.nome)),
-    [items, novaForm.tipo],
-  );
+
 
   // ── Render rows for the table ──
   type Row =
