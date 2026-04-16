@@ -772,9 +772,7 @@ export default function Movimentacoes() {
                     </TableCell>
                     <TableCell className="py-4">
                       <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded bg-muted flex items-center justify-center shrink-0">
-                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
+                        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <span className="text-sm font-semibold text-foreground">
                           {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
                         </span>
