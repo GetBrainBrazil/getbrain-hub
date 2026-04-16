@@ -6,6 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   AlertTriangle, FileText as FileTextIcon, Clock, Percent, Download,
   CalendarIcon, FileText, FileSpreadsheet, ChevronDown, ChevronRight,
@@ -19,6 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface InadMovimentacao {
   id: string;
