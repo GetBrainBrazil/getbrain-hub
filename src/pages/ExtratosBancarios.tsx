@@ -148,6 +148,37 @@ export default function ExtratosBancarios() {
 
   const [confirmDesfazer, setConfirmDesfazer] = useState(false);
 
+  const startEdit = () => {
+    if (!detailMov) return;
+    setEditForm({
+      descricao: detailMov.descricao || "",
+      categoria_id: detailMov.categoria_id || "",
+      cliente_id: detailMov.cliente_id || "",
+      fornecedor_id: detailMov.fornecedor_id || "",
+      centro_custo_id: detailMov.centro_custo_id || "",
+      observacoes: detailMov.observacoes || "",
+    });
+    setEditMode(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!detailMov) return;
+    setSaving(true);
+    const { error } = await supabase.from("movimentacoes").update({
+      descricao: editForm.descricao,
+      categoria_id: editForm.categoria_id || null,
+      cliente_id: editForm.cliente_id || null,
+      fornecedor_id: editForm.fornecedor_id || null,
+      centro_custo_id: editForm.centro_custo_id || null,
+      observacoes: editForm.observacoes || null,
+    }).eq("id", detailMov.id);
+    setSaving(false);
+    if (error) { toast.error("Erro ao salvar alterações."); return; }
+    toast.success("Lançamento atualizado com sucesso");
+    setEditMode(false);
+    queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
+  };
+
   const handleDesfazerConciliacao = async (movId: string) => {
     await supabase.from("movimentacoes").update({ conciliado: false }).eq("id", movId);
     const linked = extratoTransacoes.find((et: any) => et.movimentacao_id === movId);
