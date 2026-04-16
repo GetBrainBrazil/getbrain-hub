@@ -351,7 +351,7 @@ export default function ExtratosBancarios() {
                       <Select value={editForm.categoria_id} onValueChange={(v) => setEditForm((f) => ({ ...f, categoria_id: v }))}>
                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhuma</SelectItem>
+                          <SelectItem value="__none__">Nenhuma</SelectItem>
                           {categorias.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                         </SelectContent>
                       </Select>
