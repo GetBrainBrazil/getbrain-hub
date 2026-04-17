@@ -232,9 +232,23 @@ export default function ColaboradoresTab({ search }: { search: string }) {
           icon={Landmark}
           title="Dados Bancários"
           action={
-            <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={handleCopyBank}>
-              {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado!" : "Copiar Dados Bancários"}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 h-7 px-2 text-[13px] text-slate-500 hover:text-slate-700"
+              onClick={handleCopyBank}
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-emerald-600">Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" />
+                  Copiar
+                </>
+              )}
             </Button>
           }
         >
