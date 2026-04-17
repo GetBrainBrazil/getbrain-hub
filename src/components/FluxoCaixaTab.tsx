@@ -27,6 +27,7 @@ import {
   ComposedChart, Area, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend
 } from "recharts";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 interface Movimentacao {
   id: string;
@@ -380,6 +381,7 @@ export default function FluxoCaixaTab() {
             <SelectItem value="mensal">Mensal</SelectItem>
           </SelectContent>
         </Select>
+        <HelpTooltip content="Diário mostra dia a dia. Semanal agrupa por semana. Mensal dá uma visão mais ampla. Escolha conforme o nível de detalhe que precisa." />
 
         <div className="ml-auto">
           <Button variant="outline" onClick={exportCSV} disabled={groupedData.length === 0}>
