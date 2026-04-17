@@ -163,7 +163,7 @@ export default function ContasBancariasTab({ search }: { search: string }) {
               ) : (
                 <>
                   <Copy className="h-3.5 w-3.5" />
-                  Copiar
+                  Copiar dados
                 </>
               )}
             </Button>
