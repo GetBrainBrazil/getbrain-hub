@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Landmark, Users, Truck, Target, Tags, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Landmark, Users, Truck, Target, Tags, UserRound, Lightbulb, X } from "lucide-react";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 import ContasBancariasTab from "@/components/config-financeiras/ContasBancariasTab";
 import ColaboradoresTab from "@/components/config-financeiras/ColaboradoresTab";
