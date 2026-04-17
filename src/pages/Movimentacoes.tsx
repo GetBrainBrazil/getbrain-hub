@@ -750,11 +750,30 @@ export default function Movimentacoes() {
           </DialogHeader>
 
           <div className="space-y-5">
+            {/* Comprovante (opcional) com análise IA */}
+            <ComprovanteUploadField
+              onFileChange={setComprovanteFile}
+              valorEsperado={selectedMov ? Number(selectedMov.valor_previsto) : undefined}
+              contas={contas as any}
+              onAIResult={(res: ComprovanteAIResult) => {
+                const next: typeof aiFields = new Set(aiFields);
+                setBaixaForm((prev) => {
+                  const upd = { ...prev };
+                  if (res.data) { upd.data_pagamento = res.data; next.add("data_pagamento"); }
+                  if (res.valor != null) { upd.valor_realizado = String(res.valor); next.add("valor_realizado"); }
+                  if (res.conta_bancaria_id) { upd.conta_bancaria_id = res.conta_bancaria_id; next.add("conta_bancaria_id"); }
+                  return upd;
+                });
+                setAiFields(next);
+              }}
+            />
+
             {/* Linha 1: Data, Forma, Conta */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
                   Data do {isPagar ? "Pagamento" : "Recebimento"}
+                  {aiFields.has("data_pagamento") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
                 </Label>
                 <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} className="h-10 text-sm" />
               </div>
@@ -766,7 +785,10 @@ export default function Movimentacoes() {
                 </Select>
               </div>
               <div>
-                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Conta Bancária</Label>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
+                  Conta Bancária
+                  {aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
+                </Label>
                 <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
                   <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
