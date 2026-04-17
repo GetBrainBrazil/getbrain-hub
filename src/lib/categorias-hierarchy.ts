@@ -86,6 +86,38 @@ function capitalize(s: string) {
   return s.charAt(0) + s.slice(1).toLowerCase();
 }
 
+export type VinculacaoTipo = "colaborador" | "socio" | "fornecedor" | "cliente";
+
+/** Determina o tipo de vinculação (Fornecedor/Colaborador/Sócio/Cliente)
+ *  com base na categoria selecionada.
+ *  - Receita → cliente
+ *  - Tipo "retirada" → sócio
+ *  - Subcategoria/conta cujo nome (ou da subcategoria-pai) contém "Salário" → colaborador
+ *  - Demais despesas/impostos → fornecedor
+ */
+export function getVinculacaoTipo(
+  categoriaId: string | null | undefined,
+  items: CategoriaRaw[],
+  isPagar: boolean,
+): VinculacaoTipo {
+  if (!isPagar) return "cliente";
+  if (!categoriaId) return "fornecedor";
+  const map = new Map(items.map(i => [i.id, i]));
+  const cat = map.get(categoriaId);
+  if (!cat) return "fornecedor";
+  if (cat.tipo === "retirada") return "socio";
+  // Verifica se a categoria atual ou a subcategoria-pai tem "salário" no nome
+  const nomeCat = cat.nome.toLowerCase();
+  const isSalario = nomeCat.includes("salário") || nomeCat.includes("salario");
+  if (isSalario) return "colaborador";
+  if (cat.categoria_pai_id) {
+    const pai = map.get(cat.categoria_pai_id);
+    const nomePai = (pai?.nome || "").toLowerCase();
+    if (nomePai.includes("salário") || nomePai.includes("salario")) return "colaborador";
+  }
+  return "fornecedor";
+}
+
 export interface HierarchicalOption {
   id: string;
   label: string;          // "Despesas > SAAS > CRM"
