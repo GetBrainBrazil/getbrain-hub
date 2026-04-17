@@ -1,0 +1,1 @@
+DELETE FROM projetos WHERE id='219bf92d-cdc9-4484-8f65-fadf96882f92';
