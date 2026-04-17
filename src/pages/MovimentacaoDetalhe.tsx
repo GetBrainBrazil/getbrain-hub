@@ -620,7 +620,7 @@ export default function MovimentacaoDetalhe() {
                       type="button"
                       onClick={() => {
                         setTipoLocal("despesa");
-                        setForm((prev) => ({ ...prev, cliente_id: "", categoria_id: "" }));
+                        setForm((prev) => ({ ...prev, cliente_id: "", categoria_id: "", colaborador_id: "" }));
                       }}
                       className={cn(
                         "rounded-lg border-2 p-4 text-left transition-all",
@@ -646,7 +646,7 @@ export default function MovimentacaoDetalhe() {
                       type="button"
                       onClick={() => {
                         setTipoLocal("receita");
-                        setForm((prev) => ({ ...prev, fornecedor_id: "", categoria_id: "" }));
+                        setForm((prev) => ({ ...prev, fornecedor_id: "", categoria_id: "", colaborador_id: "" }));
                       }}
                       className={cn(
                         "rounded-lg border-2 p-4 text-left transition-all",
