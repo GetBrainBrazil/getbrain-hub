@@ -205,8 +205,7 @@ export default function CategoriasTab({ search }: { search: string }) {
   type Row =
     | { kind: "tipo"; codigo: string; tipoIdx: number; label: string; tipo: TipoCategoria; hasChildren: boolean; open: boolean }
     | { kind: "sub"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria; hasChildren: boolean; open: boolean; isAnalitica: boolean }
-    | { kind: "conta"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria }
-    | { kind: "add-placeholder"; level: 2 | 3; tipo: TipoCategoria; subId?: string };
+    | { kind: "conta"; codigo: string; cat: CategoriaRaw; tipo: TipoCategoria };
 
   const rows: Row[] = useMemo(() => {
     const out: Row[] = [];
