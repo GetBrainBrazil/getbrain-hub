@@ -299,6 +299,45 @@ export default function MovimentacaoDetalhe() {
 
   const selectedFornecedorNome = fornecedores.find((f) => f.id === form.fornecedor_id)?.nome;
   const selectedClienteNome = clientes.find((c) => c.id === form.cliente_id)?.nome;
+  const selectedColaboradorNome = colaboradores.find((c) => c.id === form.colaborador_id)?.nome;
+
+  // Colaborador combobox
+  const filteredColaboradores = useMemo(() => {
+    if (!colaboradorSearch) return colaboradores;
+    return colaboradores.filter((c) => c.nome.toLowerCase().includes(colaboradorSearch.toLowerCase()));
+  }, [colaboradores, colaboradorSearch]);
+  const showCreateColaborador =
+    colaboradorSearch.trim().length > 0 &&
+    !colaboradores.some((c) => c.nome.toLowerCase() === colaboradorSearch.trim().toLowerCase());
+
+  async function handleCreateColaborador() {
+    const nome = colaboradorSearch.trim();
+    if (!nome) return;
+    const { data, error } = await supabase.from("colaboradores").insert({ nome }).select().single();
+    if (error) { toast.error("Erro ao criar colaborador"); return; }
+    toast.success(`Colaborador "${nome}" criado!`);
+    setColaboradores((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm((prev) => ({ ...prev, colaborador_id: data.id }));
+    setColaboradorSearch("");
+    setColaboradorOpen(false);
+  }
+
+  // Tipo de vinculação dinâmico baseado na categoria
+  const vinculacaoTipo: VinculacaoTipo | null = useMemo(() => {
+    if (!isPagar) return "cliente";
+    if (!form.categoria_id) return null;
+    return getVinculacaoTipo(form.categoria_id, categorias as any, isPagar);
+  }, [form.categoria_id, categorias, isPagar]);
+
+  // Limpa o vínculo anterior quando o tipo de vinculação muda
+  const prevVincTipoRef = useRef<VinculacaoTipo | null>(null);
+  useEffect(() => {
+    const prev = prevVincTipoRef.current;
+    if (prev && vinculacaoTipo && prev !== vinculacaoTipo) {
+      setForm((f) => ({ ...f, fornecedor_id: "", colaborador_id: "", cliente_id: !isPagar ? f.cliente_id : "" }));
+    }
+    prevVincTipoRef.current = vinculacaoTipo;
+  }, [vinculacaoTipo, isPagar]);
 
   const totalPrevisto = useMemo(() => {
     const n = (v: string) => parseFloat(v || "0") || 0;
@@ -307,11 +346,14 @@ export default function MovimentacaoDetalhe() {
 
   function buildPayload() {
     const num = (v: string) => (v === "" || v == null ? 0 : parseFloat(v) || 0);
+    const isFornecedor = vinculacaoTipo === "fornecedor";
+    const isColab = vinculacaoTipo === "colaborador" || vinculacaoTipo === "socio";
     return {
       tipo: tipoLocal,
       descricao: form.descricao,
       cliente_id: !isPagar ? form.cliente_id || null : null,
-      fornecedor_id: isPagar ? form.fornecedor_id || null : null,
+      fornecedor_id: isPagar && isFornecedor ? form.fornecedor_id || null : null,
+      colaborador_id: isPagar && isColab ? form.colaborador_id || null : null,
       categoria_id: form.categoria_id || null,
       centro_custo_id: form.centro_custo_id || null,
       conta_bancaria_id: form.conta_bancaria_id || null,
@@ -338,8 +380,11 @@ export default function MovimentacaoDetalhe() {
       toast.error("Preencha os campos obrigatórios");
       return false;
     }
-    if (isPagar && !form.fornecedor_id) { toast.error("Selecione um fornecedor"); return false; }
-    if (!isPagar && !form.cliente_id) { toast.error("Selecione um cliente"); return false; }
+    if (!form.categoria_id) { toast.error("Selecione uma categoria"); return false; }
+    if (vinculacaoTipo === "fornecedor" && !form.fornecedor_id) { toast.error("Selecione um fornecedor"); return false; }
+    if (vinculacaoTipo === "colaborador" && !form.colaborador_id) { toast.error("Selecione um colaborador"); return false; }
+    if (vinculacaoTipo === "socio" && !form.colaborador_id) { toast.error("Selecione um sócio"); return false; }
+    if (vinculacaoTipo === "cliente" && !form.cliente_id) { toast.error("Selecione um cliente"); return false; }
     return true;
   }
 
