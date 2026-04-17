@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, startOfYear, endOfYear, subYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { buildCategoriasTree, type CategoriaRaw, type TipoCategoria } from "@/lib/categorias-hierarchy";
 
 // ── Types ──
 interface Movimentacao {
