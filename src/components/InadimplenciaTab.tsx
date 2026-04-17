@@ -374,13 +374,17 @@ export default function InadimplenciaTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">Análise de Inadimplência</h2>
+        <HelpTooltip content="Visão completa dos valores que clientes devem e ainda não pagaram. Ajuda a identificar quem precisa de cobrança." />
+      </div>
       {renderFilters()}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total em Atraso</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Total em Atraso<HelpTooltip content="Soma de todas as contas a receber vencidas e não pagas." /></CardTitle>
             <AlertTriangle className="h-5 w-5 text-destructive" />
           </CardHeader>
           <CardContent>
@@ -389,7 +393,7 @@ export default function InadimplenciaTab() {
         </Card>
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Quantidade de Títulos</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Quantidade de Títulos<HelpTooltip content="Número total de lançamentos de clientes que estão em atraso." /></CardTitle>
             <FileTextIcon className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -398,7 +402,7 @@ export default function InadimplenciaTab() {
         </Card>
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tempo Médio de Atraso</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Tempo Médio de Atraso<HelpTooltip content="Média de dias de atraso entre a data de vencimento e hoje. Se este número cresce ao longo do tempo, a cobrança precisa de atenção." /></CardTitle>
             <Clock className="h-5 w-5 text-warning" />
           </CardHeader>
           <CardContent>
@@ -407,7 +411,7 @@ export default function InadimplenciaTab() {
         </Card>
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Taxa de Inadimplência</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Taxa de Inadimplência<HelpTooltip content="Percentual do faturamento que não foi recebido. Abaixo de 5% é saudável, acima de 10% requer ação imediata." /></CardTitle>
             <Percent className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
