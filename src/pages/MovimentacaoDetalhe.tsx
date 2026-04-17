@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
+import CategoryPicker from "@/components/CategoryPicker";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -725,25 +726,13 @@ export default function MovimentacaoDetalhe() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Categoria *</Label>
-                <Select
-                  value={form.categoria_id || "none"}
-                  onValueChange={(v) => setForm({ ...form, categoria_id: v === "none" ? "" : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Nenhuma —</SelectItem>
-                    {categoriasFiltradas.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <span className="flex items-center gap-1.5">
-                          {c.level === 3 && <span className="text-muted-foreground text-xs">└─</span>}
-                          {c.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CategoryPicker
+                  categorias={categorias as any}
+                  value={form.categoria_id}
+                  onChange={(id) => setForm({ ...form, categoria_id: id || "" })}
+                  restrictTipos={isPagar ? ["despesas", "impostos"] : ["receitas"]}
+                  placeholder="Buscar categoria..."
+                />
               </div>
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Centro de Custo</Label>
