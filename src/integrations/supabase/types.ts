@@ -550,6 +550,7 @@ export type Database = {
           centro_custo_id: string | null
           cliente_id: string | null
           cofins: number | null
+          colaborador_id: string | null
           conciliado: boolean | null
           conta_bancaria_id: string | null
           created_at: string | null
@@ -590,6 +591,7 @@ export type Database = {
           centro_custo_id?: string | null
           cliente_id?: string | null
           cofins?: number | null
+          colaborador_id?: string | null
           conciliado?: boolean | null
           conta_bancaria_id?: string | null
           created_at?: string | null
@@ -630,6 +632,7 @@ export type Database = {
           centro_custo_id?: string | null
           cliente_id?: string | null
           cofins?: number | null
+          colaborador_id?: string | null
           conciliado?: boolean | null
           conta_bancaria_id?: string | null
           created_at?: string | null
@@ -685,6 +688,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
             referencedColumns: ["id"]
           },
           {
