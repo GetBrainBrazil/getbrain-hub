@@ -686,43 +686,19 @@ export default function Movimentacoes() {
           <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("pagar"); }}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="gap-1.5 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
-                onClick={() => setTab("pagar")}
-              >
-                <ArrowDown className="h-4 w-4 text-destructive" /> Conta a Pagar
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
-              <DialogHeader>
-                <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <span>📄</span> Nova Conta a Pagar
-                </DialogTitle>
-              </DialogHeader>
-              {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
-            </DialogContent>
-          </Dialog>
-          <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("receber"); }}>
-            <DialogTrigger asChild>
-              <Button
-                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => setTab("receber")}
-              >
-                <ArrowUp className="h-4 w-4 text-primary-foreground" /> Conta a Receber
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
-              <DialogHeader>
-                <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <span>📄</span> Nova Conta a Receber
-                </DialogTitle>
-              </DialogHeader>
-              {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="outline"
+            className="gap-1.5 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
+            onClick={() => navigate("/financeiro/movimentacoes/novo/pagar")}
+          >
+            <ArrowDown className="h-4 w-4 text-destructive" /> Conta a Pagar
+          </Button>
+          <Button
+            className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => navigate("/financeiro/movimentacoes/novo/receber")}
+          >
+            <ArrowUp className="h-4 w-4 text-primary-foreground" /> Conta a Receber
+          </Button>
         </div>
       </div>
 
