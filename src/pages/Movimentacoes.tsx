@@ -490,6 +490,19 @@ export default function Movimentacoes() {
         )}
       </div>
 
+      {/* Tip banner (first visit / no movements) */}
+      {!tipBannerDismissed && !loading && movs.length === 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 animate-fade-in">
+          <Lightbulb className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+          <p className="text-sm text-foreground flex-1">
+            <span className="font-semibold">Dica:</span> comece registrando suas despesas fixas (aluguel, ferramentas, salários) como Contas a Pagar, e os recebimentos de clientes como Contas a Receber.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => setTipBannerDismissed(true)} className="shrink-0">
+            Entendi
+          </Button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-border">
         <button
@@ -504,6 +517,7 @@ export default function Movimentacoes() {
         >
           A Receber
         </button>
+        <HelpTooltip content="A aba 'A Pagar' mostra suas despesas e obrigações. A aba 'A Receber' mostra valores que clientes devem para você." className="mb-2" />
       </div>
 
       {/* Filters */}
@@ -516,8 +530,9 @@ export default function Movimentacoes() {
         <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
           <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
           Exibir Saldos Parciais
+          <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
         </label>
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1.5">
           {statusButtons.map(s => (
             <Button
               key={s.key}
@@ -529,6 +544,7 @@ export default function Movimentacoes() {
               {s.label}
             </Button>
           ))}
+          <HelpTooltip content="Filtre as movimentações por status: Pendentes aguardam pagamento, Pagas já foram liquidadas, Atrasadas passaram do vencimento sem pagamento." className="ml-1" />
         </div>
       </div>
 
