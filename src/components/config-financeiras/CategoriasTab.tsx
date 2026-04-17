@@ -433,41 +433,7 @@ export default function CategoriasTab({ search }: { search: string }) {
                   );
                 }
 
-                // add-placeholder row (fixed "+ Adicionar" row)
-                const isSub = row.level === 2;
-                return (
-                  <TableRow
-                    key={`add-${row.tipo}-${row.subId ?? "root"}-${idx}`}
-                    className="border-b border-border/60 opacity-60 hover:opacity-90 cursor-pointer transition-opacity"
-                    onClick={() => {
-                      if (isSub) {
-                        openCreateModal({ kind: "categoria", tipo: row.tipo });
-                      } else {
-                        openCreateModal({
-                          kind: "subcategoria",
-                          tipo: row.tipo,
-                          paiId: row.subId,
-                        });
-                      }
-                    }}
-                  >
-                    <TableCell className="py-2">
-                      <span className={cn("flex items-center justify-center w-5 h-5", !isSub && "ml-[26px]")}>
-                        <Plus className="h-3.5 w-3.5 text-muted-foreground/60" />
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <div className="flex items-center gap-1.5" style={{ paddingLeft: isSub ? 24 : 48 }}>
-                        <span className="text-sm italic text-muted-foreground/70">
-                          + Adicionar
-                        </span>
-                        <HelpTooltip content="Clique para adicionar uma subcategoria dentro deste grupo." />
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2"></TableCell>
-                    <TableCell className="py-2 text-right pr-4"></TableCell>
-                  </TableRow>
-                );
+                return null;
               })}
             </TableBody>
           </Table>
