@@ -112,9 +112,21 @@ export default function ClientesTab({ search }: { search: string }) {
   async function handleDelete() {
     if (!selected) return;
     const { error } = await supabase.from("clientes").delete().eq("id", selected.id);
-    if (error) { toast.error("Erro ao excluir cliente"); return; }
+    if (error) {
+      console.error("Erro ao excluir cliente:", error);
+      if (error.code === "23503") {
+        toast.error(
+          "Não é possível excluir: este cliente possui movimentações ou projetos vinculados. Remova-os ou inative o cliente.",
+        );
+      } else {
+        toast.error(error.message || "Erro ao excluir cliente");
+      }
+      return;
+    }
     toast.success("Cliente excluído com sucesso");
-    setDeleteOpen(false); backToList(); load();
+    setDeleteOpen(false);
+    backToList();
+    load();
   }
   async function toggleAtivo(id: string, ativo: boolean) {
     await supabase.from("clientes").update({ ativo: !ativo }).eq("id", id); load();
