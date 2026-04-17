@@ -27,6 +27,7 @@ import {
 } from "@/lib/categorias-hierarchy";
 import { TipoBadge } from "@/components/TipoBadge";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { useURLState } from "@/hooks/useURLState";
 
 type DeleteTarget =
   | { kind: "simple"; cat: CategoriaRaw }
@@ -38,8 +39,8 @@ type DeleteTarget =
 export default function CategoriasTab({ search }: { search: string }) {
   const [items, setItems] = useState<CategoriaRaw[]>([]);
   const [usageMap, setUsageMap] = useState<Map<string, number>>(new Map());
-  const [tipoFilter, setTipoFilter] = useState<"todos" | TipoCategoria>("todos");
-  const [statusFilter, setStatusFilter] = useState<"todas" | "ativas" | "inativas">("todas");
+  const [tipoFilter, setTipoFilter] = useURLState("tipo", "todos");
+  const [statusFilter, setStatusFilter] = useURLState("status", "todas");
   
 
   const [expandedTipos, setExpandedTipos] = useState<Set<string>>(new Set(TIPOS_CATEGORIA.map(t => t.key)));

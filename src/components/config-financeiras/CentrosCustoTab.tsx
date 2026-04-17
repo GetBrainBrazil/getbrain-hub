@@ -18,6 +18,7 @@ import { Plus, Pencil, Eye, Trash2, FileText, BarChart3, ClipboardList } from "l
 import { cn } from "@/lib/utils";
 import { FormMode, FormPageShell, FormSection, DetailField } from "./shared";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { useURLState } from "@/hooks/useURLState";
 
 type Form = {
   codigo: string;
@@ -40,7 +41,7 @@ interface Resumo {
 export default function CentrosCustoTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
   const [usageMap, setUsageMap] = useState<Map<string, Resumo>>(new Map());
-  const [statusFilter, setStatusFilter] = useState<"todos" | "ativos" | "inativos">("todos");
+  const [statusFilter, setStatusFilter] = useURLState("status", "todos");
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);

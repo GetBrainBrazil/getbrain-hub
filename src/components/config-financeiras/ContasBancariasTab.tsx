@@ -14,6 +14,7 @@ import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, StickyNo
 import { formatCurrency } from "@/lib/formatters";
 import { FormMode, FormPageShell, FormSection, DetailField, formatMoneyForInput, parseMoney } from "./shared";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { useURLState } from "@/hooks/useURLState";
 
 type Form = { nome: string; banco: string; agencia: string; conta: string; tipo: string; saldo_inicial: string; moeda: string; ativo: boolean; chaves_pix: string[]; observacoes: string };
 const empty: Form = { nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [], observacoes: "" };
@@ -24,9 +25,9 @@ const formatMoeda = (m: string) => m === "USD" ? "Dólar (US$)" : m === "EUR" ? 
 
 export default function ContasBancariasTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [filterBanco, setFilterBanco] = useState("__all__");
-  const [filterTipo, setFilterTipo] = useState("__all__");
-  const [filterMoeda, setFilterMoeda] = useState("__all__");
+  const [filterBanco, setFilterBanco] = useURLState("banco", "__all__");
+  const [filterTipo, setFilterTipo] = useURLState("tipo_conta", "__all__");
+  const [filterMoeda, setFilterMoeda] = useURLState("moeda", "__all__");
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);
