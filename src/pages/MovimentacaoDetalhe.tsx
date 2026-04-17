@@ -174,9 +174,10 @@ export default function MovimentacaoDetalhe() {
   }, [id, tipoParam]);
 
   async function loadReferences() {
-    const [rClientes, rFornecedores, rCategorias, rContas, rMeios, rCentros] = await Promise.all([
+    const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rMeios, rCentros] = await Promise.all([
       supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("colaboradores").select("id, nome, cargo").eq("ativo", true).order("nome"),
       supabase.from("categorias").select("id, nome, tipo, categoria_pai_id, ativo").eq("ativo", true).order("nome"),
       supabase.from("contas_bancarias").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("meios_pagamento").select("id, nome").eq("ativo", true).order("nome"),
@@ -184,6 +185,7 @@ export default function MovimentacaoDetalhe() {
     ]);
     setClientes(rClientes.data || []);
     setFornecedores(rFornecedores.data || []);
+    setColaboradores(rColaboradores.data || []);
     setCategorias(rCategorias.data || []);
     setContas(rContas.data || []);
     setMeios(rMeios.data || []);
@@ -221,6 +223,7 @@ export default function MovimentacaoDetalhe() {
         descricao: m.descricao || "",
         cliente_id: m.cliente_id || "",
         fornecedor_id: m.fornecedor_id || "",
+        colaborador_id: (m as any).colaborador_id || "",
         categoria_id: m.categoria_id || "",
         centro_custo_id: m.centro_custo_id || "",
         conta_bancaria_id: m.conta_bancaria_id || "",
