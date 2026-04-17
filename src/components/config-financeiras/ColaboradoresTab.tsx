@@ -95,21 +95,54 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     setForm({ ...form, chaves_pix: [...form.chaves_pix, v] }); setNewPix("");
   }
 
+  function mergePendingInputs() {
+    const nextForm = {
+      ...form,
+      emails: [...form.emails],
+      telefones: [...form.telefones],
+      chaves_pix: [...form.chaves_pix],
+    };
+
+    const pendingEmail = newEmail.trim();
+    if (pendingEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pendingEmail)) {
+        toast.error("E-mail inválido");
+        return null;
+      }
+      if (!nextForm.emails.includes(pendingEmail)) nextForm.emails.push(pendingEmail);
+    }
+
+    const pendingPhone = newPhone.trim();
+    if (pendingPhone && !nextForm.telefones.includes(pendingPhone)) nextForm.telefones.push(pendingPhone);
+
+    const pendingPix = newPix.trim();
+    if (pendingPix && !nextForm.chaves_pix.includes(pendingPix)) nextForm.chaves_pix.push(pendingPix);
+
+    return nextForm;
+  }
+
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    const salario = parseMoney(form.salario_base);
+    const nextForm = mergePendingInputs();
+    if (!nextForm) return;
+
+    const salario = parseMoney(nextForm.salario_base);
     const payload: any = {
-      nome: form.nome, cargo: form.cargo || null, cpf: form.cpf || null,
-      emails: form.emails, telefones: form.telefones,
-      banco: form.banco || null, agencia: form.agencia || null, conta: form.conta || null,
-      tipo_conta: form.tipo_conta, chaves_pix: form.chaves_pix,
-      cep: form.cep || null, estado: form.estado || null, cidade: form.cidade || null,
-      endereco: form.endereco || null, numero: form.numero || null, bairro: form.bairro || null,
-      complemento: form.complemento || null,
-      data_admissao: form.data_admissao || null,
+      nome: nextForm.nome, cargo: nextForm.cargo || null, cpf: nextForm.cpf || null,
+      emails: nextForm.emails, telefones: nextForm.telefones,
+      banco: nextForm.banco || null, agencia: nextForm.agencia || null, conta: nextForm.conta || null,
+      tipo_conta: nextForm.tipo_conta, chaves_pix: nextForm.chaves_pix,
+      cep: nextForm.cep || null, estado: nextForm.estado || null, cidade: nextForm.cidade || null,
+      endereco: nextForm.endereco || null, numero: nextForm.numero || null, bairro: nextForm.bairro || null,
+      complemento: nextForm.complemento || null,
+      data_admissao: nextForm.data_admissao || null,
       salario_base: isNaN(salario) ? 0 : salario,
-      observacoes: form.observacoes || null,
+      observacoes: nextForm.observacoes || null,
     };
+    setForm(nextForm);
+    setNewEmail("");
+    setNewPhone("");
+    setNewPix("");
     if (mode === "new") {
       const { data: userData } = await supabase.auth.getUser();
       payload.created_by = userData.user?.id || null;
@@ -118,7 +151,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
       toast.success("Colaborador cadastrado com sucesso");
       backToList(); await load();
     } else {
-      payload.ativo = form.ativo;
+      payload.ativo = nextForm.ativo;
       const { data: updated, error } = await supabase
         .from("colaboradores" as any)
         .update(payload)
