@@ -391,6 +391,15 @@ export default function Movimentacoes() {
 
     if (error) { toast.error("Erro ao registrar"); return; }
 
+    if (comprovanteFile) {
+      try {
+        await uploadComprovanteToMovimentacao(comprovanteFile, selectedMov.id);
+      } catch (e) {
+        console.error(e);
+        toast.error("Pagamento registrado, mas falhou ao salvar o comprovante.");
+      }
+    }
+
     const baseValue = parseFloat(baixaForm.valor_realizado) || 0;
     if (baseValue < valorPrev) {
       await supabase.from("movimentacoes").insert({
