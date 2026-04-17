@@ -263,7 +263,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
           <div>
             <span className="text-xs text-muted-foreground">Chaves PIX</span>
             {selected.chaves_pix?.length > 0 ? (
-              <div className="space-y-0.5 mt-0.5">{selected.chaves_pix.map((k: string, i: number) => <p key={i} por font-medium">{k}</p>)}</div>
+              <div className="space-y-0.5 mt-0.5">{selected.chaves_pix.map((k: string, i: number) => <p key={i} className="text-sm font-medium">{k}</p>)}</div>
             ) : <p className="text-sm text-muted-foreground mt-0.5">—</p>}
           </div>
         </FormSection>
