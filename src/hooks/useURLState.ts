@@ -20,9 +20,6 @@ function writeSession(key: string, value: string | null) {
 /**
  * URL is the source of truth, mirrored to sessionStorage per-route so that
  * navigating away and back restores filters. F5 still works via the URL.
- *
- * Hydration is done synchronously on first render (lazy useState) — no effects,
- * no conditional hooks, no hook-order issues across re-renders.
  */
 export function useURLState<T extends string>(
   paramName: string,
@@ -31,35 +28,31 @@ export function useURLState<T extends string>(
   const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
 
-  // One-shot hydration: if URL has no param, copy from sessionStorage into URL.
-  const [hydrated] = useState(() => {
-    const key = storageKey(pathname, paramName);
+  // Local state holds the current value. Initialized from URL, then sessionStorage, then default.
+  const [localValue, setLocalValue] = useState<T>(() => {
     const urlValue = searchParams.get(paramName);
-    if (urlValue === null) {
-      const stored = readSession(key);
-      if (stored !== null && stored !== defaultValue) {
-        // Defer URL update to avoid setState during render.
-        queueMicrotask(() => {
-          setSearchParams(
-            (prev) => {
-              const next = new URLSearchParams(prev);
-              if (next.get(paramName) === null) next.set(paramName, stored);
-              return next;
-            },
-            { replace: true }
-          );
-        });
-        return stored;
-      }
+    if (urlValue !== null) return urlValue as T;
+    const stored = readSession(storageKey(pathname, paramName));
+    if (stored !== null) {
+      // Push back into URL on next tick so refresh works.
+      queueMicrotask(() => {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            if (next.get(paramName) === null) next.set(paramName, stored);
+            return next;
+          },
+          { replace: true }
+        );
+      });
+      return stored as T;
     }
-    return urlValue ?? defaultValue;
+    return defaultValue;
   });
-
-  const raw = searchParams.get(paramName);
-  const value = (raw !== null ? raw : (hydrated as string)) as T;
 
   const setValue = useCallback(
     (newValue: T) => {
+      setLocalValue(newValue);
       const key = storageKey(pathname, paramName);
       const isDefault =
         newValue === defaultValue ||
@@ -82,7 +75,7 @@ export function useURLState<T extends string>(
     [paramName, defaultValue, setSearchParams, pathname]
   );
 
-  return [value, setValue];
+  return [localValue, setValue];
 }
 
 /** Boolean variant — stores "1" / "0". */
@@ -93,36 +86,30 @@ export function useURLStateBoolean(
   const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
 
-  const [hydrated] = useState(() => {
-    const key = storageKey(pathname, paramName);
+  const [localValue, setLocalValue] = useState<boolean>(() => {
     const urlValue = searchParams.get(paramName);
-    if (urlValue === null) {
-      const stored = readSession(key);
-      if (stored !== null) {
-        const storedBool = stored === "1" || stored === "true";
-        if (storedBool !== defaultValue) {
-          queueMicrotask(() => {
-            setSearchParams(
-              (prev) => {
-                const next = new URLSearchParams(prev);
-                if (next.get(paramName) === null) next.set(paramName, storedBool ? "1" : "0");
-                return next;
-              },
-              { replace: true }
-            );
-          });
-          return storedBool;
-        }
-      }
+    if (urlValue !== null) return urlValue === "1" || urlValue === "true";
+    const stored = readSession(storageKey(pathname, paramName));
+    if (stored !== null) {
+      const storedBool = stored === "1" || stored === "true";
+      queueMicrotask(() => {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            if (next.get(paramName) === null) next.set(paramName, storedBool ? "1" : "0");
+            return next;
+          },
+          { replace: true }
+        );
+      });
+      return storedBool;
     }
-    return urlValue === null ? defaultValue : urlValue === "1" || urlValue === "true";
+    return defaultValue;
   });
-
-  const raw = searchParams.get(paramName);
-  const value = raw === null ? hydrated : raw === "1" || raw === "true";
 
   const setValue = useCallback(
     (newValue: boolean) => {
+      setLocalValue(newValue);
       const key = storageKey(pathname, paramName);
       const isDefault = newValue === defaultValue;
       writeSession(key, isDefault ? null : newValue ? "1" : "0");
@@ -140,5 +127,5 @@ export function useURLStateBoolean(
     [paramName, defaultValue, setSearchParams, pathname]
   );
 
-  return [value, setValue];
+  return [localValue, setValue];
 }
