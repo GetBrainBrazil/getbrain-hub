@@ -350,8 +350,10 @@ export default function ClientesTab({ search }: { search: string }) {
               </SelectContent>
             </Select>
           </div>
-          <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Cliente</Button>
-          <HelpTooltip content="Cadastre seus clientes para vinculá-los às Contas a Receber. Você pode adicionar múltiplos e-mails, telefones e endereço completo." />
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Cliente</Button>
+            <HelpTooltip content="Cadastre seus clientes para vinculá-los às Contas a Receber. Você pode adicionar múltiplos e-mails, telefones e endereço completo." />
+          </div>
         </div>
         <Table>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead><div className="flex items-center gap-1">Tipo<HelpTooltip content="PF = Pessoa Física (CPF). PJ = Pessoa Jurídica (CNPJ). O tipo define a máscara do documento." /></div></TableHead><TableHead>Documento</TableHead><TableHead>E-mail</TableHead><TableHead>Telefone</TableHead><TableHead><div className="flex items-center gap-1">Ativo<HelpTooltip content="Clientes inativos não aparecem nos dropdowns ao criar movimentações, mas seus lançamentos históricos são preservados." /></div></TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>

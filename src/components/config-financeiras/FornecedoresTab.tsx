@@ -341,8 +341,10 @@ export default function FornecedoresTab({ search }: { search: string }) {
               </SelectContent>
             </Select>
           </div>
-          <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Fornecedor</Button>
-          <HelpTooltip content="Cadastre fornecedores para vinculá-los às Contas a Pagar. Facilitam o controle de quem você paga e permitem análises por fornecedor." />
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Fornecedor</Button>
+            <HelpTooltip content="Cadastre fornecedores para vinculá-los às Contas a Pagar. Facilitam o controle de quem você paga e permitem análises por fornecedor." />
+          </div>
         </div>
         <Table>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Documento</TableHead><TableHead>E-mail</TableHead><TableHead>Telefone</TableHead><TableHead><div className="flex items-center gap-1">Ativo<HelpTooltip content="Fornecedores inativos não aparecem nos dropdowns ao criar movimentações, mas seus lançamentos históricos são preservados." /></div></TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
