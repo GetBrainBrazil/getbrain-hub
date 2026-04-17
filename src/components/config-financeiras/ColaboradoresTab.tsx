@@ -114,15 +114,20 @@ export default function ColaboradoresTab({ search }: { search: string }) {
       const { data: userData } = await supabase.auth.getUser();
       payload.created_by = userData.user?.id || null;
       const { error } = await supabase.from("colaboradores" as any).insert(payload);
-      if (error) { toast.error("Erro ao salvar"); return; }
+      if (error) { toast.error("Erro ao cadastrar colaborador. Tente novamente."); return; }
       toast.success("Colaborador cadastrado com sucesso");
-      backToList(); load();
+      backToList(); await load();
     } else {
       payload.ativo = form.ativo;
-      const { error } = await supabase.from("colaboradores" as any).update(payload).eq("id", selected.id);
-      if (error) { toast.error("Erro ao atualizar"); return; }
+      const { data: updated, error } = await supabase
+        .from("colaboradores" as any)
+        .update(payload)
+        .eq("id", selected.id)
+        .select()
+        .maybeSingle();
+      if (error || !updated) { toast.error("Erro ao atualizar colaborador. Tente novamente."); return; }
       toast.success("Colaborador atualizado com sucesso");
-      setSelected({ ...selected, ...payload }); setMode("view"); load();
+      setSelected(updated as any); setMode("view"); await load();
     }
   }
   async function handleDelete() {

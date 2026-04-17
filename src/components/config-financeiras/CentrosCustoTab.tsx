@@ -111,22 +111,27 @@ export default function CentrosCustoTab({ search }: { search: string }) {
       const { error } = await supabase.from("centros_custo").insert(payload);
       if (error) {
         if (error.message.includes("centros_custo_codigo_unique")) toast.error("Já existe um centro de custo com esse código");
-        else toast.error("Erro ao salvar");
+        else toast.error("Erro ao cadastrar centro de custo. Tente novamente.");
         return;
       }
-      toast.success("Centro de custo cadastrado com sucesso"); backToList(); load();
+      toast.success("Centro de custo cadastrado com sucesso"); backToList(); await load();
     } else {
       payload.ativo = form.ativo;
-      const { error } = await supabase.from("centros_custo").update(payload).eq("id", selected.id);
-      if (error) {
-        if (error.message.includes("centros_custo_codigo_unique")) toast.error("Já existe um centro de custo com esse código");
-        else toast.error("Erro ao atualizar");
+      const { data: updated, error } = await supabase
+        .from("centros_custo")
+        .update(payload)
+        .eq("id", selected.id)
+        .select()
+        .maybeSingle();
+      if (error || !updated) {
+        if (error?.message.includes("centros_custo_codigo_unique")) toast.error("Já existe um centro de custo com esse código");
+        else toast.error("Erro ao atualizar centro de custo. Tente novamente.");
         return;
       }
       toast.success("Centro de custo atualizado com sucesso");
-      setSelected({ ...selected, ...payload });
+      setSelected(updated);
       setMode("view");
-      load();
+      await load();
     }
   }
 

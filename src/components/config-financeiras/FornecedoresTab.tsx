@@ -92,14 +92,19 @@ export default function FornecedoresTab({ search }: { search: string }) {
     };
     if (mode === "new") {
       const { error } = await supabase.from("fornecedores").insert(payload);
-      if (error) { toast.error("Erro ao salvar"); return; }
-      toast.success("Fornecedor criado!"); backToList(); load();
+      if (error) { toast.error("Erro ao cadastrar fornecedor. Tente novamente."); return; }
+      toast.success("Fornecedor criado!"); backToList(); await load();
     } else {
       payload.ativo = form.ativo;
-      const { error } = await supabase.from("fornecedores").update(payload).eq("id", selected.id);
-      if (error) { toast.error("Erro ao atualizar"); return; }
+      const { data: updated, error } = await supabase
+        .from("fornecedores")
+        .update(payload)
+        .eq("id", selected.id)
+        .select()
+        .maybeSingle();
+      if (error || !updated) { toast.error("Erro ao atualizar fornecedor. Tente novamente."); return; }
       toast.success("Fornecedor atualizado com sucesso");
-      setSelected({ ...selected, ...payload }); setMode("view"); load();
+      setSelected(updated); setMode("view"); await load();
     }
   }
   async function handleDelete() {

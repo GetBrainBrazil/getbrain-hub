@@ -74,16 +74,20 @@ export default function ContasBancariasTab({ search }: { search: string }) {
     };
     if (mode === "new") {
       const { error } = await supabase.from("contas_bancarias").insert(payload);
-      if (error) { toast.error("Erro ao salvar"); return; }
+      if (error) { toast.error("Erro ao cadastrar conta bancária. Tente novamente."); return; }
       toast.success("Conta bancária criada!");
-      backToList(); load();
+      backToList(); await load();
     } else {
       payload.ativo = form.ativo;
-      const { error } = await supabase.from("contas_bancarias").update(payload).eq("id", selected.id);
-      if (error) { toast.error("Erro ao atualizar"); return; }
+      const { data: updated, error } = await supabase
+        .from("contas_bancarias")
+        .update(payload)
+        .eq("id", selected.id)
+        .select()
+        .maybeSingle();
+      if (error || !updated) { toast.error("Erro ao atualizar conta bancária. Tente novamente."); return; }
       toast.success("Conta atualizada com sucesso");
-      const updated = { ...selected, ...payload };
-      setSelected(updated); setMode("view"); load();
+      setSelected(updated); setMode("view"); await load();
     }
   }
   async function handleDelete() {

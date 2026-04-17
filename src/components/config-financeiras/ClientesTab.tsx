@@ -93,14 +93,19 @@ export default function ClientesTab({ search }: { search: string }) {
     };
     if (mode === "new") {
       const { error } = await supabase.from("clientes").insert(payload);
-      if (error) { toast.error("Erro ao salvar"); return; }
-      toast.success("Cliente criado!"); backToList(); load();
+      if (error) { toast.error("Erro ao cadastrar cliente. Tente novamente."); return; }
+      toast.success("Cliente criado!"); backToList(); await load();
     } else {
       payload.ativo = form.ativo;
-      const { error } = await supabase.from("clientes").update(payload).eq("id", selected.id);
-      if (error) { toast.error("Erro ao atualizar"); return; }
+      const { data: updated, error } = await supabase
+        .from("clientes")
+        .update(payload)
+        .eq("id", selected.id)
+        .select()
+        .maybeSingle();
+      if (error || !updated) { toast.error("Erro ao atualizar cliente. Tente novamente."); return; }
       toast.success("Cliente atualizado com sucesso");
-      setSelected({ ...selected, ...payload }); setMode("view"); load();
+      setSelected(updated); setMode("view"); await load();
     }
   }
   async function handleDelete() {
