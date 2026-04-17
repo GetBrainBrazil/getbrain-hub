@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
+import CategoryPicker from "@/components/CategoryPicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -270,27 +271,19 @@ export default function ExtratoMovimentacaoDetalhe() {
                 />
                 <div>
                   <FieldLabel>Categoria</FieldLabel>
-                  <Select
-                    value={editForm.categoria_id || "__none__"}
-                    onValueChange={(v) =>
-                      setEditForm((f) => ({ ...f, categoria_id: v === "__none__" ? "" : v }))
+                  <CategoryPicker
+                    categorias={categorias as any}
+                    value={editForm.categoria_id}
+                    onChange={(id) =>
+                      setEditForm((f) => ({ ...f, categoria_id: id || "" }))
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Nenhuma</SelectItem>
-                      {getHierarchicalOptions(categorias as any).map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          <span className="flex items-center gap-1.5">
-                            {o.level === 3 && <span className="text-muted-foreground text-xs">└─</span>}
-                            {o.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    restrictTipos={
+                      mov.tipo === "receita"
+                        ? ["receitas"]
+                        : ["despesas", "impostos"]
+                    }
+                    placeholder="Buscar categoria..."
+                  />
                 </div>
                 {mov.tipo === "receita" && (
                   <div>
