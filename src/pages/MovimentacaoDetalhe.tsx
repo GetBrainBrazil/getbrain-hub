@@ -3,6 +3,8 @@ import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowDown,
+  ArrowUp,
   CheckCircle,
   Trash2,
   Save,
@@ -16,6 +18,8 @@ import {
   Upload,
   X,
   Plus,
+  Repeat,
+  Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   Dialog,
@@ -46,6 +51,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { formatCurrency, StatusType } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -70,13 +76,53 @@ function SectionHeader({ icon: Icon, title }: { icon: any; title: string }) {
   );
 }
 
-export default function MovimentacaoDetalhe() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+function addByFrequency(dateStr: string, amount: number, freq: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  if (freq === "diario") d.setDate(d.getDate() + amount);
+  else if (freq === "semanal") d.setDate(d.getDate() + amount * 7);
+  else if (freq === "anual") d.setFullYear(d.getFullYear() + amount);
+  else d.setMonth(d.getMonth() + amount);
+  return d.toISOString().split("T")[0];
+}
 
-  const [loading, setLoading] = useState(true);
+const emptyForm = {
+  descricao: "",
+  cliente_id: "",
+  fornecedor_id: "",
+  categoria_id: "",
+  centro_custo_id: "",
+  conta_bancaria_id: "",
+  meio_pagamento_id: "",
+  valor_previsto: "",
+  desconto_previsto: "",
+  juros: "",
+  multa: "",
+  taxas_adm: "",
+  pis: "",
+  cofins: "",
+  csll: "",
+  iss: "",
+  ir: "",
+  inss: "",
+  data_competencia: "",
+  data_vencimento: "",
+  observacoes: "",
+};
+
+export default function MovimentacaoDetalhe() {
+  const { id, tipo: tipoParam } = useParams<{ id?: string; tipo?: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Modos: create | edit | view
+  const isCreate = !id && !!tipoParam;
+  const initialTipo: "despesa" | "receita" =
+    tipoParam === "receber" ? "receita" : tipoParam === "pagar" ? "despesa" : "despesa";
+
+  const [loading, setLoading] = useState(!isCreate);
   const [saving, setSaving] = useState(false);
   const [mov, setMov] = useState<any>(null);
+  const [tipoLocal, setTipoLocal] = useState<"despesa" | "receita">(initialTipo);
 
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
@@ -86,29 +132,13 @@ export default function MovimentacaoDetalhe() {
   const [centros, setCentros] = useState<any[]>([]);
   const [anexos, setAnexos] = useState<any[]>([]);
 
-  const [form, setForm] = useState({
-    descricao: "",
-    cliente_id: "",
-    fornecedor_id: "",
-    categoria_id: "",
-    centro_custo_id: "",
-    conta_bancaria_id: "",
-    meio_pagamento_id: "",
-    valor_previsto: "",
-    desconto_previsto: "",
-    juros: "",
-    multa: "",
-    taxas_adm: "",
-    pis: "",
-    cofins: "",
-    csll: "",
-    iss: "",
-    ir: "",
-    inss: "",
-    data_competencia: "",
-    data_vencimento: "",
-    observacoes: "",
-  });
+  const [form, setForm] = useState({ ...emptyForm });
+
+  // Recorrência (somente create)
+  const [recorrente, setRecorrente] = useState(false);
+  const [recIntervalo, setRecIntervalo] = useState("1");
+  const [recPeriodo, setRecPeriodo] = useState<"diario" | "semanal" | "mensal" | "anual">("mensal");
+  const [recAte, setRecAte] = useState<string>("");
 
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
@@ -120,28 +150,50 @@ export default function MovimentacaoDetalhe() {
   });
 
   const [fornecedorOpen, setFornecedorOpen] = useState(false);
+  const [fornecedorSearch, setFornecedorSearch] = useState("");
   const [clienteOpen, setClienteOpen] = useState(false);
+  const [clienteSearch, setClienteSearch] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, tipoParam]);
+
+  async function loadReferences() {
+    const [rClientes, rFornecedores, rCategorias, rContas, rMeios, rCentros] = await Promise.all([
+      supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("categorias").select("id, nome, tipo, categoria_pai_id, ativo").eq("ativo", true).order("nome"),
+      supabase.from("contas_bancarias").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("meios_pagamento").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("centros_custo").select("id, nome").eq("ativo", true).order("nome"),
+    ]);
+    setClientes(rClientes.data || []);
+    setFornecedores(rFornecedores.data || []);
+    setCategorias(rCategorias.data || []);
+    setContas(rContas.data || []);
+    setMeios(rMeios.data || []);
+    setCentros(rCentros.data || []);
+  }
 
   async function load() {
     setLoading(true);
     try {
-      const [rMov, rClientes, rFornecedores, rCategorias, rContas, rMeios, rCentros, rAnexos] = await Promise.all([
+      await loadReferences();
+
+      if (isCreate) {
+        const today = new Date().toISOString().split("T")[0];
+        setForm({ ...emptyForm, data_competencia: today, data_vencimento: today });
+        setMov(null);
+        setLoading(false);
+        return;
+      }
+
+      const [rMov, rAnexos] = await Promise.all([
         supabase.from("movimentacoes").select("*").eq("id", id!).maybeSingle(),
-        supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("categorias").select("id, nome, tipo").eq("ativo", true).order("nome"),
-        supabase.from("contas_bancarias").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("meios_pagamento").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("centros_custo").select("id, nome").eq("ativo", true).order("nome"),
         supabase.from("anexos").select("*").eq("movimentacao_id", id!).order("created_at"),
       ]);
 
@@ -153,6 +205,7 @@ export default function MovimentacaoDetalhe() {
 
       const m: any = rMov.data;
       setMov(m);
+      setTipoLocal(m.tipo === "receita" ? "receita" : "despesa");
       setForm({
         descricao: m.descricao || "",
         cliente_id: m.cliente_id || "",
@@ -176,28 +229,59 @@ export default function MovimentacaoDetalhe() {
         data_vencimento: m.data_vencimento || "",
         observacoes: m.observacoes || "",
       });
-      setClientes(rClientes.data || []);
-      setFornecedores(rFornecedores.data || []);
-      setCategorias(rCategorias.data || []);
-      setContas(rContas.data || []);
-      setMeios(rMeios.data || []);
-      setCentros(rCentros.data || []);
       setAnexos(rAnexos.data || []);
     } finally {
       setLoading(false);
     }
   }
 
-  const isPagar = mov?.tipo === "despesa";
+  const isPagar = tipoLocal === "despesa";
 
   const categoriasFiltradas = useMemo(() => {
-    if (!mov) return [] as any[];
-    // Mapear tipo da movimentação (receita/despesa) para o novo enum (receitas/despesas)
-    const tipoFiltro = mov.tipo === "receita" ? "receitas" : "despesas";
-    const restrict = [tipoFiltro] as any;
-    // Importação local do helper hierárquico
+    const restrict = isPagar ? (["despesas", "impostos"] as any) : (["receitas"] as any);
     return getHierarchicalOptions(categorias as any, restrict);
-  }, [categorias, mov]);
+  }, [categorias, isPagar]);
+
+  // Combobox helpers
+  const filteredFornecedores = useMemo(() => {
+    if (!fornecedorSearch) return fornecedores;
+    return fornecedores.filter((f) => f.nome.toLowerCase().includes(fornecedorSearch.toLowerCase()));
+  }, [fornecedores, fornecedorSearch]);
+  const showCreateFornecedor =
+    fornecedorSearch.trim().length > 0 &&
+    !fornecedores.some((f) => f.nome.toLowerCase() === fornecedorSearch.trim().toLowerCase());
+
+  async function handleCreateFornecedor() {
+    const nome = fornecedorSearch.trim();
+    if (!nome) return;
+    const { data, error } = await supabase.from("fornecedores").insert({ nome }).select().single();
+    if (error) { toast.error("Erro ao criar fornecedor"); return; }
+    toast.success(`Fornecedor "${nome}" criado!`);
+    setFornecedores((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm((prev) => ({ ...prev, fornecedor_id: data.id }));
+    setFornecedorSearch("");
+    setFornecedorOpen(false);
+  }
+
+  const filteredClientes = useMemo(() => {
+    if (!clienteSearch) return clientes;
+    return clientes.filter((c) => c.nome.toLowerCase().includes(clienteSearch.toLowerCase()));
+  }, [clientes, clienteSearch]);
+  const showCreateCliente =
+    clienteSearch.trim().length > 0 &&
+    !clientes.some((c) => c.nome.toLowerCase() === clienteSearch.trim().toLowerCase());
+
+  async function handleCreateCliente() {
+    const nome = clienteSearch.trim();
+    if (!nome) return;
+    const { data, error } = await supabase.from("clientes").insert({ nome }).select().single();
+    if (error) { toast.error("Erro ao criar cliente"); return; }
+    toast.success(`Cliente "${nome}" criado!`);
+    setClientes((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm((prev) => ({ ...prev, cliente_id: data.id }));
+    setClienteSearch("");
+    setClienteOpen(false);
+  }
 
   const selectedFornecedorNome = fornecedores.find((f) => f.id === form.fornecedor_id)?.nome;
   const selectedClienteNome = clientes.find((c) => c.id === form.cliente_id)?.nome;
@@ -210,6 +294,7 @@ export default function MovimentacaoDetalhe() {
   function buildPayload() {
     const num = (v: string) => (v === "" || v == null ? 0 : parseFloat(v) || 0);
     return {
+      tipo: tipoLocal,
       descricao: form.descricao,
       cliente_id: !isPagar ? form.cliente_id || null : null,
       fornecedor_id: isPagar ? form.fornecedor_id || null : null,
@@ -222,34 +307,96 @@ export default function MovimentacaoDetalhe() {
       juros: num(form.juros),
       multa: num(form.multa),
       taxas_adm: num(form.taxas_adm),
-      pis: num(form.pis),
-      cofins: num(form.cofins),
-      csll: num(form.csll),
-      iss: num(form.iss),
-      ir: num(form.ir),
-      inss: num(form.inss),
+      pis: isPagar ? num(form.pis) : 0,
+      cofins: isPagar ? num(form.cofins) : 0,
+      csll: isPagar ? num(form.csll) : 0,
+      iss: isPagar ? num(form.iss) : 0,
+      ir: isPagar ? num(form.ir) : 0,
+      inss: isPagar ? num(form.inss) : 0,
       data_competencia: form.data_competencia,
       data_vencimento: form.data_vencimento,
       observacoes: form.observacoes || null,
     };
   }
 
-  async function handleSave(closeAfter = false) {
-    if (!mov) return;
+  function validate(): boolean {
     if (!form.descricao || !form.valor_previsto || !form.data_competencia || !form.data_vencimento) {
       toast.error("Preencha os campos obrigatórios");
+      return false;
+    }
+    if (isPagar && !form.fornecedor_id) { toast.error("Selecione um fornecedor"); return false; }
+    if (!isPagar && !form.cliente_id) { toast.error("Selecione um cliente"); return false; }
+    return true;
+  }
+
+  async function handleCreate() {
+    if (!validate()) return;
+    setSaving(true);
+    const base = { ...buildPayload(), created_by: user?.id ?? null };
+
+    const { data: parent, error } = await supabase
+      .from("movimentacoes")
+      .insert(base as any)
+      .select()
+      .single();
+
+    if (error || !parent) {
+      setSaving(false);
+      toast.error("Erro ao salvar. Tente novamente.");
       return;
     }
-    setSaving(true);
-    const { error } = await supabase.from("movimentacoes").update(buildPayload()).eq("id", mov.id);
+
+    // Recorrência: cria ocorrências adicionais até "recAte" (se preenchido) ou 12 ocorrências por padrão.
+    if (recorrente) {
+      const intervalo = Math.max(parseInt(recIntervalo) || 1, 1);
+      const limite = recAte ? new Date(recAte + "T12:00:00") : null;
+      const maxOcorrencias = limite ? 240 : 12; // segurança
+      const recurrences: any[] = [];
+      for (let i = 1; i < maxOcorrencias; i++) {
+        const competencia = addByFrequency(form.data_competencia, intervalo * i, recPeriodo);
+        const vencimento = addByFrequency(form.data_vencimento, intervalo * i, recPeriodo);
+        if (limite && new Date(vencimento + "T12:00:00") > limite) break;
+        recurrences.push({
+          ...base,
+          data_competencia: competencia,
+          data_vencimento: vencimento,
+          movimentacao_pai_id: parent.id,
+          recorrente: true,
+          frequencia_recorrencia: recPeriodo,
+        });
+      }
+      if (recurrences.length > 0) {
+        await supabase.from("movimentacoes").insert(recurrences as any);
+      }
+      // Atualiza pai para marcar como recorrente
+      await supabase
+        .from("movimentacoes")
+        .update({ recorrente: true, frequencia_recorrencia: recPeriodo } as any)
+        .eq("id", parent.id);
+    }
+
     setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar");
+    toast.success(isPagar ? "Conta a pagar cadastrada com sucesso" : "Conta a receber cadastrada com sucesso");
+    navigate("/financeiro/movimentacoes");
+  }
+
+  async function handleSaveEdit() {
+    if (!mov) return;
+    if (!validate()) return;
+    setSaving(true);
+    const { data: updated, error } = await supabase
+      .from("movimentacoes")
+      .update(buildPayload() as any)
+      .eq("id", mov.id)
+      .select()
+      .maybeSingle();
+    setSaving(false);
+    if (error || !updated) {
+      toast.error("Erro ao salvar. Tente novamente.");
       return;
     }
     toast.success("Alterações salvas!");
-    if (closeAfter) navigate("/financeiro/movimentacoes");
-    else void load();
+    setMov(updated);
   }
 
   function openDarBaixa() {
@@ -340,7 +487,6 @@ export default function MovimentacaoDetalhe() {
       toast.error("Erro ao remover anexo");
       return;
     }
-    // tenta remover do storage (best-effort)
     try {
       const url: string = anexo.url || "";
       const idx = url.indexOf(`/${ANEXOS_BUCKET}/`);
@@ -362,10 +508,18 @@ export default function MovimentacaoDetalhe() {
     );
   }
 
-  if (!mov) return null;
+  if (!isCreate && !mov) return null;
 
-  const podeBaixa = mov.status !== "pago" && mov.status !== "cancelado";
+  const podeBaixa = !isCreate && mov && mov.status !== "pago" && mov.status !== "cancelado";
   const totalColor = isPagar ? "text-destructive" : "text-success";
+
+  const headerTitle = isCreate
+    ? isPagar
+      ? "Nova Conta a Pagar"
+      : "Nova Conta a Receber"
+    : isPagar
+      ? "Editar Conta a Pagar"
+      : "Editar Conta a Receber";
 
   return (
     <div className="space-y-6 pb-28 max-w-5xl mx-auto">
@@ -379,7 +533,7 @@ export default function MovimentacaoDetalhe() {
             <FileText className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Editar Movimentação</h1>
+            <h1 className="text-xl font-bold">{headerTitle}</h1>
             <p className="text-sm text-muted-foreground">Preencha os dados da movimentação financeira</p>
           </div>
         </div>
@@ -392,81 +546,175 @@ export default function MovimentacaoDetalhe() {
           <section>
             <SectionHeader icon={FileText} title="Dados Principais" />
             <div className="space-y-4">
+              {/* Tipo de Movimentação — apenas no create */}
+              {isCreate && (
+                <div>
+                  <Label className="text-[13px] font-medium mb-1.5 block">Tipo de Movimentação *</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTipoLocal("despesa");
+                        setForm((prev) => ({ ...prev, cliente_id: "", categoria_id: "" }));
+                      }}
+                      className={cn(
+                        "rounded-lg border-2 p-4 text-left transition-all",
+                        isPagar
+                          ? "border-destructive bg-destructive/5"
+                          : "border-input bg-background hover:border-muted-foreground/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-9 w-9 rounded-md flex items-center justify-center",
+                          isPagar ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"
+                        )}>
+                          <ArrowDown className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">Conta a Pagar</p>
+                          <p className="text-xs text-muted-foreground">Saída de recursos</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTipoLocal("receita");
+                        setForm((prev) => ({ ...prev, fornecedor_id: "", categoria_id: "" }));
+                      }}
+                      className={cn(
+                        "rounded-lg border-2 p-4 text-left transition-all",
+                        !isPagar
+                          ? "border-success bg-success/5"
+                          : "border-input bg-background hover:border-muted-foreground/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-9 w-9 rounded-md flex items-center justify-center",
+                          !isPagar ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+                        )}>
+                          <ArrowUp className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">Conta a Receber</p>
+                          <p className="text-xs text-muted-foreground">Entrada de recursos</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Fornecedor / Cliente */}
+              <div className="transition-opacity duration-150">
+                <Label className="text-[13px] font-medium mb-1.5 block">{isPagar ? "Fornecedor *" : "Cliente *"}</Label>
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  {isPagar ? (
+                    <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                          {selectedFornecedorNome || "Selecione..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput placeholder="Buscar fornecedor..." value={fornecedorSearch} onValueChange={setFornecedorSearch} />
+                          <CommandList>
+                            <CommandEmpty>{fornecedorSearch.trim() ? "Nenhum encontrado" : "Digite para buscar"}</CommandEmpty>
+                            <CommandGroup>
+                              {filteredFornecedores.map((f) => (
+                                <CommandItem
+                                  key={f.id}
+                                  value={f.id}
+                                  onSelect={() => {
+                                    setForm({ ...form, fornecedor_id: f.id });
+                                    setFornecedorOpen(false);
+                                    setFornecedorSearch("");
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", form.fornecedor_id === f.id ? "opacity-100" : "opacity-0")} />
+                                  {f.nome}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                            {showCreateFornecedor && (
+                              <CommandGroup>
+                                <CommandItem onSelect={handleCreateFornecedor} className="text-primary font-medium">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Criar "{fornecedorSearch.trim()}"
+                                </CommandItem>
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                          {selectedClienteNome || "Selecione..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput placeholder="Buscar cliente..." value={clienteSearch} onValueChange={setClienteSearch} />
+                          <CommandList>
+                            <CommandEmpty>{clienteSearch.trim() ? "Nenhum encontrado" : "Digite para buscar"}</CommandEmpty>
+                            <CommandGroup>
+                              {filteredClientes.map((c) => (
+                                <CommandItem
+                                  key={c.id}
+                                  value={c.id}
+                                  onSelect={() => {
+                                    setForm({ ...form, cliente_id: c.id });
+                                    setClienteOpen(false);
+                                    setClienteSearch("");
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", form.cliente_id === c.id ? "opacity-100" : "opacity-0")} />
+                                  {c.nome}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                            {showCreateCliente && (
+                              <CommandGroup>
+                                <CommandItem onSelect={handleCreateCliente} className="text-primary font-medium">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Criar "{clienteSearch.trim()}"
+                                </CommandItem>
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={() => {
+                      if (isPagar) { setFornecedorOpen(true); setFornecedorSearch(""); }
+                      else { setClienteOpen(true); setClienteSearch(""); }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Descrição da Movimentação *</Label>
                 <Input
                   value={form.descricao}
                   onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-                  placeholder="Ex: Pagamento mensal de aluguel"
+                  placeholder="Descrição da movimentação"
                 />
-              </div>
-              <div>
-                <Label className="text-[13px] font-medium mb-1.5 block">{isPagar ? "Fornecedor *" : "Cliente *"}</Label>
-                {isPagar ? (
-                  <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-                        {selectedFornecedorNome || "Selecione..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar fornecedor..." />
-                        <CommandList>
-                          <CommandEmpty>Nenhum encontrado.</CommandEmpty>
-                          <CommandGroup>
-                            {fornecedores.map((f) => (
-                              <CommandItem
-                                key={f.id}
-                                value={f.nome}
-                                onSelect={() => {
-                                  setForm({ ...form, fornecedor_id: f.id });
-                                  setFornecedorOpen(false);
-                                }}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", form.fornecedor_id === f.id ? "opacity-100" : "opacity-0")} />
-                                {f.nome}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                ) : (
-                  <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-                        {selectedClienteNome || "Selecione..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar cliente..." />
-                        <CommandList>
-                          <CommandEmpty>Nenhum encontrado.</CommandEmpty>
-                          <CommandGroup>
-                            {clientes.map((c) => (
-                              <CommandItem
-                                key={c.id}
-                                value={c.nome}
-                                onSelect={() => {
-                                  setForm({ ...form, cliente_id: c.id });
-                                  setClienteOpen(false);
-                                }}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", form.cliente_id === c.id ? "opacity-100" : "opacity-0")} />
-                                {c.nome}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                )}
               </div>
             </div>
           </section>
@@ -522,7 +770,7 @@ export default function MovimentacaoDetalhe() {
           {/* 3. DATAS E CONDIÇÕES */}
           <section>
             <SectionHeader icon={CalendarDays} title="Datas e Condições" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Data de Competência *</Label>
                 <Input
@@ -540,32 +788,13 @@ export default function MovimentacaoDetalhe() {
                 />
               </div>
               <div>
-                <Label className="text-[13px] font-medium mb-1.5 block">Forma de Pagamento</Label>
-                <Select
-                  value={form.meio_pagamento_id || "none"}
-                  onValueChange={(v) => setForm({ ...form, meio_pagamento_id: v === "none" ? "" : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Nenhuma —</SelectItem>
-                    {meios.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Conta Bancária</Label>
                 <Select
                   value={form.conta_bancaria_id || "none"}
                   onValueChange={(v) => setForm({ ...form, conta_bancaria_id: v === "none" ? "" : v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
+                    <SelectValue placeholder="Nenhuma" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Nenhuma —</SelectItem>
@@ -578,10 +807,12 @@ export default function MovimentacaoDetalhe() {
                 </Select>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2">
-              <span className="text-[13px] text-muted-foreground">Status:</span>
-              <StatusBadge status={mov.status as StatusType} />
-            </div>
+            {!isCreate && mov && (
+              <div className="mt-4 flex items-center gap-2">
+                <span className="text-[13px] text-muted-foreground">Status:</span>
+                <StatusBadge status={mov.status as StatusType} />
+              </div>
+            )}
           </section>
 
           {/* 4. VALORES E ENCARGOS */}
@@ -645,30 +876,33 @@ export default function MovimentacaoDetalhe() {
             </div>
           </section>
 
-          {/* 5. IMPOSTOS RETIDOS */}
-          <section>
-            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-              <p className="text-[11px] font-semibold text-destructive tracking-widest uppercase mb-1">
-                Impostos Retidos na Fonte (-)
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">Não interferem no valor total previsto</p>
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                {(["pis", "cofins", "csll", "iss", "ir", "inss"] as const).map((k) => (
-                  <div key={k}>
-                    <Label className="text-[11px] font-medium uppercase mb-1 block">{k}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={(form as any)[k]}
-                      onChange={(e) => setForm({ ...form, [k]: e.target.value } as any)}
-                      placeholder="0,00"
-                      className="h-9 text-sm"
-                    />
-                  </div>
-                ))}
+          {/* 5. IMPOSTOS RETIDOS — apenas para Conta a Pagar */}
+          {isPagar && (
+            <section>
+              <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
+                <p className="text-[11px] font-semibold text-warning-foreground tracking-widest uppercase mb-1 flex items-center gap-2">
+                  <Landmark className="h-3.5 w-3.5" />
+                  Impostos Retidos na Fonte (-)
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">Não interferem no valor total previsto</p>
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                  {(["pis", "cofins", "csll", "iss", "ir", "inss"] as const).map((k) => (
+                    <div key={k}>
+                      <Label className="text-[11px] font-medium uppercase mb-1 block text-destructive">{k}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={(form as any)[k]}
+                        onChange={(e) => setForm({ ...form, [k]: e.target.value } as any)}
+                        placeholder="0,00"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* 6. OBSERVAÇÕES */}
           <section>
@@ -677,96 +911,153 @@ export default function MovimentacaoDetalhe() {
               rows={4}
               value={form.observacoes}
               onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-              placeholder="Adicione observações sobre esta movimentação..."
+              placeholder="Observações adicionais..."
             />
           </section>
 
-          {/* 7. ANEXOS */}
-          <section>
-            <SectionHeader icon={Paperclip} title="Anexos" />
-            <div className="space-y-2">
-              {anexos.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 rounded-md border border-border p-3">
-                  <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <a
-                    href={a.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm font-medium text-primary hover:underline truncate max-w-[200px]"
-                    title={a.nome_arquivo}
-                  >
-                    {a.nome_arquivo}
-                  </a>
-                  <Input
-                    placeholder="Descrição do anexo..."
-                    defaultValue={a.descricao || ""}
-                    onBlur={(e) => {
-                      if ((e.target.value || "") !== (a.descricao || "")) {
-                        void updateAnexoDescricao(a.id, e.target.value);
-                      }
-                    }}
-                    className="flex-1 h-9 text-sm"
-                  />
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{formatBytes(a.tamanho_bytes)}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAnexo(a)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+          {/* 7. ANEXOS — apenas para movimentação existente */}
+          {!isCreate && (
+            <section>
+              <SectionHeader icon={Paperclip} title="Anexos" />
+              <div className="space-y-2">
+                {anexos.map((a) => (
+                  <div key={a.id} className="flex items-center gap-3 rounded-md border border-border p-3">
+                    <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <a
+                      href={a.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm font-medium text-primary hover:underline truncate max-w-[200px]"
+                      title={a.nome_arquivo}
+                    >
+                      {a.nome_arquivo}
+                    </a>
+                    <Input
+                      placeholder="Descrição do anexo..."
+                      defaultValue={a.descricao || ""}
+                      onBlur={(e) => {
+                        if ((e.target.value || "") !== (a.descricao || "")) {
+                          void updateAnexoDescricao(a.id, e.target.value);
+                        }
+                      }}
+                      className="flex-1 h-9 text-sm"
+                    />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatBytes(a.tamanho_bytes)}</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAnexo(a)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
 
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full rounded-md border border-dashed border-input bg-muted/30 hover:bg-muted/60 transition-colors p-4 flex items-center justify-center gap-2 text-sm text-muted-foreground"
-              >
-                <Upload className="h-4 w-4" />
-                {uploading ? "Enviando..." : "Clique para anexar arquivo"}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void handleFileSelected(f);
-                  e.target.value = "";
-                }}
-              />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full rounded-md border border-dashed border-input bg-muted/30 hover:bg-muted/60 transition-colors p-4 flex items-center justify-center gap-2 text-sm text-muted-foreground"
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploading ? "Enviando..." : "Clique para anexar arquivo ou arraste aqui"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,image/*,.doc,.docx"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleFileSelected(f);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            </section>
+          )}
+
+          {/* 8. RECORRÊNCIA — apenas para create */}
+          {isCreate && (
+            <section>
+              <div className="rounded-lg border border-input p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Conta recorrente</p>
+                      <p className="text-xs text-muted-foreground">Cria automaticamente múltiplas ocorrências</p>
+                    </div>
+                  </div>
+                  <Switch checked={recorrente} onCheckedChange={setRecorrente} />
+                </div>
+                {recorrente && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                    <div>
+                      <Label className="text-[12px] font-medium mb-1.5 block">A cada</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={recIntervalo}
+                        onChange={(e) => setRecIntervalo(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[12px] font-medium mb-1.5 block">Período</Label>
+                      <Select value={recPeriodo} onValueChange={(v) => setRecPeriodo(v as any)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="diario">Dia(s)</SelectItem>
+                          <SelectItem value="semanal">Semana(s)</SelectItem>
+                          <SelectItem value="mensal">Mês(es)</SelectItem>
+                          <SelectItem value="anual">Ano(s)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[12px] font-medium mb-1.5 block">Repetir até (opcional)</Label>
+                      <Input type="date" value={recAte} onChange={(e) => setRecAte(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Footer com ações dentro do card */}
+          <div className="border-t border-border pt-4 flex items-center gap-2 flex-wrap">
+            {!isCreate && (
+              <>
+                <Button variant="destructive" onClick={() => setOpenDelete(true)} className="gap-1.5">
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </Button>
+                {podeBaixa && (
+                  <Button
+                    variant="outline"
+                    onClick={openDarBaixa}
+                    className="gap-1.5 border-success text-success hover:bg-success hover:text-white"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
+                  </Button>
+                )}
+              </>
+            )}
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => navigate("/financeiro/movimentacoes")}>
+                Cancelar
+              </Button>
+              {isCreate ? (
+                <Button onClick={handleCreate} disabled={saving} className="gap-1.5">
+                  <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Confirmar Cadastro"}
+                </Button>
+              ) : (
+                <Button onClick={handleSaveEdit} disabled={saving} className="gap-1.5">
+                  <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              )}
             </div>
-          </section>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Footer fixo de ações */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-[var(--sidebar-width,16rem)] bg-background border-t border-border p-4 z-30">
-        <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
-          <Button variant="destructive" onClick={() => setOpenDelete(true)} className="gap-1.5">
-            <Trash2 className="h-4 w-4" /> Excluir
-          </Button>
-          {podeBaixa && (
-            <Button
-              variant="outline"
-              onClick={openDarBaixa}
-              className="gap-1.5 border-success text-success hover:bg-success hover:text-white"
-            >
-              <CheckCircle className="h-4 w-4" />
-              {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
-            </Button>
-          )}
-          <div className="ml-auto flex items-center gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => navigate("/financeiro/movimentacoes")}>
-              Cancelar
-            </Button>
-            <Button variant="outline" onClick={() => handleSave(true)} disabled={saving} className="gap-1.5">
-              <Save className="h-4 w-4" /> Salvar e Fechar
-            </Button>
-            <Button variant="destructive" onClick={() => handleSave(false)} disabled={saving} className="gap-1.5">
-              <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
-        </div>
-      </div>
 
       {/* Confirm delete */}
       <AlertDialog open={openDelete} onOpenChange={setOpenDelete}>
