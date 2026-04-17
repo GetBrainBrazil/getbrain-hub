@@ -250,21 +250,7 @@ export default function CategoriasTab({ search }: { search: string }) {
               tipo: tipoNode.config.key,
             });
           });
-          // fixed "+ Adicionar" placeholder for contas
-          out.push({
-            kind: "add-placeholder",
-            level: 3,
-            tipo: tipoNode.config.key,
-            subId: sub.id,
-          });
         }
-      });
-
-      // fixed "+ Adicionar" placeholder for subcategorias
-      out.push({
-        kind: "add-placeholder",
-        level: 2,
-        tipo: tipoNode.config.key,
       });
     });
     return out;
