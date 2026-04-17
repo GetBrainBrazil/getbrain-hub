@@ -343,16 +343,24 @@ export default function Relatorios() {
           </TableRow>
         );
       } else if (line.type === "detail") {
+        const detailKey = `${line.label}-${idx}`;
+        const isOpen = expandedDetailKey === detailKey;
+        const colSpan = compare ? 4 : 2;
         rows.push(
           <TableRow
             key={idx}
-            className="group cursor-pointer hover:bg-muted/30 transition-colors"
-            onClick={() => openDetail(line)}
+            className="cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => toggleDetail(detailKey)}
           >
             <TableCell className="py-2.5">
-              <div className="flex items-center justify-between pl-8">
+              <div className="flex items-center gap-2 pl-6">
+                <ChevronRight
+                  className={cn(
+                    "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                    isOpen && "rotate-90"
+                  )}
+                />
                 <span className="text-sm">{line.label}</span>
-                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </TableCell>
             <TableCell className="text-right font-mono text-sm py-2.5">{formatCurrency(line.value)}</TableCell>
@@ -368,6 +376,50 @@ export default function Relatorios() {
             )}
           </TableRow>
         );
+        if (isOpen) {
+          rows.push(
+            <TableRow key={`${idx}-detail`} className="hover:bg-transparent border-b-0">
+              <TableCell colSpan={colSpan} className="p-0 bg-muted/30">
+                <div className="overflow-hidden animate-accordion-down">
+                  <div className="px-12 py-3">
+                    {(line.items && line.items.length > 0) ? (
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-muted-foreground border-b border-border/50">
+                            <th className="text-left font-medium py-1.5 pr-4">Data</th>
+                            <th className="text-left font-medium py-1.5 pr-4">Descrição</th>
+                            <th className="text-left font-medium py-1.5 pr-4">Cliente / Fornecedor</th>
+                            <th className="text-right font-medium py-1.5">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {line.items.map(item => (
+                            <tr key={item.id} className="border-b border-border/30 last:border-0">
+                              <td className="py-1.5 pr-4 text-muted-foreground">
+                                {item.data_pagamento ? formatDate(item.data_pagamento) : "—"}
+                              </td>
+                              <td className="py-1.5 pr-4">{item.descricao}</td>
+                              <td className="py-1.5 pr-4 text-muted-foreground">
+                                {item.cliente_id ? clientes[item.cliente_id] || "—" : item.fornecedor_id ? fornecedores[item.fornecedor_id] || "—" : "—"}
+                              </td>
+                              <td className="py-1.5 text-right font-mono">
+                                {formatCurrency(Math.abs(item.valor_realizado || 0))}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic py-2">
+                        Nenhum lançamento nesta categoria para o período selecionado
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        }
       } else if (line.type === "subtotal") {
         const isReceitaLiquida = line.label === "= Receita Líquida";
         rows.push(
