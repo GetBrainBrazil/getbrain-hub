@@ -15,6 +15,7 @@ import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, Phone, M
 import { formatCurrency } from "@/lib/formatters";
 import { FormMode, FormPageShell, FormSection, DetailField, ESTADOS_BR, applyCpfMask, applyPhoneMask, applyCepMask, applyMoneyMask, parseMoney, formatMoneyForInput, formatCpfCnpj, formatPhone, formatDateBR, buildAddressString } from "./shared";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { useURLState } from "@/hooks/useURLState";
 
 type Form = {
   nome: string; cargo: string; cpf: string;
@@ -29,8 +30,8 @@ const formatTipoConta = (t: string) => t === "poupanca" ? "Poupança" : "Corrent
 
 export default function ColaboradoresTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [filterCargo, setFilterCargo] = useState("__all__");
-  const [filterStatus, setFilterStatus] = useState("__all__");
+  const [filterCargo, setFilterCargo] = useURLState<string>("cargo", "__all__");
+  const [filterStatus, setFilterStatus] = useURLState<string>("status", "__all__");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [mode, setMode] = useState<FormMode>("list");

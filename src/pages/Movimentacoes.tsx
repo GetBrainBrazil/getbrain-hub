@@ -4,6 +4,7 @@ import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckC
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState } from "@/hooks/useURLState";
 import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -41,7 +42,7 @@ export default function Movimentacoes() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
-  const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
+  const [tab, setTab] = useURLState<string>("aba", "pagar");
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
   const [loadingByTab, setLoadingByTab] = useState<Record<TabType, boolean>>({ pagar: true, receber: true });
   const [referencesLoading, setReferencesLoading] = useState(true);
@@ -51,9 +52,9 @@ export default function Movimentacoes() {
   const [contas, setContas] = useState<any[]>([]);
   const [projetos, setProjetos] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
-  const [search, setSearch] = usePersistedState("movimentacoes_search", "");
-  const [statusFilter, setStatusFilter] = usePersistedState("movimentacoes_status", "todas");
-  const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("movimentacoes_period", "month");
+  const [search, setSearch] = useURLState<string>("busca", "");
+  const [statusFilter, setStatusFilter] = useURLState<string>("status", "todas");
+  const [periodPreset, setPeriodPreset] = useURLState<string>("periodo", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
@@ -84,10 +85,10 @@ export default function Movimentacoes() {
     observacoes_pagamento: "",
   });
 
-  const tipo = tipoByTab[tab];
+  const tipo = tipoByTab[tab as TabType];
   const isPagar = tab === "pagar";
-  const movs = movsByTab[tab];
-  const loading = referencesLoading || loadingByTab[tab];
+  const movs = movsByTab[tab as TabType];
+  const loading = referencesLoading || loadingByTab[tab as TabType];
 
   useEffect(() => {
     void loadInitialData();
@@ -207,7 +208,7 @@ export default function Movimentacoes() {
 
   const selectedClienteNome = clientes.find(c => c.id === form.cliente_id)?.nome;
 
-  const periodRange = useMemo(() => getDateRange(periodPreset, periodCustom), [periodPreset, periodCustom]);
+  const periodRange = useMemo(() => getDateRange(periodPreset as PeriodPreset, periodCustom), [periodPreset, periodCustom]);
 
   const periodFiltered = useMemo(() => {
     if (!periodRange.startDate && !periodRange.endDate) return movs;
@@ -314,7 +315,7 @@ export default function Movimentacoes() {
     );
     setOpenNew(false);
     resetForm();
-    void refreshTabs([tab]);
+    void refreshTabs([tab as TabType]);
   }
 
   function resetForm() {
@@ -402,11 +403,11 @@ export default function Movimentacoes() {
 
     toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
     setOpenBaixa(false);
-    void refreshTabs([tab]);
+    void refreshTabs([tab as TabType]);
   }
 
   async function handleDelete(id: string) {
-    const mov = (movsByTab[tab] || []).find((x: any) => x.id === id);
+    const mov = (movsByTab[tab as TabType] || []).find((x: any) => x.id === id);
     const ok = await confirmDialog({
       title: "Excluir Movimentação",
       description: (
@@ -422,7 +423,7 @@ export default function Movimentacoes() {
     if (!ok) return;
     const { error } = await supabase.from("movimentacoes").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir movimentação"); return; }
-    await refreshTabs([tab]);
+    await refreshTabs([tab as TabType]);
     toast.success("Movimentação excluída com sucesso");
   }
 
@@ -439,7 +440,7 @@ export default function Movimentacoes() {
     });
     if (error) { toast.error("Erro ao duplicar"); return; }
     toast.success("Movimentação duplicada!");
-    void refreshTabs([tab]);
+    void refreshTabs([tab as TabType]);
   }
 
   function openEditModal(m: any) {
@@ -542,7 +543,7 @@ export default function Movimentacoes() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <PeriodFilter preset={periodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
+        <PeriodFilter preset={periodPreset as PeriodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
         <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
           <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
           Exibir Saldos Parciais

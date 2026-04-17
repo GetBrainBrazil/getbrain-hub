@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState } from "@/hooks/useURLState";
 import { PeriodFilter, PeriodPreset, getDateRange } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
@@ -17,11 +18,11 @@ import { HelpTooltip } from "@/components/HelpTooltip";
 
 export default function ExtratosBancarios() {
   const navigate = useNavigate();
-  const [contaId, setContaId] = usePersistedState<string>("extrato_conta_id", "all");
-  const [preset, setPreset] = usePersistedState<PeriodPreset>("extrato_preset", "month");
+  const [contaId, setContaId] = useURLState<string>("conta", "all");
+  const [preset, setPreset] = useURLState<string>("periodo", "month");
   const [customRange, setCustomRange] = usePersistedState<{ start: string | null; end: string | null }>("extrato_custom_range", { start: null, end: null });
   const [sort, setSort] = useState<SortConfig>({ key: null, direction: null });
-  const [subTab, setSubTab] = usePersistedState<string>("extrato_subtab", "todas");
+  const [subTab, setSubTab] = useURLState<string>("subtab", "todas");
   const [importOpen, setImportOpen] = useState(false);
 
   const { data: contas = [] } = useQuery({
@@ -34,7 +35,7 @@ export default function ExtratosBancarios() {
 
   const contaSelecionada = contas.find((c) => c.id === contaId);
   const saldoInicial = contaSelecionada?.saldo_inicial ?? 0;
-  const dateRange = useMemo(() => getDateRange(preset, customRange), [preset, customRange]);
+  const dateRange = useMemo(() => getDateRange(preset as PeriodPreset, customRange), [preset, customRange]);
 
   const { data: movimentacoes = [] } = useQuery({
     queryKey: ["extrato_movimentacoes", contaId, dateRange.startDate?.toISOString(), dateRange.endDate?.toISOString()],
@@ -116,7 +117,7 @@ export default function ExtratosBancarios() {
             ))}
           </SelectContent>
         </Select>
-        <PeriodFilter preset={preset} customRange={customRange} onPresetChange={setPreset} onCustomRangeChange={setCustomRange} />
+        <PeriodFilter preset={preset as PeriodPreset} customRange={customRange} onPresetChange={setPreset} onCustomRangeChange={setCustomRange} />
         <div className="flex-1" />
         <Button onClick={() => setImportOpen(true)} className="gap-2">
           <Upload className="h-4 w-4" /> Importar Extrato

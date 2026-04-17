@@ -23,6 +23,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState } from "@/hooks/useURLState";
 import {
   ComposedChart, Area, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend
@@ -62,9 +63,9 @@ interface GroupedPeriod {
 }
 
 export default function FluxoCaixaTab() {
-  const [contaFilter, setContaFilter] = usePersistedState("fluxo-conta", "todas");
-  const [periodFilter, setPeriodFilter] = usePersistedState("fluxo-period", "60dias");
-  const [groupBy, setGroupBy] = usePersistedState("fluxo-group", "diario");
+  const [contaFilter, setContaFilter] = useURLState<string>("fc_conta", "todas");
+  const [periodFilter, setPeriodFilter] = useURLState<string>("fc_periodo", "60dias");
+  const [groupBy, setGroupBy] = useURLState<string>("fc_grupo", "diario");
   const [customStart, setCustomStart] = useState<Date | undefined>();
   const [customEnd, setCustomEnd] = useState<Date | undefined>();
   const [contas, setContas] = useState<ContaBancaria[]>([]);

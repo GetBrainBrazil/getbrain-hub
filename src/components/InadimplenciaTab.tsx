@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { format, subDays, startOfYear, differenceInDays, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState } from "@/hooks/useURLState";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, Cell } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -59,10 +60,10 @@ function getAgingBadgeClass(dias: number): string {
 
 export default function InadimplenciaTab() {
   const navigate = useNavigate();
-  const [period, setPeriod] = usePersistedState("inad-period", "90dias");
+  const [period, setPeriod] = useURLState<string>("in_periodo", "90dias");
   const [customStart, setCustomStart] = useState<Date | undefined>();
   const [customEnd, setCustomEnd] = useState<Date | undefined>();
-  const [clienteFilter, setClienteFilter] = usePersistedState("inad-cliente", "todos");
+  const [clienteFilter, setClienteFilter] = useURLState<string>("in_cliente", "todos");
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [atrasados, setAtrasados] = useState<InadMovimentacao[]>([]);
   const [totalFaturado, setTotalFaturado] = useState(0);

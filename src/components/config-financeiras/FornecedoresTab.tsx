@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Eye, X, Copy, Check, Trash2, FileText, Phone, MapPin, StickyNote } from "lucide-react";
 import { FormMode, FormPageShell, FormSection, DetailField, ESTADOS_BR, applyCpfCnpjMask, applyPhoneMask, applyCepMask, formatCpfCnpj, formatPhone, buildAddressString } from "./shared";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { useURLState } from "@/hooks/useURLState";
 
 type Form = {
   nome: string; tipo_pessoa: "PF" | "PJ"; cpf_cnpj: string; razao_social: string;
@@ -25,8 +26,8 @@ const empty: Form = { nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", razao_social: "
 
 export default function FornecedoresTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [filterTipo, setFilterTipo] = useState("__all__");
-  const [filterStatus, setFilterStatus] = useState("__all__");
+  const [filterTipo, setFilterTipo] = useURLState<string>("tipo_pessoa", "__all__");
+  const [filterStatus, setFilterStatus] = useURLState<string>("status", "__all__");
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Landmark, Users, Truck, Target, Tags, UserRound, Lightbulb, X } from "lucide-react";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState } from "@/hooks/useURLState";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 import ContasBancariasTab from "@/components/config-financeiras/ContasBancariasTab";
@@ -25,10 +26,10 @@ const tabConfig = {
 type TabKey = keyof typeof tabConfig;
 
 export default function ConfiguracoesFinanceiras() {
-  const [activeTab, setActiveTab] = usePersistedState<TabKey>("fin_config_tab", "contas");
+  const [activeTab, setActiveTab] = useURLState<string>("tab", "contas");
   // Migrate legacy "plano" value to "colaboradores"
-  useEffect(() => { if ((activeTab as string) === "plano") setActiveTab("colaboradores"); }, []);
-  const [search, setSearch] = useState("");
+  useEffect(() => { if (activeTab === "plano") setActiveTab("colaboradores"); }, []);
+  const [search, setSearch] = useURLState<string>("busca", "");
   const [tipDismissed, setTipDismissed] = usePersistedState<boolean>("config_fin_tip_dismissed", false);
 
   return (
@@ -56,7 +57,7 @@ export default function ConfiguracoesFinanceiras() {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabKey); setSearch(""); }}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <TabsList>
             {Object.entries(tabConfig).map(([key, cfg]) => (
