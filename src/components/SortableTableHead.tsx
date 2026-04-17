@@ -1,3 +1,4 @@
+import * as React from "react";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -11,9 +12,10 @@ interface SortableTableHeadProps {
   currentSort: SortConfig;
   onSort: (config: SortConfig) => void;
   className?: string;
+  extra?: React.ReactNode;
 }
 
-export function SortableTableHead({ label, sortKey, currentSort, onSort, className }: SortableTableHeadProps) {
+export function SortableTableHead({ label, sortKey, currentSort, onSort, className, extra }: SortableTableHeadProps) {
   const isActive = currentSort.key === sortKey;
   const direction = isActive ? currentSort.direction : null;
 
@@ -34,6 +36,7 @@ export function SortableTableHead({ label, sortKey, currentSort, onSort, classNa
       <div className="flex items-center gap-1">
         {label}
         <Icon className={cn("h-3.5 w-3.5", isActive ? "text-foreground" : "text-muted-foreground/50")} />
+        {extra && <span onClick={(e) => e.stopPropagation()} className="ml-1 inline-flex">{extra}</span>}
       </div>
     </TableHead>
   );

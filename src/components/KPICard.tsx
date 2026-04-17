@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 interface KPICardProps {
   title: string;
@@ -12,9 +13,10 @@ interface KPICardProps {
   isCurrency?: boolean;
   badgeText?: string;
   badgeVariant?: "warning" | "danger";
+  helpText?: string;
 }
 
-export function KPICard({ title, value, icon: Icon, variant = "default", change, isCurrency = true, badgeText, badgeVariant = "danger" }: KPICardProps) {
+export function KPICard({ title, value, icon: Icon, variant = "default", change, isCurrency = true, badgeText, badgeVariant = "danger", helpText }: KPICardProps) {
   const dynamicVariant = variant === "dynamic" ? (value >= 0 ? "success" : "danger") : variant;
 
   const iconColors: Record<string, string> = {
@@ -26,7 +28,10 @@ export function KPICard({ title, value, icon: Icon, variant = "default", change,
   return (
     <Card className="animate-fade-slide">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          {helpText && <HelpTooltip content={helpText} />}
+        </div>
         <Icon className={cn("h-5 w-5", iconColors[dynamicVariant] || "text-accent")} />
       </CardHeader>
       <CardContent>

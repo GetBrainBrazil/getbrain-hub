@@ -26,6 +26,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { HelpTooltip } from "@/components/HelpTooltip";
+import { Lightbulb } from "lucide-react";
 
 type TabType = "pagar" | "receber";
 
@@ -53,6 +55,7 @@ export default function Movimentacoes() {
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
+  const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -448,7 +451,10 @@ export default function Movimentacoes() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">Movimentações</h1>
-          <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
+            <HelpTooltip content="Aqui você registra todas as entradas e saídas financeiras da empresa. Use 'Conta a Pagar' para despesas e 'Conta a Receber' para receitas." />
+          </div>
         </div>
         <div className="flex gap-2">
           <Button
@@ -477,12 +483,25 @@ export default function Movimentacoes() {
           </>
         ) : (
           <>
-            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} />
-            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" />
-            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" />
+            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
+            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
+            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
           </>
         )}
       </div>
+
+      {/* Tip banner (first visit / no movements) */}
+      {!tipBannerDismissed && !loading && movs.length === 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 animate-fade-in">
+          <Lightbulb className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+          <p className="text-sm text-foreground flex-1">
+            <span className="font-semibold">Dica:</span> comece registrando suas despesas fixas (aluguel, ferramentas, salários) como Contas a Pagar, e os recebimentos de clientes como Contas a Receber.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => setTipBannerDismissed(true)} className="shrink-0">
+            Entendi
+          </Button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-border">
@@ -498,6 +517,7 @@ export default function Movimentacoes() {
         >
           A Receber
         </button>
+        <HelpTooltip content="A aba 'A Pagar' mostra suas despesas e obrigações. A aba 'A Receber' mostra valores que clientes devem para você." className="mb-2" />
       </div>
 
       {/* Filters */}
@@ -510,8 +530,9 @@ export default function Movimentacoes() {
         <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
           <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
           Exibir Saldos Parciais
+          <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
         </label>
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1.5">
           {statusButtons.map(s => (
             <Button
               key={s.key}
@@ -523,6 +544,7 @@ export default function Movimentacoes() {
               {s.label}
             </Button>
           ))}
+          <HelpTooltip content="Filtre as movimentações por status: Pendentes aguardam pagamento, Pagas já foram liquidadas, Atrasadas passaram do vencimento sem pagamento." className="ml-1" />
         </div>
       </div>
 
@@ -542,7 +564,7 @@ export default function Movimentacoes() {
                   <SortableTableHead label="VALOR" sortKey="valor_previsto" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground text-right" />
                   <SortableTableHead label="VENCIMENTO" sortKey="data_vencimento" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
                   <SortableTableHead label={isPagar ? "PAGAMENTO" : "RECEBIMENTO"} sortKey="data_pagamento" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
-                  <SortableTableHead label="STATUS" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
+                  <SortableTableHead label="STATUS" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" extra={<HelpTooltip content="Pago: liquidado com sucesso. Pendente: aguardando vencimento. Atrasado: vencimento ultrapassado sem pagamento." />} />
                   <TableHead className="w-12 text-[11px] font-semibold tracking-wider text-muted-foreground"></TableHead>
                 </TableRow>
               </TableHeader>
