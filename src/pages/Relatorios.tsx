@@ -68,29 +68,22 @@ function getPreviousPeriodDates(start: Date, end: Date): { start: Date; end: Dat
   return { start: prevStart, end: prevEnd };
 }
 
-// ── DRE structure definition ──
-const DRE_STRUCTURE = {
-  receita: {
-    label: "RECEITA BRUTA",
-    categories: ["Consultoria", "Licenças/Revenda", "Mensalidades", "Projetos", "Outros"],
-    subtotalLabel: "= Total Receita Bruta",
-  },
-  deducoes: {
-    label: "(-) DEDUÇÕES SOBRE RECEITA",
-    categories: ["Impostos sobre serviços"],
-    subtotalLabel: "= Receita Líquida",
-  },
-  despesas_op: {
-    label: "(-) DESPESAS OPERACIONAIS",
-    categories: ["APIs/Ferramentas", "Contabilidade", "Infraestrutura", "Marketing", "Pessoal"],
-    subtotalLabel: "= Total Despesas Operacionais",
-  },
-  despesas_fin: {
-    label: "(-) DESPESAS FINANCEIRAS",
-    categories: ["Taxas e tarifas bancárias"],
-    subtotalLabel: "= Total Despesas Financeiras",
-  },
-};
+// ── DRE section configuration (mapped from category types) ──
+interface DRESection {
+  key: string;
+  label: string;
+  tipo: TipoCategoria;
+  /** subtractive (impostos, despesas, retirada) vs additive (receitas) */
+  sign: 1 | -1;
+  subtotalLabel: string;
+}
+
+const DRE_SECTIONS: DRESection[] = [
+  { key: "receita",     label: "RECEITA BRUTA",                tipo: "receitas", sign:  1, subtotalLabel: "= Total Receita Bruta" },
+  { key: "deducoes",    label: "(-) DEDUÇÕES SOBRE RECEITA",   tipo: "impostos", sign: -1, subtotalLabel: "= Receita Líquida" },
+  { key: "despesas_op", label: "(-) DESPESAS OPERACIONAIS",    tipo: "despesas", sign: -1, subtotalLabel: "= Total Despesas Operacionais" },
+  { key: "retiradas",   label: "(-) RETIRADAS",                tipo: "retirada", sign: -1, subtotalLabel: "= Total Retiradas" },
+];
 
 export default function Relatorios() {
   const [period, setPeriod] = usePersistedState("relatorios-period", "este_mes");
