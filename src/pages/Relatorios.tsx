@@ -390,6 +390,12 @@ export default function Relatorios() {
 
       if (line.type === "group") {
         const isExpanded = expandedGroups[groupKey!];
+        const groupTip: Record<string, string> = {
+          receita: "Soma de todos os recebimentos no período, agrupados por categoria. Clique em cada linha para ver os lançamentos individuais.",
+          deducoes: "Impostos e tributos que incidem sobre a receita, como ISS e DAS do Simples.",
+          despesas_op: "Custos necessários para a operação da empresa: ferramentas, salários, infraestrutura, etc.",
+          retiradas: "Retiradas dos sócios (pró-labore, distribuição de lucros) realizadas no período.",
+        };
         rows.push(
           <TableRow
             key={idx}
@@ -400,6 +406,7 @@ export default function Relatorios() {
               <div className="flex items-center gap-2">
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 {line.label}
+                {groupKey && groupTip[groupKey] && <HelpTooltip content={groupTip[groupKey]} />}
               </div>
             </TableCell>
             <TableCell />
