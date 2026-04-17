@@ -424,48 +424,7 @@ export default function Movimentacoes() {
   }
 
   function openEditModal(m: any) {
-    setForm({
-      descricao: m.descricao || "",
-      cliente_id: m.cliente_id || "",
-      fornecedor_id: m.fornecedor_id || "",
-      projeto_id: m.projeto_id || "",
-      categoria_id: m.categoria_id || "",
-      conta_bancaria_id: m.conta_bancaria_id || "",
-      valor_previsto: String(m.valor_previsto || ""),
-      data_competencia: m.data_competencia || "",
-      data_vencimento: m.data_vencimento || "",
-      observacoes: m.observacoes || "",
-      recorrente: m.recorrente || false,
-      frequencia_recorrencia: m.frequencia_recorrencia || "mensal",
-      quantidade_recorrencia: "12",
-    });
-    setSelectedMov(m);
-    setOpenEdit(true);
-  }
-
-  async function handleEditSave() {
-    if (!selectedMov) return;
-    if (!form.descricao || !form.valor_previsto || !form.data_competencia || !form.data_vencimento) {
-      toast.error("Preencha os campos obrigatórios");
-      return;
-    }
-    const { error } = await supabase.from("movimentacoes").update({
-      descricao: form.descricao,
-      cliente_id: !isPagar ? (form.cliente_id || null) : null,
-      fornecedor_id: isPagar ? (form.fornecedor_id || null) : null,
-      projeto_id: form.projeto_id || null,
-      categoria_id: form.categoria_id || null,
-      conta_bancaria_id: form.conta_bancaria_id || null,
-      valor_previsto: parseFloat(form.valor_previsto),
-      data_competencia: form.data_competencia,
-      data_vencimento: form.data_vencimento,
-      observacoes: form.observacoes || null,
-    }).eq("id", selectedMov.id);
-    if (error) { toast.error("Erro ao atualizar"); return; }
-    toast.success("Movimentação atualizada!");
-    setOpenEdit(false);
-    resetForm();
-    void refreshTabs([tab]);
+    navigate(`/financeiro/movimentacoes/${m.id}`);
   }
 
   const statusButtons = isPagar
@@ -482,200 +441,6 @@ export default function Movimentacoes() {
         { key: "atrasadas", label: "Atrasadas" },
       ];
 
-  // Shared modal form content for both create and edit
-  function renderModalForm(onSave: () => void, saveLabel: string, onCancel: () => void) {
-    return (
-      <div className="space-y-6">
-        {/* DADOS PRINCIPAIS */}
-        <div>
-          <p className="text-[11px] font-medium text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-2">
-            <span className="text-sm">📋</span> DADOS PRINCIPAIS
-          </p>
-          <Separator />
-        </div>
-
-        {/* Entity field: Fornecedor or Cliente */}
-        <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
-          <div>
-            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">
-              {isPagar ? "Fornecedor *" : "Cliente *"}
-            </Label>
-            {isPagar ? (
-              <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={fornecedorOpen} className="w-full justify-between font-normal h-10 text-sm bg-background border-input">
-                    {selectedFornecedorNome || "Selecione..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command shouldFilter={false}>
-                    <CommandInput placeholder="Buscar..." value={fornecedorSearch} onValueChange={setFornecedorSearch} />
-                    <CommandList>
-                      <CommandEmpty>
-                        {fornecedorSearch.trim() ? "Nenhum fornecedor encontrado" : "Digite para buscar"}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {filteredFornecedores.map(f => (
-                          <CommandItem key={f.id} value={f.id} onSelect={() => {
-                            setForm(prev => ({ ...prev, fornecedor_id: f.id }));
-                            setFornecedorOpen(false);
-                            setFornecedorSearch("");
-                          }}>
-                            <Check className={cn("mr-2 h-4 w-4", form.fornecedor_id === f.id ? "opacity-100" : "opacity-0")} />
-                            {f.nome}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                      {showCreateFornecedor && (
-                        <CommandGroup>
-                          <CommandItem onSelect={handleCreateFornecedor} className="text-primary font-medium">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Criar "{fornecedorSearch.trim()}"
-                          </CommandItem>
-                        </CommandGroup>
-                      )}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            ) : (
-              <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={clienteOpen} className="w-full justify-between font-normal h-10 text-sm bg-background border-input">
-                    {selectedClienteNome || "Selecione..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command shouldFilter={false}>
-                    <CommandInput placeholder="Buscar..." value={clienteSearch} onValueChange={setClienteSearch} />
-                    <CommandList>
-                      <CommandEmpty>
-                        {clienteSearch.trim() ? "Nenhum cliente encontrado" : "Digite para buscar"}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {filteredClientes.map(c => (
-                          <CommandItem key={c.id} value={c.id} onSelect={() => {
-                            setForm(prev => ({ ...prev, cliente_id: c.id }));
-                            setClienteOpen(false);
-                            setClienteSearch("");
-                          }}>
-                            <Check className={cn("mr-2 h-4 w-4", form.cliente_id === c.id ? "opacity-100" : "opacity-0")} />
-                            {c.nome}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                      {showCreateCliente && (
-                        <CommandGroup>
-                          <CommandItem onSelect={handleCreateCliente} className="text-primary font-medium">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Criar "{clienteSearch.trim()}"
-                          </CommandItem>
-                        </CommandGroup>
-                      )}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
-          <Button variant="outline" size="icon" className="h-10 w-10 border-input" onClick={() => {
-            if (isPagar) { setFornecedorOpen(true); setFornecedorSearch(""); }
-            else { setClienteOpen(true); setClienteSearch(""); }
-          }}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div>
-          <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Descrição da Movimentação *</Label>
-          <Input placeholder="Descrição da movimentação" value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} className="h-10 text-sm" />
-        </div>
-
-        {/* PRAZOS E VALORES */}
-        <div>
-          <p className="text-[11px] font-medium text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-2">
-            <span className="text-sm">💰</span> PRAZOS E VALORES
-          </p>
-          <Separator />
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Valor Previsto (R$) *</Label>
-            <Input type="number" step="0.01" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm({...form, valor_previsto: e.target.value})} className="h-10 text-sm" />
-          </div>
-          <div>
-            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Data de Competência *</Label>
-            <Input type="date" value={form.data_competencia} onChange={e => setForm({...form, data_competencia: e.target.value})} className="h-10 text-sm" />
-          </div>
-          <div>
-            <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Data de Vencimento *</Label>
-            <Input type="date" value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} className="h-10 text-sm" />
-          </div>
-        </div>
-
-        <div className="max-w-[240px]">
-          <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Conta Bancária</Label>
-          <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
-            <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-            <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-
-        {/* OBSERVAÇÕES */}
-        <div>
-          <Label className="text-[13px] font-medium text-foreground mb-1.5 block">Observações Internas</Label>
-          <Textarea
-            placeholder="Observações adicionais..."
-            value={form.observacoes}
-            onChange={e => setForm({...form, observacoes: e.target.value})}
-            className="min-h-[72px] text-sm resize-none"
-          />
-        </div>
-
-        {/* RECORRÊNCIA */}
-        <div className="rounded-lg border border-input p-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">Conta recorrente</p>
-              <p className="text-xs text-muted-foreground">Cria automaticamente múltiplas ocorrências</p>
-            </div>
-            <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
-          </div>
-          {form.recorrente && (
-            <div className="flex items-center gap-3 pt-1">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">A cada</span>
-              <Input
-                type="number"
-                min="1"
-                value={form.quantidade_recorrencia}
-                onChange={e => setForm({...form, quantidade_recorrencia: e.target.value})}
-                className="w-20 h-9 text-sm"
-              />
-              <Select value={form.frequencia_recorrencia} onValueChange={v => setForm({...form, frequencia_recorrencia: v})}>
-                <SelectTrigger className="w-[130px] h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="diario">Dia(s)</SelectItem>
-                  <SelectItem value="mensal">Mês(es)</SelectItem>
-                  <SelectItem value="anual">Ano(s)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-
-        {/* FOOTER */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-          <Button variant="outline" onClick={onCancel} className="px-5 h-10">Cancelar</Button>
-          <Button onClick={onSave} className="px-5 h-10">{saveLabel}</Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -686,43 +451,19 @@ export default function Movimentacoes() {
           <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={openNew && isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("pagar"); }}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="gap-1.5 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
-                onClick={() => setTab("pagar")}
-              >
-                <ArrowDown className="h-4 w-4 text-destructive" /> Conta a Pagar
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
-              <DialogHeader>
-                <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <span>📄</span> Nova Conta a Pagar
-                </DialogTitle>
-              </DialogHeader>
-              {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
-            </DialogContent>
-          </Dialog>
-          <Dialog open={openNew && !isPagar} onOpenChange={v => { setOpenNew(v); if (!v) resetForm(); if (v) setTab("receber"); }}>
-            <DialogTrigger asChild>
-              <Button
-                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => setTab("receber")}
-              >
-                <ArrowUp className="h-4 w-4 text-primary-foreground" /> Conta a Receber
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
-              <DialogHeader>
-                <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <span>📄</span> Nova Conta a Receber
-                </DialogTitle>
-              </DialogHeader>
-              {renderModalForm(handleSave, "Confirmar Cadastro", () => setOpenNew(false))}
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="outline"
+            className="gap-1.5 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
+            onClick={() => navigate("/financeiro/movimentacoes/novo/pagar")}
+          >
+            <ArrowDown className="h-4 w-4 text-destructive" /> Conta a Pagar
+          </Button>
+          <Button
+            className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => navigate("/financeiro/movimentacoes/novo/receber")}
+          >
+            <ArrowUp className="h-4 w-4 text-primary-foreground" /> Conta a Receber
+          </Button>
         </div>
       </div>
 
@@ -1076,17 +817,6 @@ export default function Movimentacoes() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog — same layout as create */}
-      <Dialog open={openEdit} onOpenChange={(v) => { setOpenEdit(v); if (!v) resetForm(); }}>
-        <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto p-7">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-              <span>📄</span> Editar Movimentação
-            </DialogTitle>
-          </DialogHeader>
-          {renderModalForm(handleEditSave, "Salvar Alterações", () => setOpenEdit(false))}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
