@@ -59,9 +59,6 @@ export default function Movimentacoes() {
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
   const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
-  const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
-  const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
-  const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
