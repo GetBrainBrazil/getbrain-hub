@@ -23,6 +23,7 @@ import { format, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuart
 import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { buildCategoriasTree, type CategoriaRaw, type TipoCategoria } from "@/lib/categorias-hierarchy";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 // ── Types ──
 interface Movimentacao {
@@ -389,6 +390,12 @@ export default function Relatorios() {
 
       if (line.type === "group") {
         const isExpanded = expandedGroups[groupKey!];
+        const groupTip: Record<string, string> = {
+          receita: "Soma de todos os recebimentos no período, agrupados por categoria. Clique em cada linha para ver os lançamentos individuais.",
+          deducoes: "Impostos e tributos que incidem sobre a receita, como ISS e DAS do Simples.",
+          despesas_op: "Custos necessários para a operação da empresa: ferramentas, salários, infraestrutura, etc.",
+          retiradas: "Retiradas dos sócios (pró-labore, distribuição de lucros) realizadas no período.",
+        };
         rows.push(
           <TableRow
             key={idx}
@@ -399,6 +406,7 @@ export default function Relatorios() {
               <div className="flex items-center gap-2">
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 {line.label}
+                {groupKey && groupTip[groupKey] && <HelpTooltip content={groupTip[groupKey]} />}
               </div>
             </TableCell>
             <TableCell />
@@ -536,6 +544,7 @@ export default function Relatorios() {
             <TableCell className={cn("font-bold text-base py-4", positive ? "text-success" : "text-destructive")}>
               <div className="flex items-center gap-3">
                 {line.label}
+                <HelpTooltip content="Este é o número mais importante: o lucro ou prejuízo final da empresa no período." />
                 <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", positive ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive")}>
                   Margem: {margem.toFixed(1)}%
                 </span>
@@ -591,6 +600,10 @@ export default function Relatorios() {
         </TabsList>
 
         <TabsContent value="dre" className="space-y-6 mt-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">DRE</h2>
+            <HelpTooltip content="O Demonstrativo de Resultado do Exercício mostra a saúde financeira da empresa: quanto entrou, quanto saiu e qual o resultado final no período selecionado." />
+          </div>
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3">
             <Select value={period} onValueChange={setPeriod}>
@@ -634,12 +647,14 @@ export default function Relatorios() {
             <div className="flex items-center gap-2">
               <Switch checked={compare} onCheckedChange={setCompare} id="compare-toggle" />
               <Label htmlFor="compare-toggle" className="text-sm cursor-pointer">Comparar com período anterior</Label>
+              <HelpTooltip content="Ativa uma coluna adicional mostrando os valores do período anterior e a variação percentual, permitindo identificar tendências." />
             </div>
 
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
               <Button variant="outline" onClick={exportDRECSV} disabled={dreLines.length === 0}>
                 <Download className="h-4 w-4 mr-2" />Exportar CSV
               </Button>
+              <HelpTooltip content="Baixe o DRE em PDF para compartilhar com sócios ou contador, ou em Excel para análises personalizadas." />
             </div>
           </div>
 
@@ -647,7 +662,7 @@ export default function Relatorios() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="animate-fade-slide">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Receita Líquida</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Receita Líquida<HelpTooltip content="Receita Bruta menos as deduções (impostos sobre serviços). É o valor que efetivamente entrou na empresa." /></CardTitle>
                 <DollarSign className="h-5 w-5 text-success" />
               </CardHeader>
               <CardContent>
@@ -656,7 +671,7 @@ export default function Relatorios() {
             </Card>
             <Card className="animate-fade-slide">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total de Despesas</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Total de Despesas<HelpTooltip content="Soma de todas as despesas operacionais e financeiras pagas no período." /></CardTitle>
                 <MinusCircle className="h-5 w-5 text-destructive" />
               </CardHeader>
               <CardContent>
@@ -665,7 +680,7 @@ export default function Relatorios() {
             </Card>
             <Card className="animate-fade-slide">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Resultado Líquido</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Resultado Líquido<HelpTooltip content="Receita Líquida menos todas as despesas e retiradas. Positivo = lucro. Negativo = prejuízo." /></CardTitle>
                 {summary.resultado >= 0 ? <TrendingUp className="h-5 w-5 text-success" /> : <TrendingDown className="h-5 w-5 text-destructive" />}
               </CardHeader>
               <CardContent>
@@ -676,7 +691,7 @@ export default function Relatorios() {
             </Card>
             <Card className="animate-fade-slide">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Margem Operacional</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Margem Operacional<HelpTooltip content="Percentual do resultado em relação à receita. Indica quanto de cada real faturado sobra como lucro." /></CardTitle>
                 <Percent className="h-5 w-5 text-accent" />
               </CardHeader>
               <CardContent>

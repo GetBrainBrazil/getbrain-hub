@@ -27,6 +27,7 @@ import {
   ComposedChart, Area, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend
 } from "recharts";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 interface Movimentacao {
   id: string;
@@ -380,6 +381,7 @@ export default function FluxoCaixaTab() {
             <SelectItem value="mensal">Mensal</SelectItem>
           </SelectContent>
         </Select>
+        <HelpTooltip content="Diário mostra dia a dia. Semanal agrupa por semana. Mensal dá uma visão mais ampla. Escolha conforme o nível de detalhe que precisa." />
 
         <div className="ml-auto">
           <Button variant="outline" onClick={exportCSV} disabled={groupedData.length === 0}>
@@ -391,7 +393,7 @@ export default function FluxoCaixaTab() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Atual</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Saldo Atual<HelpTooltip content="Soma dos saldos de todas as contas bancárias neste momento." /></CardTitle>
             <Landmark className="h-5 w-5 text-accent" />
           </CardHeader>
           <CardContent>
@@ -400,7 +402,7 @@ export default function FluxoCaixaTab() {
         </Card>
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total a Receber</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Total a Receber<HelpTooltip content="Soma de todas as contas a receber pendentes dentro do período selecionado." /></CardTitle>
             <ArrowUpRight className="h-5 w-5 text-success" />
           </CardHeader>
           <CardContent>
@@ -409,7 +411,7 @@ export default function FluxoCaixaTab() {
         </Card>
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total a Pagar</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Total a Pagar<HelpTooltip content="Soma de todas as contas a pagar pendentes dentro do período selecionado." /></CardTitle>
             <ArrowDownRight className="h-5 w-5 text-destructive" />
           </CardHeader>
           <CardContent>
@@ -418,7 +420,7 @@ export default function FluxoCaixaTab() {
         </Card>
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Projetado Final</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Saldo Projetado Final<HelpTooltip content="Saldo atual + recebimentos previstos - pagamentos previstos. É quanto a empresa deve ter em caixa ao final do período." /></CardTitle>
             <Target className={cn("h-5 w-5", kpis.saldoProjetado >= 0 ? "text-success" : "text-destructive")} />
           </CardHeader>
           <CardContent>
@@ -443,9 +445,12 @@ export default function FluxoCaixaTab() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Projeção de Fluxo de Caixa</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => { setTempSaldoMinimo(String(saldoMinimo)); setSettingsOpen(true); }}>
-                  <Settings className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <HelpTooltip content="Configure o saldo mínimo de segurança. Se a projeção cruzar abaixo deste valor, a zona de risco será destacada em vermelho no gráfico." />
+                  <Button variant="ghost" size="icon" onClick={() => { setTempSaldoMinimo(String(saldoMinimo)); setSettingsOpen(true); }}>
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -486,7 +491,7 @@ export default function FluxoCaixaTab() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Composição do Fluxo de Caixa</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">Composição do Fluxo de Caixa<HelpTooltip content="Tabela detalhada mostrando cada entrada e saída que compõe a projeção. Expanda cada período para ver os lançamentos individuais." /></CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
