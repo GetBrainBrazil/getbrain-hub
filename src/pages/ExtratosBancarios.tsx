@@ -35,7 +35,7 @@ export default function ExtratosBancarios() {
 
   const contaSelecionada = contas.find((c) => c.id === contaId);
   const saldoInicial = contaSelecionada?.saldo_inicial ?? 0;
-  const dateRange = useMemo(() => getDateRange(preset, customRange), [preset, customRange]);
+  const dateRange = useMemo(() => getDateRange(preset as PeriodPreset, customRange), [preset, customRange]);
 
   const { data: movimentacoes = [] } = useQuery({
     queryKey: ["extrato_movimentacoes", contaId, dateRange.startDate?.toISOString(), dateRange.endDate?.toISOString()],
@@ -117,7 +117,7 @@ export default function ExtratosBancarios() {
             ))}
           </SelectContent>
         </Select>
-        <PeriodFilter preset={preset} customRange={customRange} onPresetChange={setPreset} onCustomRangeChange={setCustomRange} />
+        <PeriodFilter preset={preset as PeriodPreset} customRange={customRange} onPresetChange={setPreset} onCustomRangeChange={setCustomRange} />
         <div className="flex-1" />
         <Button onClick={() => setImportOpen(true)} className="gap-2">
           <Upload className="h-4 w-4" /> Importar Extrato
