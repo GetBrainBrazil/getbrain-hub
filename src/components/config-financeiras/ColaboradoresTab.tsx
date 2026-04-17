@@ -434,8 +434,10 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               </SelectContent>
             </Select>
           </div>
-          <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Colaborador</Button>
-          <HelpTooltip content="Cadastre funcionários e prestadores de serviço. Os dados bancários cadastrados aqui facilitam o registro de pagamentos." />
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Colaborador</Button>
+            <HelpTooltip content="Cadastre funcionários e prestadores de serviço. Os dados bancários cadastrados aqui facilitam o registro de pagamentos." />
+          </div>
         </div>
         <Table>
           <TableHeader><TableRow><TableHead>Nome Completo</TableHead><TableHead><div className="flex items-center gap-1">Cargo<HelpTooltip content="O cargo é informativo e ajuda a organizar seus colaboradores. Você pode usar qualquer descrição." /></div></TableHead><TableHead>Documento</TableHead><TableHead>E-mail</TableHead><TableHead>Telefone</TableHead><TableHead>Status</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>

@@ -301,7 +301,10 @@ export default function ContasBancariasTab({ search }: { search: string }) {
               </SelectContent>
             </Select>
           </div>
-          <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Nova Conta</Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Nova Conta</Button>
+            <HelpTooltip content="Cadastre suas contas bancárias para registrar movimentações e importar extratos." />
+          </div>
         </div>
         <Table>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead><div className="flex items-center gap-1">Saldo Inicial<HelpTooltip content="O saldo inicial é o valor que a conta tinha no momento do cadastro. O saldo atual é calculado automaticamente com base nas movimentações registradas." /></div></TableHead><TableHead><div className="flex items-center gap-1">Ativo<HelpTooltip content="Contas inativas não aparecem nos dropdowns de seleção ao criar movimentações, mas seus dados históricos são preservados." /></div></TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>

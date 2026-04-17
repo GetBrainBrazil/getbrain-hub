@@ -303,7 +303,7 @@ export default function CentrosCustoTab({ search }: { search: string }) {
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
             <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -312,11 +312,11 @@ export default function CentrosCustoTab({ search }: { search: string }) {
               <SelectItem value="inativos">Inativos</SelectItem>
             </SelectContent>
           </Select>
-          <div className="ml-auto">
+          <div className="flex items-center gap-2">
             <Button size="sm" className="gap-1 h-9" onClick={openNew}>
               <Plus className="h-4 w-4" /> Novo Centro
             </Button>
-            <HelpTooltip content="Centros de custo permitem agrupar receitas e despesas por projeto, departamento ou cliente. Útil para saber a rentabilidade de cada área." className="ml-2" />
+            <HelpTooltip content="Centros de custo permitem agrupar receitas e despesas por projeto, departamento ou cliente. Útil para saber a rentabilidade de cada área." />
           </div>
         </div>
 
