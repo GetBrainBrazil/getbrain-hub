@@ -149,6 +149,7 @@ export default function MovimentacaoDetalhe() {
     valor_realizado: "",
     data_pagamento: "",
     conta_bancaria_id: "",
+    meio_pagamento_id: "",
   });
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
