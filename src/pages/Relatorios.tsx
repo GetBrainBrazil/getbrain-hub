@@ -303,12 +303,8 @@ export default function Relatorios() {
     return null;
   }
 
-  function openDetail(line: DRELine) {
-    if (line.items && line.items.length > 0) {
-      setDrawerLabel(line.label);
-      setDrawerItems(line.items);
-      setDrawerOpen(true);
-    }
+  function toggleDetail(key: string) {
+    setExpandedDetailKey(prev => (prev === key ? null : key));
   }
 
   function variation(current: number, prev: number): number | null {
