@@ -55,6 +55,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
+import { Sparkles } from "lucide-react";
 
 const ANEXOS_BUCKET = "anexos-movimentacoes";
 
@@ -147,8 +149,9 @@ export default function MovimentacaoDetalhe() {
     valor_realizado: "",
     data_pagamento: "",
     conta_bancaria_id: "",
-    meio_pagamento_id: "",
   });
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
 
   const [fornecedorOpen, setFornecedorOpen] = useState(false);
   const [fornecedorSearch, setFornecedorSearch] = useState("");
@@ -408,6 +411,8 @@ export default function MovimentacaoDetalhe() {
       conta_bancaria_id: form.conta_bancaria_id || mov.conta_bancaria_id || "",
       meio_pagamento_id: "",
     });
+    setComprovanteFile(null);
+    setAiFields(new Set());
     setOpenBaixa(true);
   }
 
@@ -427,6 +432,10 @@ export default function MovimentacaoDetalhe() {
     if (error) {
       toast.error("Erro ao registrar");
       return;
+    }
+    if (comprovanteFile) {
+      try { await uploadComprovanteToMovimentacao(comprovanteFile, mov.id); }
+      catch (e) { console.error(e); toast.error("Pagamento registrado, mas falhou ao salvar o comprovante."); }
     }
     toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
     setOpenBaixa(false);
