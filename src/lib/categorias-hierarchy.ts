@@ -1,7 +1,7 @@
 // Utilitários para a hierarquia de categorias (3 níveis)
 // Nível 1: Tipo (fixo) | Nível 2: Subcategoria | Nível 3: Conta
 
-export type TipoCategoria = "receitas" | "despesas" | "impostos" | "retirada" | "transferencias";
+export type TipoCategoria = "receitas" | "despesas" | "impostos" | "retirada";
 
 export interface TipoConfig {
   key: TipoCategoria;
@@ -21,7 +21,6 @@ export const TIPOS_CATEGORIA: TipoConfig[] = [
   { key: "despesas",        label: "DESPESAS",        textClass: "text-rose-700 dark:text-rose-400",       bgClass: "bg-rose-500/10",     borderClass: "border-l-rose-500",     badgeClass: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30" },
   { key: "impostos",        label: "IMPOSTOS",        textClass: "text-orange-700 dark:text-orange-400",   bgClass: "bg-orange-500/10",   borderClass: "border-l-orange-500",   badgeClass: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30" },
   { key: "retirada",        label: "RETIRADA",        textClass: "text-violet-700 dark:text-violet-400",   bgClass: "bg-violet-500/10",   borderClass: "border-l-violet-500",   badgeClass: "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30" },
-  { key: "transferencias",  label: "TRANSFERÊNCIAS",  textClass: "text-cyan-700 dark:text-cyan-400",       bgClass: "bg-cyan-500/10",     borderClass: "border-l-cyan-500",     badgeClass: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30" },
 ];
 
 export function getTipoConfig(tipo?: string | null): TipoConfig {
