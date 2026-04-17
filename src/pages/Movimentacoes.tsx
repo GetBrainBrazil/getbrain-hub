@@ -339,6 +339,8 @@ export default function Movimentacoes() {
       pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
       observacoes_pagamento: "",
     });
+    setComprovanteFile(null);
+    setAiFields(new Set());
     setOpenBaixa(true);
   }
 
