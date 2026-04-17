@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, StickyNote, ArrowLeft } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { FormMode, FormPageShell, FormSection, DetailField, formatMoneyForInput, parseMoney } from "./shared";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 type Form = { nome: string; banco: string; agencia: string; conta: string; tipo: string; saldo_inicial: string; moeda: string; ativo: boolean; chaves_pix: string[]; observacoes: string };
 const empty: Form = { nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [], observacoes: "" };
@@ -280,6 +281,7 @@ export default function ContasBancariasTab({ search }: { search: string }) {
                 {bancos.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
               </SelectContent>
             </Select>
+            <HelpTooltip content="Filtre as contas pelo banco, tipo (Corrente, Investimento, Poupança) ou moeda." />
             <Select value={filterTipo} onValueChange={setFilterTipo}>
               <SelectTrigger className="w-[160px]"><SelectValue placeholder="Todos os Tipos" /></SelectTrigger>
               <SelectContent>
@@ -302,7 +304,7 @@ export default function ContasBancariasTab({ search }: { search: string }) {
           <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Nova Conta</Button>
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead>Saldo Inicial</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Banco</TableHead><TableHead>Tipo</TableHead><TableHead>Moeda</TableHead><TableHead><div className="flex items-center gap-1">Saldo Inicial<HelpTooltip content="O saldo inicial é o valor que a conta tinha no momento do cadastro. O saldo atual é calculado automaticamente com base nas movimentações registradas." /></div></TableHead><TableHead><div className="flex items-center gap-1">Ativo<HelpTooltip content="Contas inativas não aparecem nos dropdowns de seleção ao criar movimentações, mas seus dados históricos são preservados." /></div></TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
               <TableRow key={i.id} className="group cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => openView(i)}>

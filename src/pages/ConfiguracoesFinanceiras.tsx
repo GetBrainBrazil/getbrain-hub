@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Landmark, Users, Truck, Target, Tags, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Landmark, Users, Truck, Target, Tags, UserRound, Lightbulb, X } from "lucide-react";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 import ContasBancariasTab from "@/components/config-financeiras/ContasBancariasTab";
 import ColaboradoresTab from "@/components/config-financeiras/ColaboradoresTab";
@@ -27,13 +29,32 @@ export default function ConfiguracoesFinanceiras() {
   // Migrate legacy "plano" value to "colaboradores"
   useEffect(() => { if ((activeTab as string) === "plano") setActiveTab("colaboradores"); }, []);
   const [search, setSearch] = useState("");
+  const [tipDismissed, setTipDismissed] = usePersistedState<boolean>("config_fin_tip_dismissed", false);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Configurações Financeiras</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          Configurações Financeiras
+          <HelpTooltip content="Aqui você configura todos os dados base do seu financeiro: contas bancárias, pessoas, categorias e centros de custo. Esses dados alimentam todo o sistema." />
+        </h1>
         <p className="text-muted-foreground text-sm mt-1">Gerencie contas, categorias, clientes, fornecedores e centros de custo</p>
       </div>
+
+      {!tipDismissed && (
+        <div className="flex items-start gap-3 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 dark:border-cyan-900/50 dark:bg-cyan-950/30">
+          <Lightbulb className="h-5 w-5 text-cyan-600 dark:text-cyan-400 mt-0.5 shrink-0" />
+          <div className="flex-1 text-sm text-cyan-900 dark:text-cyan-100">
+            <strong>Dica:</strong> comece cadastrando suas contas bancárias e categorias. Depois adicione fornecedores e clientes. Essas informações são usadas em todo o módulo financeiro.
+          </div>
+          <Button size="sm" variant="ghost" className="h-7 text-cyan-700 hover:text-cyan-900 hover:bg-cyan-100 dark:text-cyan-300 dark:hover:bg-cyan-900/40" onClick={() => setTipDismissed(true)}>
+            Entendi
+          </Button>
+          <button onClick={() => setTipDismissed(true)} className="text-cyan-600/70 hover:text-cyan-800 dark:text-cyan-400/70" aria-label="Fechar">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabKey); setSearch(""); }}>
         <div className="flex items-center justify-between gap-4 flex-wrap">

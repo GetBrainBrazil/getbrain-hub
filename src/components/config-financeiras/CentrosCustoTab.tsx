@@ -17,6 +17,7 @@ import {
 import { Plus, Pencil, Eye, Trash2, FileText, BarChart3, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormMode, FormPageShell, FormSection, DetailField } from "./shared";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 type Form = {
   codigo: string;
@@ -315,6 +316,7 @@ export default function CentrosCustoTab({ search }: { search: string }) {
             <Button size="sm" className="gap-1 h-9" onClick={openNew}>
               <Plus className="h-4 w-4" /> Novo Centro
             </Button>
+            <HelpTooltip content="Centros de custo permitem agrupar receitas e despesas por projeto, departamento ou cliente. Útil para saber a rentabilidade de cada área." className="ml-2" />
           </div>
         </div>
 
@@ -322,10 +324,10 @@ export default function CentrosCustoTab({ search }: { search: string }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-32">Código</TableHead>
+                <TableHead className="w-32"><div className="flex items-center gap-1">Código<HelpTooltip content="Use códigos curtos para identificar rapidamente cada centro de custo. Ex: CC001, MKT, DEV." /></div></TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Responsável</TableHead>
-                <TableHead>Descrição</TableHead>
+                <TableHead><div className="flex items-center gap-1">Descrição<HelpTooltip content="Uma descrição opcional para detalhar o propósito deste centro de custo." /></div></TableHead>
                 <TableHead className="w-20">Ativo</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
