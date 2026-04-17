@@ -636,39 +636,6 @@ export default function Relatorios() {
         </TabsContent>
       </Tabs>
 
-      {/* Detail Drawer */}
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center justify-between">
-              Lançamentos: {drawerLabel}
-              <Button variant="ghost" size="icon" onClick={() => setDrawerOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-3">
-            {drawerItems.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-8">Nenhum lançamento encontrado.</p>
-            ) : (
-              drawerItems.map(item => (
-                <div key={item.id} className="border rounded-lg p-3 space-y-1">
-                  <div className="flex justify-between items-start">
-                    <span className="font-medium text-sm">{item.descricao}</span>
-                    <span className="font-mono font-bold text-sm">{formatCurrency(Math.abs(item.valor_realizado || 0))}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>
-                      {item.cliente_id ? clientes[item.cliente_id] || "—" : item.fornecedor_id ? fornecedores[item.fornecedor_id] || "—" : "—"}
-                    </span>
-                    <span>{item.data_pagamento ? formatDate(item.data_pagamento) : "—"}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
