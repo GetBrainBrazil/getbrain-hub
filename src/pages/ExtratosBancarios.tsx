@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Wallet, TrendingUp, TrendingDown, Landmark, Upload, CheckCircle2, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
 import { ImportExtratoWizard } from "@/components/ImportExtratoWizard";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 export default function ExtratosBancarios() {
   const navigate = useNavigate();
