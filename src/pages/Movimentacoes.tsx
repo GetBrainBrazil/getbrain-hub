@@ -40,6 +40,7 @@ const tipoByTab: Record<TabType, "despesa" | "receita"> = {
 export default function Movimentacoes() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
   const [loadingByTab, setLoadingByTab] = useState<Record<TabType, boolean>>({ pagar: true, receber: true });
@@ -854,6 +855,7 @@ export default function Movimentacoes() {
         </DialogContent>
       </Dialog>
 
+      {confirmDialogEl}
     </div>
   );
 }

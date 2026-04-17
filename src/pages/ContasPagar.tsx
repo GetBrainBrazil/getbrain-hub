@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 export default function ContasPagar() {
   const { user } = useAuth();
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [movs, setMovs] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -464,6 +465,7 @@ export default function ContasPagar() {
           </div>
         </DialogContent>
       </Dialog>
+      {confirmDialogEl}
     </div>
   );
 }

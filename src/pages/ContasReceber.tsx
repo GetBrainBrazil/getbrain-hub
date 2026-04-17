@@ -22,6 +22,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function ContasReceber() {
   const { user } = useAuth();
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [movs, setMovs] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -312,6 +313,7 @@ export default function ContasReceber() {
           </div>
         </DialogContent>
       </Dialog>
+      {confirmDialogEl}
     </div>
   );
 }
