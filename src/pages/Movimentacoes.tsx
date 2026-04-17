@@ -241,7 +241,15 @@ export default function Movimentacoes() {
     totalAtrasado: periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0),
   }), [periodFiltered]);
 
-  const entityLabel = isPagar ? "Fornecedor" : "Cliente";
+  const entityLabel = isPagar ? "Vinculado a" : "Cliente";
+
+  /** Resolve a entidade vinculada (fornecedor, colaborador ou cliente) e retorna nome + badge curto. */
+  function getVinculado(m: any): { nome: string; badge: "F" | "C" | "CL" | null } {
+    if (m.colaborador_id && m.colaboradores) return { nome: (m.colaboradores as any).nome, badge: "C" };
+    if (m.fornecedor_id && m.fornecedores) return { nome: (m.fornecedores as any).nome, badge: "F" };
+    if (m.cliente_id && m.clientes) return { nome: (m.clientes as any).nome, badge: "CL" };
+    return { nome: "—", badge: null };
+  }
 
   function addMonths(dateStr: string, months: number): string {
     const d = new Date(dateStr + "T12:00:00");
