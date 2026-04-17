@@ -369,8 +369,8 @@ export default function Relatorios() {
       const groupKey = getGroupKey(line.label);
       if (groupKey) currentGroup = groupKey;
 
-      // Hide detail lines if group collapsed
-      if (line.type === "detail" && currentGroup && !expandedGroups[currentGroup]) return;
+      // Hide nested lines if group collapsed
+      if ((line.type === "detail" || line.type === "subgroup" || line.type === "subtotal-sub") && currentGroup && !expandedGroups[currentGroup]) return;
 
       if (line.type === "group") {
         const isExpanded = expandedGroups[groupKey!];
