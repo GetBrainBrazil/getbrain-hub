@@ -29,7 +29,7 @@ export default function ConfiguracoesFinanceiras() {
   const [activeTab, setActiveTab] = useURLState<string>("tab", "contas");
   // Migrate legacy "plano" value to "colaboradores"
   useEffect(() => { if (activeTab === "plano") setActiveTab("colaboradores"); }, []);
-  const [search, setSearch] = useURLState("busca", "");
+  const [search, setSearch] = useURLState<string>("busca", "");
   const [tipDismissed, setTipDismissed] = usePersistedState<boolean>("config_fin_tip_dismissed", false);
 
   return (
