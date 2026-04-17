@@ -564,7 +564,7 @@ export default function Movimentacoes() {
                   <SortableTableHead label="VALOR" sortKey="valor_previsto" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground text-right" />
                   <SortableTableHead label="VENCIMENTO" sortKey="data_vencimento" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
                   <SortableTableHead label={isPagar ? "PAGAMENTO" : "RECEBIMENTO"} sortKey="data_pagamento" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
-                  <SortableTableHead label="STATUS" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
+                  <SortableTableHead label="STATUS" sortKey="status" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" extra={<HelpTooltip content="Pago: liquidado com sucesso. Pendente: aguardando vencimento. Atrasado: vencimento ultrapassado sem pagamento." />} />
                   <TableHead className="w-12 text-[11px] font-semibold tracking-wider text-muted-foreground"></TableHead>
                 </TableRow>
               </TableHeader>
