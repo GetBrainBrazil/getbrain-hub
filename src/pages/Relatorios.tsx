@@ -88,6 +88,7 @@ const DRE_SECTIONS: DRESection[] = [
 ];
 
 export default function Relatorios() {
+  const [relTab, setRelTab] = useURLState<string>("tab", "dre");
   const [period, setPeriod] = useURLState<string>("periodo", "este_mes");
   const [customStart, setCustomStart] = useState<Date | undefined>(undefined);
   const [customEnd, setCustomEnd] = useState<Date | undefined>(undefined);
@@ -593,7 +594,7 @@ export default function Relatorios() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Relatórios</h1>
 
-      <Tabs defaultValue="dre" value={undefined} onValueChange={undefined}>
+      <Tabs value={relTab} onValueChange={setRelTab}>
         <TabsList>
           <TabsTrigger value="dre"><BarChart3 className="h-4 w-4 mr-1.5" />DRE</TabsTrigger>
           <TabsTrigger value="fluxo"><TrendingUp className="h-4 w-4 mr-1.5" />Fluxo de Caixa</TabsTrigger>
