@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
 
 type TabType = "pagar" | "receber";
@@ -39,6 +40,7 @@ const tipoByTab: Record<TabType, "despesa" | "receita"> = {
 export default function Movimentacoes() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
   const [loadingByTab, setLoadingByTab] = useState<Record<TabType, boolean>>({ pagar: true, receber: true });
@@ -404,7 +406,20 @@ export default function Movimentacoes() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta movimentação?")) return;
+    const mov = (movsByTab[tab] || []).find((x: any) => x.id === id);
+    const ok = await confirmDialog({
+      title: "Excluir Movimentação",
+      description: (
+        <>
+          Tem certeza que deseja excluir a movimentação{" "}
+          <span className="font-medium text-foreground">"{mov?.descricao ?? ""}"</span>? Esta ação
+          não pode ser desfeita.
+        </>
+      ),
+      confirmLabel: "Excluir",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("movimentacoes").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir movimentação"); return; }
     await refreshTabs([tab]);
@@ -840,6 +855,7 @@ export default function Movimentacoes() {
         </DialogContent>
       </Dialog>
 
+      {confirmDialogEl}
     </div>
   );
 }
