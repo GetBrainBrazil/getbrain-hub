@@ -1,41 +1,28 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 
-/**
- * Builds a sessionStorage key scoped per-route + param name.
- * This way the same param name on different routes won't collide.
- */
+/** Per-route + param sessionStorage key. */
 function storageKey(pathname: string, paramName: string) {
   return `urlstate::${pathname}::${paramName}`;
 }
 
 function readSession(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
+  try { return sessionStorage.getItem(key); } catch { return null; }
 }
 
 function writeSession(key: string, value: string | null) {
   try {
     if (value === null) sessionStorage.removeItem(key);
     else sessionStorage.setItem(key, value);
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
 }
 
 /**
- * Syncs a piece of state with a URL query parameter (primary source of truth)
- * AND mirrors it to sessionStorage (per-route) so navigating away and back
- * restores the last filter values, while F5 still works via the URL.
+ * URL is the source of truth, mirrored to sessionStorage per-route so that
+ * navigating away and back restores filters. F5 still works via the URL.
  *
- * Behavior:
- * - On mount: if URL has the param → use it. Else if sessionStorage has a value
- *   for this (route, param) → hydrate URL with it. Else use defaultValue.
- * - On change: writes to URL via setSearchParams (replace) AND to sessionStorage.
- * - When value equals defaultValue (or empty): removes from URL and sessionStorage.
+ * Hydration is done synchronously on first render (lazy useState) — no effects,
+ * no conditional hooks, no hook-order issues across re-renders.
  */
 export function useURLState<T extends string>(
   paramName: string,
@@ -43,35 +30,37 @@ export function useURLState<T extends string>(
 ): [T, (value: T) => void] {
   const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
-  const key = storageKey(pathname, paramName);
-  const hydratedRef = useRef(false);
 
-  // Hydrate URL from sessionStorage on first mount if URL param is missing.
-  useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
+  // One-shot hydration: if URL has no param, copy from sessionStorage into URL.
+  const [hydrated] = useState(() => {
+    const key = storageKey(pathname, paramName);
     const urlValue = searchParams.get(paramName);
     if (urlValue === null) {
       const stored = readSession(key);
       if (stored !== null && stored !== defaultValue) {
-        setSearchParams(
-          (prev) => {
-            const next = new URLSearchParams(prev);
-            next.set(paramName, stored);
-            return next;
-          },
-          { replace: true }
-        );
+        // Defer URL update to avoid setState during render.
+        queueMicrotask(() => {
+          setSearchParams(
+            (prev) => {
+              const next = new URLSearchParams(prev);
+              if (next.get(paramName) === null) next.set(paramName, stored);
+              return next;
+            },
+            { replace: true }
+          );
+        });
+        return stored;
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return urlValue ?? defaultValue;
+  });
 
   const raw = searchParams.get(paramName);
-  const value = (raw !== null ? raw : defaultValue) as T;
+  const value = (raw !== null ? raw : (hydrated as string)) as T;
 
   const setValue = useCallback(
     (newValue: T) => {
+      const key = storageKey(pathname, paramName);
       const isDefault =
         newValue === defaultValue ||
         newValue === ("" as T) ||
@@ -90,53 +79,51 @@ export function useURLState<T extends string>(
         { replace: true }
       );
     },
-    [paramName, defaultValue, setSearchParams, key]
+    [paramName, defaultValue, setSearchParams, pathname]
   );
 
   return [value, setValue];
 }
 
-/**
- * Boolean variant of useURLState. Stores "1" / "0".
- * Same URL + sessionStorage mirroring behavior.
- */
+/** Boolean variant — stores "1" / "0". */
 export function useURLStateBoolean(
   paramName: string,
   defaultValue: boolean
 ): [boolean, (value: boolean) => void] {
   const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
-  const key = storageKey(pathname, paramName);
-  const hydratedRef = useRef(false);
 
-  useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
+  const [hydrated] = useState(() => {
+    const key = storageKey(pathname, paramName);
     const urlValue = searchParams.get(paramName);
     if (urlValue === null) {
       const stored = readSession(key);
       if (stored !== null) {
         const storedBool = stored === "1" || stored === "true";
         if (storedBool !== defaultValue) {
-          setSearchParams(
-            (prev) => {
-              const next = new URLSearchParams(prev);
-              next.set(paramName, storedBool ? "1" : "0");
-              return next;
-            },
-            { replace: true }
-          );
+          queueMicrotask(() => {
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                if (next.get(paramName) === null) next.set(paramName, storedBool ? "1" : "0");
+                return next;
+              },
+              { replace: true }
+            );
+          });
+          return storedBool;
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return urlValue === null ? defaultValue : urlValue === "1" || urlValue === "true";
+  });
 
   const raw = searchParams.get(paramName);
-  const value = raw === null ? defaultValue : raw === "1" || raw === "true";
+  const value = raw === null ? hydrated : raw === "1" || raw === "true";
 
   const setValue = useCallback(
     (newValue: boolean) => {
+      const key = storageKey(pathname, paramName);
       const isDefault = newValue === defaultValue;
       writeSession(key, isDefault ? null : newValue ? "1" : "0");
 
@@ -150,7 +137,7 @@ export function useURLStateBoolean(
         { replace: true }
       );
     },
-    [paramName, defaultValue, setSearchParams, key]
+    [paramName, defaultValue, setSearchParams, pathname]
   );
 
   return [value, setValue];
