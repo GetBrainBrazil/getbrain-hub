@@ -23,6 +23,7 @@ import { usePersistedState } from "@/hooks/use-persisted-state";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, Cell } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 interface InadMovimentacao {
   id: string;
@@ -418,7 +419,7 @@ export default function InadimplenciaTab() {
       {/* Client Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Inadimplência por Cliente</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">Inadimplência por Cliente<HelpTooltip content="Veja quanto cada cliente deve. Clique na linha para expandir e ver os lançamentos individuais. Você pode registrar o recebimento direto daqui." /></CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -504,7 +505,7 @@ export default function InadimplenciaTab() {
       {/* Aging Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Envelhecimento da Dívida (Aging)</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">Envelhecimento da Dívida (Aging)<HelpTooltip content="Mostra há quanto tempo os valores estão em atraso. Quanto mais à direita no gráfico, mais antiga e difícil de recuperar a dívida." /></CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -557,7 +558,7 @@ export default function InadimplenciaTab() {
       {/* Evolution Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Evolução da Inadimplência (Últimos 6 meses)</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">Evolução da Inadimplência (Últimos 6 meses)<HelpTooltip content="Acompanhe se a inadimplência está crescendo ou diminuindo ao longo dos meses. Tendência de queda indica que a cobrança está funcionando." /></CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-72">
