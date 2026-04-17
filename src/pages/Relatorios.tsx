@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, startOfYear, endOfYear, subYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState, useURLStateBoolean } from "@/hooks/useURLState";
 import { buildCategoriasTree, type CategoriaRaw, type TipoCategoria } from "@/lib/categorias-hierarchy";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
@@ -87,10 +88,10 @@ const DRE_SECTIONS: DRESection[] = [
 ];
 
 export default function Relatorios() {
-  const [period, setPeriod] = usePersistedState("relatorios-period", "este_mes");
+  const [period, setPeriod] = useURLState<string>("periodo", "este_mes");
   const [customStart, setCustomStart] = useState<Date | undefined>(undefined);
   const [customEnd, setCustomEnd] = useState<Date | undefined>(undefined);
-  const [compare, setCompare] = usePersistedState("relatorios-compare", false);
+  const [compare, setCompare] = useURLStateBoolean("comparativo", false);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [prevMovimentacoes, setPrevMovimentacoes] = useState<Movimentacao[]>([]);
   const [categorias, setCategorias] = useState<CategoriaRaw[]>([]);
@@ -592,7 +593,7 @@ export default function Relatorios() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Relatórios</h1>
 
-      <Tabs defaultValue="dre">
+      <Tabs defaultValue="dre" value={undefined} onValueChange={undefined}>
         <TabsList>
           <TabsTrigger value="dre"><BarChart3 className="h-4 w-4 mr-1.5" />DRE</TabsTrigger>
           <TabsTrigger value="fluxo"><TrendingUp className="h-4 w-4 mr-1.5" />Fluxo de Caixa</TabsTrigger>

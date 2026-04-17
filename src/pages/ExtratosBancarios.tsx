@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState } from "@/hooks/useURLState";
 import { PeriodFilter, PeriodPreset, getDateRange } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
@@ -17,11 +18,11 @@ import { HelpTooltip } from "@/components/HelpTooltip";
 
 export default function ExtratosBancarios() {
   const navigate = useNavigate();
-  const [contaId, setContaId] = usePersistedState<string>("extrato_conta_id", "all");
-  const [preset, setPreset] = usePersistedState<PeriodPreset>("extrato_preset", "month");
+  const [contaId, setContaId] = useURLState<string>("conta", "all");
+  const [preset, setPreset] = useURLState<string>("periodo", "month");
   const [customRange, setCustomRange] = usePersistedState<{ start: string | null; end: string | null }>("extrato_custom_range", { start: null, end: null });
   const [sort, setSort] = useState<SortConfig>({ key: null, direction: null });
-  const [subTab, setSubTab] = usePersistedState<string>("extrato_subtab", "todas");
+  const [subTab, setSubTab] = useURLState<string>("subtab", "todas");
   const [importOpen, setImportOpen] = useState(false);
 
   const { data: contas = [] } = useQuery({

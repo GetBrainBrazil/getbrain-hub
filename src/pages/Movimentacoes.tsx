@@ -4,6 +4,7 @@ import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckC
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useURLState } from "@/hooks/useURLState";
 import { PeriodFilter, getDateRange, PeriodPreset } from "@/components/PeriodFilter";
 import { KPICard } from "@/components/KPICard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -41,7 +42,7 @@ export default function Movimentacoes() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
-  const [tab, setTab] = usePersistedState<TabType>("movimentacoes_tab", "pagar");
+  const [tab, setTab] = useURLState<string>("aba", "pagar");
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
   const [loadingByTab, setLoadingByTab] = useState<Record<TabType, boolean>>({ pagar: true, receber: true });
   const [referencesLoading, setReferencesLoading] = useState(true);
@@ -51,10 +52,13 @@ export default function Movimentacoes() {
   const [contas, setContas] = useState<any[]>([]);
   const [projetos, setProjetos] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
-  const [search, setSearch] = usePersistedState("movimentacoes_search", "");
-  const [statusFilter, setStatusFilter] = usePersistedState("movimentacoes_status", "todas");
-  const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("movimentacoes_period", "month");
+  const [search, setSearch] = useURLState<string>("busca", "");
+  const [statusFilter, setStatusFilter] = useURLState<string>("status", "todas");
+  const [periodPreset, setPeriodPreset] = useURLState<string>("periodo", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
+  const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
+  const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
+  const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
   const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
