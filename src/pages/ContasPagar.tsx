@@ -458,9 +458,25 @@ export default function ContasPagar() {
         <DialogContent>
           <DialogHeader><DialogTitle>Registrar Pagamento</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Valor Pago (R$)</Label><Input type="number" step="0.01" value={pagForm.valor_realizado} onChange={e => setPagForm({...pagForm, valor_realizado: e.target.value})} /></div>
-            <div><Label>Data do Pagamento</Label><Input type="date" value={pagForm.data_pagamento} onChange={e => setPagForm({...pagForm, data_pagamento: e.target.value})} /></div>
-            <div><Label>Conta Bancária</Label>
+            <ComprovanteUploadField
+              onFileChange={setComprovanteFile}
+              valorEsperado={selectedMov ? Number(selectedMov.valor_previsto) : undefined}
+              contas={contas as any}
+              onAIResult={(res: ComprovanteAIResult) => {
+                const next: typeof aiFields = new Set(aiFields);
+                setPagForm((prev) => {
+                  const upd = { ...prev };
+                  if (res.data) { upd.data_pagamento = res.data; next.add("data_pagamento"); }
+                  if (res.valor != null) { upd.valor_realizado = String(res.valor); next.add("valor_realizado"); }
+                  if (res.conta_bancaria_id) { upd.conta_bancaria_id = res.conta_bancaria_id; next.add("conta_bancaria_id"); }
+                  return upd;
+                });
+                setAiFields(next);
+              }}
+            />
+            <div><Label className="flex items-center gap-1">Valor Pago (R$){aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}</Label><Input type="number" step="0.01" value={pagForm.valor_realizado} onChange={e => setPagForm({...pagForm, valor_realizado: e.target.value})} /></div>
+            <div><Label className="flex items-center gap-1">Data do Pagamento{aiFields.has("data_pagamento") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}</Label><Input type="date" value={pagForm.data_pagamento} onChange={e => setPagForm({...pagForm, data_pagamento: e.target.value})} /></div>
+            <div><Label className="flex items-center gap-1">Conta Bancária{aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}</Label>
               <Select value={pagForm.conta_bancaria_id} onValueChange={v => setPagForm({...pagForm, conta_bancaria_id: v})}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
