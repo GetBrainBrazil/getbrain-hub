@@ -544,6 +544,7 @@ export default function Relatorios() {
             <TableCell className={cn("font-bold text-base py-4", positive ? "text-success" : "text-destructive")}>
               <div className="flex items-center gap-3">
                 {line.label}
+                <HelpTooltip content="Este é o número mais importante: o lucro ou prejuízo final da empresa no período." />
                 <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", positive ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive")}>
                   Margem: {margem.toFixed(1)}%
                 </span>
