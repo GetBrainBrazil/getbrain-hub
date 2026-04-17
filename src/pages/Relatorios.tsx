@@ -36,19 +36,13 @@ interface Movimentacao {
   fornecedor_id: string | null;
 }
 
-interface Categoria {
-  id: string;
-  nome: string;
-  tipo: string;
-}
-
 interface DRELine {
   label: string;
-  type: "group" | "detail" | "subtotal" | "result";
+  type: "group" | "subgroup" | "detail" | "subtotal-sub" | "subtotal" | "result";
   value: number;
   prevValue?: number;
   indent?: number;
-  categoriaId?: string;
+  categoriaIds?: string[]; // for detail expansion: ids of categories that contribute
   items?: Movimentacao[];
 }
 
