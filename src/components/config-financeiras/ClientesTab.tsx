@@ -116,8 +116,16 @@ export default function ClientesTab({ search }: { search: string }) {
     if (error) {
       console.error("Erro ao excluir cliente:", error);
       if (error.code === "23503") {
+        const [{ count: movCount }, { count: projCount }] = await Promise.all([
+          supabase.from("movimentacoes").select("id", { count: "exact", head: true }).eq("cliente_id", selected.id),
+          supabase.from("projetos").select("id", { count: "exact", head: true }).eq("cliente_id", selected.id),
+        ]);
+        const partes: string[] = [];
+        if (movCount) partes.push(`${movCount} movimentação(ões)`);
+        if (projCount) partes.push(`${projCount} projeto(s)`);
+        const detalhe = partes.length ? partes.join(" e ") : "registros";
         toast.error(
-          "Não é possível excluir: este cliente possui movimentações ou projetos vinculados. Remova-os ou inative o cliente.",
+          `Não é possível excluir: este cliente possui ${detalhe} vinculado(s). Remova-os ou inative o cliente.`,
         );
       } else {
         toast.error(error.message || "Erro ao excluir cliente");
