@@ -396,8 +396,8 @@ export default function MovimentacaoDetalhe() {
       toast.error("Erro ao salvar. Tente novamente.");
       return;
     }
-    toast.success("Alterações salvas!");
-    setMov(updated);
+    toast.success("Movimentação atualizada com sucesso");
+    navigate("/financeiro/movimentacoes");
   }
 
   function openDarBaixa() {
