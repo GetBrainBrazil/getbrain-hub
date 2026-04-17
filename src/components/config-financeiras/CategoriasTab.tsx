@@ -278,7 +278,7 @@ export default function CategoriasTab({ search }: { search: string }) {
           </Select>
 
           <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-            <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-48 h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todos os Status</SelectItem>
               <SelectItem value="ativas">Ativas</SelectItem>
