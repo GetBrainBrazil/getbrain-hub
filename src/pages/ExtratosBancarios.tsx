@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Wallet, TrendingUp, TrendingDown, Landmark, Upload, CheckCircle2, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Landmark, Upload, CheckCircle2, Clock, AlertTriangle, ShieldCheck, Camera } from "lucide-react";
 import { ImportExtratoWizard } from "@/components/ImportExtratoWizard";
+import { RegistrarComprovanteWizard } from "@/components/RegistrarComprovanteWizard";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 export default function ExtratosBancarios() {
@@ -24,6 +25,7 @@ export default function ExtratosBancarios() {
   const [sort, setSort] = useState<SortConfig>({ key: null, direction: null });
   const [subTab, setSubTab] = useURLState<string>("subtab", "todas");
   const [importOpen, setImportOpen] = useState(false);
+  const [comprovanteOpen, setComprovanteOpen] = useState(false);
 
   const { data: contas = [] } = useQuery({
     queryKey: ["contas_bancarias_extrato"],
@@ -122,6 +124,9 @@ export default function ExtratosBancarios() {
         <Button onClick={() => setImportOpen(true)} className="gap-2">
           <Upload className="h-4 w-4" /> Importar Extrato
         </Button>
+        <Button variant="outline" onClick={() => setComprovanteOpen(true)} className="gap-2">
+          <Camera className="h-4 w-4" /> Registrar Comprovante
+        </Button>
       </div>
 
       {/* Divergence alert */}
@@ -214,6 +219,7 @@ export default function ExtratosBancarios() {
 
       {/* Import Wizard */}
       <ImportExtratoWizard open={importOpen} onOpenChange={setImportOpen} contas={contas} />
+      <RegistrarComprovanteWizard open={comprovanteOpen} onOpenChange={setComprovanteOpen} contas={contas} />
 
     </div>
   );
