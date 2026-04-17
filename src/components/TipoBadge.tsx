@@ -6,7 +6,6 @@ const TIPO_META: Record<TipoCategoria, { label: string; dot: string }> = {
   despesas:       { label: "Despesa",        dot: "bg-red-500" },     // #EF4444
   impostos:       { label: "Impostos",       dot: "bg-amber-500" },   // #F59E0B
   retirada:       { label: "Retirada",       dot: "bg-violet-500" },  // #8B5CF6
-  transferencias: { label: "Transferências", dot: "bg-sky-500" },     // #0EA5E9
 };
 
 interface TipoBadgeProps {
