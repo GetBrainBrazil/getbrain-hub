@@ -57,7 +57,7 @@ export default function ConfiguracoesFinanceiras() {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSearch(""); }}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <TabsList>
             {Object.entries(tabConfig).map(([key, cfg]) => (
