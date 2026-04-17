@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
+import { getHierarchicalOptions, getVinculacaoTipo, type VinculacaoTipo } from "@/lib/categorias-hierarchy";
 import CategoryPicker from "@/components/CategoryPicker";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -21,6 +21,8 @@ import {
   Plus,
   Repeat,
   Landmark,
+  Users,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,6 +94,7 @@ const emptyForm = {
   descricao: "",
   cliente_id: "",
   fornecedor_id: "",
+  colaborador_id: "",
   categoria_id: "",
   centro_custo_id: "",
   conta_bancaria_id: "",
@@ -129,6 +132,7 @@ export default function MovimentacaoDetalhe() {
 
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
+  const [colaboradores, setColaboradores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [contas, setContas] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
@@ -158,6 +162,8 @@ export default function MovimentacaoDetalhe() {
   const [fornecedorSearch, setFornecedorSearch] = useState("");
   const [clienteOpen, setClienteOpen] = useState(false);
   const [clienteSearch, setClienteSearch] = useState("");
+  const [colaboradorOpen, setColaboradorOpen] = useState(false);
+  const [colaboradorSearch, setColaboradorSearch] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
