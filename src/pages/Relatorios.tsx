@@ -92,24 +92,24 @@ export default function Relatorios() {
   const [compare, setCompare] = usePersistedState("relatorios-compare", false);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [prevMovimentacoes, setPrevMovimentacoes] = useState<Movimentacao[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaRaw[]>([]);
   const [clientes, setClientes] = useState<Record<string, string>>({});
   const [fornecedores, setFornecedores] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    receita: true, deducoes: true, despesas_op: true, despesas_fin: true,
-  });
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(DRE_SECTIONS.map(s => [s.key, true]))
+  );
   const [expandedDetailKey, setExpandedDetailKey] = useState<string | null>(null);
 
   // Fetch reference data
   useEffect(() => {
     async function load() {
       const [catRes, cliRes, forRes] = await Promise.all([
-        supabase.from("categorias").select("id, nome, tipo"),
+        supabase.from("categorias").select("id, nome, tipo, categoria_pai_id, ativo"),
         supabase.from("clientes").select("id, nome"),
         supabase.from("fornecedores").select("id, nome"),
       ]);
-      setCategorias(catRes.data || []);
+      setCategorias((catRes.data as CategoriaRaw[]) || []);
       const cMap: Record<string, string> = {};
       (cliRes.data || []).forEach(c => { cMap[c.id] = c.nome; });
       setClientes(cMap);
@@ -153,142 +153,202 @@ export default function Relatorios() {
     load();
   }, [period, customStart, customEnd, compare]);
 
-  // ── Build DRE lines ──
-  const dreLines = useMemo(() => {
-    const catMap = new Map(categorias.map(c => [c.id, c]));
+  // ── Build DRE lines dynamically from categoria tree ──
+  const { dreLines, sectionTotals } = useMemo(() => {
+    const tree = buildCategoriasTree(categorias);
     const lines: DRELine[] = [];
+    const sectionTotals: Record<string, { value: number; prev: number }> = {};
 
-    function sumByCategories(
-      names: string[],
-      tipo: "receita" | "despesa",
-      movs: Movimentacao[]
-    ): { byName: Record<string, { value: number; items: Movimentacao[] }> } {
-      const byName: Record<string, { value: number; items: Movimentacao[] }> = {};
-      names.forEach(n => { byName[n] = { value: 0, items: [] }; });
-
+    // Pre-compute sums per categoria_id (current + previous period)
+    function sumByCategoria(movs: Movimentacao[]) {
+      const byCat = new Map<string, { value: number; items: Movimentacao[] }>();
       movs.forEach(m => {
         if (!m.categoria_id) return;
-        const cat = catMap.get(m.categoria_id);
-        if (!cat) return;
-        const catTipo = cat.tipo?.toLowerCase();
-        if (tipo === "receita" && catTipo !== "receitas") return;
-        if (tipo === "despesa" && catTipo !== "despesas") return;
-
         const val = Math.abs(m.valor_realizado || 0);
-        // Try exact match first
-        const matched = names.find(n => cat.nome.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(cat.nome.toLowerCase()));
-        if (matched) {
-          byName[matched].value += val;
-          byName[matched].items.push(m);
-        } else {
-          // Put in "Outros" if exists, otherwise last bucket
-          const fallback = names.includes("Outros") ? "Outros" : names[names.length - 1];
-          byName[fallback].value += val;
-          byName[fallback].items.push(m);
-        }
+        const e = byCat.get(m.categoria_id) || { value: 0, items: [] };
+        e.value += val;
+        e.items.push(m);
+        byCat.set(m.categoria_id, e);
       });
-      return { byName };
+      return byCat;
+    }
+    const curMap = sumByCategoria(movimentacoes);
+    const prevMap = sumByCategoria(prevMovimentacoes);
+
+    // Helper: should a leaf (sub w/o contas, or conta) be displayed?
+    // - ativa: sempre
+    // - inativa: só se tiver lançamentos no período (atual ou de comparação)
+    function shouldShowLeaf(catId: string, ativo: boolean): boolean {
+      if (ativo) return true;
+      const hasCur = (curMap.get(catId)?.value || 0) > 0;
+      const hasPrev = (prevMap.get(catId)?.value || 0) > 0;
+      return hasCur || hasPrev;
     }
 
-    // RECEITA BRUTA
-    const recNames = DRE_STRUCTURE.receita.categories;
-    const rec = sumByCategories(recNames, "receita", movimentacoes);
-    const recPrev = compare ? sumByCategories(recNames, "receita", prevMovimentacoes) : null;
-    let totalReceita = 0;
-    let totalReceitaPrev = 0;
+    let receitaTotal = 0, receitaTotalPrev = 0;
+    let deducoesTotal = 0, deducoesTotalPrev = 0;
+    let despesasOpTotal = 0, despesasOpTotalPrev = 0;
+    let retiradasTotal = 0, retiradasTotalPrev = 0;
 
-    lines.push({ label: DRE_STRUCTURE.receita.label, type: "group", value: 0 });
-    recNames.forEach(name => {
-      const v = rec.byName[name].value;
-      totalReceita += v;
-      const pv = recPrev?.byName[name]?.value || 0;
-      totalReceitaPrev += pv;
-      lines.push({ label: name === "Outros" ? "Outros (Receita)" : name, type: "detail", value: v, prevValue: pv, indent: 1, items: rec.byName[name].items });
+    DRE_SECTIONS.forEach(section => {
+      const tipoNode = tree.find(t => t.config.key === section.tipo);
+      const subs = tipoNode?.subcategorias || [];
+
+      let sectionValue = 0;
+      let sectionPrev = 0;
+      const sectionLines: DRELine[] = [];
+
+      subs.forEach(sub => {
+        const subDirectCur = curMap.get(sub.id);
+        const subDirectPrev = prevMap.get(sub.id);
+        const contasVisiveis = sub.contas.filter(c => shouldShowLeaf(c.id, c.ativo));
+
+        if (contasVisiveis.length > 0) {
+          // Subcategoria com contas → render como subgroup + contas + subtotal-sub
+          let subSum = 0;
+          let subSumPrev = 0;
+          const contaLines: DRELine[] = [];
+
+          // Lançamentos diretamente na subcategoria (raro, mas possível) entram como linha "Outros [sub]"
+          const subDirectVal = subDirectCur?.value || 0;
+          const subDirectPrevVal = subDirectPrev?.value || 0;
+          if (subDirectVal > 0 || subDirectPrevVal > 0) {
+            subSum += subDirectVal;
+            subSumPrev += subDirectPrevVal;
+            contaLines.push({
+              label: `Outros (${sub.nome})`,
+              type: "detail",
+              value: subDirectVal,
+              prevValue: subDirectPrevVal,
+              indent: 2,
+              categoriaIds: [sub.id],
+              items: subDirectCur?.items || [],
+            });
+          }
+
+          contasVisiveis.forEach(conta => {
+            const v = curMap.get(conta.id)?.value || 0;
+            const pv = prevMap.get(conta.id)?.value || 0;
+            const items = curMap.get(conta.id)?.items || [];
+            subSum += v;
+            subSumPrev += pv;
+            contaLines.push({
+              label: conta.nome,
+              type: "detail",
+              value: v,
+              prevValue: pv,
+              indent: 2,
+              categoriaIds: [conta.id],
+              items,
+            });
+          });
+
+          // Só mostra a subcategoria se for ativa OU se tiver soma > 0
+          if (sub.ativo || subSum > 0 || subSumPrev > 0) {
+            sectionLines.push({
+              label: sub.nome,
+              type: "subgroup",
+              value: 0,
+              indent: 1,
+            });
+            sectionLines.push(...contaLines);
+            sectionLines.push({
+              label: `Subtotal ${sub.nome}`,
+              type: "subtotal-sub",
+              value: subSum,
+              prevValue: subSumPrev,
+              indent: 1,
+            });
+            sectionValue += subSum;
+            sectionPrev += subSumPrev;
+          }
+        } else {
+          // Subcategoria sem contas → linha de detalhe direta
+          if (!shouldShowLeaf(sub.id, sub.ativo)) return;
+          const v = subDirectCur?.value || 0;
+          const pv = subDirectPrev?.value || 0;
+          const items = subDirectCur?.items || [];
+          sectionLines.push({
+            label: sub.nome,
+            type: "detail",
+            value: v,
+            prevValue: pv,
+            indent: 1,
+            categoriaIds: [sub.id],
+            items,
+          });
+          sectionValue += v;
+          sectionPrev += pv;
+        }
+      });
+
+      // Sempre exibe o group header e o subtotal da seção (mesmo vazio)
+      lines.push({ label: section.label, type: "group", value: 0 });
+      if (sectionLines.length === 0) {
+        lines.push({
+          label: "Nenhuma categoria cadastrada",
+          type: "detail",
+          value: 0,
+          prevValue: 0,
+          indent: 1,
+          items: [],
+        });
+      } else {
+        lines.push(...sectionLines);
+      }
+
+      // Subtotal da seção (label varia: "= Receita Líquida" para deduções inclui receita - deduções)
+      if (section.key === "receita") {
+        receitaTotal = sectionValue;
+        receitaTotalPrev = sectionPrev;
+        lines.push({ label: section.subtotalLabel, type: "subtotal", value: receitaTotal, prevValue: receitaTotalPrev });
+      } else if (section.key === "deducoes") {
+        deducoesTotal = sectionValue;
+        deducoesTotalPrev = sectionPrev;
+        const receitaLiquida = receitaTotal - deducoesTotal;
+        const receitaLiquidaPrev = receitaTotalPrev - deducoesTotalPrev;
+        lines.push({ label: section.subtotalLabel, type: "subtotal", value: receitaLiquida, prevValue: receitaLiquidaPrev });
+      } else if (section.key === "despesas_op") {
+        despesasOpTotal = sectionValue;
+        despesasOpTotalPrev = sectionPrev;
+        lines.push({ label: section.subtotalLabel, type: "subtotal", value: despesasOpTotal, prevValue: despesasOpTotalPrev });
+      } else if (section.key === "retiradas") {
+        retiradasTotal = sectionValue;
+        retiradasTotalPrev = sectionPrev;
+        lines.push({ label: section.subtotalLabel, type: "subtotal", value: retiradasTotal, prevValue: retiradasTotalPrev });
+      }
+
+      sectionTotals[section.key] = { value: sectionValue, prev: sectionPrev };
     });
-    lines.push({ label: DRE_STRUCTURE.receita.subtotalLabel, type: "subtotal", value: totalReceita, prevValue: totalReceitaPrev });
 
-    // DEDUÇÕES
-    const dedNames = DRE_STRUCTURE.deducoes.categories;
-    const ded = sumByCategories(dedNames, "despesa", movimentacoes);
-    const dedPrev = compare ? sumByCategories(dedNames, "despesa", prevMovimentacoes) : null;
-    let totalDeducoes = 0;
-    let totalDeducoesPrev = 0;
-
-    lines.push({ label: DRE_STRUCTURE.deducoes.label, type: "group", value: 0 });
-    dedNames.forEach(name => {
-      const v = ded.byName[name].value;
-      totalDeducoes += v;
-      const pv = dedPrev?.byName[name]?.value || 0;
-      totalDeducoesPrev += pv;
-      lines.push({ label: name, type: "detail", value: v, prevValue: pv, indent: 1, items: ded.byName[name].items });
-    });
-    const receitaLiquida = totalReceita - totalDeducoes;
-    const receitaLiquidaPrev = totalReceitaPrev - totalDeducoesPrev;
-    lines.push({ label: DRE_STRUCTURE.deducoes.subtotalLabel, type: "subtotal", value: receitaLiquida, prevValue: receitaLiquidaPrev });
-
-    // DESPESAS OPERACIONAIS
-    const dopNames = DRE_STRUCTURE.despesas_op.categories;
-    const dop = sumByCategories(dopNames, "despesa", movimentacoes);
-    const dopPrev = compare ? sumByCategories(dopNames, "despesa", prevMovimentacoes) : null;
-    let totalDespOp = 0;
-    let totalDespOpPrev = 0;
-
-    lines.push({ label: DRE_STRUCTURE.despesas_op.label, type: "group", value: 0 });
-    dopNames.forEach(name => {
-      const v = dop.byName[name].value;
-      totalDespOp += v;
-      const pv = dopPrev?.byName[name]?.value || 0;
-      totalDespOpPrev += pv;
-      lines.push({ label: name, type: "detail", value: v, prevValue: pv, indent: 1, items: dop.byName[name].items });
-    });
-    lines.push({ label: DRE_STRUCTURE.despesas_op.subtotalLabel, type: "subtotal", value: totalDespOp, prevValue: totalDespOpPrev });
-
-    // DESPESAS FINANCEIRAS
-    const dfNames = DRE_STRUCTURE.despesas_fin.categories;
-    const df = sumByCategories(dfNames, "despesa", movimentacoes);
-    const dfPrev = compare ? sumByCategories(dfNames, "despesa", prevMovimentacoes) : null;
-    let totalDespFin = 0;
-    let totalDespFinPrev = 0;
-
-    lines.push({ label: DRE_STRUCTURE.despesas_fin.label, type: "group", value: 0 });
-    dfNames.forEach(name => {
-      const v = df.byName[name].value;
-      totalDespFin += v;
-      const pv = dfPrev?.byName[name]?.value || 0;
-      totalDespFinPrev += pv;
-      lines.push({ label: name, type: "detail", value: v, prevValue: pv, indent: 1, items: df.byName[name].items });
-    });
-    lines.push({ label: DRE_STRUCTURE.despesas_fin.subtotalLabel, type: "subtotal", value: totalDespFin, prevValue: totalDespFinPrev });
-
-    // RESULTADO LÍQUIDO
-    const resultado = receitaLiquida - totalDespOp - totalDespFin;
-    const resultadoPrev = receitaLiquidaPrev - totalDespOpPrev - totalDespFinPrev;
+    // RESULTADO LÍQUIDO = (Receita - Deduções) - Despesas Op - Retiradas
+    const receitaLiquida = receitaTotal - deducoesTotal;
+    const receitaLiquidaPrev = receitaTotalPrev - deducoesTotalPrev;
+    const resultado = receitaLiquida - despesasOpTotal - retiradasTotal;
+    const resultadoPrev = receitaLiquidaPrev - despesasOpTotalPrev - retiradasTotalPrev;
     lines.push({ label: "RESULTADO LÍQUIDO", type: "result", value: resultado, prevValue: resultadoPrev });
 
-    return lines;
-  }, [movimentacoes, prevMovimentacoes, categorias, compare]);
+    return { dreLines: lines, sectionTotals };
+  }, [movimentacoes, prevMovimentacoes, categorias]);
 
   // ── Summary values ──
   const summary = useMemo(() => {
     const receitaLiquida = dreLines.find(l => l.label === "= Receita Líquida")?.value || 0;
-    const totalDespOp = dreLines.find(l => l.label === "= Total Despesas Operacionais")?.value || 0;
-    const totalDespFin = dreLines.find(l => l.label === "= Total Despesas Financeiras")?.value || 0;
-    const totalDespesas = totalDespOp + totalDespFin;
+    const totalDespOp = sectionTotals.despesas_op?.value || 0;
+    const totalRetiradas = sectionTotals.retiradas?.value || 0;
+    const totalDespesas = totalDespOp + totalRetiradas;
     const resultado = dreLines.find(l => l.type === "result")?.value || 0;
     const margem = receitaLiquida !== 0 ? (resultado / receitaLiquida) * 100 : 0;
     return { receitaLiquida, totalDespesas, resultado, margem };
-  }, [dreLines]);
+  }, [dreLines, sectionTotals]);
 
   function toggleGroup(key: string) {
     setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
   }
 
   function getGroupKey(label: string): string | null {
-    if (label === DRE_STRUCTURE.receita.label) return "receita";
-    if (label === DRE_STRUCTURE.deducoes.label) return "deducoes";
-    if (label === DRE_STRUCTURE.despesas_op.label) return "despesas_op";
-    if (label === DRE_STRUCTURE.despesas_fin.label) return "despesas_fin";
-    return null;
+    const s = DRE_SECTIONS.find(s => s.label === label);
+    return s ? s.key : null;
   }
 
   function toggleDetail(key: string) {
