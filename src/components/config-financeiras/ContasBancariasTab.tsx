@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, StickyNote, ArrowLeft } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { FormMode, FormPageShell, FormSection, DetailField, formatMoneyForInput, parseMoney } from "./shared";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 type Form = { nome: string; banco: string; agencia: string; conta: string; tipo: string; saldo_inicial: string; moeda: string; ativo: boolean; chaves_pix: string[]; observacoes: string };
 const empty: Form = { nome: "", banco: "", agencia: "", conta: "", tipo: "corrente", saldo_inicial: "0,00", moeda: "BRL", ativo: true, chaves_pix: [], observacoes: "" };
