@@ -3,15 +3,15 @@ import { useLocation } from "react-router-dom";
 
 const ROUTE_KEY = "getbrain_last_route";
 
-/** Saves the current route to sessionStorage on every navigation. */
+/** Saves the current route (pathname + search) to sessionStorage on every navigation. */
 export function RouteTracker() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   useEffect(() => {
     if (pathname !== "/login") {
-      sessionStorage.setItem(ROUTE_KEY, pathname);
+      sessionStorage.setItem(ROUTE_KEY, pathname + (search || ""));
     }
-  }, [pathname]);
+  }, [pathname, search]);
 
   return null;
 }
