@@ -13,8 +13,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   TrendingUp, TrendingDown, DollarSign, MinusCircle, BarChart3, Percent,
-  ChevronDown, ChevronRight, Eye, Download, CalendarIcon, FileText, FileSpreadsheet,
-  X, AlertTriangle
+  ChevronDown, ChevronRight, Download, CalendarIcon, FileText, FileSpreadsheet,
+  AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/formatters";
