@@ -643,12 +643,20 @@ export default function Movimentacoes() {
                       />
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-sm font-semibold text-foreground">
-                          {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
-                        </span>
-                      </div>
+                      {(() => {
+                        const v = getVinculado(m);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-semibold text-foreground">{v.nome}</span>
+                            {v.badge && (
+                              <span className="inline-flex items-center justify-center rounded border border-border bg-muted px-1.5 py-0 text-[9px] font-semibold text-muted-foreground leading-4" title={v.badge === "F" ? "Fornecedor" : v.badge === "C" ? "Colaborador" : "Cliente"}>
+                                {v.badge}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm text-foreground py-4">
                       <div className="flex items-center gap-2">
@@ -714,7 +722,7 @@ export default function Movimentacoes() {
                         <div className="flex items-center gap-2 pl-4 text-muted-foreground">
                           <CornerDownRight className="h-3.5 w-3.5 shrink-0" />
                           <span className="text-sm font-medium text-foreground">
-                            {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
+                            {getVinculado(m).nome}
                           </span>
                         </div>
                       </TableCell>
