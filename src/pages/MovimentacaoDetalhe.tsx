@@ -440,7 +440,7 @@ export default function MovimentacaoDetalhe() {
       toast.error("Erro ao excluir");
       return;
     }
-    toast.success("Movimentação excluída");
+    toast.success("Movimentação excluída com sucesso");
     navigate("/financeiro/movimentacoes");
   }
 
