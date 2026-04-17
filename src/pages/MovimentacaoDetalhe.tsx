@@ -1083,8 +1083,27 @@ export default function MovimentacaoDetalhe() {
             <DialogTitle>{isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <ComprovanteUploadField
+              onFileChange={setComprovanteFile}
+              valorEsperado={mov ? Number(mov.valor_previsto) : undefined}
+              contas={contas as any}
+              onAIResult={(res: ComprovanteAIResult) => {
+                const next: typeof aiFields = new Set(aiFields);
+                setBaixaForm((prev) => {
+                  const upd = { ...prev };
+                  if (res.data) { upd.data_pagamento = res.data; next.add("data_pagamento"); }
+                  if (res.valor != null) { upd.valor_realizado = String(res.valor); next.add("valor_realizado"); }
+                  if (res.conta_bancaria_id) { upd.conta_bancaria_id = res.conta_bancaria_id; next.add("conta_bancaria_id"); }
+                  return upd;
+                });
+                setAiFields(next);
+              }}
+            />
             <div>
-              <Label>Valor {isPagar ? "Pago" : "Recebido"} (R$)</Label>
+              <Label className="flex items-center gap-1">
+                Valor {isPagar ? "Pago" : "Recebido"} (R$)
+                {aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}
+              </Label>
               <Input
                 type="number"
                 step="0.01"
@@ -1093,7 +1112,10 @@ export default function MovimentacaoDetalhe() {
               />
             </div>
             <div>
-              <Label>Data do {isPagar ? "Pagamento" : "Recebimento"}</Label>
+              <Label className="flex items-center gap-1">
+                Data do {isPagar ? "Pagamento" : "Recebimento"}
+                {aiFields.has("data_pagamento") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}
+              </Label>
               <Input
                 type="date"
                 value={baixaForm.data_pagamento}
@@ -1101,7 +1123,10 @@ export default function MovimentacaoDetalhe() {
               />
             </div>
             <div>
-              <Label>Conta Bancária</Label>
+              <Label className="flex items-center gap-1">
+                Conta Bancária
+                {aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}
+              </Label>
               <Select
                 value={baixaForm.conta_bancaria_id}
                 onValueChange={(v) => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}
