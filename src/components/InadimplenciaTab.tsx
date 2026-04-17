@@ -42,11 +42,11 @@ type SortKey = "nome" | "qtd" | "valor" | "antigo" | "pct";
 type SortDir = "asc" | "desc";
 
 const AGING_RANGES = [
-  { label: "1 a 15 dias", min: 1, max: 15, color: "#B2E0F0" },
+  { label: "1 a 15 dias", min: 1, max: 15, color: "#BAE6FD" },
   { label: "16 a 30 dias", min: 16, max: 30, color: "#38BDF8" },
-  { label: "31 a 60 dias", min: 31, max: 60, color: "#0284C7" },
-  { label: "61 a 90 dias", min: 61, max: 90, color: "#1E3A5F" },
-  { label: "Acima de 90 dias", min: 91, max: 99999, color: "#0F172A" },
+  { label: "31 a 60 dias", min: 31, max: 60, color: "#0EA5E9" },
+  { label: "61 a 90 dias", min: 61, max: 90, color: "#0369A1" },
+  { label: "Acima de 90 dias", min: 91, max: 99999, color: "#0C4A6E" },
 ];
 
 function getAgingBadgeClass(dias: number): string {

@@ -218,7 +218,7 @@ export default function FinanceiroVisaoGeral() {
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Últimas Movimentações</CardTitle>
-            <button onClick={() => navigate("/financeiro/transacoes")} className="text-xs text-accent hover:underline">Ver todas →</button>
+            <button onClick={() => navigate("/financeiro/movimentacoes")} className="text-xs text-accent hover:underline">Ver todas →</button>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

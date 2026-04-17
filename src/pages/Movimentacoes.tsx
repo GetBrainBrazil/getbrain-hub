@@ -405,9 +405,10 @@ export default function Movimentacoes() {
 
   async function handleDelete(id: string) {
     if (!confirm("Excluir esta movimentação?")) return;
-    await supabase.from("movimentacoes").delete().eq("id", id);
-    toast.success("Movimentação excluída");
-    void refreshTabs([tab]);
+    const { error } = await supabase.from("movimentacoes").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir movimentação"); return; }
+    await refreshTabs([tab]);
+    toast.success("Movimentação excluída com sucesso");
   }
 
   async function handleDuplicate(m: any) {
