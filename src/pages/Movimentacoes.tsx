@@ -111,7 +111,7 @@ export default function Movimentacoes() {
   function getMovimentacoesQuery(targetTab: TabType) {
     return supabase
       .from("movimentacoes")
-      .select("*, clientes(nome), fornecedores(nome), categorias(nome), projetos(nome)")
+      .select("*, clientes(nome), fornecedores(nome), colaboradores(nome), categorias(nome), projetos(nome)")
       .eq("tipo", tipoByTab[targetTab])
       .order("data_vencimento", { ascending: false });
   }
@@ -241,7 +241,15 @@ export default function Movimentacoes() {
     totalAtrasado: periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0),
   }), [periodFiltered]);
 
-  const entityLabel = isPagar ? "Fornecedor" : "Cliente";
+  const entityLabel = isPagar ? "Vinculado a" : "Cliente";
+
+  /** Resolve a entidade vinculada (fornecedor, colaborador ou cliente) e retorna nome + badge curto. */
+  function getVinculado(m: any): { nome: string; badge: "F" | "C" | "CL" | null } {
+    if (m.colaborador_id && m.colaboradores) return { nome: (m.colaboradores as any).nome, badge: "C" };
+    if (m.fornecedor_id && m.fornecedores) return { nome: (m.fornecedores as any).nome, badge: "F" };
+    if (m.cliente_id && m.clientes) return { nome: (m.clientes as any).nome, badge: "CL" };
+    return { nome: "—", badge: null };
+  }
 
   function addMonths(dateStr: string, months: number): string {
     const d = new Date(dateStr + "T12:00:00");
@@ -635,12 +643,20 @@ export default function Movimentacoes() {
                       />
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-sm font-semibold text-foreground">
-                          {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
-                        </span>
-                      </div>
+                      {(() => {
+                        const v = getVinculado(m);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-semibold text-foreground">{v.nome}</span>
+                            {v.badge && (
+                              <span className="inline-flex items-center justify-center rounded border border-border bg-muted px-1.5 py-0 text-[9px] font-semibold text-muted-foreground leading-4" title={v.badge === "F" ? "Fornecedor" : v.badge === "C" ? "Colaborador" : "Cliente"}>
+                                {v.badge}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm text-foreground py-4">
                       <div className="flex items-center gap-2">
@@ -706,7 +722,7 @@ export default function Movimentacoes() {
                         <div className="flex items-center gap-2 pl-4 text-muted-foreground">
                           <CornerDownRight className="h-3.5 w-3.5 shrink-0" />
                           <span className="text-sm font-medium text-foreground">
-                            {isPagar ? (m.fornecedores as any)?.nome || "—" : (m.clientes as any)?.nome || "—"}
+                            {getVinculado(m).nome}
                           </span>
                         </div>
                       </TableCell>

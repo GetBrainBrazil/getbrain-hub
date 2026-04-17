@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
+import { getHierarchicalOptions, getVinculacaoTipo, type VinculacaoTipo } from "@/lib/categorias-hierarchy";
 import CategoryPicker from "@/components/CategoryPicker";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -21,6 +21,8 @@ import {
   Plus,
   Repeat,
   Landmark,
+  Users,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,6 +94,7 @@ const emptyForm = {
   descricao: "",
   cliente_id: "",
   fornecedor_id: "",
+  colaborador_id: "",
   categoria_id: "",
   centro_custo_id: "",
   conta_bancaria_id: "",
@@ -129,6 +132,7 @@ export default function MovimentacaoDetalhe() {
 
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
+  const [colaboradores, setColaboradores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [contas, setContas] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
@@ -158,6 +162,8 @@ export default function MovimentacaoDetalhe() {
   const [fornecedorSearch, setFornecedorSearch] = useState("");
   const [clienteOpen, setClienteOpen] = useState(false);
   const [clienteSearch, setClienteSearch] = useState("");
+  const [colaboradorOpen, setColaboradorOpen] = useState(false);
+  const [colaboradorSearch, setColaboradorSearch] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -168,9 +174,10 @@ export default function MovimentacaoDetalhe() {
   }, [id, tipoParam]);
 
   async function loadReferences() {
-    const [rClientes, rFornecedores, rCategorias, rContas, rMeios, rCentros] = await Promise.all([
+    const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rMeios, rCentros] = await Promise.all([
       supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("colaboradores").select("id, nome, cargo").eq("ativo", true).order("nome"),
       supabase.from("categorias").select("id, nome, tipo, categoria_pai_id, ativo").eq("ativo", true).order("nome"),
       supabase.from("contas_bancarias").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("meios_pagamento").select("id, nome").eq("ativo", true).order("nome"),
@@ -178,6 +185,7 @@ export default function MovimentacaoDetalhe() {
     ]);
     setClientes(rClientes.data || []);
     setFornecedores(rFornecedores.data || []);
+    setColaboradores(rColaboradores.data || []);
     setCategorias(rCategorias.data || []);
     setContas(rContas.data || []);
     setMeios(rMeios.data || []);
@@ -215,6 +223,7 @@ export default function MovimentacaoDetalhe() {
         descricao: m.descricao || "",
         cliente_id: m.cliente_id || "",
         fornecedor_id: m.fornecedor_id || "",
+        colaborador_id: (m as any).colaborador_id || "",
         categoria_id: m.categoria_id || "",
         centro_custo_id: m.centro_custo_id || "",
         conta_bancaria_id: m.conta_bancaria_id || "",
@@ -290,6 +299,45 @@ export default function MovimentacaoDetalhe() {
 
   const selectedFornecedorNome = fornecedores.find((f) => f.id === form.fornecedor_id)?.nome;
   const selectedClienteNome = clientes.find((c) => c.id === form.cliente_id)?.nome;
+  const selectedColaboradorNome = colaboradores.find((c) => c.id === form.colaborador_id)?.nome;
+
+  // Colaborador combobox
+  const filteredColaboradores = useMemo(() => {
+    if (!colaboradorSearch) return colaboradores;
+    return colaboradores.filter((c) => c.nome.toLowerCase().includes(colaboradorSearch.toLowerCase()));
+  }, [colaboradores, colaboradorSearch]);
+  const showCreateColaborador =
+    colaboradorSearch.trim().length > 0 &&
+    !colaboradores.some((c) => c.nome.toLowerCase() === colaboradorSearch.trim().toLowerCase());
+
+  async function handleCreateColaborador() {
+    const nome = colaboradorSearch.trim();
+    if (!nome) return;
+    const { data, error } = await supabase.from("colaboradores").insert({ nome }).select().single();
+    if (error) { toast.error("Erro ao criar colaborador"); return; }
+    toast.success(`Colaborador "${nome}" criado!`);
+    setColaboradores((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm((prev) => ({ ...prev, colaborador_id: data.id }));
+    setColaboradorSearch("");
+    setColaboradorOpen(false);
+  }
+
+  // Tipo de vinculação dinâmico baseado na categoria
+  const vinculacaoTipo: VinculacaoTipo | null = useMemo(() => {
+    if (!isPagar) return "cliente";
+    if (!form.categoria_id) return null;
+    return getVinculacaoTipo(form.categoria_id, categorias as any, isPagar);
+  }, [form.categoria_id, categorias, isPagar]);
+
+  // Limpa o vínculo anterior quando o tipo de vinculação muda
+  const prevVincTipoRef = useRef<VinculacaoTipo | null>(null);
+  useEffect(() => {
+    const prev = prevVincTipoRef.current;
+    if (prev && vinculacaoTipo && prev !== vinculacaoTipo) {
+      setForm((f) => ({ ...f, fornecedor_id: "", colaborador_id: "", cliente_id: !isPagar ? f.cliente_id : "" }));
+    }
+    prevVincTipoRef.current = vinculacaoTipo;
+  }, [vinculacaoTipo, isPagar]);
 
   const totalPrevisto = useMemo(() => {
     const n = (v: string) => parseFloat(v || "0") || 0;
@@ -298,11 +346,14 @@ export default function MovimentacaoDetalhe() {
 
   function buildPayload() {
     const num = (v: string) => (v === "" || v == null ? 0 : parseFloat(v) || 0);
+    const isFornecedor = vinculacaoTipo === "fornecedor";
+    const isColab = vinculacaoTipo === "colaborador" || vinculacaoTipo === "socio";
     return {
       tipo: tipoLocal,
       descricao: form.descricao,
       cliente_id: !isPagar ? form.cliente_id || null : null,
-      fornecedor_id: isPagar ? form.fornecedor_id || null : null,
+      fornecedor_id: isPagar && isFornecedor ? form.fornecedor_id || null : null,
+      colaborador_id: isPagar && isColab ? form.colaborador_id || null : null,
       categoria_id: form.categoria_id || null,
       centro_custo_id: form.centro_custo_id || null,
       conta_bancaria_id: form.conta_bancaria_id || null,
@@ -329,8 +380,11 @@ export default function MovimentacaoDetalhe() {
       toast.error("Preencha os campos obrigatórios");
       return false;
     }
-    if (isPagar && !form.fornecedor_id) { toast.error("Selecione um fornecedor"); return false; }
-    if (!isPagar && !form.cliente_id) { toast.error("Selecione um cliente"); return false; }
+    if (!form.categoria_id) { toast.error("Selecione uma categoria"); return false; }
+    if (vinculacaoTipo === "fornecedor" && !form.fornecedor_id) { toast.error("Selecione um fornecedor"); return false; }
+    if (vinculacaoTipo === "colaborador" && !form.colaborador_id) { toast.error("Selecione um colaborador"); return false; }
+    if (vinculacaoTipo === "socio" && !form.colaborador_id) { toast.error("Selecione um sócio"); return false; }
+    if (vinculacaoTipo === "cliente" && !form.cliente_id) { toast.error("Selecione um cliente"); return false; }
     return true;
   }
 
@@ -566,7 +620,7 @@ export default function MovimentacaoDetalhe() {
                       type="button"
                       onClick={() => {
                         setTipoLocal("despesa");
-                        setForm((prev) => ({ ...prev, cliente_id: "", categoria_id: "" }));
+                        setForm((prev) => ({ ...prev, cliente_id: "", categoria_id: "", colaborador_id: "" }));
                       }}
                       className={cn(
                         "rounded-lg border-2 p-4 text-left transition-all",
@@ -592,7 +646,7 @@ export default function MovimentacaoDetalhe() {
                       type="button"
                       onClick={() => {
                         setTipoLocal("receita");
-                        setForm((prev) => ({ ...prev, fornecedor_id: "", categoria_id: "" }));
+                        setForm((prev) => ({ ...prev, fornecedor_id: "", categoria_id: "", colaborador_id: "" }));
                       }}
                       className={cn(
                         "rounded-lg border-2 p-4 text-left transition-all",
@@ -618,107 +672,7 @@ export default function MovimentacaoDetalhe() {
                 </div>
               )}
 
-              {/* Fornecedor / Cliente */}
-              <div className="transition-opacity duration-150">
-                <Label className="text-[13px] font-medium mb-1.5 block">{isPagar ? "Fornecedor *" : "Cliente *"}</Label>
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                  {isPagar ? (
-                    <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-                          {selectedFornecedorNome || "Selecione..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <Command shouldFilter={false}>
-                          <CommandInput placeholder="Buscar fornecedor..." value={fornecedorSearch} onValueChange={setFornecedorSearch} />
-                          <CommandList>
-                            <CommandEmpty>{fornecedorSearch.trim() ? "Nenhum encontrado" : "Digite para buscar"}</CommandEmpty>
-                            <CommandGroup>
-                              {filteredFornecedores.map((f) => (
-                                <CommandItem
-                                  key={f.id}
-                                  value={f.id}
-                                  onSelect={() => {
-                                    setForm({ ...form, fornecedor_id: f.id });
-                                    setFornecedorOpen(false);
-                                    setFornecedorSearch("");
-                                  }}
-                                >
-                                  <Check className={cn("mr-2 h-4 w-4", form.fornecedor_id === f.id ? "opacity-100" : "opacity-0")} />
-                                  {f.nome}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                            {showCreateFornecedor && (
-                              <CommandGroup>
-                                <CommandItem onSelect={handleCreateFornecedor} className="text-primary font-medium">
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Criar "{fornecedorSearch.trim()}"
-                                </CommandItem>
-                              </CommandGroup>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-                          {selectedClienteNome || "Selecione..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <Command shouldFilter={false}>
-                          <CommandInput placeholder="Buscar cliente..." value={clienteSearch} onValueChange={setClienteSearch} />
-                          <CommandList>
-                            <CommandEmpty>{clienteSearch.trim() ? "Nenhum encontrado" : "Digite para buscar"}</CommandEmpty>
-                            <CommandGroup>
-                              {filteredClientes.map((c) => (
-                                <CommandItem
-                                  key={c.id}
-                                  value={c.id}
-                                  onSelect={() => {
-                                    setForm({ ...form, cliente_id: c.id });
-                                    setClienteOpen(false);
-                                    setClienteSearch("");
-                                  }}
-                                >
-                                  <Check className={cn("mr-2 h-4 w-4", form.cliente_id === c.id ? "opacity-100" : "opacity-0")} />
-                                  {c.nome}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                            {showCreateCliente && (
-                              <CommandGroup>
-                                <CommandItem onSelect={handleCreateCliente} className="text-primary font-medium">
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Criar "{clienteSearch.trim()}"
-                                </CommandItem>
-                              </CommandGroup>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10"
-                    onClick={() => {
-                      if (isPagar) { setFornecedorOpen(true); setFornecedorSearch(""); }
-                      else { setClienteOpen(true); setClienteSearch(""); }
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
+              {/* Descrição da Movimentação */}
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Descrição da Movimentação *</Label>
                 <Input
@@ -766,7 +720,147 @@ export default function MovimentacaoDetalhe() {
             </div>
           </section>
 
-          {/* 3. DATAS E CONDIÇÕES */}
+          {/* 2.5 VINCULAÇÃO — campo dinâmico baseado na categoria */}
+          <section>
+            <SectionHeader icon={Users} title="Vinculação" />
+            {vinculacaoTipo === null ? (
+              <p className="text-sm italic text-muted-foreground">
+                Selecione uma categoria para definir o tipo de vinculação
+              </p>
+            ) : (
+              <div key={vinculacaoTipo} className="animate-fade-in">
+                {vinculacaoTipo === "fornecedor" && (
+                  <div>
+                    <Label className="text-[13px] font-medium mb-1.5 block">Fornecedor *</Label>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <Popover open={fornecedorOpen} onOpenChange={setFornecedorOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                            {selectedFornecedorNome || "Selecione o fornecedor..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput placeholder="Buscar fornecedor..." value={fornecedorSearch} onValueChange={setFornecedorSearch} />
+                            <CommandList>
+                              <CommandEmpty>{fornecedorSearch.trim() ? "Nenhum encontrado" : "Digite para buscar"}</CommandEmpty>
+                              <CommandGroup>
+                                {filteredFornecedores.map((f) => (
+                                  <CommandItem key={f.id} value={f.id} onSelect={() => { setForm({ ...form, fornecedor_id: f.id }); setFornecedorOpen(false); setFornecedorSearch(""); }}>
+                                    <Check className={cn("mr-2 h-4 w-4", form.fornecedor_id === f.id ? "opacity-100" : "opacity-0")} />
+                                    {f.nome}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                              {showCreateFornecedor && (
+                                <CommandGroup>
+                                  <CommandItem onSelect={handleCreateFornecedor} className="text-primary font-medium">
+                                    <Plus className="mr-2 h-4 w-4" /> Criar "{fornecedorSearch.trim()}"
+                                  </CommandItem>
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => { setFornecedorOpen(true); setFornecedorSearch(""); }}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {(vinculacaoTipo === "colaborador" || vinculacaoTipo === "socio") && (
+                  <div>
+                    <Label className="text-[13px] font-medium mb-1.5 block">
+                      {vinculacaoTipo === "socio" ? "Sócio *" : "Colaborador *"}
+                    </Label>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <Popover open={colaboradorOpen} onOpenChange={setColaboradorOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                            {selectedColaboradorNome || (vinculacaoTipo === "socio" ? "Selecione o sócio..." : "Selecione o colaborador...")}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput placeholder={vinculacaoTipo === "socio" ? "Buscar sócio..." : "Buscar colaborador..."} value={colaboradorSearch} onValueChange={setColaboradorSearch} />
+                            <CommandList>
+                              <CommandEmpty>{colaboradorSearch.trim() ? "Nenhum encontrado" : "Digite para buscar"}</CommandEmpty>
+                              <CommandGroup>
+                                {filteredColaboradores.map((c) => (
+                                  <CommandItem key={c.id} value={c.id} onSelect={() => { setForm({ ...form, colaborador_id: c.id }); setColaboradorOpen(false); setColaboradorSearch(""); }}>
+                                    <Check className={cn("mr-2 h-4 w-4", form.colaborador_id === c.id ? "opacity-100" : "opacity-0")} />
+                                    <span className="flex-1">{c.nome}</span>
+                                    {c.cargo && <span className="text-xs text-muted-foreground ml-2">{c.cargo}</span>}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                              {showCreateColaborador && (
+                                <CommandGroup>
+                                  <CommandItem onSelect={handleCreateColaborador} className="text-primary font-medium">
+                                    <Plus className="mr-2 h-4 w-4" /> Criar "{colaboradorSearch.trim()}"
+                                  </CommandItem>
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => { setColaboradorOpen(true); setColaboradorSearch(""); }}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {vinculacaoTipo === "cliente" && (
+                  <div>
+                    <Label className="text-[13px] font-medium mb-1.5 block">Cliente *</Label>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                            {selectedClienteNome || "Selecione o cliente..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput placeholder="Buscar cliente..." value={clienteSearch} onValueChange={setClienteSearch} />
+                            <CommandList>
+                              <CommandEmpty>{clienteSearch.trim() ? "Nenhum encontrado" : "Digite para buscar"}</CommandEmpty>
+                              <CommandGroup>
+                                {filteredClientes.map((c) => (
+                                  <CommandItem key={c.id} value={c.id} onSelect={() => { setForm({ ...form, cliente_id: c.id }); setClienteOpen(false); setClienteSearch(""); }}>
+                                    <Check className={cn("mr-2 h-4 w-4", form.cliente_id === c.id ? "opacity-100" : "opacity-0")} />
+                                    {c.nome}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                              {showCreateCliente && (
+                                <CommandGroup>
+                                  <CommandItem onSelect={handleCreateCliente} className="text-primary font-medium">
+                                    <Plus className="mr-2 h-4 w-4" /> Criar "{clienteSearch.trim()}"
+                                  </CommandItem>
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => { setClienteOpen(true); setClienteSearch(""); }}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
           <section>
             <SectionHeader icon={CalendarDays} title="Datas e Condições" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
