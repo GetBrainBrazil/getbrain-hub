@@ -111,9 +111,7 @@ export default function Relatorios() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     receita: true, deducoes: true, despesas_op: true, despesas_fin: true,
   });
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerItems, setDrawerItems] = useState<Movimentacao[]>([]);
-  const [drawerLabel, setDrawerLabel] = useState("");
+  const [expandedDetailKey, setExpandedDetailKey] = useState<string | null>(null);
 
   // Fetch reference data
   useEffect(() => {
