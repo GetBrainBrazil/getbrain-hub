@@ -800,7 +800,10 @@ export default function Movimentacoes() {
             <div className="rounded-lg border border-border p-4 space-y-3">
               <div className="grid grid-cols-5 gap-3">
                 <div>
-                  <Label className="text-[11px] font-medium text-foreground mb-1.5 block">Valor Base (R$) *</Label>
+                  <Label className="text-[11px] font-medium text-foreground mb-1.5 block">
+                    Valor Base (R$) *
+                    {aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
+                  </Label>
                   <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })} className="h-10 text-sm" />
                 </div>
                 <div>
