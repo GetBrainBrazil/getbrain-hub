@@ -21,6 +21,7 @@ import { formatCurrency, formatDate, StatusType } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
 export default function ContasPagar() {
@@ -215,7 +216,20 @@ export default function ContasPagar() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta movimentação?")) return;
+    const mov = movs.find((m) => m.id === id);
+    const ok = await confirmDialog({
+      title: "Excluir Movimentação",
+      description: (
+        <>
+          Tem certeza que deseja excluir a movimentação{" "}
+          <span className="font-medium text-foreground">"{mov?.descricao ?? ""}"</span>? Esta ação
+          não pode ser desfeita.
+        </>
+      ),
+      confirmLabel: "Excluir",
+      variant: "destructive",
+    });
+    if (!ok) return;
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
     loadAll();
