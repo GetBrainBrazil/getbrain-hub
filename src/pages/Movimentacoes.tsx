@@ -84,6 +84,7 @@ export default function Movimentacoes() {
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
     desconto: "", juros: "", multa: "", taxas: "",
     pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
+    observacoes_pagamento: "",
   });
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
