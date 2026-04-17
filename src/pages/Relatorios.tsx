@@ -468,6 +468,37 @@ export default function Relatorios() {
             </TableRow>
           );
         }
+      } else if (line.type === "subgroup") {
+        rows.push(
+          <TableRow key={idx} className="hover:bg-transparent">
+            <TableCell className="py-2 pl-10 text-sm font-semibold text-foreground/80">
+              {line.label}
+            </TableCell>
+            <TableCell />
+            {compare && <><TableCell /><TableCell /></>}
+          </TableRow>
+        );
+      } else if (line.type === "subtotal-sub") {
+        rows.push(
+          <TableRow key={idx} className="hover:bg-transparent">
+            <TableCell className="py-2 pl-10 text-xs text-muted-foreground italic">
+              {line.label}
+            </TableCell>
+            <TableCell className="text-right font-mono text-xs text-muted-foreground py-2">
+              {formatCurrency(line.value)}
+            </TableCell>
+            {compare && (
+              <>
+                <TableCell className="text-right font-mono text-xs text-muted-foreground py-2">
+                  {formatCurrency(line.prevValue || 0)}
+                </TableCell>
+                <TableCell className="text-right text-xs py-2">
+                  {renderVariation(line.value, line.prevValue || 0)}
+                </TableCell>
+              </>
+            )}
+          </TableRow>
+        );
       } else if (line.type === "subtotal") {
         const isReceitaLiquida = line.label === "= Receita Líquida";
         rows.push(
