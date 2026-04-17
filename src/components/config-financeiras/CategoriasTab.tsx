@@ -470,10 +470,11 @@ export default function CategoriasTab({ search }: { search: string }) {
                       </span>
                     </TableCell>
                     <TableCell className="py-2">
-                      <div style={{ paddingLeft: isSub ? 24 : 48 }}>
+                      <div className="flex items-center gap-1.5" style={{ paddingLeft: isSub ? 24 : 48 }}>
                         <span className="text-sm italic text-muted-foreground/70">
                           + Adicionar
                         </span>
+                        <HelpTooltip content="Clique para adicionar uma subcategoria dentro deste grupo." />
                       </div>
                     </TableCell>
                     <TableCell className="py-2"></TableCell>
