@@ -30,8 +30,8 @@ const formatTipoConta = (t: string) => t === "poupanca" ? "Poupança" : "Corrent
 
 export default function ColaboradoresTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [filterCargo, setFilterCargo] = useURLState("cargo", "__all__");
-  const [filterStatus, setFilterStatus] = useURLState("status", "__all__");
+  const [filterCargo, setFilterCargo] = useURLState<string>("cargo", "__all__");
+  const [filterStatus, setFilterStatus] = useURLState<string>("status", "__all__");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [mode, setMode] = useState<FormMode>("list");

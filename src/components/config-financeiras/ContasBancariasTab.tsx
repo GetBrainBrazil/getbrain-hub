@@ -25,9 +25,9 @@ const formatMoeda = (m: string) => m === "USD" ? "Dólar (US$)" : m === "EUR" ? 
 
 export default function ContasBancariasTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [filterBanco, setFilterBanco] = useURLState("banco", "__all__");
-  const [filterTipo, setFilterTipo] = useURLState("tipo_conta", "__all__");
-  const [filterMoeda, setFilterMoeda] = useURLState("moeda", "__all__");
+  const [filterBanco, setFilterBanco] = useURLState<string>("banco", "__all__");
+  const [filterTipo, setFilterTipo] = useURLState<string>("tipo_conta", "__all__");
+  const [filterMoeda, setFilterMoeda] = useURLState<string>("moeda", "__all__");
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);

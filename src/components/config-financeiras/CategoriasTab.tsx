@@ -39,8 +39,8 @@ type DeleteTarget =
 export default function CategoriasTab({ search }: { search: string }) {
   const [items, setItems] = useState<CategoriaRaw[]>([]);
   const [usageMap, setUsageMap] = useState<Map<string, number>>(new Map());
-  const [tipoFilter, setTipoFilter] = useURLState("tipo", "todos");
-  const [statusFilter, setStatusFilter] = useURLState("status", "todas");
+  const [tipoFilter, setTipoFilter] = useURLState<string>("tipo", "todos");
+  const [statusFilter, setStatusFilter] = useURLState<string>("status", "todas");
   
 
   const [expandedTipos, setExpandedTipos] = useState<Set<string>>(new Set(TIPOS_CATEGORIA.map(t => t.key)));

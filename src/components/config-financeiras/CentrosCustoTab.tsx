@@ -41,7 +41,7 @@ interface Resumo {
 export default function CentrosCustoTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
   const [usageMap, setUsageMap] = useState<Map<string, Resumo>>(new Map());
-  const [statusFilter, setStatusFilter] = useURLState("status", "todos");
+  const [statusFilter, setStatusFilter] = useURLState<string>("status", "todos");
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);

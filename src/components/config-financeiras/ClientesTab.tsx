@@ -26,8 +26,8 @@ const empty: Form = { nome: "", tipo_pessoa: "PJ", cpf_cnpj: "", razao_social: "
 
 export default function ClientesTab({ search }: { search: string }) {
   const [items, setItems] = useState<any[]>([]);
-  const [filterTipo, setFilterTipo] = useURLState("tipo_pessoa", "__all__");
-  const [filterStatus, setFilterStatus] = useURLState("status", "__all__");
+  const [filterTipo, setFilterTipo] = useURLState<string>("tipo_pessoa", "__all__");
+  const [filterStatus, setFilterStatus] = useURLState<string>("status", "__all__");
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);
