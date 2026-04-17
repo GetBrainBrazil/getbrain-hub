@@ -26,6 +26,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { HelpTooltip } from "@/components/HelpTooltip";
+import { Lightbulb } from "lucide-react";
 
 type TabType = "pagar" | "receber";
 
@@ -53,6 +55,7 @@ export default function Movimentacoes() {
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
+  const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -448,7 +451,10 @@ export default function Movimentacoes() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">Movimentações</h1>
-          <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
+            <HelpTooltip content="Aqui você registra todas as entradas e saídas financeiras da empresa. Use 'Conta a Pagar' para despesas e 'Conta a Receber' para receitas." />
+          </div>
         </div>
         <div className="flex gap-2">
           <Button
@@ -477,9 +483,9 @@ export default function Movimentacoes() {
           </>
         ) : (
           <>
-            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} />
-            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" />
-            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" />
+            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
+            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
+            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
           </>
         )}
       </div>
