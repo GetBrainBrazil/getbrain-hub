@@ -25,6 +25,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
+import { Sparkles } from "lucide-react";
 
 interface InadMovimentacao {
   id: string;
@@ -78,6 +80,8 @@ export default function InadimplenciaTab() {
   const [baixaForm, setBaixaForm] = useState({
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
   });
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
 
   // Load clientes
   useEffect(() => {
@@ -135,6 +139,8 @@ export default function InadimplenciaTab() {
       conta_bancaria_id: "",
       meio_pagamento_id: "",
     });
+    setComprovanteFile(null);
+    setAiFields(new Set());
     setOpenBaixa(true);
   }
 
@@ -148,6 +154,10 @@ export default function InadimplenciaTab() {
       meio_pagamento_id: baixaForm.meio_pagamento_id || null,
     }).eq("id", selectedMov.id);
     if (error) { toast.error("Erro ao registrar pagamento"); return; }
+    if (comprovanteFile) {
+      try { await uploadComprovanteToMovimentacao(comprovanteFile, selectedMov.id); }
+      catch (e) { console.error(e); toast.error("Pagamento registrado, mas falhou ao salvar o comprovante."); }
+    }
     toast.success("Pagamento registrado com sucesso!");
     setOpenBaixa(false);
     loadData();
@@ -608,16 +618,32 @@ export default function InadimplenciaTab() {
                 <p><span className="text-muted-foreground">Valor Previsto:</span> {formatCurrency(selectedMov.valor_previsto)}</p>
                 <p><span className="text-muted-foreground">Vencimento:</span> {formatDate(selectedMov.data_vencimento)}</p>
               </div>
+              <ComprovanteUploadField
+                onFileChange={setComprovanteFile}
+                valorEsperado={selectedMov ? Number(selectedMov.valor_previsto) : undefined}
+                contas={contasBancarias as any}
+                onAIResult={(res: ComprovanteAIResult) => {
+                  const next: typeof aiFields = new Set(aiFields);
+                  setBaixaForm((prev) => {
+                    const upd = { ...prev };
+                    if (res.data) { upd.data_pagamento = res.data; next.add("data_pagamento"); }
+                    if (res.valor != null) { upd.valor_realizado = String(res.valor); next.add("valor_realizado"); }
+                    if (res.conta_bancaria_id) { upd.conta_bancaria_id = res.conta_bancaria_id; next.add("conta_bancaria_id"); }
+                    return upd;
+                  });
+                  setAiFields(next);
+                }}
+              />
               <div>
-                <Label>Valor Recebido (R$) *</Label>
+                <Label className="flex items-center gap-1">Valor Recebido (R$) *{aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}</Label>
                 <Input type="number" step="0.01" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })} />
               </div>
               <div>
-                <Label>Data do Pagamento *</Label>
+                <Label className="flex items-center gap-1">Data do Pagamento *{aiFields.has("data_pagamento") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}</Label>
                 <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} />
               </div>
               <div>
-                <Label>Conta Bancária</Label>
+                <Label className="flex items-center gap-1">Conta Bancária{aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}</Label>
                 <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>

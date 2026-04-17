@@ -28,6 +28,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
+import { Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
 
@@ -84,6 +86,8 @@ export default function Movimentacoes() {
     pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
     observacoes_pagamento: "",
   });
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
 
   const tipo = tipoByTab[tab as TabType];
   const isPagar = tab === "pagar";
@@ -335,6 +339,8 @@ export default function Movimentacoes() {
       pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
       observacoes_pagamento: "",
     });
+    setComprovanteFile(null);
+    setAiFields(new Set());
     setOpenBaixa(true);
   }
 
@@ -384,6 +390,15 @@ export default function Movimentacoes() {
     }).eq("id", selectedMov.id);
 
     if (error) { toast.error("Erro ao registrar"); return; }
+
+    if (comprovanteFile) {
+      try {
+        await uploadComprovanteToMovimentacao(comprovanteFile, selectedMov.id);
+      } catch (e) {
+        console.error(e);
+        toast.error("Pagamento registrado, mas falhou ao salvar o comprovante.");
+      }
+    }
 
     const baseValue = parseFloat(baixaForm.valor_realizado) || 0;
     if (baseValue < valorPrev) {
@@ -735,11 +750,30 @@ export default function Movimentacoes() {
           </DialogHeader>
 
           <div className="space-y-5">
+            {/* Comprovante (opcional) com análise IA */}
+            <ComprovanteUploadField
+              onFileChange={setComprovanteFile}
+              valorEsperado={selectedMov ? Number(selectedMov.valor_previsto) : undefined}
+              contas={contas as any}
+              onAIResult={(res: ComprovanteAIResult) => {
+                const next: typeof aiFields = new Set(aiFields);
+                setBaixaForm((prev) => {
+                  const upd = { ...prev };
+                  if (res.data) { upd.data_pagamento = res.data; next.add("data_pagamento"); }
+                  if (res.valor != null) { upd.valor_realizado = String(res.valor); next.add("valor_realizado"); }
+                  if (res.conta_bancaria_id) { upd.conta_bancaria_id = res.conta_bancaria_id; next.add("conta_bancaria_id"); }
+                  return upd;
+                });
+                setAiFields(next);
+              }}
+            />
+
             {/* Linha 1: Data, Forma, Conta */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
                   Data do {isPagar ? "Pagamento" : "Recebimento"}
+                  {aiFields.has("data_pagamento") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
                 </Label>
                 <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} className="h-10 text-sm" />
               </div>
@@ -751,7 +785,10 @@ export default function Movimentacoes() {
                 </Select>
               </div>
               <div>
-                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Conta Bancária</Label>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
+                  Conta Bancária
+                  {aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
+                </Label>
                 <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
                   <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
@@ -763,7 +800,10 @@ export default function Movimentacoes() {
             <div className="rounded-lg border border-border p-4 space-y-3">
               <div className="grid grid-cols-5 gap-3">
                 <div>
-                  <Label className="text-[11px] font-medium text-foreground mb-1.5 block">Valor Base (R$) *</Label>
+                  <Label className="text-[11px] font-medium text-foreground mb-1.5 block">
+                    Valor Base (R$) *
+                    {aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
+                  </Label>
                   <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })} className="h-10 text-sm" />
                 </div>
                 <div>
