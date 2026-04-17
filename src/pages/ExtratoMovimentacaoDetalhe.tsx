@@ -170,9 +170,9 @@ export default function ExtratoMovimentacaoDetalhe() {
       return;
     }
     toast.success("Lançamento atualizado com sucesso");
-    setEditMode(false);
-    queryClient.invalidateQueries({ queryKey: ["extrato_mov_detalhe", id] });
     queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
+    queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
+    navigate("/financeiro/extratos");
   }
 
   async function handleDesfazerConciliacao() {

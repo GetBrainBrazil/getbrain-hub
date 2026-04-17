@@ -396,8 +396,8 @@ export default function MovimentacaoDetalhe() {
       toast.error("Erro ao salvar. Tente novamente.");
       return;
     }
-    toast.success("Alterações salvas!");
-    setMov(updated);
+    toast.success("Movimentação atualizada com sucesso");
+    navigate("/financeiro/movimentacoes");
   }
 
   function openDarBaixa() {
@@ -440,7 +440,7 @@ export default function MovimentacaoDetalhe() {
       toast.error("Erro ao excluir");
       return;
     }
-    toast.success("Movimentação excluída");
+    toast.success("Movimentação excluída com sucesso");
     navigate("/financeiro/movimentacoes");
   }
 
