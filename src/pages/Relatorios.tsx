@@ -7,15 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   TrendingUp, TrendingDown, DollarSign, MinusCircle, BarChart3, Percent,
-  ChevronDown, ChevronRight, Eye, Download, CalendarIcon, FileText, FileSpreadsheet,
-  X, AlertTriangle
+  ChevronDown, ChevronRight, Download, CalendarIcon, FileText, FileSpreadsheet,
+  AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/formatters";
@@ -112,9 +111,7 @@ export default function Relatorios() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     receita: true, deducoes: true, despesas_op: true, despesas_fin: true,
   });
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerItems, setDrawerItems] = useState<Movimentacao[]>([]);
-  const [drawerLabel, setDrawerLabel] = useState("");
+  const [expandedDetailKey, setExpandedDetailKey] = useState<string | null>(null);
 
   // Fetch reference data
   useEffect(() => {
@@ -306,12 +303,8 @@ export default function Relatorios() {
     return null;
   }
 
-  function openDetail(line: DRELine) {
-    if (line.items && line.items.length > 0) {
-      setDrawerLabel(line.label);
-      setDrawerItems(line.items);
-      setDrawerOpen(true);
-    }
+  function toggleDetail(key: string) {
+    setExpandedDetailKey(prev => (prev === key ? null : key));
   }
 
   function variation(current: number, prev: number): number | null {
@@ -350,16 +343,24 @@ export default function Relatorios() {
           </TableRow>
         );
       } else if (line.type === "detail") {
+        const detailKey = `${line.label}-${idx}`;
+        const isOpen = expandedDetailKey === detailKey;
+        const colSpan = compare ? 4 : 2;
         rows.push(
           <TableRow
             key={idx}
-            className="group cursor-pointer hover:bg-muted/30 transition-colors"
-            onClick={() => openDetail(line)}
+            className="cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => toggleDetail(detailKey)}
           >
             <TableCell className="py-2.5">
-              <div className="flex items-center justify-between pl-8">
+              <div className="flex items-center gap-2 pl-6">
+                <ChevronRight
+                  className={cn(
+                    "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                    isOpen && "rotate-90"
+                  )}
+                />
                 <span className="text-sm">{line.label}</span>
-                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </TableCell>
             <TableCell className="text-right font-mono text-sm py-2.5">{formatCurrency(line.value)}</TableCell>
@@ -375,6 +376,50 @@ export default function Relatorios() {
             )}
           </TableRow>
         );
+        if (isOpen) {
+          rows.push(
+            <TableRow key={`${idx}-detail`} className="hover:bg-transparent border-b-0">
+              <TableCell colSpan={colSpan} className="p-0 bg-muted/30">
+                <div className="overflow-hidden animate-accordion-down">
+                  <div className="px-12 py-3">
+                    {(line.items && line.items.length > 0) ? (
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-muted-foreground border-b border-border/50">
+                            <th className="text-left font-medium py-1.5 pr-4">Data</th>
+                            <th className="text-left font-medium py-1.5 pr-4">Descrição</th>
+                            <th className="text-left font-medium py-1.5 pr-4">Cliente / Fornecedor</th>
+                            <th className="text-right font-medium py-1.5">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {line.items.map(item => (
+                            <tr key={item.id} className="border-b border-border/30 last:border-0">
+                              <td className="py-1.5 pr-4 text-muted-foreground">
+                                {item.data_pagamento ? formatDate(item.data_pagamento) : "—"}
+                              </td>
+                              <td className="py-1.5 pr-4">{item.descricao}</td>
+                              <td className="py-1.5 pr-4 text-muted-foreground">
+                                {item.cliente_id ? clientes[item.cliente_id] || "—" : item.fornecedor_id ? fornecedores[item.fornecedor_id] || "—" : "—"}
+                              </td>
+                              <td className="py-1.5 text-right font-mono">
+                                {formatCurrency(Math.abs(item.valor_realizado || 0))}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic py-2">
+                        Nenhum lançamento nesta categoria para o período selecionado
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        }
       } else if (line.type === "subtotal") {
         const isReceitaLiquida = line.label === "= Receita Líquida";
         rows.push(
@@ -591,39 +636,6 @@ export default function Relatorios() {
         </TabsContent>
       </Tabs>
 
-      {/* Detail Drawer */}
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center justify-between">
-              Lançamentos: {drawerLabel}
-              <Button variant="ghost" size="icon" onClick={() => setDrawerOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-3">
-            {drawerItems.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-8">Nenhum lançamento encontrado.</p>
-            ) : (
-              drawerItems.map(item => (
-                <div key={item.id} className="border rounded-lg p-3 space-y-1">
-                  <div className="flex justify-between items-start">
-                    <span className="font-medium text-sm">{item.descricao}</span>
-                    <span className="font-mono font-bold text-sm">{formatCurrency(Math.abs(item.valor_realizado || 0))}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>
-                      {item.cliente_id ? clientes[item.cliente_id] || "—" : item.fornecedor_id ? fornecedores[item.fornecedor_id] || "—" : "—"}
-                    </span>
-                    <span>{item.data_pagamento ? formatDate(item.data_pagamento) : "—"}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
