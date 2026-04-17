@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
+import { Sparkles } from "lucide-react";
 
 export default function ContasPagar() {
   const { user } = useAuth();
@@ -52,8 +54,9 @@ export default function ContasPagar() {
     recorrente: false, frequencia_recorrencia: "mensal", observacoes: "",
   });
   const [pagForm, setPagForm] = useState({
-    valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
   });
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
 
   useEffect(() => { loadAll(); }, []);
 
@@ -181,6 +184,8 @@ export default function ContasPagar() {
       conta_bancaria_id: m.conta_bancaria_id || "",
       meio_pagamento_id: "",
     });
+    setComprovanteFile(null);
+    setAiFields(new Set());
     setOpenPag(true);
   }
 
@@ -209,6 +214,11 @@ export default function ContasPagar() {
         categoria_id: selectedMov.categoria_id,
         created_by: user?.id,
       });
+    }
+
+    if (comprovanteFile) {
+      try { await uploadComprovanteToMovimentacao(comprovanteFile, selectedMov.id); }
+      catch (e) { console.error(e); toast.error("Pagamento registrado, mas falhou ao salvar o comprovante."); }
     }
 
     toast.success("Pagamento registrado!");
