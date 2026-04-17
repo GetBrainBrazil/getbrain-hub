@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Eye, X, Copy, Check, Trash2, FileText, Phone, MapPin, StickyNote } from "lucide-react";
 import { FormMode, FormPageShell, FormSection, DetailField, ESTADOS_BR, applyCpfCnpjMask, applyPhoneMask, applyCepMask, formatCpfCnpj, formatPhone, buildAddressString } from "./shared";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 type Form = {
   nome: string; tipo_pessoa: "PF" | "PJ"; cpf_cnpj: string; razao_social: string;
@@ -341,9 +342,10 @@ export default function FornecedoresTab({ search }: { search: string }) {
             </Select>
           </div>
           <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Fornecedor</Button>
+          <HelpTooltip content="Cadastre fornecedores para vinculá-los às Contas a Pagar. Facilitam o controle de quem você paga e permitem análises por fornecedor." />
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Documento</TableHead><TableHead>E-mail</TableHead><TableHead>Telefone</TableHead><TableHead>Ativo</TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Documento</TableHead><TableHead>E-mail</TableHead><TableHead>Telefone</TableHead><TableHead><div className="flex items-center gap-1">Ativo<HelpTooltip content="Fornecedores inativos não aparecem nos dropdowns ao criar movimentações, mas seus lançamentos históricos são preservados." /></div></TableHead><TableHead className="w-10"></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map(i => (
               <TableRow key={i.id} className="group cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => openView(i)}>

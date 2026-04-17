@@ -26,6 +26,7 @@ import {
   buildCategoriasTree,
 } from "@/lib/categorias-hierarchy";
 import { TipoBadge } from "@/components/TipoBadge";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 type DeleteTarget =
   | { kind: "simple"; cat: CategoriaRaw }
@@ -305,6 +306,7 @@ export default function CategoriasTab({ search }: { search: string }) {
           >
             <Plus className="h-4 w-4" /> Nova Categoria
           </Button>
+          <HelpTooltip content="Categorias organizam suas receitas e despesas em grupos. Use subcategorias para maior detalhamento. Ex: Despesas > SAAS > CRM." />
         </div>
 
 
@@ -313,9 +315,9 @@ export default function CategoriasTab({ search }: { search: string }) {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-[110px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Código</TableHead>
+                <TableHead className="w-[110px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9"><div className="flex items-center gap-1">Código<HelpTooltip content="O código é gerado automaticamente e indica a posição na hierarquia. Ex: 2.01 = primeira subcategoria de Despesas." /></div></TableHead>
                 <TableHead className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Nome</TableHead>
-                <TableHead className="w-[140px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9">Tipo</TableHead>
+                <TableHead className="w-[140px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9"><div className="flex items-center gap-1">Tipo<HelpTooltip content="O tipo define a natureza contábil: Receita (dinheiro entrando), Despesa (dinheiro saindo), Impostos (tributos) e Retirada (distribuição de lucros aos sócios)." /></div></TableHead>
                 
                 <TableHead className="w-[80px] text-[11px] uppercase tracking-wide text-muted-foreground font-medium h-9 text-right pr-4">Ativo</TableHead>
               </TableRow>
