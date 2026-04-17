@@ -250,6 +250,29 @@ export default function InadimplenciaTab() {
     setExpandedClients(prev => ({ ...prev, [clientId]: !prev[clientId] }));
   }
 
+  function exportCSV() {
+    const header = ["Cliente", "Descrição", "Valor", "Vencimento", "Dias em atraso"];
+    const rows = filteredAtrasados.map(m => {
+      const dias = differenceInDays(now, new Date(m.data_vencimento));
+      return [
+        clienteMap[m.cliente_id || ""] || "Sem cliente",
+        m.descricao,
+        String(m.valor_previsto),
+        m.data_vencimento,
+        String(dias),
+      ];
+    });
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inadimplencia_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Arquivo CSV exportado!");
+  }
+
   const taxaColor = kpis.taxa > 10 ? "text-destructive" : kpis.taxa > 5 ? "text-warning" : "text-success";
 
   if (loading) {
