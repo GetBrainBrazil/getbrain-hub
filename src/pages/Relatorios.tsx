@@ -355,6 +355,21 @@ export default function Relatorios() {
     setExpandedDetailKey(prev => (prev === key ? null : key));
   }
 
+  function exportDRECSV() {
+    const header = compare ? ["Linha", "Valor Atual", "Valor Anterior"] : ["Linha", "Valor"];
+    const rows = dreLines
+      .filter(l => l.type !== "group" && l.type !== "subgroup")
+      .map(l => compare ? [l.label, String(l.value), String(l.prevValue ?? 0)] : [l.label, String(l.value)]);
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dre_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function variation(current: number, prev: number): number | null {
     if (prev === 0) return current === 0 ? 0 : null;
     return ((current - prev) / Math.abs(prev)) * 100;
@@ -622,17 +637,9 @@ export default function Relatorios() {
             </div>
 
             <div className="ml-auto">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />Exportar
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem><FileText className="h-4 w-4 mr-2" />Exportar PDF</DropdownMenuItem>
-                  <DropdownMenuItem><FileSpreadsheet className="h-4 w-4 mr-2" />Exportar Excel</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button variant="outline" onClick={exportDRECSV} disabled={dreLines.length === 0}>
+                <Download className="h-4 w-4 mr-2" />Exportar CSV
+              </Button>
             </div>
           </div>
 

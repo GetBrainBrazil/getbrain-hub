@@ -42,11 +42,11 @@ type SortKey = "nome" | "qtd" | "valor" | "antigo" | "pct";
 type SortDir = "asc" | "desc";
 
 const AGING_RANGES = [
-  { label: "1 a 15 dias", min: 1, max: 15, color: "#B2E0F0" },
+  { label: "1 a 15 dias", min: 1, max: 15, color: "#BAE6FD" },
   { label: "16 a 30 dias", min: 16, max: 30, color: "#38BDF8" },
-  { label: "31 a 60 dias", min: 31, max: 60, color: "#0284C7" },
-  { label: "61 a 90 dias", min: 61, max: 90, color: "#1E3A5F" },
-  { label: "Acima de 90 dias", min: 91, max: 99999, color: "#0F172A" },
+  { label: "31 a 60 dias", min: 31, max: 60, color: "#0EA5E9" },
+  { label: "61 a 90 dias", min: 61, max: 90, color: "#0369A1" },
+  { label: "Acima de 90 dias", min: 91, max: 99999, color: "#0C4A6E" },
 ];
 
 function getAgingBadgeClass(dias: number): string {
@@ -250,6 +250,29 @@ export default function InadimplenciaTab() {
     setExpandedClients(prev => ({ ...prev, [clientId]: !prev[clientId] }));
   }
 
+  function exportCSV() {
+    const header = ["Cliente", "Descrição", "Valor", "Vencimento", "Dias em atraso"];
+    const rows = filteredAtrasados.map(m => {
+      const dias = differenceInDays(now, new Date(m.data_vencimento));
+      return [
+        clienteMap[m.cliente_id || ""] || "Sem cliente",
+        m.descricao,
+        String(m.valor_previsto),
+        m.data_vencimento,
+        String(dias),
+      ];
+    });
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inadimplencia_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Arquivo CSV exportado!");
+  }
+
   const taxaColor = kpis.taxa > 10 ? "text-destructive" : kpis.taxa > 5 ? "text-warning" : "text-success";
 
   if (loading) {
@@ -328,17 +351,9 @@ export default function InadimplenciaTab() {
         </Select>
 
         <div className="ml-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />Exportar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem><FileText className="h-4 w-4 mr-2" />Exportar PDF</DropdownMenuItem>
-              <DropdownMenuItem><FileSpreadsheet className="h-4 w-4 mr-2" />Exportar Excel</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="outline" onClick={exportCSV} disabled={filteredAtrasados.length === 0}>
+            <Download className="h-4 w-4 mr-2" />Exportar CSV
+          </Button>
         </div>
       </div>
     );

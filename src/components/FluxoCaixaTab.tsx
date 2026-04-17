@@ -283,6 +283,19 @@ export default function FluxoCaixaTab() {
     setSettingsOpen(false);
   }
 
+  function exportCSV() {
+    const header = ["Período", "Entradas", "Saídas", "Saldo do Período", "Saldo Acumulado"];
+    const rows = groupedData.map(g => [g.label, String(g.entradas), String(g.saidas), String(g.saldo), String(g.saldoAcumulado)]);
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fluxo_caixa_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     const saldo = payload.find((p: any) => p.dataKey === "saldo")?.value || 0;
@@ -369,17 +382,9 @@ export default function FluxoCaixaTab() {
         </Select>
 
         <div className="ml-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />Exportar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem><FileText className="h-4 w-4 mr-2" />Exportar PDF</DropdownMenuItem>
-              <DropdownMenuItem><FileSpreadsheet className="h-4 w-4 mr-2" />Exportar Excel</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="outline" onClick={exportCSV} disabled={groupedData.length === 0}>
+            <Download className="h-4 w-4 mr-2" />Exportar CSV
+          </Button>
         </div>
       </div>
 
