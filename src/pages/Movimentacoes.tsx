@@ -28,6 +28,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
+import { Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
 
@@ -82,8 +84,9 @@ export default function Movimentacoes() {
     valor_realizado: "", data_pagamento: "", conta_bancaria_id: "", meio_pagamento_id: "",
     desconto: "", juros: "", multa: "", taxas: "",
     pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
-    observacoes_pagamento: "",
   });
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
 
   const tipo = tipoByTab[tab as TabType];
   const isPagar = tab === "pagar";
