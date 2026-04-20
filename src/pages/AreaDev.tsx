@@ -407,11 +407,28 @@ export default function AreaDev() {
             className="pl-9 h-9"
           />
         </div>
+
+        <div className="inline-flex items-center bg-muted rounded-md p-0.5">
+          <button
+            onClick={() => setView("kanban")}
+            title="Visualização em Kanban"
+            className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded transition-colors", view === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+          ><LayoutGrid className="h-3.5 w-3.5" /> Kanban</button>
+          <button
+            onClick={() => setView("table")}
+            title="Visualização em tabela"
+            className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded transition-colors", view === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+          ><Rows3 className="h-3.5 w-3.5" /> Tabela</button>
+        </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
-        {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
-      </div>
+      {view === "kanban" ? (
+        <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
+          {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
+        </div>
+      ) : (
+        <TasksTable columns={filtered} onOpenTask={setActiveTask} />
+      )}
 
       <TaskDetailDrawer
         task={activeTask}
