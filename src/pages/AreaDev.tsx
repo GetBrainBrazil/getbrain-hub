@@ -416,6 +416,13 @@ export default function AreaDev() {
         onClose={() => setActiveTask(null)}
         onStatusChange={handleStatusChange}
       />
+
+      <NovaTarefaDialog
+        open={novaTarefaOpen}
+        onOpenChange={setNovaTarefaOpen}
+        onCreate={handleCreateTask}
+        nextId={nextTaskId}
+      />
     </div>
   );
 }
