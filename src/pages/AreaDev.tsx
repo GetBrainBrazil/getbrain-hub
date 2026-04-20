@@ -363,7 +363,7 @@ export default function AreaDev() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline">Novo Sprint</Button>
-          <Button className="bg-foreground text-background hover:bg-foreground/90"><Plus className="h-4 w-4 mr-1.5" /> Nova Tarefa</Button>
+          <Button onClick={() => setNovaTarefaOpen(true)} className="bg-foreground text-background hover:bg-foreground/90"><Plus className="h-4 w-4 mr-1.5" /> Nova Tarefa</Button>
         </div>
       </div>
 
