@@ -475,6 +475,34 @@ export default function AreaDev() {
     });
   }
 
+  const [draggingTask, setDraggingTask] = useState<Task | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  function handleDragStart(event: DragStartEvent) {
+    const id = event.active.id as string;
+    const task = columns.flatMap(c => c.tasks).find(t => t.id === id) ?? null;
+    setDraggingTask(task);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingTask(null);
+    const { active, over } = event;
+    if (!over) return;
+    const taskId = active.id as string;
+    const targetColId = over.id as string;
+    setColumns(prev => {
+      const sourceCol = prev.find(c => c.tasks.some(t => t.id === taskId));
+      if (!sourceCol || sourceCol.id === targetColId) return prev;
+      const task = sourceCol.tasks.find(t => t.id === taskId);
+      if (!task) return prev;
+      return prev.map(c => {
+        if (c.id === sourceCol.id) return { ...c, tasks: c.tasks.filter(t => t.id !== taskId) };
+        if (c.id === targetColId) return { ...c, tasks: [task, ...c.tasks] };
+        return c;
+      });
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
