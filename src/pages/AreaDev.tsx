@@ -1,5 +1,17 @@
 import { useMemo, useState } from "react";
 import { Plus, ListTodo, GitPullRequest, Bug, TrendingUp, Flag, Calendar, MoreHorizontal, Search, X, Link2, MessageSquare, GitCommit, LayoutGrid, Rows3 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  closestCorners,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -146,12 +158,15 @@ function KpiCard({ icon: Icon, label, value, valueClass, sparkline }: {
   );
 }
 
-function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
+function TaskCard({ task, onClick, dragging }: { task: Task; onClick?: () => void; dragging?: boolean }) {
   const prio = priorityConfig[task.priority];
   return (
     <Card
       onClick={onClick}
-      className="p-3 bg-card border-border/60 hover:border-accent/60 hover:shadow-lg transition-all cursor-pointer group"
+      className={cn(
+        "p-3 bg-card border-border/60 hover:border-accent/60 hover:shadow-lg transition-all cursor-pointer group",
+        dragging && "opacity-40"
+      )}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <span className="text-[10px] font-mono font-semibold text-muted-foreground">{task.id}</span>
@@ -180,7 +195,20 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   );
 }
 
+function DraggableTaskCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) => void }) {
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({ id: task.id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TaskCard task={task} onClick={() => !isDragging && onOpenTask(task)} dragging={isDragging} />
+    </div>
+  );
+}
+
 function KanbanColumn({ column, onOpenTask }: { column: Column; onOpenTask: (t: Task) => void }) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
   return (
     <div className="flex flex-col w-72 shrink-0 bg-muted/30 rounded-lg p-3 max-h-[calc(100vh-400px)]">
       <div className="flex items-center justify-between mb-3 px-1">
@@ -190,8 +218,16 @@ function KanbanColumn({ column, onOpenTask }: { column: Column; onOpenTask: (t: 
         </div>
         <Button variant="ghost" size="icon" className="h-6 w-6"><Plus className="h-3.5 w-3.5" /></Button>
       </div>
-      <div className="flex flex-col gap-2 overflow-y-auto pr-1 flex-1">
-        {column.tasks.map((task) => (<TaskCard key={task.id} task={task} onClick={() => onOpenTask(task)} />))}
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "flex flex-col gap-2 overflow-y-auto pr-1 flex-1 rounded-md transition-colors min-h-[80px]",
+          isOver && "bg-accent/10 ring-2 ring-accent/40"
+        )}
+      >
+        {column.tasks.map((task) => (
+          <DraggableTaskCard key={task.id} task={task} onOpenTask={onOpenTask} />
+        ))}
       </div>
     </div>
   );
@@ -439,6 +475,34 @@ export default function AreaDev() {
     });
   }
 
+  const [draggingTask, setDraggingTask] = useState<Task | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  function handleDragStart(event: DragStartEvent) {
+    const id = event.active.id as string;
+    const task = columns.flatMap(c => c.tasks).find(t => t.id === id) ?? null;
+    setDraggingTask(task);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingTask(null);
+    const { active, over } = event;
+    if (!over) return;
+    const taskId = active.id as string;
+    const targetColId = over.id as string;
+    setColumns(prev => {
+      const sourceCol = prev.find(c => c.tasks.some(t => t.id === taskId));
+      if (!sourceCol || sourceCol.id === targetColId) return prev;
+      const task = sourceCol.tasks.find(t => t.id === taskId);
+      if (!task) return prev;
+      return prev.map(c => {
+        if (c.id === sourceCol.id) return { ...c, tasks: c.tasks.filter(t => t.id !== taskId) };
+        if (c.id === targetColId) return { ...c, tasks: [task, ...c.tasks] };
+        return c;
+      });
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -505,9 +569,20 @@ export default function AreaDev() {
       </div>
 
       {view === "kanban" ? (
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
-          {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setDraggingTask(null)}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
+            {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
+          </div>
+          <DragOverlay>
+            {draggingTask ? <div className="w-72"><TaskCard task={draggingTask} /></div> : null}
+          </DragOverlay>
+        </DndContext>
       ) : (
         <TasksTable columns={filtered} onOpenTask={setActiveTask} />
       )}
