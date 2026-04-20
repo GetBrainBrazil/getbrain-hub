@@ -305,8 +305,9 @@ function TaskDetailDrawer({ task, columns, onClose, onStatusChange }: {
 
 export default function AreaDev() {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
-  const [project, setProject] = useState<string>("all");
-  const [scope, setScope] = useState<"mine" | "all">("mine");
+  const [project, setProject] = usePersistedState<string>("areadev:project", "all");
+  const [scope, setScope] = usePersistedState<"mine" | "all">("areadev:scope", "mine");
+  const [view, setView] = usePersistedState<"kanban" | "table">("areadev:view", "kanban");
   const [query, setQuery] = useState("");
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
