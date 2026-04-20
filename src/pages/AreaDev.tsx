@@ -307,6 +307,29 @@ export default function AreaDev() {
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [query, setQuery] = useState("");
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
+
+  const nextTaskId = useMemo(() => {
+    const ids = columns.flatMap(c => c.tasks.map(t => parseInt(t.id.replace("DEV-", ""), 10) || 0));
+    return `DEV-${(Math.max(0, ...ids) + 1).toString().padStart(3, "0")}`;
+  }, [columns]);
+
+  function handleCreateTask(payload: NovaTarefaPayload) {
+    const newTask: Task = {
+      id: payload.id,
+      title: payload.title,
+      tags: payload.tags,
+      priority: payload.priority,
+      dueDate: payload.dueDate,
+      assignees: payload.assignees.map(a => ({ name: a.name, full: a.full, color: a.color })),
+      project: payload.project,
+      description: payload.description,
+      comments: [],
+    };
+    setColumns(prev => prev.map(c =>
+      c.id === payload.columnId ? { ...c, tasks: [newTask, ...c.tasks] } : c
+    ));
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
