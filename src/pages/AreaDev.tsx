@@ -11,6 +11,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { NovaTarefaDialog, type NovaTarefaPayload } from "@/components/area-dev/NovaTarefaDialog";
 
 type Priority = "alta" | "media" | "baixa";
 type TagType = "Bug" | "Feature" | "Refactor" | "Docs" | "Chore";
