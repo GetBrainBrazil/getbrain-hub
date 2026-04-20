@@ -569,9 +569,20 @@ export default function AreaDev() {
       </div>
 
       {view === "kanban" ? (
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
-          {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setDraggingTask(null)}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
+            {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
+          </div>
+          <DragOverlay>
+            {draggingTask ? <div className="w-72"><TaskCard task={draggingTask} /></div> : null}
+          </DragOverlay>
+        </DndContext>
       ) : (
         <TasksTable columns={filtered} onOpenTask={setActiveTask} />
       )}
