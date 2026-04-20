@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, ListTodo, GitPullRequest, Bug, TrendingUp, Flag, Calendar, MoreHorizontal, Search, X, Link2, MessageSquare, GitCommit } from "lucide-react";
+import { Plus, ListTodo, GitPullRequest, Bug, TrendingUp, Flag, Calendar, MoreHorizontal, Search, X, Link2, MessageSquare, GitCommit, LayoutGrid, Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { NovaTarefaDialog, type NovaTarefaPayload } from "@/components/area-dev/NovaTarefaDialog";
 
 type Priority = "alta" | "media" | "baixa";
