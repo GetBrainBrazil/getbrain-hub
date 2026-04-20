@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Users,
   Settings,
+  Code2,
   Eye,
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -45,6 +46,7 @@ const financeiroItems = [
 
 const otherItems = [
   { title: "Projetos", url: "/projetos", icon: FolderOpen },
+  { title: "Área Dev", url: "/area-dev", icon: Code2 },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
