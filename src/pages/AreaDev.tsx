@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, ListTodo, GitPullRequest, Bug, TrendingUp, Flag, Calendar, MoreHorizontal, Search, X, Link2, MessageSquare, GitCommit } from "lucide-react";
+import { Plus, ListTodo, GitPullRequest, Bug, TrendingUp, Flag, Calendar, MoreHorizontal, Search, X, Link2, MessageSquare, GitCommit, LayoutGrid, Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { NovaTarefaDialog, type NovaTarefaPayload } from "@/components/area-dev/NovaTarefaDialog";
 
 type Priority = "alta" | "media" | "baixa";
@@ -301,10 +303,93 @@ function TaskDetailDrawer({ task, columns, onClose, onStatusChange }: {
   );
 }
 
+function TasksTable({ columns, onOpenTask }: { columns: Column[]; onOpenTask: (t: Task) => void }) {
+  const columnMeta: Record<string, { title: string; dot: string }> = {
+    backlog: { title: "Backlog", dot: "bg-slate-400" },
+    todo: { title: "To Do", dot: "bg-blue-400" },
+    progress: { title: "In Progress", dot: "bg-amber-400" },
+    review: { title: "Code Review", dot: "bg-purple-400" },
+    done: { title: "Done", dot: "bg-emerald-500" },
+  };
+  const rows = columns.flatMap(col => col.tasks.map(t => ({ ...t, columnId: col.id })));
+
+  if (rows.length === 0) {
+    return (
+      <Card className="p-12 text-center text-sm text-muted-foreground">
+        Nenhuma tarefa encontrada com os filtros atuais.
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden border-border/50 shadow-sm">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/30 hover:bg-muted/30">
+            <TableHead className="w-[90px] text-xs uppercase tracking-wider">ID</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider">Tarefa</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider">Status</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider">Tags</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider">Prioridade</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider">Projeto</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider">Entrega</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider text-right pr-4">Responsáveis</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(task => {
+            const meta = columnMeta[task.columnId] ?? { title: task.columnId, dot: "bg-muted" };
+            const prio = priorityConfig[task.priority];
+            return (
+              <TableRow key={task.id} onClick={() => onOpenTask(task)} className="cursor-pointer">
+                <TableCell className="font-mono text-xs text-muted-foreground">{task.id}</TableCell>
+                <TableCell className="font-medium text-sm text-foreground max-w-[360px] truncate">{task.title}</TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                    <span className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
+                    {meta.title}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {task.tags.map(tag => (
+                      <Badge key={tag} variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 font-medium", tagStyles[tag])}>{tag}</Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                    <Flag className={cn("h-3 w-3", prio.color)} fill="currentColor" />
+                    {prio.label}
+                  </span>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{task.project}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{task.dueDate}</span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex -space-x-1.5 justify-end pr-1">
+                    {task.assignees.map((a, i) => (
+                      <Avatar key={i} className="h-6 w-6 border-2 border-card" title={a.full}>
+                        <AvatarFallback className={cn("text-[9px] font-semibold text-white", a.color)}>{a.name}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+
 export default function AreaDev() {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
-  const [project, setProject] = useState<string>("all");
-  const [scope, setScope] = useState<"mine" | "all">("mine");
+  const [project, setProject] = usePersistedState<string>("areadev:project", "all");
+  const [scope, setScope] = usePersistedState<"mine" | "all">("areadev:scope", "mine");
+  const [view, setView] = usePersistedState<"kanban" | "table">("areadev:view", "kanban");
   const [query, setQuery] = useState("");
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
@@ -404,11 +489,28 @@ export default function AreaDev() {
             className="pl-9 h-9"
           />
         </div>
+
+        <div className="inline-flex items-center bg-muted rounded-md p-0.5">
+          <button
+            onClick={() => setView("kanban")}
+            title="Visualização em Kanban"
+            className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded transition-colors", view === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+          ><LayoutGrid className="h-3.5 w-3.5" /> Kanban</button>
+          <button
+            onClick={() => setView("table")}
+            title="Visualização em tabela"
+            className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded transition-colors", view === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+          ><Rows3 className="h-3.5 w-3.5" /> Tabela</button>
+        </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
-        {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
-      </div>
+      {view === "kanban" ? (
+        <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
+          {filtered.map((col) => (<KanbanColumn key={col.id} column={col} onOpenTask={setActiveTask} />))}
+        </div>
+      ) : (
+        <TasksTable columns={filtered} onOpenTask={setActiveTask} />
+      )}
 
       <TaskDetailDrawer
         task={activeTask}
