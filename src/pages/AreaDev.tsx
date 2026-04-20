@@ -1,5 +1,17 @@
 import { useMemo, useState } from "react";
 import { Plus, ListTodo, GitPullRequest, Bug, TrendingUp, Flag, Calendar, MoreHorizontal, Search, X, Link2, MessageSquare, GitCommit, LayoutGrid, Rows3 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  closestCorners,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
