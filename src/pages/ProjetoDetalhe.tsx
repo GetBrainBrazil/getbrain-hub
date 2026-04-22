@@ -79,6 +79,7 @@ import { AbaMarcos } from "@/components/projetos/AbaMarcos";
 import { AbaRiscos } from "@/components/projetos/AbaRiscos";
 import { AbaDependencias } from "@/components/projetos/AbaDependencias";
 import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
+import { AbaOperacional } from "@/components/projetos/AbaOperacional";
 import {
   dependencyStatusLabel,
   milestoneStatusLabel,
@@ -942,11 +943,12 @@ export default function ProjetoDetalhe() {
                 {[
                   ["overview", "Visão Geral", null],
                   ["scope", "Escopo", null],
+                  ["operacional", "Operacional", null],
                   ["milestones", "Marcos", milestones.length || null],
-                  ["risks", "Riscos", null],
-                  ["team", "Time & Contratos", allocs.length || null],
                   ["dependencies", "Dependências", blockingDeps.length || null],
+                  ["risks", "Riscos", null],
                   ["integrations", "Integrações", integrations.length || null],
+                  ["team", "Time & Contratos", allocs.length || null],
                   ["activity", "Atividade", null],
                 ].map(([v, label, count]) => (
                   <TabsTrigger
