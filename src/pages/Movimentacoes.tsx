@@ -112,7 +112,7 @@ export default function Movimentacoes() {
   function getMovimentacoesQuery(targetTab: TabType) {
     return supabase
       .from("movimentacoes")
-      .select("*, clientes(nome), fornecedores(nome), colaboradores(nome), categorias(nome), projetos(nome)")
+      .select("*, clientes(nome), fornecedores(nome), colaboradores(nome), categorias(nome), projects(name, code)")
       .eq("tipo", tipoByTab[targetTab])
       .order("data_vencimento", { ascending: false });
   }
