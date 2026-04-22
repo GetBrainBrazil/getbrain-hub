@@ -540,6 +540,8 @@ Sempre usar variáveis CSS / tokens do Tailwind, nunca hex hardcoded em componen
 7. **Tokens** — consumo Anthropic por cliente, comparação com bolsão
 8. **Melhorias do Financeiro** — margem, parcelas automáticas, NF, inadimplência
 
+**Integrações:** seguir mapa da Seção 13 do ARCHITECTURE.md.
+
 ### 8.3 Módulos futuros (Fase 2 e 3)
 - Gerador de proposta com IA
 - Gerador de contrato com IA
