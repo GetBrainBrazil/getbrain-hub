@@ -455,7 +455,7 @@ export default function MovimentacaoDetalhe() {
 
     setSaving(false);
     toast.success(isPagar ? "Conta a pagar cadastrada com sucesso" : "Conta a receber cadastrada com sucesso");
-    navigate("/financeiro/movimentacoes");
+    navigate(backUrl);
   }
 
   async function handleSaveEdit() {
@@ -474,7 +474,7 @@ export default function MovimentacaoDetalhe() {
       return;
     }
     toast.success("Movimentação atualizada com sucesso");
-    navigate("/financeiro/movimentacoes");
+    navigate(backUrl);
   }
 
   function openDarBaixa() {
@@ -525,7 +525,7 @@ export default function MovimentacaoDetalhe() {
       return;
     }
     toast.success("Movimentação excluída com sucesso");
-    navigate("/financeiro/movimentacoes");
+    navigate(backUrl);
   }
 
   // ─── Anexos ──────────────────────────────────────────────────────
@@ -610,7 +610,7 @@ export default function MovimentacaoDetalhe() {
     <div className="space-y-6 pb-28 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/financeiro/movimentacoes")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-3">
@@ -1176,7 +1176,7 @@ export default function MovimentacaoDetalhe() {
               </>
             )}
             <div className="ml-auto flex items-center gap-2 flex-wrap">
-              <Button variant="outline" onClick={() => navigate("/financeiro/movimentacoes")}>
+              <Button variant="outline" onClick={() => navigate(backUrl)}>
                 Cancelar
               </Button>
               {isCreate ? (
