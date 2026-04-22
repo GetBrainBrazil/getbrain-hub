@@ -281,8 +281,9 @@ export default function Movimentacoes() {
     setMeios(rMeios.data || []);
   }
 
-  async function refreshTabs(targetTabs: TabType[]) {
-    setTabsLoading(targetTabs, true);
+  async function refreshTabs(targetTabs: TabType[], opts?: { silent?: boolean }) {
+    const silent = opts?.silent ?? false;
+    if (!silent) setTabsLoading(targetTabs, true);
     try {
       const results = await Promise.all([
         supabase.rpc("update_status_atrasado" as any),
@@ -297,7 +298,7 @@ export default function Movimentacoes() {
         return next;
       });
     } finally {
-      setTabsLoading(targetTabs, false);
+      if (!silent) setTabsLoading(targetTabs, false);
     }
   }
 
@@ -694,7 +695,7 @@ export default function Movimentacoes() {
     }
     toast.success("Conta reaberta com sucesso");
     setOpenBaixa(false);
-    void refreshTabs([tab as TabType]);
+    void refreshTabs([tab as TabType], { silent: true });
   }
 
   const baixaTotals = useMemo(() => {
@@ -779,7 +780,7 @@ export default function Movimentacoes() {
         : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
     );
     setOpenBaixa(false);
-    void refreshTabs([tab as TabType]);
+    void refreshTabs([tab as TabType], { silent: true });
   }
 
   async function handleDelete(id: string) {
