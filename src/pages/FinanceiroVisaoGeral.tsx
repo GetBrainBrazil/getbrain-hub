@@ -234,7 +234,11 @@ export default function FinanceiroVisaoGeral() {
                   : "success"
               }
               isCurrency={false}
-              subtitle={`${k.inadimplencia_percent.toFixed(1)}% do faturado no mês`}
+              subtitle={
+                k.total_a_receber > 0
+                  ? `${k.inadimplencia_percent.toFixed(1)}% da carteira a receber vencida`
+                  : "Sem recebíveis em aberto"
+              }
             />
           </div>
         )}
