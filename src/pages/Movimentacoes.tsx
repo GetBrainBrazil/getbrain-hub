@@ -265,6 +265,41 @@ export default function Movimentacoes() {
     }), sortConfig)
   ), [periodFiltered, search, sortConfig, statusFilter, vinculadoFilter, categoriaFilter, projetoFilter, contaFilter]);
 
+  /** Opções de "Vinculado" derivadas das movimentações da aba atual. */
+  const vinculadoOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    movs.forEach((m) => {
+      if (isPagar) {
+        if (m.fornecedor_id && m.fornecedores?.nome) map.set(m.fornecedor_id, m.fornecedores.nome);
+        if (m.colaborador_id && m.colaboradores?.nome) map.set(m.colaborador_id, m.colaboradores.nome);
+      } else {
+        if (m.cliente_id && m.clientes?.nome) map.set(m.cliente_id, m.clientes.nome);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [movs, isPagar]);
+
+  /** Categorias relevantes ao tipo da aba (despesa/receita). */
+  const categoriaOptions = useMemo(() => {
+    return categorias
+      .filter((c) => !c.tipo || c.tipo === tipo)
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+  }, [categorias, tipo]);
+
+  const hasActiveFilters =
+    !!search || !!vinculadoFilter || !!categoriaFilter || !!projetoFilter || !!contaFilter || statusFilter !== "todas";
+
+  function clearAllFilters() {
+    setSearch("");
+    setVinculadoFilter("");
+    setCategoriaFilter("");
+    setProjetoFilter("");
+    setContaFilter("");
+    setStatusFilter("todas");
+  }
+
   const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => ({
     totalPendente: periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0),
     totalRecebidoPago: periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0),
