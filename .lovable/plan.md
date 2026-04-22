@@ -1,49 +1,44 @@
 
 
-## Refinar visual da sidebar
+## Substituir confirms/alerts nativos do navegador por diálogos in-app
 
-Os módulos atuais estão usando um fundo ciano sólido (`bg-accent/15`) em estado idle e ciano puro com sombra neon quando ativo — muito saturado, "chapado" e visualmente ruidoso. Vou refinar para um design mais sóbrio, alinhado a apps profissionais como Linear, Notion e Vercel.
+Vou aplicar uma regra global para o sistema todo: nenhuma chamada `confirm()`, `alert()` ou `prompt()` do navegador. Toda confirmação usa o `useConfirm()` (já existente em `src/components/ConfirmDialog.tsx`) e toda notificação usa `toast` (sonner).
 
-### Mudanças no `src/components/AppSidebar.tsx`
+### Memória (regra permanente)
+Adicionar em `mem://index.md` (Core):
+> Nunca usar `confirm()`, `alert()` ou `prompt()` nativos do navegador. Sempre usar `useConfirm()` de `@/components/ConfirmDialog` para confirmações e `toast` de `sonner` para notificações.
 
-**Estado idle (não ativo):**
-- Remover o fundo ciano (`bg-accent/15`) — fica transparente
-- Texto e ícone em `text-sidebar-foreground/70` (cinza claro suave sobre o fundo escuro)
-- Hover sutil: `hover:bg-sidebar-accent/50` + `hover:text-sidebar-foreground`
-- Peso de fonte `font-medium` (não `font-semibold`)
+### Arquivos a corrigir (substituir `confirm(...)` por `await confirmDialog({...})`)
 
-**Estado ativo (módulo aberto):**
-- Fundo sutil: `bg-sidebar-accent` (azul-escuro do tema, não ciano)
-- Borda esquerda fina ciano de 2px (`border-l-2 border-accent`) — esse é o "contorno azul neon" discreto
-- Texto em ciano (`text-accent`)
-- Sem sombra neon (`shadow-md shadow-accent/25` removido)
-- Mesmo `font-medium`
+| Arquivo | Onde | Ação |
+|---|---|---|
+| `src/pages/ProjetoDetalhe.tsx` | `handleStatusChange` (mudar status do projeto — caso do print) e `archiveProject` | Trocar `confirm()` por `useConfirm()` com título e descrição em pt-BR |
+| `src/pages/Projetos.tsx` | `archiveProject` | idem |
+| `src/components/projetos/ProjetoDrawer.tsx` | `handleStatusChange` | idem |
+| `src/components/projetos/AbaDependencias.tsx` | `softDelete` | idem (variant destructive) |
+| `src/components/projetos/AbaIntegracoes.tsx` | `softDelete` | idem |
+| `src/components/projetos/AbaRiscos.tsx` | `softDelete` | idem |
+| `src/components/projetos/AbaMarcos.tsx` | `softDelete` | idem |
+| `src/components/RegistrarComprovanteWizard.tsx` | `window.confirm` da conciliação | Trocar por `useConfirm()` (descrição com nome do match e valor) |
 
-**Botão Financeiro (collapsible):**
-- Mesmo tratamento — sem fundo ciano em idle, apenas borda esquerda + texto ciano quando ativo
-- Subitens já estão bons, mantém
-
-**Refinamentos gerais:**
-- Padding reduzido para `px-3 py-2` (de `py-2.5`)
-- Gap entre ícone e texto `gap-3` para respirar melhor
-- Ícones em `h-[18px] w-[18px]` (ligeiramente menores, mais elegantes)
-- Espaçamento entre grupos (`SidebarGroup`) ajustado para visual mais arejado
-
-### Resultado visual
-
-```text
-Antes:                          Depois:
-┌─────────────────┐            ┌─────────────────┐
-│ ████ Dashboard  │            │  Dashboard      │
-│ ████ Financeiro │            │ ▌Financeiro     │  ← borda ciano + bg sutil
-│ ████ Projetos   │  →         │  Projetos       │
-│ ████ Área Dev   │            │  Área Dev       │
-└─────────────────┘            └─────────────────┘
-(tudo em ciano,                (limpo, hierarquia
-ruidoso)                        clara, ativo destacado)
+### Padrão a aplicar em cada arquivo
+```tsx
+const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+// ...
+if (!(await confirmDialog({
+  title: 'Mudar status do projeto?',
+  description: `Novo status: "${getStatusLabel(newStatus)}".`,
+  confirmLabel: 'Mudar',
+  variant: 'default',
+}))) return;
+// ...
+return (<>{/* ...JSX existente... */}{confirmDialogEl}</>);
 ```
 
-Apenas o módulo aberto recebe o destaque (borda lateral ciano + texto ciano + fundo sutil). Os outros ficam neutros e discretos.
+Para deletes manter `variant: 'destructive'` e `confirmLabel: 'Remover'`.
 
-**Arquivo alterado:** `src/components/AppSidebar.tsx` apenas.
+### Resultado
+Quando o usuário clicar para mudar status (ou qualquer ação que pedia confirmação), aparecerá o `AlertDialog` estilizado da GetBrain (dark + ciano) em vez do popup branco do Chrome do print. Toasts continuam usando sonner para feedback de sucesso/erro.
+
+Nenhuma alteração em schema, rotas, ou outras telas além das listadas.
 
