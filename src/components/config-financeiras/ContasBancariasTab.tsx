@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, StickyNote, ArrowLeft } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import { FormMode, FormPageShell, FormSection, DetailField, formatMoneyForInput, parseMoney } from "./shared";
+import { FormMode, FormPageShell, FormSection, DetailField, formatMoneyForInput, parseMoney, applyAgenciaMask, applyContaMask, applyPixMask, detectPixType, pixTypeLabel } from "./shared";
+import { Badge } from "@/components/ui/badge";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useURLState } from "@/hooks/useURLState";
 
