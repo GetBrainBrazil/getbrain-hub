@@ -229,17 +229,17 @@ export default function MovimentacaoDetalhe() {
         centro_custo_id: m.centro_custo_id || "",
         conta_bancaria_id: m.conta_bancaria_id || "",
         meio_pagamento_id: m.meio_pagamento_id || "",
-        valor_previsto: String(m.valor_previsto ?? ""),
-        desconto_previsto: m.desconto_previsto != null ? String(m.desconto_previsto) : "",
-        juros: m.juros != null ? String(m.juros) : "",
-        multa: m.multa != null ? String(m.multa) : "",
-        taxas_adm: m.taxas_adm != null ? String(m.taxas_adm) : "",
-        pis: m.pis != null ? String(m.pis) : "",
-        cofins: m.cofins != null ? String(m.cofins) : "",
-        csll: m.csll != null ? String(m.csll) : "",
-        iss: m.iss != null ? String(m.iss) : "",
-        ir: m.ir != null ? String(m.ir) : "",
-        inss: m.inss != null ? String(m.inss) : "",
+        valor_previsto: m.valor_previsto != null ? formatMoneyForInput(Number(m.valor_previsto)) : "",
+        desconto_previsto: m.desconto_previsto != null ? formatMoneyForInput(Number(m.desconto_previsto)) : "",
+        juros: m.juros != null ? formatMoneyForInput(Number(m.juros)) : "",
+        multa: m.multa != null ? formatMoneyForInput(Number(m.multa)) : "",
+        taxas_adm: m.taxas_adm != null ? formatMoneyForInput(Number(m.taxas_adm)) : "",
+        pis: m.pis != null ? formatMoneyForInput(Number(m.pis)) : "",
+        cofins: m.cofins != null ? formatMoneyForInput(Number(m.cofins)) : "",
+        csll: m.csll != null ? formatMoneyForInput(Number(m.csll)) : "",
+        iss: m.iss != null ? formatMoneyForInput(Number(m.iss)) : "",
+        ir: m.ir != null ? formatMoneyForInput(Number(m.ir)) : "",
+        inss: m.inss != null ? formatMoneyForInput(Number(m.inss)) : "",
         data_competencia: m.data_competencia || "",
         data_vencimento: m.data_vencimento || "",
         observacoes: m.observacoes || "",
@@ -341,12 +341,12 @@ export default function MovimentacaoDetalhe() {
   }, [vinculacaoTipo, isPagar]);
 
   const totalPrevisto = useMemo(() => {
-    const n = (v: string) => parseFloat(v || "0") || 0;
+    const n = (v: string) => (v ? parseMoney(v) || 0 : 0);
     return n(form.valor_previsto) - n(form.desconto_previsto) + n(form.juros) + n(form.multa) + n(form.taxas_adm);
   }, [form.valor_previsto, form.desconto_previsto, form.juros, form.multa, form.taxas_adm]);
 
   function buildPayload() {
-    const num = (v: string) => (v === "" || v == null ? 0 : parseFloat(v) || 0);
+    const num = (v: string) => (v === "" || v == null ? 0 : parseMoney(v) || 0);
     const isFornecedor = vinculacaoTipo === "fornecedor";
     const isColab = vinculacaoTipo === "colaborador" || vinculacaoTipo === "socio";
     return {
@@ -461,8 +461,9 @@ export default function MovimentacaoDetalhe() {
 
   function openDarBaixa() {
     if (!mov) return;
+    const baseValor = totalPrevisto || parseMoney(form.valor_previsto || "0") || Number(mov.valor_previsto) || 0;
     setBaixaForm({
-      valor_realizado: String(totalPrevisto || form.valor_previsto || mov.valor_previsto),
+      valor_realizado: formatMoneyForInput(baseValor),
       data_pagamento: new Date().toISOString().split("T")[0],
       conta_bancaria_id: form.conta_bancaria_id || mov.conta_bancaria_id || "",
       meio_pagamento_id: "",
@@ -474,7 +475,7 @@ export default function MovimentacaoDetalhe() {
 
   async function handleBaixa() {
     if (!mov) return;
-    const valorRec = parseFloat(baixaForm.valor_realizado);
+    const valorRec = parseMoney(baixaForm.valor_realizado) || 0;
     const { error } = await supabase
       .from("movimentacoes")
       .update({
