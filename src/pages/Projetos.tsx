@@ -414,7 +414,6 @@ export default function Projetos() {
                     </TableHead>
                   ))}
                   <TableHead>Atores</TableHead>
-                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -424,14 +423,15 @@ export default function Projetos() {
                     new Date(r.estimated_delivery_date) < new Date() &&
                     !["entregue", "em_manutencao", "cancelado", "arquivado"].includes(r.status);
                   return (
-                    <TableRow key={r.id}>
+                    <TableRow
+                      key={r.id}
+                      onClick={() => openDrawer(r.id)}
+                      className="cursor-pointer hover:bg-muted/40 transition-colors"
+                    >
                       <TableCell>
-                        <button
-                          onClick={() => openDrawer(r.id)}
-                          className="text-accent font-mono font-medium hover:underline"
-                        >
+                        <span className="text-accent font-mono font-medium">
                           {r.code}
-                        </button>
+                        </span>
                       </TableCell>
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>
@@ -458,29 +458,6 @@ export default function Projetos() {
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openDrawer(r.id)}>
-                              Ver detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openDrawer(r.id)}>
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => archiveProject(r.id)}
-                              className="text-destructive"
-                            >
-                              Arquivar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
