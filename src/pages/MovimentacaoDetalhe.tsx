@@ -23,6 +23,7 @@ import {
   Landmark,
   Users,
   UserCircle,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,6 +61,7 @@ import { cn } from "@/lib/utils";
 import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
 import { Sparkles } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 const ANEXOS_BUCKET = "anexos-movimentacoes";
 
