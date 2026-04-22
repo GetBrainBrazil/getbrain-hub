@@ -34,14 +34,37 @@ export default function ConfiguracoesFinanceiras() {
   const [search, setSearch] = useURLState<string>("busca", "");
   const [tipDismissed, setTipDismissed] = usePersistedState<boolean>("config_fin_tip_dismissed", false);
 
+  const [syncing, setSyncing] = useState(false);
+
+  async function syncRecorrencias() {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-recurring-movimentacoes", { body: {} });
+      if (error) throw error;
+      const created = (data as any)?.created ?? 0;
+      const skipped = (data as any)?.skipped ?? 0;
+      toast.success(`Sincronização concluída: ${created} criada(s), ${skipped} já existente(s).`);
+    } catch (e: any) {
+      toast.error("Erro ao sincronizar recorrências: " + (e?.message || "tente novamente"));
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          Configurações Financeiras
-          <HelpTooltip content="Aqui você configura todos os dados base do seu financeiro: contas bancárias, pessoas, categorias e centros de custo. Esses dados alimentam todo o sistema." />
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">Gerencie contas, categorias, clientes, fornecedores e centros de custo</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            Configurações Financeiras
+            <HelpTooltip content="Aqui você configura todos os dados base do seu financeiro: contas bancárias, pessoas, categorias e centros de custo. Esses dados alimentam todo o sistema." />
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">Gerencie contas, categorias, clientes, fornecedores e centros de custo</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={syncRecorrencias} disabled={syncing} className="gap-2">
+          <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+          {syncing ? "Sincronizando..." : "Sincronizar recorrências"}
+        </Button>
       </div>
 
       {!tipDismissed && (
