@@ -19,12 +19,35 @@ import {
   Gauge,
   AlertTriangle,
   Info,
+  Users,
+  Plus,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/formatters";
+import { Button } from "@/components/ui/button";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 import { useProjectMetrics } from "@/hooks/useProjectMetrics";
 import type { ProjectMetrics } from "@/types/database";
+import { ActorAvatar } from "@/components/projetos/ActorAvatar";
+import { getRoleLabel } from "@/lib/projetos-helpers";
+
+export type AbaOperacionalAlloc = {
+  id: string;
+  actor_id: string;
+  role_in_project: string;
+  allocation_percent: number | null;
+  started_at?: string | null;
+  actor?: { display_name?: string | null; avatar_url?: string | null } | null;
+};
+
+export type AbaOperacionalContract = {
+  id: string;
+  status: string;
+  monthly_fee: number;
+  monthly_fee_discount_percent: number | null;
+  end_date: string | null;
+};
 
 // ─────────────────────────────────────────────────────────
 // helpers
