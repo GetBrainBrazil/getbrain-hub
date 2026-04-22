@@ -917,51 +917,51 @@ export default function MovimentacaoDetalhe() {
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Valor Base (R$) *</Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  inputMode="decimal"
                   value={form.valor_previsto}
-                  onChange={(e) => setForm({ ...form, valor_previsto: e.target.value })}
+                  onChange={(e) => setForm({ ...form, valor_previsto: applyMoneyMask(e.target.value) })}
                   placeholder="0,00"
+                  className="text-right font-mono"
                 />
               </div>
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Desconto Previsto (-)</Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  inputMode="decimal"
                   value={form.desconto_previsto}
-                  onChange={(e) => setForm({ ...form, desconto_previsto: e.target.value })}
+                  onChange={(e) => setForm({ ...form, desconto_previsto: applyMoneyMask(e.target.value) })}
                   placeholder="0,00"
+                  className="text-right font-mono"
                 />
               </div>
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Juros Previstos (+)</Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  inputMode="decimal"
                   value={form.juros}
-                  onChange={(e) => setForm({ ...form, juros: e.target.value })}
+                  onChange={(e) => setForm({ ...form, juros: applyMoneyMask(e.target.value) })}
                   placeholder="0,00"
+                  className="text-right font-mono"
                 />
               </div>
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Multa Prevista (+)</Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  inputMode="decimal"
                   value={form.multa}
-                  onChange={(e) => setForm({ ...form, multa: e.target.value })}
+                  onChange={(e) => setForm({ ...form, multa: applyMoneyMask(e.target.value) })}
                   placeholder="0,00"
+                  className="text-right font-mono"
                 />
               </div>
               <div>
                 <Label className="text-[13px] font-medium mb-1.5 block">Taxas ADM (+)</Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  inputMode="decimal"
                   value={form.taxas_adm}
-                  onChange={(e) => setForm({ ...form, taxas_adm: e.target.value })}
+                  onChange={(e) => setForm({ ...form, taxas_adm: applyMoneyMask(e.target.value) })}
                   placeholder="0,00"
+                  className="text-right font-mono"
                 />
               </div>
             </div>
@@ -985,12 +985,11 @@ export default function MovimentacaoDetalhe() {
                     <div key={k}>
                       <Label className="text-[11px] font-medium uppercase mb-1 block text-destructive">{k}</Label>
                       <Input
-                        type="number"
-                        step="0.01"
+                        inputMode="decimal"
                         value={(form as any)[k]}
-                        onChange={(e) => setForm({ ...form, [k]: e.target.value } as any)}
+                        onChange={(e) => setForm({ ...form, [k]: applyMoneyMask(e.target.value) } as any)}
                         placeholder="0,00"
-                        className="h-9 text-sm"
+                        className="h-9 text-sm text-right font-mono"
                       />
                     </div>
                   ))}
@@ -1201,10 +1200,11 @@ export default function MovimentacaoDetalhe() {
                 {aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}
               </Label>
               <Input
-                type="number"
-                step="0.01"
+                inputMode="decimal"
                 value={baixaForm.valor_realizado}
-                onChange={(e) => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })}
+                onChange={(e) => setBaixaForm({ ...baixaForm, valor_realizado: applyMoneyMask(e.target.value) })}
+                placeholder="0,00"
+                className="text-right font-mono"
               />
             </div>
             <div>
