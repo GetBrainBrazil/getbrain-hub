@@ -661,7 +661,65 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
   - Novo princípio 2.12: escopo estruturado
   - Drawer do projeto reorganizado em 8 abas: Visão Geral, Escopo, Dependências, Marcos, Riscos, Integrações, Atores & Manutenção, Atividade
   - Novo KPI na listagem de Projetos: "Dependências Bloqueantes"
+- **v1.3 (21/04/2026):**
+  - Novo princípio 2.13: integração entre módulos de primeira classe
+  - Nova Seção 13: Mapa de Integrações entre Módulos
+  - Definida barra de qualidade: todo módulo tem Camada 1 (dados+funcionalidade), Camada 2 (visual premium estilo Pipedrive/HubSpot), Camada 3 (integrações/automações com outros módulos)
+  - Definidos campos padrão para rastreabilidade de origem em lançamentos automáticos: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`
 
 ---
 
-**Fim do ARCHITECTURE.md. Este documento é vivo — evolui a cada marco do sistema. Toda mudança estrutural deve ser refletida aqui antes de virar prompt.**
+## 13. Mapa de integrações entre módulos
+
+Esta seção define quais eventos de um módulo disparam quais ações em outro módulo. Todo prompt que cria ou modifica um módulo deve incluir seção "Integrações ativas deste módulo" com referência a esta tabela.
+
+### 13.1 Projetos → Financeiro
+
+| Evento gatilho | Ação automatizada | Quem dispara |
+|----------------|-------------------|--------------|
+| `projects.status` muda para `aceito` | Criar N lançamentos de Contas a Receber no Financeiro, um por parcela do `contract_value / installments_count`, espaçados mensalmente a partir de `start_date` ou data atual. Marca `source_module='projects'`, `is_automatic=true`. | Trigger no banco + Edge Function |
+| `projects.status` muda para `cancelado` | Listar lançamentos futuros com `source_entity_id = project.id` e marcar como `cancelled`. Perguntar ao usuário (modal) se deve estornar parcelas já pagas. | Edge Function |
+| `projects.status` muda para `entregue` | Sugerir (não criar automaticamente) abertura de `maintenance_contract` com valores pré-preenchidos baseados no tipo de projeto. Exibir modal de confirmação. | Frontend após trigger |
+| Ator alocado a projeto | Calcular custo projetado mensal (`humans.hourly_cost` × horas_semana × 4) e expor em "Custos do Projeto". | View ou função |
+
+### 13.2 Manutenção → Financeiro
+
+| Evento gatilho | Ação automatizada |
+|----------------|-------------------|
+| `maintenance_contract.status = active` criado | Criar série de lançamentos recorrentes mensais em Contas a Receber, a partir de `start_date`, com valor `monthly_fee × (1 - discount_percent/100)`. |
+| `maintenance_contract.status` muda para `paused` | Marcar lançamentos futuros (ainda não-pagos) como `paused`. |
+| `maintenance_contract.status` muda para `ended` / `cancelled` | Marcar lançamentos futuros como `cancelled`. Lançamentos já pagos ficam intactos. |
+| `maintenance_contract.end_date` atingido | Mudar status automaticamente para `ended` (Edge Function agendada). |
+
+### 13.3 Tokens → Financeiro (futuro, Prompt do módulo Tokens)
+
+| Evento gatilho | Ação |
+|----------------|------|
+| Consumo atinge 80% do `token_budget_brl` | Notificar Daniel (email/UI). |
+| Consumo ultrapassa 100% | Criar lançamento adicional em Contas a Receber com valor do excedente, `source_module='tokens'`. |
+
+### 13.4 CRM → Projetos (futuro, Prompt do módulo CRM)
+
+| Evento gatilho | Ação |
+|----------------|------|
+| Pipeline muda para `fechado` | Criar `project` com `status='aceito'`, pré-populando `company_id`, `project_type`, `contract_value`, descrição a partir do lead. |
+| Pipeline muda para `perdido` | Atualizar `companies.status='lost'`. |
+
+### 13.5 Suporte → Manutenção (futuro, Prompt do módulo Suporte)
+
+| Evento gatilho | Ação |
+|----------------|------|
+| Ticket resolvido | Registrar horas gastas no `maintenance_contract` vinculado. Alertar se acumulado > `hours_budget`. |
+| Ticket reaberto 2+ vezes | Aumentar prioridade, notificar Daniel. |
+
+### 13.6 Projetos → Atividade global
+
+Toda mudança de status ou campo importante em qualquer módulo deve gerar entrada em `audit_logs` — base para feed de atividade do projeto, dashboard global e auditoria.
+
+### 13.7 Regras gerais de implementação
+
+- **Edge Functions (Supabase)** implementam automações que atravessam tabelas.
+- **Triggers SQL** implementam automações simples dentro de uma tabela.
+- **Frontend** dispara eventos explicitamente quando user confirma ação que precisa de input (ex: sugerir criar contrato de manutenção).
+- Toda tabela que recebe eventos de outros módulos tem colunas: `source_module text`, `source_entity_type text`, `source_entity_id uuid`, `is_automatic boolean default false`.
+- **Nenhuma automação roda sem estar documentada aqui primeiro.** Se um prompt futuro precisa adicionar automação, atualizar esta seção.
