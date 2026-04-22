@@ -459,6 +459,30 @@ export default function ProjetoDetalhe() {
       .order("start_date", { ascending: false });
     setContracts(mc || []);
 
+    const [{ data: deps }, { data: ms }, { data: ints }] = await Promise.all([
+      supabase
+        .from("project_dependencies")
+        .select("id, title, status, is_blocking, dependency_type, expected_at, responsible_actor_id")
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .order("expected_at", { ascending: true, nullsFirst: false }),
+      supabase
+        .from("project_milestones")
+        .select("id, title, status, target_date, actual_date, sequence_order, triggers_billing, billing_amount")
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .order("sequence_order", { ascending: true }),
+      supabase
+        .from("project_integrations")
+        .select("id, name, provider, status, estimated_cost_monthly_brl")
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .order("name"),
+    ]);
+    setDependencies(deps || []);
+    setMilestones(ms || []);
+    setIntegrations(ints || []);
+
     const { data: al } = await supabase
       .from("audit_logs")
       .select("id, action, changes, created_at, actor_id, metadata")
