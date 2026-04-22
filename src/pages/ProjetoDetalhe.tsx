@@ -105,6 +105,13 @@ type Project = {
   acceptance_criteria: string | null;
   notes: string | null;
   token_budget_brl: number | null;
+  business_context: string | null;
+  scope_in: string | null;
+  scope_out: string | null;
+  premises: string | null;
+  deliverables: string | null;
+  technical_stack: string | null;
+  identified_risks: string | null;
   created_at: string;
   updated_at: string;
 };
