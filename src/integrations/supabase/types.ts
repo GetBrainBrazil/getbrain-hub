@@ -1951,28 +1951,6 @@ export type Database = {
       }
     }
     Views: {
-      financeiro_dashboard: {
-        Row: {
-          inadimplencia_percent: number | null
-          mes_anterior_despesa: number | null
-          mes_anterior_receita: number | null
-          mes_anterior_resultado: number | null
-          mes_despesa: number | null
-          mes_despesa_prevista: number | null
-          mes_margem_percent: number | null
-          mes_receita: number | null
-          mes_receita_prevista: number | null
-          mes_resultado: number | null
-          pagar_vencido: number | null
-          qtd_pagar_vencido: number | null
-          qtd_receber_vencido: number | null
-          receber_vencido: number | null
-          saldo_total: number | null
-          total_a_pagar: number | null
-          total_a_receber: number | null
-        }
-        Relationships: []
-      }
       project_metrics: {
         Row: {
           actors_allocated: number | null
@@ -2098,6 +2076,28 @@ export type Database = {
       }
     }
     Functions: {
+      financeiro_dashboard: {
+        Args: { p_fim?: string; p_inicio?: string }
+        Returns: {
+          inadimplencia_percent: number
+          mes_anterior_despesa: number
+          mes_anterior_receita: number
+          mes_anterior_resultado: number
+          mes_despesa: number
+          mes_despesa_prevista: number
+          mes_margem_percent: number
+          mes_receita: number
+          mes_receita_prevista: number
+          mes_resultado: number
+          pagar_vencido: number
+          qtd_pagar_vencido: number
+          qtd_receber_vencido: number
+          receber_vencido: number
+          saldo_total: number
+          total_a_pagar: number
+          total_a_receber: number
+        }[]
+      }
       financeiro_fluxo_projetado: {
         Args: { p_conta?: string; p_dias?: number }
         Returns: {
@@ -2116,6 +2116,14 @@ export type Database = {
           receita_prevista: number
           receita_realizada: number
           resultado: number
+        }[]
+      }
+      financeiro_top_rankings: {
+        Args: { p_fim?: string; p_inicio?: string }
+        Returns: {
+          kind: string
+          label: string
+          valor: number
         }[]
       }
       generate_project_code: { Args: never; Returns: string }
