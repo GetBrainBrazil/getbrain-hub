@@ -755,7 +755,8 @@ export default function Movimentacoes() {
     }
 
     const baseValue = parseMoney(baixaForm.valor_realizado) || 0;
-    if (baseValue < valorPrev) {
+    const wasAlreadyPaid = selectedMov.status === "pago";
+    if (!wasAlreadyPaid && baseValue < valorPrev) {
       await supabase.from("movimentacoes").insert({
         tipo,
         descricao: `${selectedMov.descricao} (Saldo)`,
@@ -770,7 +771,11 @@ export default function Movimentacoes() {
       });
     }
 
-    toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
+    toast.success(
+      wasAlreadyPaid
+        ? "Liquidação atualizada!"
+        : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
+    );
     setOpenBaixa(false);
     void refreshTabs([tab as TabType]);
   }
@@ -1061,7 +1066,7 @@ export default function Movimentacoes() {
                             </DropdownMenuItem>
                           )}
                           {m.status === "pago" && (
-                            <DropdownMenuItem onClick={() => openEditModal(m)} className="cursor-pointer">
+                            <DropdownMenuItem onClick={() => openDarBaixa(m)} className="cursor-pointer">
                               <CheckCircle className="mr-2 h-4 w-4 text-success" />
                               Editar Liquidação
                             </DropdownMenuItem>
@@ -1131,7 +1136,9 @@ export default function Movimentacoes() {
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-success flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
-              {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
+                            {selectedMov?.status === "pago"
+                ? "Editar Liquidação"
+                : isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
             </DialogTitle>
           </DialogHeader>
 
@@ -1272,11 +1279,25 @@ export default function Movimentacoes() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 pt-2 border-t border-border">
-              <Button variant="outline" onClick={() => setOpenBaixa(false)} className="px-5 h-10">Cancelar</Button>
-              <Button onClick={handleBaixa} className="px-5 h-10 bg-success text-success-foreground hover:bg-success/90">
-                Confirmar {isPagar ? "Pagamento" : "Recebimento"}
-              </Button>
+            <div className="flex items-center gap-3 pt-2 border-t border-border">
+              {selectedMov?.status === "pago" && (
+                <Button
+                  variant="outline"
+                  onClick={handleReabrirFromBaixa}
+                  className="px-5 h-10 border-warning text-warning hover:bg-warning hover:text-white gap-1.5"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reabrir conta
+                </Button>
+              )}
+              <div className="ml-auto flex gap-3">
+                <Button variant="outline" onClick={() => setOpenBaixa(false)} className="px-5 h-10">Cancelar</Button>
+                <Button onClick={handleBaixa} className="px-5 h-10 bg-success text-success-foreground hover:bg-success/90">
+                  {selectedMov?.status === "pago"
+                    ? "Salvar Alterações"
+                    : `Confirmar ${isPagar ? "Pagamento" : "Recebimento"}`}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
