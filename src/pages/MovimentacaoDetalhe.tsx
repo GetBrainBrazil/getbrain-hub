@@ -421,7 +421,8 @@ export default function MovimentacaoDetalhe() {
         if (limite && venc > limite) break;
         // Sem prazo: gera tudo até hoje + 120 períodos no futuro
         if (!limite) {
-          const futureCutoff = addByFrequency(ymdToday(), 120, recPeriodo);
+          const todayIso = new Date().toISOString().slice(0, 10);
+          const futureCutoff = addByFrequency(todayIso, 120, recPeriodo);
           if (vencimento > futureCutoff) break;
         }
         const status = venc < today ? "atrasado" : "pendente";
