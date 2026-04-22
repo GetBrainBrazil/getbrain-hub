@@ -40,7 +40,59 @@ type FilterOption = {
   value: string;
   label: string;
   keywords?: string;
+  matchValues?: string[];
 };
+
+function normalizeFilterLabel(label: string) {
+  return label.trim().toLocaleLowerCase("pt-BR");
+}
+
+function dedupeFilterOptions(options: FilterOption[]): FilterOption[] {
+  const grouped = new Map<string, FilterOption>();
+
+  options.forEach((option) => {
+    const key = normalizeFilterLabel(option.label);
+    const values = option.matchValues ?? [option.value];
+    const existing = grouped.get(key);
+
+    if (!existing) {
+      grouped.set(key, {
+        ...option,
+        matchValues: Array.from(new Set(values)),
+      });
+      return;
+    }
+
+    grouped.set(key, {
+      ...existing,
+      keywords: [existing.keywords, option.keywords].filter(Boolean).join(" "),
+      matchValues: Array.from(new Set([...(existing.matchValues ?? [existing.value]), ...values])),
+    });
+  });
+
+  return Array.from(grouped.values());
+}
+
+function buildAllowedFilterValues(selected: string[], options: FilterOption[]) {
+  if (selected.length === 0) return new Set<string>();
+
+  const optionsByValue = new Map(options.map((option) => [option.value, option]));
+  const allowed = new Set<string>();
+
+  selected.forEach((value) => {
+    const option = optionsByValue.get(value);
+    if (!option) {
+      allowed.add(value);
+      return;
+    }
+
+    (option.matchValues ?? [option.value]).forEach((matchValue) => {
+      allowed.add(matchValue);
+    });
+  });
+
+  return allowed;
+}
 
 function MultiSelectFilter({
   title,
@@ -317,30 +369,110 @@ export default function Movimentacoes() {
     });
   }, [movs, periodRange]);
 
+  const statusOptions = useMemo<FilterOption[]>(() => ([
+    { value: "pendente", label: "Pendentes", keywords: "pendente" },
+    { value: "pago", label: isPagar ? "Pagas" : "Recebidas", keywords: "pago recebido" },
+    { value: "atrasado", label: "Atrasadas", keywords: "atrasado vencido" },
+    { value: "cancelado", label: "Canceladas", keywords: "cancelado" },
+  ]), [isPagar]);
+
+  const vinculadoOptions = useMemo<FilterOption[]>(() => {
+    const base = isPagar
+      ? [
+          ...fornecedores.map((f) => ({ value: f.id, label: `${f.nome} (Fornecedor)`, keywords: "fornecedor", matchValues: [f.id] })),
+          ...colaboradores.map((c) => ({ value: c.id, label: `${c.nome} (Colaborador)`, keywords: "colaborador", matchValues: [c.id] })),
+        ]
+      : clientes.map((c) => ({ value: c.id, label: c.nome, keywords: "cliente", matchValues: [c.id] }));
+
+    return dedupeFilterOptions([
+      { value: "__none__", label: isPagar ? "Sem vinculado" : "Sem cliente", keywords: "sem" },
+      ...base.sort((a, b) => a.label.localeCompare(b.label)),
+    ]);
+  }, [clientes, colaboradores, fornecedores, isPagar]);
+
+  const categoriaOptions = useMemo<FilterOption[]>(() => {
+    // O banco grava o tipo como "despesas"/"receitas" (plural) ou "despesa"/"receita" (singular).
+    // Aceitamos ambas as formas e também categorias sem tipo definido.
+    const tipoSingular = tipo;
+    const tipoPlural = `${tipo}s`;
+    return dedupeFilterOptions([
+      { value: "__none__", label: "Sem categoria", keywords: "sem" },
+      ...categorias
+        .filter((c) => !c.tipo || c.tipo === tipoSingular || c.tipo === tipoPlural)
+        .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))
+        .map((c) => ({ value: c.id, label: c.nome, matchValues: [c.id] })),
+    ]);
+  }, [categorias, tipo]);
+
+  const projetoOptions = useMemo<FilterOption[]>(() => dedupeFilterOptions([
+    { value: "__none__", label: "Sem projeto", keywords: "sem" },
+    ...projetos
+      .map((p: any) => ({
+        value: p.id,
+        label: [p.code, p.name].filter(Boolean).join(" — ") || p.code || p.name,
+        keywords: [p.code, p.name].filter(Boolean).join(" "),
+        matchValues: [p.id],
+      }))
+      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
+  ]), [projetos]);
+
+  const contaOptions = useMemo<FilterOption[]>(() => dedupeFilterOptions([
+    { value: "__none__", label: "Sem conta bancária", keywords: "sem conta" },
+    ...contas
+      .map((c: any) => ({ value: c.id, label: c.nome, keywords: [c.banco, c.conta].filter(Boolean).join(" "), matchValues: [c.id] }))
+      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
+  ]), [contas]);
+
+  const meioOptions = useMemo<FilterOption[]>(() => dedupeFilterOptions([
+    { value: "__none__", label: "Sem meio de pagamento", keywords: "sem meio" },
+    ...meios
+      .map((m: any) => ({ value: m.id, label: m.nome, matchValues: [m.id] }))
+      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
+  ]), [meios]);
+
+  const recorrenciaOptions = useMemo<FilterOption[]>(() => ([
+    { value: "recorrente", label: "Recorrentes" },
+    { value: "avulsa", label: "Avulsas" },
+  ]), []);
+
+  const conciliacaoOptions = useMemo<FilterOption[]>(() => ([
+    { value: "conciliado", label: "Conciliadas" },
+    { value: "nao_conciliado", label: "Não conciliadas" },
+  ]), []);
+
+  const allowedStatusValues = useMemo(() => buildAllowedFilterValues(statusFilter, statusOptions), [statusFilter, statusOptions]);
+  const allowedVinculadoValues = useMemo(() => buildAllowedFilterValues(vinculadoFilter, vinculadoOptions), [vinculadoFilter, vinculadoOptions]);
+  const allowedCategoriaValues = useMemo(() => buildAllowedFilterValues(categoriaFilter, categoriaOptions), [categoriaFilter, categoriaOptions]);
+  const allowedProjetoValues = useMemo(() => buildAllowedFilterValues(projetoFilter, projetoOptions), [projetoFilter, projetoOptions]);
+  const allowedContaValues = useMemo(() => buildAllowedFilterValues(contaFilter, contaOptions), [contaFilter, contaOptions]);
+  const allowedMeioValues = useMemo(() => buildAllowedFilterValues(meioFilter, meioOptions), [meioFilter, meioOptions]);
+  const allowedRecorrenciaValues = useMemo(() => buildAllowedFilterValues(recorrenciaFilter, recorrenciaOptions), [recorrenciaFilter, recorrenciaOptions]);
+  const allowedConciliacaoValues = useMemo(() => buildAllowedFilterValues(conciliacaoFilter, conciliacaoOptions), [conciliacaoFilter, conciliacaoOptions]);
+
   const filtered = useMemo(() => (
     applySorting(periodFiltered.filter(m => {
-      if (statusFilter.length > 0 && !statusFilter.includes(m.status || "__none__")) return false;
+      if (allowedStatusValues.size > 0 && !allowedStatusValues.has(m.status || "__none__")) return false;
 
       const vincId = m.fornecedor_id || m.cliente_id || m.colaborador_id || "__none__";
-      if (vinculadoFilter.length > 0 && !vinculadoFilter.includes(vincId)) return false;
+      if (allowedVinculadoValues.size > 0 && !allowedVinculadoValues.has(vincId)) return false;
 
       const categoriaId = m.categoria_id || "__none__";
-      if (categoriaFilter.length > 0 && !categoriaFilter.includes(categoriaId)) return false;
+      if (allowedCategoriaValues.size > 0 && !allowedCategoriaValues.has(categoriaId)) return false;
 
       const projetoId = m.projeto_id || "__none__";
-      if (projetoFilter.length > 0 && !projetoFilter.includes(projetoId)) return false;
+      if (allowedProjetoValues.size > 0 && !allowedProjetoValues.has(projetoId)) return false;
 
       const contaId = m.conta_bancaria_id || "__none__";
-      if (contaFilter.length > 0 && !contaFilter.includes(contaId)) return false;
+      if (allowedContaValues.size > 0 && !allowedContaValues.has(contaId)) return false;
 
       const meioId = m.meio_pagamento_id || "__none__";
-      if (meioFilter.length > 0 && !meioFilter.includes(meioId)) return false;
+      if (allowedMeioValues.size > 0 && !allowedMeioValues.has(meioId)) return false;
 
       const recorrenciaValue = m.recorrente ? "recorrente" : "avulsa";
-      if (recorrenciaFilter.length > 0 && !recorrenciaFilter.includes(recorrenciaValue)) return false;
+      if (allowedRecorrenciaValues.size > 0 && !allowedRecorrenciaValues.has(recorrenciaValue)) return false;
 
       const conciliacaoValue = m.conciliado ? "conciliado" : "nao_conciliado";
-      if (conciliacaoFilter.length > 0 && !conciliacaoFilter.includes(conciliacaoValue)) return false;
+      if (allowedConciliacaoValues.size > 0 && !allowedConciliacaoValues.has(conciliacaoValue)) return false;
 
       if (search) {
         const q = search.toLowerCase();
@@ -364,88 +496,18 @@ export default function Movimentacoes() {
       return true;
     }), sortConfig)
   ), [
+    allowedCategoriaValues,
+    allowedConciliacaoValues,
+    allowedContaValues,
+    allowedMeioValues,
+    allowedProjetoValues,
+    allowedRecorrenciaValues,
+    allowedStatusValues,
+    allowedVinculadoValues,
     periodFiltered,
     search,
     sortConfig,
-    statusFilter,
-    vinculadoFilter,
-    categoriaFilter,
-    projetoFilter,
-    contaFilter,
-    meioFilter,
-    recorrenciaFilter,
-    conciliacaoFilter,
   ]);
-
-  const statusOptions = useMemo<FilterOption[]>(() => ([
-    { value: "pendente", label: "Pendentes", keywords: "pendente" },
-    { value: "pago", label: isPagar ? "Pagas" : "Recebidas", keywords: "pago recebido" },
-    { value: "atrasado", label: "Atrasadas", keywords: "atrasado vencido" },
-    { value: "cancelado", label: "Canceladas", keywords: "cancelado" },
-  ]), [isPagar]);
-
-  const vinculadoOptions = useMemo<FilterOption[]>(() => {
-    const base = isPagar
-      ? [
-          ...fornecedores.map((f) => ({ value: f.id, label: `${f.nome} (Fornecedor)`, keywords: "fornecedor" })),
-          ...colaboradores.map((c) => ({ value: c.id, label: `${c.nome} (Colaborador)`, keywords: "colaborador" })),
-        ]
-      : clientes.map((c) => ({ value: c.id, label: c.nome, keywords: "cliente" }));
-
-    return [
-      { value: "__none__", label: isPagar ? "Sem vinculado" : "Sem cliente", keywords: "sem" },
-      ...base.sort((a, b) => a.label.localeCompare(b.label)),
-    ];
-  }, [clientes, colaboradores, fornecedores, isPagar]);
-
-  const categoriaOptions = useMemo<FilterOption[]>(() => {
-    // O banco grava o tipo como "despesas"/"receitas" (plural) ou "despesa"/"receita" (singular).
-    // Aceitamos ambas as formas e também categorias sem tipo definido.
-    const tipoSingular = tipo;
-    const tipoPlural = `${tipo}s`;
-    return [
-      { value: "__none__", label: "Sem categoria", keywords: "sem" },
-      ...categorias
-        .filter((c) => !c.tipo || c.tipo === tipoSingular || c.tipo === tipoPlural)
-        .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))
-        .map((c) => ({ value: c.id, label: c.nome })),
-    ];
-  }, [categorias, tipo]);
-
-  const projetoOptions = useMemo<FilterOption[]>(() => ([
-    { value: "__none__", label: "Sem projeto", keywords: "sem" },
-    ...projetos
-      .map((p: any) => ({
-        value: p.id,
-        label: [p.code, p.name].filter(Boolean).join(" — ") || p.code || p.name,
-        keywords: [p.code, p.name].filter(Boolean).join(" "),
-      }))
-      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
-  ]), [projetos]);
-
-  const contaOptions = useMemo<FilterOption[]>(() => ([
-    { value: "__none__", label: "Sem conta bancária", keywords: "sem conta" },
-    ...contas
-      .map((c: any) => ({ value: c.id, label: c.nome, keywords: [c.banco, c.conta].filter(Boolean).join(" ") }))
-      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
-  ]), [contas]);
-
-  const meioOptions = useMemo<FilterOption[]>(() => ([
-    { value: "__none__", label: "Sem meio de pagamento", keywords: "sem meio" },
-    ...meios
-      .map((m: any) => ({ value: m.id, label: m.nome }))
-      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
-  ]), [meios]);
-
-  const recorrenciaOptions = useMemo<FilterOption[]>(() => ([
-    { value: "recorrente", label: "Recorrentes" },
-    { value: "avulsa", label: "Avulsas" },
-  ]), []);
-
-  const conciliacaoOptions = useMemo<FilterOption[]>(() => ([
-    { value: "conciliado", label: "Conciliadas" },
-    { value: "nao_conciliado", label: "Não conciliadas" },
-  ]), []);
 
   const hasActiveFilters =
     !!search ||

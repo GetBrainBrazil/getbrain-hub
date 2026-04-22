@@ -172,8 +172,8 @@ export default function MovimentacaoDetalhe() {
   const [uploading, setUploading] = useState(false);
 
   // ── Rascunho persistente (apenas no modo create) ─────────────────
-  // Salva o que o usuário está preenchendo em sessionStorage para que
-  // recargas acidentais (HMR, refresh do token, troca de aba) não percam dados.
+  // Salva o que o usuário está preenchendo em localStorage para que
+  // recargas acidentais, tela branca momentânea, refresh e reabertura do navegador não percam dados.
   const draftKey = isCreate ? `mov-draft::${tipoParam}` : null;
   const draftLoadedRef = useRef(false);
 
@@ -186,7 +186,7 @@ export default function MovimentacaoDetalhe() {
   useEffect(() => {
     if (!draftKey || loading || draftLoadedRef.current) return;
     try {
-      const raw = sessionStorage.getItem(draftKey);
+        const raw = localStorage.getItem(draftKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed?.form) setForm((prev) => ({ ...prev, ...parsed.form }));
@@ -205,7 +205,7 @@ export default function MovimentacaoDetalhe() {
     if (!draftKey || !draftLoadedRef.current) return;
     const t = setTimeout(() => {
       try {
-        sessionStorage.setItem(
+          localStorage.setItem(
           draftKey,
           JSON.stringify({ form, tipoLocal, recorrente, recIntervalo, recPeriodo, recAte })
         );
@@ -216,7 +216,7 @@ export default function MovimentacaoDetalhe() {
 
   function clearDraft() {
     if (draftKey) {
-      try { sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
+      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
     }
   }
 
