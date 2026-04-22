@@ -619,6 +619,33 @@ export default function ProjetoDetalhe() {
   }
 
   // ------- Cálculos derivados ---------
+  const blockingDeps = useMemo(
+    () =>
+      dependencies.filter(
+        (d) =>
+          (d.is_blocking || d.status === "bloqueante") &&
+          !["resolvido", "cancelado", "recebido"].includes(d.status),
+      ),
+    [dependencies],
+  );
+  const nextMilestone = useMemo(() => {
+    const open = milestones
+      .filter((m) => !["concluido", "cancelado"].includes(m.status))
+      .sort((a, b) => {
+        const da = a.target_date ? new Date(a.target_date).getTime() : Infinity;
+        const db = b.target_date ? new Date(b.target_date).getTime() : Infinity;
+        return da - db;
+      });
+    return open[0] ?? null;
+  }, [milestones]);
+  const activeIntegrations = useMemo(
+    () => integrations.filter((i) => i.status === "ativa"),
+    [integrations],
+  );
+  const erroredIntegrations = useMemo(
+    () => integrations.filter((i) => i.status === "com_erro"),
+    [integrations],
+  );
   const hasActiveContract = contracts.some((c) => c.status === "active");
   const activeContract = contracts.find((c) => c.status === "active");
   const mrr = activeContract
