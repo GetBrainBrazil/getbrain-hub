@@ -577,6 +577,8 @@ export default function MovimentacaoDetalhe() {
 
   async function handleBaixa() {
     if (!mov) return;
+    if (!baixaForm.conta_bancaria_id) { toast.error("Selecione a conta bancária"); return; }
+    if (!baixaForm.meio_pagamento_id) { toast.error("Selecione a forma de pagamento"); return; }
     const wasAlreadyPaid = mov.status === "pago";
     const { error } = await supabase
       .from("movimentacoes")
@@ -1394,7 +1396,7 @@ export default function MovimentacaoDetalhe() {
                 <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} className="h-10 text-sm" />
               </div>
               <div>
-                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Forma de Pagamento</Label>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Forma de Pagamento *</Label>
                 <Select value={baixaForm.meio_pagamento_id} onValueChange={v => setBaixaForm({ ...baixaForm, meio_pagamento_id: v })}>
                   <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>{meios.map(m => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}</SelectContent>
@@ -1402,7 +1404,7 @@ export default function MovimentacaoDetalhe() {
               </div>
               <div>
                 <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
-                  Conta Bancária
+                  Conta Bancária *
                   {aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
                 </Label>
                 <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
