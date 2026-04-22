@@ -444,9 +444,19 @@ export default function Movimentacoes() {
       variant: "destructive",
     });
     if (!ok) return;
+
+    // Optimistic update — remove a linha imediatamente, sem reload da tabela
+    const currentTab = tab as TabType;
+    const previous = movsByTab[currentTab];
+    setMovsByTab((prev) => ({ ...prev, [currentTab]: prev[currentTab].filter((x: any) => x.id !== id) }));
+
     const { error } = await supabase.from("movimentacoes").delete().eq("id", id);
-    if (error) { toast.error("Erro ao excluir movimentação"); return; }
-    await refreshTabs([tab as TabType]);
+    if (error) {
+      // Rollback
+      setMovsByTab((prev) => ({ ...prev, [currentTab]: previous }));
+      toast.error(`Não foi possível excluir: ${error.message}`);
+      return;
+    }
     toast.success("Movimentação excluída com sucesso");
   }
 
