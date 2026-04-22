@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.1 — 21/04/2026**
+> **Versão atual: v1.2 — 21/04/2026**
 
 ---
 
@@ -72,6 +72,18 @@ Depois do Prompt 01 (Fundação), nenhum módulo novo pode ser entregue com dado
 - Um projeto vive seu ciclo (proposta → entregue) e, se o cliente contratar manutenção, um `maintenance_contract` ativo é criado para ele com o `monthly_fee`.
 - Renovação anual ou mudança de valor = fechar o contrato atual (`status='ended'`) e abrir um novo.
 - Isso permite histórico completo da relação comercial e cálculo preciso de LTS por cliente.
+
+### 2.12 Escopo é estruturado, não livre
+
+Descrição textual simples não é suficiente para projetos profissionais. Todo projeto tem:
+
+- Escopo documentado em 7 dimensões (contexto de negócio, in-scope, out-of-scope, premissas, entregáveis, stack técnico, riscos inicialmente identificados)
+- Dependências externas rastreadas com SLA e flag de bloqueio
+- Marcos/milestones com data-alvo × data-real
+- Integrações catalogadas com custos estimados
+- Riscos com severidade, probabilidade e plano de mitigação
+
+Essa estrutura responde diretamente a duas das 4 causas-raiz dos atrasos: escopo mal definido e cliente atrasando dependências externas.
 
 ---
 
@@ -255,6 +267,13 @@ estimated_delivery_date date
 actual_delivery_date date
 description text
 acceptance_criteria text  -- critérios formais de aceite
+business_context text        -- contexto e objetivo de negócio do cliente
+scope_in text                -- o que está incluso
+scope_out text               -- o que NÃO está incluso
+premises text                -- premissas assumidas
+deliverables text            -- entregáveis formais
+technical_stack text         -- tecnologias envolvidas
+identified_risks text        -- riscos no início do projeto
 notes text
 created_at, updated_at timestamptz
 deleted_at timestamptz null
@@ -307,6 +326,93 @@ action enum('create', 'update', 'delete', 'restore', 'status_change', 'custom') 
 changes jsonb  -- { field: { before: X, after: Y } }
 metadata jsonb  -- contexto adicional
 created_at timestamptz default now()
+```
+
+### 4.12 `project_dependencies`
+Dependências externas (acessos, dados, credenciais, aprovações) que o projeto precisa do cliente ou de terceiros. Rastreia SLA e marca bloqueios.
+```
+id uuid PK
+organization_id uuid FK
+project_id uuid FK → projects
+title text not null
+description text
+dependency_type enum project_dependency_type
+  ('acesso_api','credenciais','dados_cliente','aprovacao',
+   'documentacao','homologacao','infraestrutura','outro')
+status enum project_dependency_status
+  ('pendente','solicitado','em_andamento','recebido',
+   'atrasado','bloqueante','resolvido','cancelado')
+requested_from text          -- nome livre de quem fornece
+responsible_actor_id uuid FK → actors  -- quem da GetBrain cobra
+requested_at date
+expected_at date             -- data-alvo
+received_at date             -- data real
+is_blocking boolean default false
+notes text
+created_at, updated_at, deleted_at
+created_by_actor_id, updated_by_actor_id
+```
+
+### 4.13 `project_milestones`
+Marcos/entregas intermediárias com data-alvo × data-real, alinhado ao princípio 2.4.
+```
+id uuid PK
+organization_id uuid FK
+project_id uuid FK → projects
+title text not null
+description text
+sequence_order int not null   -- ordem visual
+target_date date not null
+actual_date date              -- preenchido quando concluído
+status enum project_milestone_status
+  ('planejado','em_andamento','concluido','atrasado','cancelado')
+acceptance_notes text
+created_at, updated_at, deleted_at
+created_by_actor_id, updated_by_actor_id
+```
+
+Constraint única: `(project_id, sequence_order)` onde `deleted_at is null`.
+
+### 4.14 `project_integrations`
+Integrações externas do projeto (APIs de terceiros, sistemas do cliente).
+```
+id uuid PK
+organization_id uuid FK
+project_id uuid FK → projects
+name text not null            -- ex: "Recrutei API"
+provider text                 -- fabricante
+purpose text                  -- para que serve
+documentation_url text
+credentials_location text     -- descrição de onde estão as chaves (NÃO as chaves)
+status enum project_integration_status
+  ('planejada','em_desenvolvimento','testando','ativa','com_erro','descontinuada')
+estimated_cost_monthly_brl numeric(12,2)
+notes text
+created_at, updated_at, deleted_at
+created_by_actor_id, updated_by_actor_id
+```
+
+**Importante:** `credentials_location` NÃO armazena credenciais. Um Gestor de Secrets dedicado virá em prompt futuro.
+
+### 4.15 `project_risks`
+Riscos identificados + plano de mitigação.
+```
+id uuid PK
+organization_id uuid FK
+project_id uuid FK → projects
+title text not null
+description text
+severity enum project_risk_severity ('baixa','media','alta','critica')
+probability enum project_risk_probability ('baixa','media','alta')
+status enum project_risk_status
+  ('identificado','em_mitigacao','mitigado','materializado','aceito')
+mitigation_plan text
+responsible_actor_id uuid FK → actors
+identified_at date default current_date
+resolved_at date
+notes text
+created_at, updated_at, deleted_at
+created_by_actor_id, updated_by_actor_id
 ```
 
 ---
@@ -517,6 +623,8 @@ Ao final da Fundação (Prompt 01), o banco deve conter:
 
 Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
 
+> As 4 novas tabelas (`project_dependencies`, `project_milestones`, `project_integrations`, `project_risks`) começam vazias. Serão populadas por Daniel à medida que ele configurar os 3 projetos existentes.
+
 ---
 
 ## 12. Histórico de versões
@@ -533,6 +641,13 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
   - Código de projeto: formato PRJ-001 sequencial (confirmado)
   - Primary color: ciano #06b6d4 (confirmado)
   - Seção 11 atualizada com seed incluindo `maintenance_contracts`
+- **v1.2 (21/04/2026):**
+  - Adicionados 7 campos TEXT à tabela `projects` para escopo estruturado (`business_context`, `scope_in`, `scope_out`, `premises`, `deliverables`, `technical_stack`, `identified_risks`)
+  - Adicionadas 4 tabelas fundacionais novas (`project_dependencies`, `project_milestones`, `project_integrations`, `project_risks`)
+  - Adicionados 7 enums novos correspondentes
+  - Novo princípio 2.12: escopo estruturado
+  - Drawer do projeto reorganizado em 8 abas: Visão Geral, Escopo, Dependências, Marcos, Riscos, Integrações, Atores & Manutenção, Atividade
+  - Novo KPI na listagem de Projetos: "Dependências Bloqueantes"
 
 ---
 
