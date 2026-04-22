@@ -18,6 +18,7 @@ import ExtratosBancarios from "./pages/ExtratosBancarios";
 import ExtratoMovimentacaoDetalhe from "./pages/ExtratoMovimentacaoDetalhe";
 import ConfiguracoesFinanceiras from "./pages/ConfiguracoesFinanceiras";
 import Projetos from "./pages/Projetos";
+import ProjetoDetalhe from "./pages/ProjetoDetalhe";
 import AreaDev from "./pages/AreaDev";
 import Clientes from "./pages/Clientes";
 import Configuracoes from "./pages/Configuracoes";
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/financeiro/extratos/movimentacao/:id" element={<ProtectedRoute><ExtratoMovimentacaoDetalhe /></ProtectedRoute>} />
             <Route path="/financeiro/configuracoes" element={<ProtectedRoute><ConfiguracoesFinanceiras /></ProtectedRoute>} />
             <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
+            <Route path="/projetos/:id" element={<ProtectedRoute><ProjetoDetalhe /></ProtectedRoute>} />
             <Route path="/area-dev" element={<ProtectedRoute><AreaDev /></ProtectedRoute>} />
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   PlayCircle,
@@ -48,7 +49,6 @@ import {
 import { StatusBadge, TypeBadge } from "@/components/projetos/ProjetoBadges";
 import { ActorAvatar, ActorAvatarStack } from "@/components/projetos/ActorAvatar";
 import { NovoProjetoDialog } from "@/components/projetos/NovoProjetoDialog";
-import { ProjetoDrawer } from "@/components/projetos/ProjetoDrawer";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -93,8 +93,7 @@ export default function Projetos() {
   const pageSize = 20;
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [drawerId, setDrawerId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     load();
@@ -219,8 +218,7 @@ export default function Projetos() {
   }
 
   function openDrawer(id: string) {
-    setDrawerId(id);
-    setDrawerOpen(true);
+    navigate(`/projetos/${id}`);
   }
 
   async function archiveProject(id: string) {
@@ -563,13 +561,6 @@ export default function Projetos() {
           load();
           openDrawer(id);
         }}
-      />
-
-      <ProjetoDrawer
-        projectId={drawerId}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        onChanged={load}
       />
     </div>
   );
