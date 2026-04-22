@@ -59,6 +59,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
 import { Sparkles } from "lucide-react";
+import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
 
 const ANEXOS_BUCKET = "anexos-movimentacoes";
 
