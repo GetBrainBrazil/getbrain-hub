@@ -1750,8 +1750,103 @@ export default function ProjetoDetalhe() {
                 )}
               </SidebarSection>
 
+              <SidebarSection title="Dependências Bloqueantes">
+                {blockingDeps.length === 0 ? (
+                  <p className="py-1 text-xs text-muted-foreground">Nenhuma bloqueante</p>
+                ) : (
+                  <div className="space-y-2 py-1">
+                    {blockingDeps.slice(0, 4).map((d) => {
+                      const overdue =
+                        d.expected_at && new Date(d.expected_at) < new Date();
+                      return (
+                        <div
+                          key={d.id}
+                          className="rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5"
+                        >
+                          <div className="flex items-start gap-1.5">
+                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-destructive" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium text-foreground">
+                                {d.title}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {dependencyStatusLabel(d.status)}
+                                {d.expected_at && (
+                                  <span className={cn("ml-1", overdue && "text-destructive")}>
+                                    · {overdue ? "atrasada" : "prev."} {formatDate(d.expected_at)}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {blockingDeps.length > 4 && (
+                      <p className="text-[10px] text-muted-foreground">
+                        +{blockingDeps.length - 4} adicionais
+                      </p>
+                    )}
+                  </div>
+                )}
+              </SidebarSection>
+
+              <SidebarSection title="Próximo Marco">
+                {!nextMilestone ? (
+                  <p className="py-1 text-xs text-muted-foreground">Sem marcos abertos</p>
+                ) : (
+                  <div className="rounded-md border border-border/60 bg-card/40 px-2 py-2">
+                    <div className="flex items-start gap-1.5">
+                      <Flag className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-foreground">
+                          {nextMilestone.title}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {milestoneStatusLabel(nextMilestone.status)}
+                          {nextMilestone.target_date && (
+                            <> · {formatDate(nextMilestone.target_date)}</>
+                          )}
+                        </p>
+                        {nextMilestone.triggers_billing && nextMilestone.billing_amount && (
+                          <p className="mt-0.5 font-mono text-[10px] text-success">
+                            {formatCurrency(Number(nextMilestone.billing_amount))} ao concluir
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </SidebarSection>
+
               <SidebarSection title="Integrações">
-                <p className="py-1 text-xs text-muted-foreground">—</p>
+                {integrations.length === 0 ? (
+                  <p className="py-1 text-xs text-muted-foreground">Nenhuma cadastrada</p>
+                ) : (
+                  <div className="space-y-1.5 py-1">
+                    {integrations.slice(0, 5).map((i) => (
+                      <div key={i.id} className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <Plug className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate text-xs text-foreground">{i.name}</span>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide",
+                            integrationStatusClass(i.status as any),
+                          )}
+                        >
+                          {integrationStatusLabel(i.status as any)}
+                        </span>
+                      </div>
+                    ))}
+                    {integrations.length > 5 && (
+                      <p className="text-[10px] text-muted-foreground">
+                        +{integrations.length - 5} adicionais
+                      </p>
+                    )}
+                  </div>
+                )}
               </SidebarSection>
 
               <SidebarSection title="Atividade Recente" last>
