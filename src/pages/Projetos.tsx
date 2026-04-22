@@ -181,7 +181,23 @@ export default function Projetos() {
         s + Number(c.monthly_fee) * (1 - Number(c.monthly_fee_discount_percent || 0) / 100),
       0,
     );
-    setKpis({ ativos, manut, contratado, mrr });
+    const { data: blockDeps } = await supabase
+      .from("project_dependencies")
+      .select("project_id, status, is_blocking")
+      .is("deleted_at", null)
+      .or("is_blocking.eq.true,status.eq.bloqueante");
+    const activeProjIds = new Set(
+      projectRows
+        .filter((r) => !["cancelado", "arquivado", "entregue"].includes(r.status))
+        .map((r) => r.id),
+    );
+    const blockingDeps = (blockDeps || []).filter(
+      (d) =>
+        activeProjIds.has(d.project_id) &&
+        !["resolvido", "cancelado", "recebido"].includes(d.status),
+    ).length;
+
+    setKpis({ ativos, manut, contratado, mrr, blockingDeps });
     setLoading(false);
   }
 
