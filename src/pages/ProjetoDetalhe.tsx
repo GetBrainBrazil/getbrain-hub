@@ -1666,6 +1666,7 @@ export default function ProjetoDetalhe() {
           projectId={projectId!}
           onCreated={load}
         />
+        {confirmDialogEl}
       </div>
     </TooltipProvider>
   );
