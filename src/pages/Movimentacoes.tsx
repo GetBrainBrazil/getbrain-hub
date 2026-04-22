@@ -32,6 +32,7 @@ import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type Comprovan
 import { Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
+import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
 
 type TabType = "pagar" | "receber";
 
@@ -339,7 +340,7 @@ export default function Movimentacoes() {
   function openDarBaixa(m: any) {
     setSelectedMov(m);
     setBaixaForm({
-      valor_realizado: String(m.valor_previsto),
+      valor_realizado: formatMoneyForInput(Number(m.valor_previsto) || 0),
       data_pagamento: new Date().toISOString().split("T")[0],
       conta_bancaria_id: m.conta_bancaria_id || "",
       meio_pagamento_id: "",
@@ -353,17 +354,18 @@ export default function Movimentacoes() {
   }
 
   const baixaTotals = useMemo(() => {
-    const base = parseFloat(baixaForm.valor_realizado) || 0;
-    const desconto = parseFloat(baixaForm.desconto) || 0;
-    const juros = parseFloat(baixaForm.juros) || 0;
-    const multa = parseFloat(baixaForm.multa) || 0;
-    const taxas = parseFloat(baixaForm.taxas) || 0;
-    const pis = parseFloat(baixaForm.pis) || 0;
-    const cofins = parseFloat(baixaForm.cofins) || 0;
-    const csll = parseFloat(baixaForm.csll) || 0;
-    const iss = parseFloat(baixaForm.iss) || 0;
-    const ir = parseFloat(baixaForm.ir) || 0;
-    const inss = parseFloat(baixaForm.inss) || 0;
+    const pm = (v: string) => (v ? parseMoney(v) || 0 : 0);
+    const base = pm(baixaForm.valor_realizado);
+    const desconto = pm(baixaForm.desconto);
+    const juros = pm(baixaForm.juros);
+    const multa = pm(baixaForm.multa);
+    const taxas = pm(baixaForm.taxas);
+    const pis = pm(baixaForm.pis);
+    const cofins = pm(baixaForm.cofins);
+    const csll = pm(baixaForm.csll);
+    const iss = pm(baixaForm.iss);
+    const ir = pm(baixaForm.ir);
+    const inss = pm(baixaForm.inss);
     const impostos = pis + cofins + csll + iss + ir + inss;
     const totalPago = base - desconto + juros + multa + taxas;
     const valorOriginal = Number(selectedMov?.valor_previsto) || 0;
@@ -382,16 +384,16 @@ export default function Movimentacoes() {
       data_pagamento: baixaForm.data_pagamento,
       conta_bancaria_id: baixaForm.conta_bancaria_id || null,
       meio_pagamento_id: baixaForm.meio_pagamento_id || null,
-      desconto_previsto: parseFloat(baixaForm.desconto) || null,
-      juros: parseFloat(baixaForm.juros) || null,
-      multa: parseFloat(baixaForm.multa) || null,
-      taxas_adm: parseFloat(baixaForm.taxas) || null,
-      pis: parseFloat(baixaForm.pis) || null,
-      cofins: parseFloat(baixaForm.cofins) || null,
-      csll: parseFloat(baixaForm.csll) || null,
-      iss: parseFloat(baixaForm.iss) || null,
-      ir: parseFloat(baixaForm.ir) || null,
-      inss: parseFloat(baixaForm.inss) || null,
+      desconto_previsto: parseMoney(baixaForm.desconto) || null,
+      juros: parseMoney(baixaForm.juros) || null,
+      multa: parseMoney(baixaForm.multa) || null,
+      taxas_adm: parseMoney(baixaForm.taxas) || null,
+      pis: parseMoney(baixaForm.pis) || null,
+      cofins: parseMoney(baixaForm.cofins) || null,
+      csll: parseMoney(baixaForm.csll) || null,
+      iss: parseMoney(baixaForm.iss) || null,
+      ir: parseMoney(baixaForm.ir) || null,
+      inss: parseMoney(baixaForm.inss) || null,
       observacoes: baixaForm.observacoes_pagamento
         ? `${selectedMov.observacoes ? selectedMov.observacoes + "\n\n" : ""}[Pagamento] ${baixaForm.observacoes_pagamento}`
         : selectedMov.observacoes,
@@ -408,7 +410,7 @@ export default function Movimentacoes() {
       }
     }
 
-    const baseValue = parseFloat(baixaForm.valor_realizado) || 0;
+    const baseValue = parseMoney(baixaForm.valor_realizado) || 0;
     if (baseValue < valorPrev) {
       await supabase.from("movimentacoes").insert({
         tipo,
@@ -786,7 +788,7 @@ export default function Movimentacoes() {
                 setBaixaForm((prev) => {
                   const upd = { ...prev };
                   if (res.data) { upd.data_pagamento = res.data; next.add("data_pagamento"); }
-                  if (res.valor != null) { upd.valor_realizado = String(res.valor); next.add("valor_realizado"); }
+                  if (res.valor != null) { upd.valor_realizado = formatMoneyForInput(Number(res.valor)); next.add("valor_realizado"); }
                   if (res.conta_bancaria_id) { upd.conta_bancaria_id = res.conta_bancaria_id; next.add("conta_bancaria_id"); }
                   return upd;
                 });
@@ -830,23 +832,23 @@ export default function Movimentacoes() {
                     Valor Base (R$) *
                     {aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
                   </Label>
-                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: e.target.value })} className="h-10 text-sm" />
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
                 </div>
                 <div>
                   <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Desconto (-)</Label>
-                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.desconto} onChange={e => setBaixaForm({ ...baixaForm, desconto: e.target.value })} className="h-10 text-sm" />
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.desconto} onChange={e => setBaixaForm({ ...baixaForm, desconto: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
                 </div>
                 <div>
                   <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Juros (+)</Label>
-                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.juros} onChange={e => setBaixaForm({ ...baixaForm, juros: e.target.value })} className="h-10 text-sm" />
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.juros} onChange={e => setBaixaForm({ ...baixaForm, juros: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
                 </div>
                 <div>
                   <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Multa (+)</Label>
-                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.multa} onChange={e => setBaixaForm({ ...baixaForm, multa: e.target.value })} className="h-10 text-sm" />
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.multa} onChange={e => setBaixaForm({ ...baixaForm, multa: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
                 </div>
                 <div>
                   <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Taxas (+)</Label>
-                  <Input type="number" step="0.01" placeholder="0,00" value={baixaForm.taxas} onChange={e => setBaixaForm({ ...baixaForm, taxas: e.target.value })} className="h-10 text-sm" />
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.taxas} onChange={e => setBaixaForm({ ...baixaForm, taxas: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
                 </div>
               </div>
               <div className="flex items-center justify-between rounded-md bg-muted/40 px-4 py-2.5">
@@ -864,7 +866,7 @@ export default function Movimentacoes() {
                 {(["pis", "cofins", "csll", "iss", "ir", "inss"] as const).map(k => (
                   <div key={k}>
                     <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block uppercase">{k}</Label>
-                    <Input type="number" step="0.01" placeholder="0,00" value={baixaForm[k]} onChange={e => setBaixaForm({ ...baixaForm, [k]: e.target.value })} className="h-10 text-sm" />
+                    <Input inputMode="decimal" placeholder="0,00" value={baixaForm[k]} onChange={e => setBaixaForm({ ...baixaForm, [k]: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
                   </div>
                 ))}
               </div>
