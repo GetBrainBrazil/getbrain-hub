@@ -997,6 +997,7 @@ export type Database = {
           parcelado: boolean | null
           pis: number | null
           projeto_id: string | null
+          recorrencia_ativa: boolean
           recorrente: boolean | null
           source_entity_id: string | null
           source_entity_type: string | null
@@ -1042,6 +1043,7 @@ export type Database = {
           parcelado?: boolean | null
           pis?: number | null
           projeto_id?: string | null
+          recorrencia_ativa?: boolean
           recorrente?: boolean | null
           source_entity_id?: string | null
           source_entity_type?: string | null
@@ -1087,6 +1089,7 @@ export type Database = {
           parcelado?: boolean | null
           pis?: number | null
           projeto_id?: string | null
+          recorrencia_ativa?: boolean
           recorrente?: boolean | null
           source_entity_id?: string | null
           source_entity_type?: string | null
