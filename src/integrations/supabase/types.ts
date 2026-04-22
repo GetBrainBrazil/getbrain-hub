@@ -924,6 +924,13 @@ export type Database = {
             foreignKeyName: "maintenance_contracts_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "maintenance_contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -1341,6 +1348,13 @@ export type Database = {
             foreignKeyName: "project_actors_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_actors_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -1417,6 +1431,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "actors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_dependencies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "project_dependencies_project_id_fkey"
@@ -1508,6 +1529,13 @@ export type Database = {
             foreignKeyName: "project_integrations_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_integrations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -1585,6 +1613,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "actors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "project_milestones_project_id_fkey"
@@ -1670,6 +1705,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "actors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_risks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "project_risks_project_id_fkey"
@@ -1896,7 +1938,129 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      project_metrics: {
+        Row: {
+          actors_allocated: number | null
+          avg_resolution_hours: number | null
+          blocking_dependencies: number | null
+          cost_integrations_monthly: number | null
+          cost_total_estimated: number | null
+          created_at: string | null
+          deleted_at: string | null
+          estimated_delivery_date: string | null
+          high_risks_active: number | null
+          hours_actual: number | null
+          hours_estimated: number | null
+          integrations_active: number | null
+          integrations_total: number | null
+          margin_real: number | null
+          milestones_done: number | null
+          milestones_total: number | null
+          next_milestone: Json | null
+          project_code: string | null
+          project_id: string | null
+          project_status: Database["public"]["Enums"]["project_status"] | null
+          revenue_contracted: number | null
+          revenue_pending: number | null
+          revenue_received: number | null
+          start_date: string | null
+          tasks_backlog: number | null
+          tasks_blocked: number | null
+          tasks_completion_percent: number | null
+          tasks_done: number | null
+          tasks_in_progress: number | null
+          tasks_total: number | null
+          tickets_open: number | null
+          tickets_resolved_30d: number | null
+          tokens_budget_brl: number | null
+          tokens_consumed_month_brl: number | null
+          tokens_consumption_percent: number | null
+          total_dependencies: number | null
+          total_risks: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          actors_allocated?: never
+          avg_resolution_hours?: never
+          blocking_dependencies?: never
+          cost_integrations_monthly?: never
+          cost_total_estimated?: never
+          created_at?: string | null
+          deleted_at?: string | null
+          estimated_delivery_date?: string | null
+          high_risks_active?: never
+          hours_actual?: never
+          hours_estimated?: never
+          integrations_active?: never
+          integrations_total?: never
+          margin_real?: never
+          milestones_done?: never
+          milestones_total?: never
+          next_milestone?: never
+          project_code?: string | null
+          project_id?: string | null
+          project_status?: Database["public"]["Enums"]["project_status"] | null
+          revenue_contracted?: never
+          revenue_pending?: never
+          revenue_received?: never
+          start_date?: string | null
+          tasks_backlog?: never
+          tasks_blocked?: never
+          tasks_completion_percent?: never
+          tasks_done?: never
+          tasks_in_progress?: never
+          tasks_total?: never
+          tickets_open?: never
+          tickets_resolved_30d?: never
+          tokens_budget_brl?: never
+          tokens_consumed_month_brl?: never
+          tokens_consumption_percent?: never
+          total_dependencies?: never
+          total_risks?: never
+          updated_at?: string | null
+        }
+        Update: {
+          actors_allocated?: never
+          avg_resolution_hours?: never
+          blocking_dependencies?: never
+          cost_integrations_monthly?: never
+          cost_total_estimated?: never
+          created_at?: string | null
+          deleted_at?: string | null
+          estimated_delivery_date?: string | null
+          high_risks_active?: never
+          hours_actual?: never
+          hours_estimated?: never
+          integrations_active?: never
+          integrations_total?: never
+          margin_real?: never
+          milestones_done?: never
+          milestones_total?: never
+          next_milestone?: never
+          project_code?: string | null
+          project_id?: string | null
+          project_status?: Database["public"]["Enums"]["project_status"] | null
+          revenue_contracted?: never
+          revenue_pending?: never
+          revenue_received?: never
+          start_date?: string | null
+          tasks_backlog?: never
+          tasks_blocked?: never
+          tasks_completion_percent?: never
+          tasks_done?: never
+          tasks_in_progress?: never
+          tasks_total?: never
+          tickets_open?: never
+          tickets_resolved_30d?: never
+          tokens_budget_brl?: never
+          tokens_consumed_month_brl?: never
+          tokens_consumption_percent?: never
+          total_dependencies?: never
+          total_risks?: never
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_project_code: { Args: never; Returns: string }

@@ -1,3 +1,25 @@
+/**
+ * PÁGINA DE DETALHE DO PROJETO
+ *
+ * Arquitetura de integração (Seção 13 do ARCHITECTURE.md):
+ *
+ * OUT (este módulo dispara):
+ *  - milestone.concluido + triggers_billing → Financeiro.ContasReceber (edge function)
+ *  - dependency.is_blocking → audit_log no projeto
+ *  - projects.status=aceito → (futuro) gerar parcelas no Financeiro
+ *  - projects.status=entregue → (futuro) sugerir maintenance_contract
+ *
+ * IN (este módulo consome de outros, via view SQL `project_metrics`):
+ *  - Financeiro.movimentacoes (source_entity_id) → revenue_*, cost_*
+ *  - project_integrations.estimated_cost_monthly_brl → cost_*
+ *  - maintenance_contracts.token_budget_brl → tokens_budget_brl
+ *  - (futuro) tasks → tasks_*, hours_*
+ *  - (futuro) tickets → tickets_*
+ *  - (futuro) token usage → tokens_consumed_*
+ *
+ * Toda agregação vive na view SQL — princípio 2.15. O front consome via
+ * `useProjectMetrics(projectId)` na aba "Operacional".
+ */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -79,6 +101,7 @@ import { AbaMarcos } from "@/components/projetos/AbaMarcos";
 import { AbaRiscos } from "@/components/projetos/AbaRiscos";
 import { AbaDependencias } from "@/components/projetos/AbaDependencias";
 import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
+import { AbaOperacional } from "@/components/projetos/AbaOperacional";
 import {
   dependencyStatusLabel,
   milestoneStatusLabel,
@@ -942,11 +965,12 @@ export default function ProjetoDetalhe() {
                 {[
                   ["overview", "Visão Geral", null],
                   ["scope", "Escopo", null],
+                  ["operacional", "Operacional", null],
                   ["milestones", "Marcos", milestones.length || null],
-                  ["risks", "Riscos", null],
-                  ["team", "Time & Contratos", allocs.length || null],
                   ["dependencies", "Dependências", blockingDeps.length || null],
+                  ["risks", "Riscos", null],
                   ["integrations", "Integrações", integrations.length || null],
+                  ["team", "Time & Contratos", allocs.length || null],
                   ["activity", "Atividade", null],
                 ].map(([v, label, count]) => (
                   <TabsTrigger
@@ -1452,6 +1476,11 @@ export default function ProjetoDetalhe() {
                   }}
                   onSaved={load}
                 />
+              </TabsContent>
+
+              {/* ----- OPERACIONAL ----- */}
+              <TabsContent value="operacional">
+                <AbaOperacional projectId={projectId!} />
               </TabsContent>
 
               {/* ----- MARCOS ----- */}

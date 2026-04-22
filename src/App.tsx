@@ -22,6 +22,8 @@ import ProjetoDetalhe from "./pages/ProjetoDetalhe";
 import AreaDev from "./pages/AreaDev";
 import Clientes from "./pages/Clientes";
 import Configuracoes from "./pages/Configuracoes";
+import Suporte from "./pages/Suporte";
+import Tokens from "./pages/Tokens";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -76,6 +78,8 @@ const App = () => (
             <Route path="/area-dev" element={<ProtectedRoute><AreaDev /></ProtectedRoute>} />
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+            <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
+            <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
