@@ -1051,9 +1051,9 @@ export default function Movimentacoes() {
                             </DropdownMenuItem>
                           )}
                           {m.status === "pago" && (
-                            <DropdownMenuItem onClick={() => handleReabrir(m)} className="cursor-pointer text-warning focus:text-warning">
-                              <RotateCcw className="mr-2 h-4 w-4" />
-                              Reabrir conta
+                            <DropdownMenuItem onClick={() => openEditModal(m)} className="cursor-pointer">
+                              <CheckCircle className="mr-2 h-4 w-4 text-success" />
+                              Editar Liquidação
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => openEditModal(m)} className="cursor-pointer">
