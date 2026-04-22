@@ -1326,7 +1326,11 @@ export default function MovimentacaoDetalhe() {
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}</DialogTitle>
+            <DialogTitle>
+              {mov?.status === "pago"
+                ? "Editar Liquidação"
+                : isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <ComprovanteUploadField
@@ -1414,6 +1418,8 @@ export default function MovimentacaoDetalhe() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {confirmDialogEl}
     </div>
   );
 }
