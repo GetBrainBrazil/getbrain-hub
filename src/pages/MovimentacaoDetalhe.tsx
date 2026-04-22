@@ -23,6 +23,7 @@ import {
   Landmark,
   Users,
   UserCircle,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,6 +61,7 @@ import { cn } from "@/lib/utils";
 import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
 import { Sparkles } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 const ANEXOS_BUCKET = "anexos-movimentacoes";
 
@@ -121,6 +123,7 @@ export default function MovimentacaoDetalhe() {
   const { id, tipo: tipoParam } = useParams<{ id?: string; tipo?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
 
   // Modos: create | edit | view
   const isCreate = !id && !!tipoParam;
@@ -524,12 +527,19 @@ export default function MovimentacaoDetalhe() {
 
   function openDarBaixa() {
     if (!mov) return;
-    const baseValor = totalPrevisto || parseMoney(form.valor_previsto || "0") || Number(mov.valor_previsto) || 0;
+    const isEditingLiquidacao = mov.status === "pago";
+    const baseValor = isEditingLiquidacao
+      ? Number(mov.valor_realizado) || 0
+      : totalPrevisto || parseMoney(form.valor_previsto || "0") || Number(mov.valor_previsto) || 0;
     setBaixaForm({
       valor_realizado: formatMoneyForInput(baseValor),
-      data_pagamento: new Date().toISOString().split("T")[0],
-      conta_bancaria_id: form.conta_bancaria_id || mov.conta_bancaria_id || "",
-      meio_pagamento_id: "",
+      data_pagamento: isEditingLiquidacao
+        ? mov.data_pagamento || new Date().toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      conta_bancaria_id: isEditingLiquidacao
+        ? mov.conta_bancaria_id || ""
+        : form.conta_bancaria_id || mov.conta_bancaria_id || "",
+      meio_pagamento_id: isEditingLiquidacao ? mov.meio_pagamento_id || "" : "",
     });
     setComprovanteFile(null);
     setAiFields(new Set());
@@ -557,8 +567,44 @@ export default function MovimentacaoDetalhe() {
       try { await uploadComprovanteToMovimentacao(comprovanteFile, mov.id); }
       catch (e) { console.error(e); toast.error("Pagamento registrado, mas falhou ao salvar o comprovante."); }
     }
-    toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
+    toast.success(
+      mov.status === "pago"
+        ? "Liquidação atualizada!"
+        : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
+    );
     setOpenBaixa(false);
+    void load();
+  }
+
+  async function handleReabrir() {
+    if (!mov) return;
+    const ok = await confirmDialog({
+      title: "Reabrir conta?",
+      description: (
+        <>
+          A conta voltará para <span className="font-medium text-foreground">pendente</span> e o
+          pagamento registrado (valor, data, conciliação) será removido.
+        </>
+      ),
+      confirmLabel: "Reabrir",
+      variant: "default",
+    });
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from("movimentacoes")
+      .update({
+        status: "pendente",
+        valor_realizado: 0,
+        data_pagamento: null,
+        conciliado: false,
+      } as any)
+      .eq("id", mov.id);
+    if (error) {
+      toast.error(`Não foi possível reabrir: ${error.message}`);
+      return;
+    }
+    toast.success("Conta reaberta com sucesso");
     void load();
   }
 
@@ -1218,6 +1264,26 @@ export default function MovimentacaoDetalhe() {
                     {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
                   </Button>
                 )}
+                {mov?.status === "pago" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={openDarBaixa}
+                      className="gap-1.5 border-success text-success hover:bg-success hover:text-white"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Editar Liquidação
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReabrir}
+                      className="gap-1.5 border-warning text-warning hover:bg-warning hover:text-white"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Reabrir conta
+                    </Button>
+                  </>
+                )}
               </>
             )}
             <div className="ml-auto flex items-center gap-2 flex-wrap">
@@ -1260,7 +1326,11 @@ export default function MovimentacaoDetalhe() {
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}</DialogTitle>
+            <DialogTitle>
+              {mov?.status === "pago"
+                ? "Editar Liquidação"
+                : isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <ComprovanteUploadField
@@ -1348,6 +1418,8 @@ export default function MovimentacaoDetalhe() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {confirmDialogEl}
     </div>
   );
 }
