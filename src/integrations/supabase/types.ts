@@ -14,6 +14,103 @@ export type Database = {
   }
   public: {
     Tables: {
+      actors: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          deleted_at: string | null
+          display_name: string
+          id: string
+          organization_id: string
+          status: Database["public"]["Enums"]["actor_status"]
+          type: Database["public"]["Enums"]["actor_type"]
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          display_name: string
+          id?: string
+          organization_id: string
+          status?: Database["public"]["Enums"]["actor_status"]
+          type: Database["public"]["Enums"]["actor_type"]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          display_name?: string
+          id?: string
+          organization_id?: string
+          status?: Database["public"]["Enums"]["actor_status"]
+          type?: Database["public"]["Enums"]["actor_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agents: {
+        Row: {
+          actor_id: string
+          capabilities: string[] | null
+          config: Json | null
+          cost_per_1k_input_tokens_usd: number | null
+          cost_per_1k_output_tokens_usd: number | null
+          created_at: string
+          id: string
+          model: string
+          openclaw_agent_id: string | null
+          provider: Database["public"]["Enums"]["ai_provider"]
+          system_prompt: string | null
+          updated_at: string
+        }
+        Insert: {
+          actor_id: string
+          capabilities?: string[] | null
+          config?: Json | null
+          cost_per_1k_input_tokens_usd?: number | null
+          cost_per_1k_output_tokens_usd?: number | null
+          created_at?: string
+          id?: string
+          model: string
+          openclaw_agent_id?: string | null
+          provider: Database["public"]["Enums"]["ai_provider"]
+          system_prompt?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actor_id?: string
+          capabilities?: string[] | null
+          config?: Json | null
+          cost_per_1k_input_tokens_usd?: number | null
+          cost_per_1k_output_tokens_usd?: number | null
+          created_at?: string
+          id?: string
+          model?: string
+          openclaw_agent_id?: string | null
+          provider?: Database["public"]["Enums"]["ai_provider"]
+          system_prompt?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agents_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: true
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anexos: {
         Row: {
           created_at: string | null
@@ -64,6 +161,57 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["audit_action"]
+          actor_id: string | null
+          changes: Json | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json | null
+          organization_id: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["audit_action"]
+          actor_id?: string | null
+          changes?: Json | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["audit_action"]
+          actor_id?: string | null
+          changes?: Json | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -288,6 +436,123 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      companies: {
+        Row: {
+          cnpj: string | null
+          company_type: Database["public"]["Enums"]["company_type"]
+          created_at: string
+          created_by_actor_id: string | null
+          deleted_at: string | null
+          id: string
+          industry: string | null
+          legal_name: string
+          notes: string | null
+          organization_id: string
+          size: Database["public"]["Enums"]["company_size"] | null
+          status: Database["public"]["Enums"]["company_status"]
+          trade_name: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          cnpj?: string | null
+          company_type: Database["public"]["Enums"]["company_type"]
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          id?: string
+          industry?: string | null
+          legal_name: string
+          notes?: string | null
+          organization_id: string
+          size?: Database["public"]["Enums"]["company_size"] | null
+          status?: Database["public"]["Enums"]["company_status"]
+          trade_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          cnpj?: string | null
+          company_type?: Database["public"]["Enums"]["company_type"]
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          id?: string
+          industry?: string | null
+          legal_name?: string
+          notes?: string | null
+          organization_id?: string
+          size?: Database["public"]["Enums"]["company_size"] | null
+          status?: Database["public"]["Enums"]["company_status"]
+          trade_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_created_by_actor_id_fkey"
+            columns: ["created_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_people: {
+        Row: {
+          company_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          is_primary_contact: boolean
+          person_id: string
+          role: string | null
+          started_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_primary_contact?: boolean
+          person_id: string
+          role?: string | null
+          started_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_primary_contact?: boolean
+          person_id?: string
+          role?: string | null
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_people_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_people_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contas_bancarias: {
         Row: {
@@ -522,6 +787,154 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      humans: {
+        Row: {
+          actor_id: string
+          auth_user_id: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
+          cpf: string | null
+          created_at: string
+          email: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          fixed_monthly_pay: number | null
+          hourly_cost: number | null
+          id: string
+          phone: string | null
+          role: Database["public"]["Enums"]["human_role"]
+          updated_at: string
+          variable_percentage: number | null
+        }
+        Insert: {
+          actor_id: string
+          auth_user_id?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          email: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          fixed_monthly_pay?: number | null
+          hourly_cost?: number | null
+          id?: string
+          phone?: string | null
+          role: Database["public"]["Enums"]["human_role"]
+          updated_at?: string
+          variable_percentage?: number | null
+        }
+        Update: {
+          actor_id?: string
+          auth_user_id?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          fixed_monthly_pay?: number | null
+          hourly_cost?: number | null
+          id?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["human_role"]
+          updated_at?: string
+          variable_percentage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "humans_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: true
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_contracts: {
+        Row: {
+          created_at: string
+          created_by_actor_id: string | null
+          deleted_at: string | null
+          end_date: string | null
+          hours_budget: number | null
+          id: string
+          monthly_fee: number
+          monthly_fee_discount_percent: number
+          notes: string | null
+          organization_id: string
+          project_id: string
+          start_date: string
+          status: Database["public"]["Enums"]["maintenance_contract_status"]
+          token_budget_brl: number | null
+          updated_at: string
+          updated_by_actor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          end_date?: string | null
+          hours_budget?: number | null
+          id?: string
+          monthly_fee: number
+          monthly_fee_discount_percent?: number
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          start_date: string
+          status?: Database["public"]["Enums"]["maintenance_contract_status"]
+          token_budget_brl?: number | null
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          end_date?: string | null
+          hours_budget?: number | null
+          id?: string
+          monthly_fee?: number
+          monthly_fee_discount_percent?: number
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["maintenance_contract_status"]
+          token_budget_brl?: number | null
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_contracts_created_by_actor_id_fkey"
+            columns: ["created_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_contracts_updated_by_actor_id_fkey"
+            columns: ["updated_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meios_pagamento: {
         Row: {
@@ -772,6 +1185,83 @@ export type Database = {
           },
         ]
       }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      people: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          full_name: string
+          id: string
+          linkedin_url: string | null
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          role_in_company: string | null
+          status: Database["public"]["Enums"]["person_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          linkedin_url?: string | null
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          role_in_company?: string | null
+          status?: Database["public"]["Enums"]["person_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          linkedin_url?: string | null
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          role_in_company?: string | null
+          status?: Database["public"]["Enums"]["person_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -795,6 +1285,165 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      project_actors: {
+        Row: {
+          actor_id: string
+          allocation_percent: number | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          project_id: string
+          role_in_project: Database["public"]["Enums"]["project_actor_role"]
+          started_at: string
+        }
+        Insert: {
+          actor_id: string
+          allocation_percent?: number | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          project_id: string
+          role_in_project: Database["public"]["Enums"]["project_actor_role"]
+          started_at?: string
+        }
+        Update: {
+          actor_id?: string
+          allocation_percent?: number | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          project_id?: string
+          role_in_project?: Database["public"]["Enums"]["project_actor_role"]
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_actors_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_actors_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          acceptance_criteria: string | null
+          actual_delivery_date: string | null
+          code: string
+          company_id: string
+          contract_value: number | null
+          created_at: string
+          created_by_actor_id: string | null
+          deleted_at: string | null
+          description: string | null
+          estimated_delivery_date: string | null
+          id: string
+          installments_count: number | null
+          name: string
+          notes: string | null
+          organization_id: string
+          owner_actor_id: string | null
+          project_type: Database["public"]["Enums"]["project_type"]
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          token_budget_brl: number | null
+          updated_at: string
+          updated_by_actor_id: string | null
+        }
+        Insert: {
+          acceptance_criteria?: string | null
+          actual_delivery_date?: string | null
+          code?: string
+          company_id: string
+          contract_value?: number | null
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          estimated_delivery_date?: string | null
+          id?: string
+          installments_count?: number | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          owner_actor_id?: string | null
+          project_type: Database["public"]["Enums"]["project_type"]
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          token_budget_brl?: number | null
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Update: {
+          acceptance_criteria?: string | null
+          actual_delivery_date?: string | null
+          code?: string
+          company_id?: string
+          contract_value?: number | null
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          estimated_delivery_date?: string | null
+          id?: string
+          installments_count?: number | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          owner_actor_id?: string | null
+          project_type?: Database["public"]["Enums"]["project_type"]
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          token_budget_brl?: number | null
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_actor_id_fkey"
+            columns: ["created_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_owner_actor_id_fkey"
+            columns: ["owner_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_updated_by_actor_id_fkey"
+            columns: ["updated_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projetos: {
         Row: {
@@ -869,6 +1518,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_project_code: { Args: never; Returns: string }
+      getbrain_org_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -879,7 +1530,52 @@ export type Database = {
       update_status_atrasado: { Args: never; Returns: undefined }
     }
     Enums: {
+      actor_status: "active" | "inactive" | "archived"
+      actor_type: "human" | "ai_agent"
+      ai_provider: "anthropic" | "openai" | "google" | "custom"
       app_role: "admin" | "member"
+      audit_action:
+        | "create"
+        | "update"
+        | "delete"
+        | "restore"
+        | "status_change"
+        | "custom"
+      company_size: "micro" | "small" | "medium" | "large" | "enterprise"
+      company_status: "active" | "inactive" | "churned" | "lost"
+      company_type: "client" | "prospect" | "supplier" | "partner" | "other"
+      employment_type: "founder" | "pj" | "clt" | "intern" | "freelancer"
+      human_role:
+        | "owner"
+        | "developer"
+        | "designer"
+        | "commercial"
+        | "support"
+        | "manager"
+      maintenance_contract_status: "active" | "paused" | "ended" | "cancelled"
+      person_status: "active" | "inactive"
+      project_actor_role:
+        | "owner"
+        | "developer"
+        | "designer"
+        | "consultant"
+        | "support"
+      project_status:
+        | "proposta"
+        | "aceito"
+        | "em_desenvolvimento"
+        | "em_homologacao"
+        | "entregue"
+        | "em_manutencao"
+        | "pausado"
+        | "cancelado"
+        | "arquivado"
+      project_type:
+        | "sistema_personalizado"
+        | "chatbot"
+        | "consultoria"
+        | "interno"
+        | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1007,7 +1703,57 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      actor_status: ["active", "inactive", "archived"],
+      actor_type: ["human", "ai_agent"],
+      ai_provider: ["anthropic", "openai", "google", "custom"],
       app_role: ["admin", "member"],
+      audit_action: [
+        "create",
+        "update",
+        "delete",
+        "restore",
+        "status_change",
+        "custom",
+      ],
+      company_size: ["micro", "small", "medium", "large", "enterprise"],
+      company_status: ["active", "inactive", "churned", "lost"],
+      company_type: ["client", "prospect", "supplier", "partner", "other"],
+      employment_type: ["founder", "pj", "clt", "intern", "freelancer"],
+      human_role: [
+        "owner",
+        "developer",
+        "designer",
+        "commercial",
+        "support",
+        "manager",
+      ],
+      maintenance_contract_status: ["active", "paused", "ended", "cancelled"],
+      person_status: ["active", "inactive"],
+      project_actor_role: [
+        "owner",
+        "developer",
+        "designer",
+        "consultant",
+        "support",
+      ],
+      project_status: [
+        "proposta",
+        "aceito",
+        "em_desenvolvimento",
+        "em_homologacao",
+        "entregue",
+        "em_manutencao",
+        "pausado",
+        "cancelado",
+        "arquivado",
+      ],
+      project_type: [
+        "sistema_personalizado",
+        "chatbot",
+        "consultoria",
+        "interno",
+        "outro",
+      ],
     },
   },
 } as const
