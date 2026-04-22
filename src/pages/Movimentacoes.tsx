@@ -642,18 +642,59 @@ export default function Movimentacoes() {
 
   function openDarBaixa(m: any) {
     setSelectedMov(m);
+    const isEditing = m.status === "pago";
+    const fmt = (v: any) => (v != null && v !== 0 ? formatMoneyForInput(Number(v)) : "");
     setBaixaForm({
-      valor_realizado: formatMoneyForInput(Number(m.valor_previsto) || 0),
-      data_pagamento: new Date().toISOString().split("T")[0],
+      valor_realizado: isEditing
+        ? fmt(m.valor_realizado || m.valor_previsto)
+        : formatMoneyForInput(Number(m.valor_previsto) || 0),
+      data_pagamento: isEditing
+        ? (m.data_pagamento || new Date().toISOString().split("T")[0])
+        : new Date().toISOString().split("T")[0],
       conta_bancaria_id: m.conta_bancaria_id || "",
-      meio_pagamento_id: "",
-      desconto: "", juros: "", multa: "", taxas: "",
-      pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
+      meio_pagamento_id: isEditing ? (m.meio_pagamento_id || "") : "",
+      desconto: isEditing ? fmt(m.desconto_previsto) : "",
+      juros: isEditing ? fmt(m.juros) : "",
+      multa: isEditing ? fmt(m.multa) : "",
+      taxas: isEditing ? fmt(m.taxas_adm) : "",
+      pis: isEditing ? fmt(m.pis) : "",
+      cofins: isEditing ? fmt(m.cofins) : "",
+      csll: isEditing ? fmt(m.csll) : "",
+      iss: isEditing ? fmt(m.iss) : "",
+      ir: isEditing ? fmt(m.ir) : "",
+      inss: isEditing ? fmt(m.inss) : "",
       observacoes_pagamento: "",
     });
     setComprovanteFile(null);
     setAiFields(new Set());
     setOpenBaixa(true);
+  }
+
+  async function handleReabrirFromBaixa() {
+    if (!selectedMov) return;
+    const ok = await confirmDialog({
+      title: "Reabrir conta?",
+      description: (
+        <>
+          A conta voltará para <span className="font-medium text-foreground">pendente</span> e o
+          pagamento registrado (valor, data, conciliação) será removido.
+        </>
+      ),
+      confirmLabel: "Reabrir",
+      variant: "default",
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("movimentacoes")
+      .update({ status: "pendente", valor_realizado: 0, data_pagamento: null, conciliado: false } as any)
+      .eq("id", selectedMov.id);
+    if (error) {
+      toast.error(`Não foi possível reabrir: ${error.message}`);
+      return;
+    }
+    toast.success("Conta reaberta com sucesso");
+    setOpenBaixa(false);
+    void refreshTabs([tab as TabType]);
   }
 
   const baixaTotals = useMemo(() => {
@@ -714,7 +755,8 @@ export default function Movimentacoes() {
     }
 
     const baseValue = parseMoney(baixaForm.valor_realizado) || 0;
-    if (baseValue < valorPrev) {
+    const wasAlreadyPaid = selectedMov.status === "pago";
+    if (!wasAlreadyPaid && baseValue < valorPrev) {
       await supabase.from("movimentacoes").insert({
         tipo,
         descricao: `${selectedMov.descricao} (Saldo)`,
@@ -729,7 +771,11 @@ export default function Movimentacoes() {
       });
     }
 
-    toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
+    toast.success(
+      wasAlreadyPaid
+        ? "Liquidação atualizada!"
+        : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
+    );
     setOpenBaixa(false);
     void refreshTabs([tab as TabType]);
   }
@@ -1020,7 +1066,7 @@ export default function Movimentacoes() {
                             </DropdownMenuItem>
                           )}
                           {m.status === "pago" && (
-                            <DropdownMenuItem onClick={() => openEditModal(m)} className="cursor-pointer">
+                            <DropdownMenuItem onClick={() => openDarBaixa(m)} className="cursor-pointer">
                               <CheckCircle className="mr-2 h-4 w-4 text-success" />
                               Editar Liquidação
                             </DropdownMenuItem>
@@ -1090,7 +1136,9 @@ export default function Movimentacoes() {
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-success flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
-              {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
+                            {selectedMov?.status === "pago"
+                ? "Editar Liquidação"
+                : isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
             </DialogTitle>
           </DialogHeader>
 
@@ -1231,11 +1279,25 @@ export default function Movimentacoes() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 pt-2 border-t border-border">
-              <Button variant="outline" onClick={() => setOpenBaixa(false)} className="px-5 h-10">Cancelar</Button>
-              <Button onClick={handleBaixa} className="px-5 h-10 bg-success text-success-foreground hover:bg-success/90">
-                Confirmar {isPagar ? "Pagamento" : "Recebimento"}
-              </Button>
+            <div className="flex items-center gap-3 pt-2 border-t border-border">
+              {selectedMov?.status === "pago" && (
+                <Button
+                  variant="outline"
+                  onClick={handleReabrirFromBaixa}
+                  className="px-5 h-10 border-warning text-warning hover:bg-warning hover:text-white gap-1.5"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reabrir conta
+                </Button>
+              )}
+              <div className="ml-auto flex gap-3">
+                <Button variant="outline" onClick={() => setOpenBaixa(false)} className="px-5 h-10">Cancelar</Button>
+                <Button onClick={handleBaixa} className="px-5 h-10 bg-success text-success-foreground hover:bg-success/90">
+                  {selectedMov?.status === "pago"
+                    ? "Salvar Alterações"
+                    : `Confirmar ${isPagar ? "Pagamento" : "Recebimento"}`}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
