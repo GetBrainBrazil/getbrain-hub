@@ -797,37 +797,6 @@ export default function Movimentacoes() {
     navigate(`/financeiro/movimentacoes/${m.id}`);
   }
 
-  async function handleReabrir(m: any) {
-    const ok = await confirmDialog({
-      title: "Reabrir conta?",
-      description: (
-        <>
-          A conta <span className="font-medium text-foreground">"{m.descricao}"</span> voltará para
-          <span className="font-medium"> pendente</span> e o pagamento registrado será removido.
-        </>
-      ),
-      confirmLabel: "Reabrir",
-      variant: "default",
-    });
-    if (!ok) return;
-
-    const { error } = await supabase
-      .from("movimentacoes")
-      .update({
-        status: "pendente",
-        valor_realizado: 0,
-        data_pagamento: null,
-        conciliado: false,
-      } as any)
-      .eq("id", m.id);
-
-    if (error) {
-      toast.error(`Não foi possível reabrir: ${error.message}`);
-      return;
-    }
-    toast.success("Conta reaberta com sucesso");
-    void refreshTabs([tab as TabType]);
-  }
 
   return (
     <div className="space-y-6">
