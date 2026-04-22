@@ -406,11 +406,11 @@ export default function MovimentacaoDetalhe() {
       return;
     }
 
-    // Recorrência: cria ocorrências adicionais até "recAte" (se preenchido) ou 12 ocorrências por padrão.
+    // Recorrência: cria ocorrências adicionais até "recAte" (se preenchido) ou 120 ocorrências (10 anos para mensal) por padrão.
     if (recorrente) {
       const intervalo = Math.max(parseInt(recIntervalo) || 1, 1);
       const limite = recAte ? new Date(recAte + "T12:00:00") : null;
-      const maxOcorrencias = limite ? 240 : 12; // segurança
+      const maxOcorrencias = limite ? 240 : 120; // segurança / sem prazo: gera ~10 anos para mensal
       const recurrences: any[] = [];
       for (let i = 1; i < maxOcorrencias; i++) {
         const competencia = addByFrequency(form.data_competencia, intervalo * i, recPeriodo);

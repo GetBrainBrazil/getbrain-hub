@@ -147,10 +147,10 @@ export default function ContasPagar() {
     const { data: parentData, error } = await supabase.from("movimentacoes").insert(baseRecord).select().single();
     if (error) { toast.error("Erro ao salvar"); return; }
 
-    // If recorrente, create 11 more months (total 12)
+    // If recorrente, create 119 more months (total 120 = 10 anos)
     if (form.recorrente && parentData) {
       const recurrences: any[] = [];
-      for (let i = 1; i <= 11; i++) {
+      for (let i = 1; i <= 119; i++) {
         const competencia = addMonths(form.data_competencia, i);
         const vencimento = addMonths(form.data_vencimento, i);
         recurrences.push({
@@ -164,7 +164,7 @@ export default function ContasPagar() {
       if (recError) { toast.error("Erro ao criar recorrências"); }
     }
 
-    toast.success(form.recorrente ? "Conta recorrente criada (12 meses)!" : "Conta a pagar criada!");
+    toast.success(form.recorrente ? "Conta recorrente criada (120 meses)!" : "Conta a pagar criada!");
     setOpenNew(false);
     setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal", observacoes: "" });
     setFornecedorSearch("");
@@ -380,7 +380,7 @@ export default function ContasPagar() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">Conta recorrente</p>
-                <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 12 meses</p>
+                <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 120 meses (10 anos)</p>
               </div>
               <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
             </div>
