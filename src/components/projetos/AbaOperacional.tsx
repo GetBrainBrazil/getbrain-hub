@@ -249,7 +249,23 @@ function computeMarginTone(m: ProjectMetrics): Tone {
 // ─────────────────────────────────────────────────────────
 // Componente principal
 // ─────────────────────────────────────────────────────────
-export function AbaOperacional({ projectId }: { projectId: string }) {
+interface AbaOperacionalProps {
+  projectId: string;
+  allocs?: AbaOperacionalAlloc[];
+  contracts?: AbaOperacionalContract[];
+  onAllocate?: () => void;
+  onDeallocate?: (allocId: string) => void;
+  onCreateContract?: () => void;
+}
+
+export function AbaOperacional({
+  projectId,
+  allocs = [],
+  contracts = [],
+  onAllocate,
+  onDeallocate,
+  onCreateContract,
+}: AbaOperacionalProps) {
   const { data: m, isLoading, error } = useProjectMetrics(projectId);
 
   if (isLoading) {
