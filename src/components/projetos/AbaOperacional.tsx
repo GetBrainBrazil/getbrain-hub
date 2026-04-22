@@ -660,7 +660,7 @@ export function AbaOperacional({
                   <p className="truncate text-sm font-medium text-foreground">
                     {a.actor?.display_name ?? "—"}
                     <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      {getRoleLabel(a.role_in_project)}
+                      {getRoleLabel(a.role_in_project as any)}
                       {a.allocation_percent ? ` · ${a.allocation_percent}%` : ""}
                     </span>
                   </p>
