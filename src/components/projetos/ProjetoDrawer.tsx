@@ -33,6 +33,7 @@ interface Props {
 }
 
 export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [project, setProject] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
   const [allocs, setAllocs] = useState<any[]>([]);

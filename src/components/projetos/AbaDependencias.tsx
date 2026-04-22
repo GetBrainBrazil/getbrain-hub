@@ -73,6 +73,7 @@ interface Props {
 }
 
 export function AbaDependencias({ projectId, onProjectStatusChange }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [items, setItems] = useState<ProjectDependency[]>([]);
   const [actors, setActors] = useState<Actor[]>([]);
   const [loading, setLoading] = useState(true);

@@ -56,6 +56,7 @@ const PROB_ROWS: RiskProbability[] = ["alta", "media", "baixa"];
 const SEV_COLS: RiskSeverity[] = ["baixa", "media", "alta", "critica"];
 
 export function AbaRiscos({ projectId }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [items, setItems] = useState<ProjectRisk[]>([]);
   const [actors, setActors] = useState<Actor[]>([]);
   const [loading, setLoading] = useState(true);

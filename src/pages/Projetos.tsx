@@ -74,6 +74,7 @@ const DEFAULT_STATUSES: ProjectStatus[] = PROJECT_STATUS_OPTIONS
 const DEFAULT_TYPES: ProjectType[] = PROJECT_TYPE_OPTIONS.map((o) => o.value) as ProjectType[];
 
 export default function Projetos() {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [rows, setRows] = useState<ProjectRow[]>([]);
   const [companies, setCompanies] = useState<{ id: string; label: string }[]>([]);
   const [kpis, setKpis] = useState({ ativos: 0, manut: 0, contratado: 0, mrr: 0 });

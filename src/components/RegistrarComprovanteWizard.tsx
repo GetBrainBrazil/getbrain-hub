@@ -90,6 +90,7 @@ function normalizeName(s?: string | null): string {
 }
 
 export function RegistrarComprovanteWizard({ open, onOpenChange, contas }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [contaId, setContaId] = useState("");

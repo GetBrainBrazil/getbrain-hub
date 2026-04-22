@@ -44,6 +44,7 @@ interface Props {
 }
 
 export function AbaIntegracoes({ projectId }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [items, setItems] = useState<ProjectIntegration[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);

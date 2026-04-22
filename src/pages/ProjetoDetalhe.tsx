@@ -341,6 +341,7 @@ function diffDays(from: string | Date, to: string | Date) {
 export default function ProjetoDetalhe() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
 
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);

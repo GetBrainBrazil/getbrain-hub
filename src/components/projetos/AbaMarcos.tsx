@@ -71,6 +71,7 @@ interface Props {
 }
 
 export function AbaMarcos({ projectId }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [items, setItems] = useState<ProjectMilestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
