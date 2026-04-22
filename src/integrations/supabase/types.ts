@@ -222,6 +222,7 @@ export type Database = {
           categoria_pai_id: string | null
           created_at: string | null
           id: string
+          is_transferencia: boolean
           nome: string
           tipo: string
         }
@@ -230,6 +231,7 @@ export type Database = {
           categoria_pai_id?: string | null
           created_at?: string | null
           id?: string
+          is_transferencia?: boolean
           nome: string
           tipo: string
         }
@@ -238,6 +240,7 @@ export type Database = {
           categoria_pai_id?: string | null
           created_at?: string | null
           id?: string
+          is_transferencia?: boolean
           nome?: string
           tipo?: string
         }
@@ -1948,6 +1951,28 @@ export type Database = {
       }
     }
     Views: {
+      financeiro_dashboard: {
+        Row: {
+          inadimplencia_percent: number | null
+          mes_anterior_despesa: number | null
+          mes_anterior_receita: number | null
+          mes_anterior_resultado: number | null
+          mes_despesa: number | null
+          mes_despesa_prevista: number | null
+          mes_margem_percent: number | null
+          mes_receita: number | null
+          mes_receita_prevista: number | null
+          mes_resultado: number | null
+          pagar_vencido: number | null
+          qtd_pagar_vencido: number | null
+          qtd_receber_vencido: number | null
+          receber_vencido: number | null
+          saldo_total: number | null
+          total_a_pagar: number | null
+          total_a_receber: number | null
+        }
+        Relationships: []
+      }
       project_metrics: {
         Row: {
           actors_allocated: number | null
@@ -2073,6 +2098,26 @@ export type Database = {
       }
     }
     Functions: {
+      financeiro_fluxo_projetado: {
+        Args: { p_conta?: string; p_dias?: number }
+        Returns: {
+          dia: string
+          entradas: number
+          saidas: number
+          saldo_acumulado: number
+        }[]
+      }
+      financeiro_serie_mensal: {
+        Args: { p_conta?: string; p_meses?: number }
+        Returns: {
+          despesa_prevista: number
+          despesa_realizada: number
+          mes: string
+          receita_prevista: number
+          receita_realizada: number
+          resultado: number
+        }[]
+      }
       generate_project_code: { Args: never; Returns: string }
       getbrain_org_id: { Args: never; Returns: string }
       has_role: {
