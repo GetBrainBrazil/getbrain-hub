@@ -283,7 +283,7 @@ export default function Projetos() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <KPICard title="Projetos Ativos" value={kpis.ativos} icon={PlayCircle} isCurrency={false} />
         <KPICard title="Em Manutenção" value={kpis.manut} icon={Wrench} variant="success" isCurrency={false} />
         <KPICard title="Valor Contratado Total" value={kpis.contratado} icon={DollarSign} />
@@ -293,6 +293,13 @@ export default function Projetos() {
           icon={Repeat}
           variant="success"
           change={0}
+        />
+        <KPICard
+          title="Dependências Bloqueantes"
+          value={kpis.blockingDeps}
+          icon={AlertTriangle}
+          variant={kpis.blockingDeps > 0 ? "danger" : "default"}
+          isCurrency={false}
         />
       </div>
 
