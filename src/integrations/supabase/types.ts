@@ -1160,13 +1160,6 @@ export type Database = {
             referencedRelation: "movimentacoes"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "movimentacoes_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos"
-            referencedColumns: ["id"]
-          },
         ]
       }
       orcamento: {
