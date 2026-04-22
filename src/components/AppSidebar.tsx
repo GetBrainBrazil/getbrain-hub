@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
   DollarSign,
@@ -6,61 +6,88 @@ import {
   Users,
   Settings,
   Code2,
-  Eye,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  ArrowLeftRight,
-  PieChart,
-  FileText,
-  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import logo from "@/assets/logo-getbrain.svg";
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
-const mainItems = [
+type NavChild = { title: string; url: string };
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children?: NavChild[];
+};
+
+const navItems: NavItem[] = [
   { title: "Dashboard", url: "/", icon: Home },
-];
-
-const financeiroItems = [
-  { title: "Dashboard", url: "/financeiro" },
-  { title: "Contas a Pagar / Receber", url: "/financeiro/movimentacoes" },
-  
-  { title: "Orçamento", url: "/financeiro/orcamento" },
-  { title: "Relatórios", url: "/financeiro/relatorios" },
-  { title: "Extratos Bancários", url: "/financeiro/extratos" },
-  { title: "Configurações", url: "/financeiro/configuracoes" },
-];
-
-const otherItems = [
+  {
+    title: "Financeiro",
+    url: "/financeiro",
+    icon: DollarSign,
+    children: [
+      { title: "Dashboard", url: "/financeiro" },
+      { title: "Contas a Pagar / Receber", url: "/financeiro/movimentacoes" },
+      { title: "Orçamento", url: "/financeiro/orcamento" },
+      { title: "Relatórios", url: "/financeiro/relatorios" },
+      { title: "Extratos Bancários", url: "/financeiro/extratos" },
+      { title: "Configurações", url: "/financeiro/configuracoes" },
+    ],
+  },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
   { title: "Área Dev", url: "/area-dev", icon: Code2 },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
+const itemClasses = (active: boolean) =>
+  cn(
+    "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors border-l-2",
+    active
+      ? "bg-sidebar-accent text-accent border-accent"
+      : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+  );
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const [finOpen, setFinOpen] = useState(location.pathname.startsWith("/financeiro") || location.pathname === "/");
+  const navigate = useNavigate();
 
-  const isActive = (path: string) =>
-    path === "/" ? location.pathname === "/" : location.pathname === path;
+  const isExactActive = (url: string) =>
+    url === "/" ? location.pathname === "/" : location.pathname === url;
 
-  const isFinActive = location.pathname.startsWith("/financeiro");
+  const isGroupOpen = (item: NavItem) =>
+    !!item.children && location.pathname.startsWith(item.url);
+
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    navItems.forEach((i) => {
+      if (i.children) map[i.title] = location.pathname.startsWith(i.url);
+    });
+    return map;
+  });
+
+  useEffect(() => {
+    setOpenMap((prev) => {
+      const next = { ...prev };
+      navItems.forEach((i) => {
+        if (i.children && location.pathname.startsWith(i.url)) {
+          next[i.title] = true;
+        }
+      });
+      return next;
+    });
+  }, [location.pathname]);
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -69,95 +96,107 @@ export function AppSidebar() {
           <img src={logo} alt="GetBrain" className={collapsed ? "h-6" : "h-8"} />
         </div>
       </SidebarHeader>
-      <SidebarContent className="gap-1">
-        <SidebarGroup className="px-2">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainItems.map((item) => {
-                const active = isActive(item.url);
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors border-l-2 ${
-                        active
-                          ? "bg-sidebar-accent text-accent border-accent"
-                          : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                      }`}
-                    >
-                      <item.icon className="h-[18px] w-[18px]" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent>
+        <nav className="px-2 space-y-1">
+          {navItems.map((item) => {
+            const hasChildren = !!item.children?.length;
+            const open = openMap[item.title] ?? false;
 
-        <SidebarGroup className="px-2">
-          <Collapsible open={finOpen} onOpenChange={setFinOpen}>
-            <CollapsibleTrigger asChild>
-              <button
-                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors border-l-2 ${
-                  isFinActive
-                    ? "bg-sidebar-accent text-accent border-accent"
-                    : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-[18px] w-[18px]" />
-                  {!collapsed && <span>Financeiro</span>}
-                </div>
-                {!collapsed && (
-                  <ChevronUp
-                    className={`h-4 w-4 transition-transform duration-200 opacity-60 ${finOpen ? "" : "rotate-180"}`}
-                  />
-                )}
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="mt-0.5 space-y-0.5 py-0.5">
-                {financeiroItems.map((item) => (
-                  <NavLink
-                    key={item.title}
-                    to={item.url}
-                    className={`block px-4 py-1.5 ml-4 text-sm rounded-md transition-colors ${
-                      isActive(item.url)
-                        ? "text-accent font-medium"
-                        : "text-sidebar-foreground/55 hover:text-sidebar-foreground"
-                    }`}
-                  >
-                    {item.title}
-                  </NavLink>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
-        <SidebarGroup className="px-2">
-          <div className="space-y-0.5">
-            {otherItems.map((item) => {
-              const active = isActive(item.url);
+            // Item without children: simple NavLink
+            if (!hasChildren) {
+              const active = isExactActive(item.url);
               return (
                 <NavLink
                   key={item.title}
                   to={item.url}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors border-l-2 ${
-                    active
-                      ? "bg-sidebar-accent text-accent border-accent"
-                      : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  }`}
+                  end={item.url === "/"}
+                  className={itemClasses(active)}
                 >
-                  <item.icon className="h-[18px] w-[18px]" />
-                  {!collapsed && <span>{item.title}</span>}
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  {!collapsed && <span className="truncate">{item.title}</span>}
                 </NavLink>
               );
-            })}
-          </div>
-        </SidebarGroup>
+            }
+
+            // Item with children: parent navigates to first child / item.url, chevron toggles
+            const activeChild = item.children!.find((c) => isExactActive(c.url));
+            const parentActive = isGroupOpen(item) && !activeChild;
+
+            return (
+              <Collapsible
+                key={item.title}
+                open={collapsed ? false : open}
+                onOpenChange={(v) =>
+                  setOpenMap((m) => ({ ...m, [item.title]: v }))
+                }
+              >
+                <div className={cn(itemClasses(parentActive), "pr-1 cursor-pointer")}
+                  onClick={() => {
+                    navigate(item.url);
+                    if (!collapsed) setOpenMap((m) => ({ ...m, [item.title]: true }));
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(item.url);
+                      if (!collapsed) setOpenMap((m) => ({ ...m, [item.title]: true }));
+                    }
+                  }}
+                >
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  {!collapsed && (
+                    <>
+                      <span className="truncate flex-1">{item.title}</span>
+                      <button
+                        type="button"
+                        aria-label={open ? "Recolher" : "Expandir"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMap((m) => ({ ...m, [item.title]: !open }));
+                        }}
+                        className="p-1 rounded hover:bg-sidebar-accent/60 opacity-60 hover:opacity-100 transition"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition-transform duration-200",
+                            open ? "" : "-rotate-90"
+                          )}
+                        />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {!collapsed && (
+                  <CollapsibleContent>
+                    <div className="mt-1 ml-[1.6rem] pl-3 border-l border-sidebar-border/40 space-y-0.5">
+                      {item.children!.map((sub) => {
+                        const subActive = isExactActive(sub.url);
+                        return (
+                          <NavLink
+                            key={sub.title}
+                            to={sub.url}
+                            end
+                            className={cn(
+                              "block px-3 py-1.5 rounded-md text-sm transition-colors",
+                              subActive
+                                ? "text-accent font-medium bg-sidebar-accent/40"
+                                : "text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-accent/30"
+                            )}
+                          >
+                            {sub.title}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleContent>
+                )}
+              </Collapsible>
+            );
+          })}
+        </nav>
       </SidebarContent>
     </Sidebar>
   );
