@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.3 — 21/04/2026**
+> **Versão atual: v1.4 — 22/04/2026**
 
 ---
 
@@ -95,6 +95,57 @@ Módulos do GetBrain Hub não são ilhas — devem se conversar por eventos e re
 - `is_automatic` (boolean) — se foi gerado por automação ou manual
 
 Isso permite: (a) saber de onde veio cada lançamento; (b) desfazer cascatas ao cancelar origem; (c) relatórios de "quanto faturei desse projeto vs quanto custou".
+
+### 2.14 Módulos macro vs sub-abas de projeto
+
+Critério para decidir se uma entidade vira módulo próprio na sidebar ou sub-aba dentro de Projetos:
+
+Se faz sentido olhar a entidade agregada no sistema inteiro (atravessando projetos), vira módulo macro. Se existe só no contexto de um projeto específico, vira sub-aba dentro da página do projeto.
+
+Aplicação concreta:
+
+| Entidade | Módulo macro? | Por quê |
+|----------|---------------|---------|
+| Tarefas | Sim (Área Dev) | "O que o Vitor faz hoje?" atravessa projetos |
+| Tickets de suporte | Sim (Suporte) | "Quais clientes têm tickets?" atravessa |
+| Contratos de manutenção | Sim (Manutenção) | MRR total atravessa |
+| Consumo de tokens | Sim (Tokens) | Total mensal atravessa |
+| Lançamentos financeiros | Sim (Financeiro) | Óbvio |
+| Leads/Pipeline | Sim (CRM) | Funil global |
+| Dependências do projeto | Não → sub-aba | Específica do projeto |
+| Marcos | Não → sub-aba | Específicos do projeto |
+| Riscos | Não → sub-aba | Específicos do projeto |
+| Integrações do projeto | Não → sub-aba | Específicas |
+
+Padrão de apresentação cruzada:
+
+- Entidades de módulos macro aparecem dentro da página de projeto como indicadores compactos (contagem + resumo + link para módulo macro filtrado).
+- Indicadores compactos dentro do projeto consolidam-se numa aba "Operacional", separada das sub-abas de gestão do projeto (Escopo, Marcos, etc.).
+
+### 2.15 Estratégia técnica: views SQL em tempo real para métricas
+
+Métricas agregadas (horas gastas, receita × custo, progresso de tarefas, contagem de tickets, etc.) são calculadas em tempo real via views SQL — não armazenadas em campos derivados nem em materialized views.
+
+Motivos:
+
+- Sempre corretas, nunca desatualizam
+- Zero manutenção de sincronização
+- Escala bem para o volume realista da GetBrain nos próximos 2 anos (<10k linhas por tabela agregada)
+- Simples: uma view por contexto agregado
+- Cache no frontend via React Query (staleTime de 30-60s) absorve picos de leitura
+
+Quando migrar: se alguma view específica começar a passar de 200ms, migra AQUELA view para materialized view com refresh agendado. Nunca refatora-se tudo de uma vez.
+
+Implementação padrão:
+
+- Criar uma view `<entidade>_metrics` por entidade agregadora (ex: `project_metrics`, `company_metrics`)
+- A view consolida todas as métricas relevantes daquela entidade num registro por id
+- Frontend consulta a view, não consulta as tabelas-fonte
+
+Proibido neste sistema:
+
+- Triggers que mantêm campos derivados (ex: `projects.total_hours_actual`) — armadilha de complexidade
+- Cálculos duplicados em múltiplos lugares do frontend — sempre usar a view
 
 ---
 
@@ -524,25 +575,43 @@ Sempre usar variáveis CSS / tokens do Tailwind, nunca hex hardcoded em componen
 - **Financeiro** — já construído. Será refatorado no Prompt 01 para usar `companies`, `actors`, `humans`, `projects`.
 - **Área Dev** — UI construída com dados mock. Será plugada ao schema real de `tasks` e `sprints` em prompts posteriores.
 
-### 8.2 Módulos a construir na Fase 1 (~14-20 dias)
-1. **Fundação** — tabelas base e refatoração do Financeiro (Prompt 01)
-2. **Projetos** — CRUD, fases, alocação, critério de aceite, contratos
-3. **Área Dev plugada** — tasks reais vinculadas a projects, sprints, time tracking
-4. **CRM/Clientes** — pipeline, triagem, ficha de cliente unificada
-5. **Manutenção + Suporte** (módulo combinado)
-   - Listagem de contratos de manutenção ativos
-   - Kanban de tickets recorrentes dentro dos contratos
-   - KPIs: MRR (receita recorrente mensal), tickets abertos, SLA
-6. **Portal do Cliente**
-   - Magic link com expiração de 90 dias
-   - Cliente abre ticket via formulário
-   - Cliente vê status dos seus projetos
-7. **Tokens** — consumo Anthropic por cliente, comparação com bolsão
-8. **Melhorias do Financeiro** — margem, parcelas automáticas, NF, inadimplência
+### 8.2 Módulos macro (sidebar principal)
+
+1. **Dashboard** — visão executiva geral
+2. **Financeiro** — já construído
+3. **Projetos** — em construção (Prompts 02, 02b, 02c)
+4. **Área Dev** — UI pronta, plug em dados reais no Prompt 03
+5. **CRM** — futuro (pipeline comercial, leads, propostas)
+6. **Suporte** — futuro (tickets globais, kanban macro)
+7. **Manutenção** — futuro (contratos ativos, recorrência)
+8. **Tokens** — futuro (consumo agregado por cliente e por projeto)
+9. **Configurações** — já construído (dentro do Financeiro por ora, vai migrar)
+
+### 8.3 Estrutura padrão de abas dentro de uma página de entidade (ex: Projetos)
+
+Sub-abas "de gestão" (controlam o projeto em si):
+
+- Visão Geral
+- Escopo
+- Marcos
+- Dependências
+- Riscos
+- Integrações
+- Time & Contratos
+- Atividade
+
+Sub-aba "Operacional" (consolida indicadores de módulos macro filtrados por este projeto):
+
+- Painel Financeiro (receita contratada, recebida, pendente, custo, margem)
+- Painel Tarefas (contagem por status, horas estimadas × reais, progresso)
+- Painel Suporte (tickets abertos, SLA, resolvidos no mês)
+- Painel Tokens (consumo mensal × bolsão)
+
+Cada painel tem botão "Ver em [Módulo]" que leva ao módulo macro filtrado pelo projeto atual.
 
 **Integrações:** seguir mapa da Seção 13 do ARCHITECTURE.md.
 
-### 8.3 Módulos futuros (Fase 2 e 3)
+### 8.4 Módulos futuros (Fase 2 e 3)
 - Gerador de proposta com IA
 - Gerador de contrato com IA
 - Motor de marketing (criativos, calendário editorial, IA estrategista)
@@ -666,6 +735,12 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
   - Nova Seção 13: Mapa de Integrações entre Módulos
   - Definida barra de qualidade: todo módulo tem Camada 1 (dados+funcionalidade), Camada 2 (visual premium estilo Pipedrive/HubSpot), Camada 3 (integrações/automações com outros módulos)
   - Definidos campos padrão para rastreabilidade de origem em lançamentos automáticos: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`
+- **v1.4 (22/04/2026):**
+  - Novo princípio 2.14: módulos macro vs sub-abas com critério de agregação global
+  - Novo princípio 2.15: views SQL em tempo real como padrão para métricas (proibido campos derivados via trigger)
+  - Seção 8 reorganizada com mapa consolidado de navegação
+  - Nova aba "Operacional" dentro de Projetos consolidando indicadores de módulos macro
+  - Seção 13 expandida com mapa de entradas (IN) para Projetos
 
 ---
 
@@ -723,3 +798,19 @@ Toda mudança de status ou campo importante em qualquer módulo deve gerar entra
 - **Frontend** dispara eventos explicitamente quando user confirma ação que precisa de input (ex: sugerir criar contrato de manutenção).
 - Toda tabela que recebe eventos de outros módulos tem colunas: `source_module text`, `source_entity_type text`, `source_entity_id uuid`, `is_automatic boolean default false`.
 - **Nenhuma automação roda sem estar documentada aqui primeiro.** Se um prompt futuro precisa adicionar automação, atualizar esta seção.
+
+### 13.8 Projetos ← outros módulos (entradas)
+
+| Módulo origem | Evento | Como aparece em Projetos |
+|---------------|--------|--------------------------|
+| Área Dev (Tarefas) | Task criada/atualizada com `project_id` preenchido | Contagem no painel Tarefas da aba Operacional |
+| Área Dev (Tarefas) | Task com `hours_actual` registrado | Soma em `project_metrics.hours_actual` |
+| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pago | Soma em `project_metrics.revenue_received` |
+| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pendente | Soma em `project_metrics.revenue_pending` |
+| Suporte (Tickets) | Ticket criado com `project_id` | Contagem no painel Suporte |
+| Tokens | Consumo registrado com `project_id` | Soma no painel Tokens |
+| CRM | Pipeline fechado | Cria projeto automaticamente com `status='aceito'` |
+
+### 13.9 Princípio de agregação
+
+Todas as métricas cruzadas são expostas via view `project_metrics` (criada no Prompt 02c). Nenhum módulo precisa "saber" que Projetos está consumindo — o Projetos simplesmente lê a view, que faz LEFT JOIN com as tabelas dos outros módulos. Quando uma tabela-fonte ainda não existe (Suporte, Tokens), a view retorna 0 para aquele agregado — e passa a retornar dados reais automaticamente quando a tabela for criada no prompt futuro.
