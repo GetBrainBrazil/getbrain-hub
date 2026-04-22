@@ -970,7 +970,6 @@ export default function ProjetoDetalhe() {
                   ["dependencies", "Dependências", blockingDeps.length || null],
                   ["risks", "Riscos", null],
                   ["integrations", "Integrações", integrations.length || null],
-                  ["team", "Time & Contratos", allocs.length || null],
                   ["activity", "Atividade", null],
                 ].map(([v, label, count]) => (
                   <TabsTrigger
@@ -1480,7 +1479,14 @@ export default function ProjetoDetalhe() {
 
               {/* ----- OPERACIONAL ----- */}
               <TabsContent value="operacional">
-                <AbaOperacional projectId={projectId!} />
+                <AbaOperacional
+                  projectId={projectId!}
+                  allocs={allocs}
+                  contracts={contracts}
+                  onAllocate={() => setAllocOpen(true)}
+                  onDeallocate={handleDeallocate}
+                  onCreateContract={() => setContractOpen(true)}
+                />
               </TabsContent>
 
               {/* ----- MARCOS ----- */}
@@ -1491,153 +1497,6 @@ export default function ProjetoDetalhe() {
               {/* ----- RISCOS ----- */}
               <TabsContent value="risks">
                 <AbaRiscos projectId={projectId!} />
-              </TabsContent>
-
-              {/* ----- TIME & CONTRATOS ----- */}
-              <TabsContent value="team" className="space-y-4">
-                <CardBlock
-                  title="Atores Alocados"
-                  icon={Users}
-                  action={
-                    <Button size="sm" variant="outline" onClick={() => setAllocOpen(true)}>
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Alocar Ator
-                    </Button>
-                  }
-                  className="[&>header_>div]:opacity-100"
-                >
-                  {allocs.length === 0 ? (
-                    <EmptyState
-                      icon={Users}
-                      title="Nenhum ator alocado"
-                      description="Aloque membros do time para começar a registrar trabalho neste projeto."
-                      action={
-                        <Button size="sm" variant="outline" onClick={() => setAllocOpen(true)}>
-                          <Plus className="mr-1 h-3.5 w-3.5" /> Alocar Ator
-                        </Button>
-                      }
-                    />
-                  ) : (
-                    <div className="space-y-2">
-                      {allocs.map((a) => (
-                        <div
-                          key={a.id}
-                          className="group flex items-center gap-3 rounded-md border border-border/60 bg-card/40 px-3 py-2.5 transition-colors hover:border-accent/40"
-                        >
-                          <ActorAvatar
-                            name={a.actor?.display_name ?? "?"}
-                            avatarUrl={a.actor?.avatar_url}
-                            size="md"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {a.actor?.display_name ?? "—"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {getRoleLabel(a.role_in_project)}
-                              {a.allocation_percent ? ` · ${a.allocation_percent}% alocação` : ""}
-                              {a.started_at ? ` · desde ${formatDate(a.started_at)}` : ""}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground/70">
-                              0 tarefas · 0h registradas · custo: —
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeallocate(a.id)}
-                            className="text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
-                          >
-                            Desalocar
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardBlock>
-
-                <CardBlock
-                  title="Contratos de Manutenção"
-                  icon={Wrench}
-                  action={
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setContractOpen(true)}
-                      disabled={hasActiveContract}
-                      title={
-                        hasActiveContract
-                          ? "Já existe contrato ativo. Encerre o atual antes de criar outro."
-                          : ""
-                      }
-                    >
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Novo Contrato
-                    </Button>
-                  }
-                  className="[&>header_>div]:opacity-100"
-                >
-                  {contracts.length === 0 ? (
-                    <EmptyState
-                      icon={Wrench}
-                      title="Nenhum contrato registrado"
-                      description="Crie um contrato de manutenção quando o projeto entrar em produção."
-                    />
-                  ) : (
-                    <div className="space-y-3">
-                      {contracts.map((c) => {
-                        const liquido =
-                          Number(c.monthly_fee) *
-                          (1 - Number(c.monthly_fee_discount_percent || 0) / 100);
-                        return (
-                          <div
-                            key={c.id}
-                            className="rounded-md border border-border/60 bg-card/40 px-4 py-3"
-                          >
-                            <div className="flex items-center justify-between">
-                              <MaintenanceStatusBadge status={c.status} />
-                              <div className="text-right">
-                                <div className="font-mono text-lg font-bold text-foreground">
-                                  {formatCurrency(liquido)}
-                                  <span className="ml-1 text-xs font-normal text-muted-foreground">
-                                    /mês
-                                  </span>
-                                </div>
-                                {Number(c.monthly_fee_discount_percent) > 0 && (
-                                  <div className="text-[11px] text-success">
-                                    -{c.monthly_fee_discount_percent}% desc. sobre{" "}
-                                    {formatCurrency(Number(c.monthly_fee))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1.5 border-t border-border/40 pt-3 text-xs">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Período</span>
-                                <span>
-                                  {formatDate(c.start_date)} —{" "}
-                                  {c.end_date ? formatDate(c.end_date) : "Atual"}
-                                </span>
-                              </div>
-                              {c.token_budget_brl && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Tokens/mês</span>
-                                  <span className="font-mono">
-                                    {formatCurrency(Number(c.token_budget_brl))}
-                                  </span>
-                                </div>
-                              )}
-                              {c.hours_budget && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Horas/mês</span>
-                                  <span className="font-mono">{c.hours_budget}h</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardBlock>
               </TabsContent>
 
               {/* ----- DEPENDÊNCIAS ----- */}

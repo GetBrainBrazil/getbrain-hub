@@ -24,6 +24,7 @@ import Clientes from "./pages/Clientes";
 import Configuracoes from "./pages/Configuracoes";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
+import ContratosManutencao from "./pages/ContratosManutencao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/financeiro/extratos" element={<ProtectedRoute><ExtratosBancarios /></ProtectedRoute>} />
             <Route path="/financeiro/extratos/movimentacao/:id" element={<ProtectedRoute><ExtratoMovimentacaoDetalhe /></ProtectedRoute>} />
             <Route path="/financeiro/configuracoes" element={<ProtectedRoute><ConfiguracoesFinanceiras /></ProtectedRoute>} />
+            <Route path="/financeiro/contratos" element={<ProtectedRoute><ContratosManutencao /></ProtectedRoute>} />
             <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
             <Route path="/projetos/:id" element={<ProtectedRoute><ProjetoDetalhe /></ProtectedRoute>} />
             <Route path="/area-dev" element={<ProtectedRoute><AreaDev /></ProtectedRoute>} />

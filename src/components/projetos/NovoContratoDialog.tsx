@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GETBRAIN_ORG_ID } from "@/lib/projetos-helpers";
@@ -11,11 +12,16 @@ import { GETBRAIN_ORG_ID } from "@/lib/projetos-helpers";
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  projectId: string;
+  /** Quando informado, esconde o seletor de projeto e usa esse id direto. */
+  projectId?: string;
+  /** Pré-seleção opcional quando o seletor de projeto está visível. */
+  defaultProjectId?: string;
   onCreated: () => void;
 }
 
-export function NovoContratoDialog({ open, onOpenChange, projectId, onCreated }: Props) {
+export function NovoContratoDialog({ open, onOpenChange, projectId, defaultProjectId, onCreated }: Props) {
+  const [projects, setProjects] = useState<{ id: string; code: string; name: string }[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId ?? defaultProjectId ?? "");
   const [monthlyFee, setMonthlyFee] = useState("");
   const [discount, setDiscount] = useState("0");
   const [tokenBudget, setTokenBudget] = useState("");
@@ -25,7 +31,29 @@ export function NovoContratoDialog({ open, onOpenChange, projectId, onCreated }:
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const showPicker = !projectId;
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedProjectId(projectId ?? defaultProjectId ?? "");
+    if (showPicker) {
+      (async () => {
+        const { data } = await supabase
+          .from("projects")
+          .select("id, code, name")
+          .is("deleted_at", null)
+          .order("code", { ascending: false });
+        setProjects(data || []);
+      })();
+    }
+  }, [open, projectId, defaultProjectId, showPicker]);
+
   async function handleSave() {
+    const finalProjectId = projectId ?? selectedProjectId;
+    if (!finalProjectId) {
+      toast.error("Selecione um projeto");
+      return;
+    }
     if (!monthlyFee || Number(monthlyFee) <= 0) {
       toast.error("Informe a mensalidade");
       return;
@@ -33,7 +61,7 @@ export function NovoContratoDialog({ open, onOpenChange, projectId, onCreated }:
     setSaving(true);
     const { error } = await supabase.from("maintenance_contracts").insert({
       organization_id: GETBRAIN_ORG_ID,
-      project_id: projectId,
+      project_id: finalProjectId,
       monthly_fee: Number(monthlyFee),
       monthly_fee_discount_percent: Number(discount) || 0,
       token_budget_brl: tokenBudget ? Number(tokenBudget) : null,
@@ -66,6 +94,19 @@ export function NovoContratoDialog({ open, onOpenChange, projectId, onCreated }:
           <DialogTitle>Novo Contrato de Manutenção</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {showPicker && (
+            <div>
+              <Label>Projeto *</Label>
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <SelectTrigger><SelectValue placeholder="Selecione um projeto..." /></SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.code} — {p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Mensalidade (R$) *</Label>

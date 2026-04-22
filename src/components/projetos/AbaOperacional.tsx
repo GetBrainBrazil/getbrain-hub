@@ -19,12 +19,35 @@ import {
   Gauge,
   AlertTriangle,
   Info,
+  Users,
+  Plus,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/formatters";
+import { Button } from "@/components/ui/button";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 import { useProjectMetrics } from "@/hooks/useProjectMetrics";
 import type { ProjectMetrics } from "@/types/database";
+import { ActorAvatar } from "@/components/projetos/ActorAvatar";
+import { getRoleLabel } from "@/lib/projetos-helpers";
+
+export type AbaOperacionalAlloc = {
+  id: string;
+  actor_id: string;
+  role_in_project: string;
+  allocation_percent: number | null;
+  started_at?: string | null;
+  actor?: { display_name?: string | null; avatar_url?: string | null } | null;
+};
+
+export type AbaOperacionalContract = {
+  id: string;
+  status: string;
+  monthly_fee: number;
+  monthly_fee_discount_percent: number | null;
+  end_date: string | null;
+};
 
 // ─────────────────────────────────────────────────────────
 // helpers
@@ -226,7 +249,23 @@ function computeMarginTone(m: ProjectMetrics): Tone {
 // ─────────────────────────────────────────────────────────
 // Componente principal
 // ─────────────────────────────────────────────────────────
-export function AbaOperacional({ projectId }: { projectId: string }) {
+interface AbaOperacionalProps {
+  projectId: string;
+  allocs?: AbaOperacionalAlloc[];
+  contracts?: AbaOperacionalContract[];
+  onAllocate?: () => void;
+  onDeallocate?: (allocId: string) => void;
+  onCreateContract?: () => void;
+}
+
+export function AbaOperacional({
+  projectId,
+  allocs = [],
+  contracts = [],
+  onAllocate,
+  onDeallocate,
+  onCreateContract,
+}: AbaOperacionalProps) {
   const { data: m, isLoading, error } = useProjectMetrics(projectId);
 
   if (isLoading) {
@@ -289,6 +328,13 @@ export function AbaOperacional({ projectId }: { projectId: string }) {
       financeLabel = "Atenção";
     }
   }
+
+  // ── Contrato ativo (para linha resumo no painel Financeiro) ──
+  const activeContract = contracts.find((c) => c.status === "active");
+  const activeContractNet = activeContract
+    ? Number(activeContract.monthly_fee) *
+      (1 - Number(activeContract.monthly_fee_discount_percent || 0) / 100)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -374,6 +420,40 @@ export function AbaOperacional({ projectId }: { projectId: string }) {
               </div>
             </div>
           )}
+          {/* Contrato de manutenção (resumo) */}
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
+            <div className="flex min-w-0 items-center gap-2">
+              <Wrench className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+              {activeContract ? (
+                <span className="truncate text-muted-foreground">
+                  Manutenção:{" "}
+                  <span className="font-mono font-semibold text-foreground">
+                    {formatCurrency(activeContractNet)}
+                  </span>
+                  /mês ativo
+                  {activeContract.end_date ? ` · até ${formatDate(activeContract.end_date)}` : ""}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Sem contrato de manutenção</span>
+              )}
+            </div>
+            {activeContract ? (
+              <Link
+                to={`/financeiro/contratos?projectId=${projectId}`}
+                className="flex-shrink-0 text-[11px] font-medium uppercase tracking-wider text-accent hover:text-accent/80"
+              >
+                Gerir →
+              </Link>
+            ) : onCreateContract ? (
+              <button
+                type="button"
+                onClick={onCreateContract}
+                className="flex-shrink-0 text-[11px] font-medium uppercase tracking-wider text-accent hover:text-accent/80"
+              >
+                Criar →
+              </button>
+            ) : null}
+          </div>
           <div className="flex-1" />
           <PanelFooter href="/financeiro/movimentacoes" label="Ver no Financeiro" />
         </Panel>
@@ -534,6 +614,75 @@ export function AbaOperacional({ projectId }: { projectId: string }) {
           <PanelFooter href="/tokens" label="Ver em Tokens" />
         </Panel>
       </div>
+
+      {/* ───── TIME ALOCADO ───── */}
+      <section className="rounded-lg border border-border bg-card p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-accent" />
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Time Alocado
+              {allocs.length > 0 && (
+                <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                  {allocs.length}
+                </span>
+              )}
+            </h3>
+          </div>
+          {onAllocate && (
+            <Button size="sm" variant="outline" onClick={onAllocate}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Alocar Ator
+            </Button>
+          )}
+        </div>
+
+        {allocs.length === 0 ? (
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <Users className="h-6 w-6 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">Nenhum ator alocado</p>
+            <p className="text-xs text-muted-foreground/70">
+              Aloque membros do time para registrar trabalho neste projeto.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-1.5">
+            {allocs.map((a) => (
+              <div
+                key={a.id}
+                className="group flex items-center gap-3 rounded-md border border-border/60 bg-card/40 px-3 py-2 transition-colors hover:border-accent/40"
+              >
+                <ActorAvatar
+                  name={a.actor?.display_name ?? "?"}
+                  avatarUrl={a.actor?.avatar_url}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {a.actor?.display_name ?? "—"}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {getRoleLabel(a.role_in_project as any)}
+                      {a.allocation_percent ? ` · ${a.allocation_percent}%` : ""}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/70">
+                    0 tarefas · 0h · custo: —
+                  </p>
+                </div>
+                {onDeallocate && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onDeallocate(a.id)}
+                    className="text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+                  >
+                    Desalocar
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
