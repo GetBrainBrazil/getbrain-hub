@@ -1265,24 +1265,14 @@ export default function MovimentacaoDetalhe() {
                   </Button>
                 )}
                 {mov?.status === "pago" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={openDarBaixa}
-                      className="gap-1.5 border-success text-success hover:bg-success hover:text-white"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Editar Liquidação
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleReabrir}
-                      className="gap-1.5 border-warning text-warning hover:bg-warning hover:text-white"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      Reabrir conta
-                    </Button>
-                  </>
+                  <Button
+                    variant="outline"
+                    onClick={openDarBaixa}
+                    className="gap-1.5 border-success text-success hover:bg-success hover:text-white"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Editar Liquidação
+                  </Button>
                 )}
               </>
             )}
@@ -1412,9 +1402,25 @@ export default function MovimentacaoDetalhe() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleBaixa} className="w-full">
-              Confirmar
-            </Button>
+            <div className="flex items-center gap-2 pt-2">
+              {mov?.status === "pago" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    setOpenBaixa(false);
+                    await handleReabrir();
+                  }}
+                  className="gap-1.5 border-warning text-warning hover:bg-warning hover:text-white"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reabrir conta
+                </Button>
+              )}
+              <Button onClick={handleBaixa} className="flex-1">
+                Confirmar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
