@@ -108,6 +108,7 @@ function MultiSelectFilter({
   placeholder?: string;
 }) {
   const selectedSet = new Set(selected);
+  const [open, setOpen] = useState(false);
 
   const toggleValue = (value: string) => {
     if (selectedSet.has(value)) {
@@ -118,7 +119,7 @@ function MultiSelectFilter({
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 min-w-[180px] justify-between gap-2 text-xs">
           <span className="truncate">
@@ -159,7 +160,16 @@ function MultiSelectFilter({
           </CommandList>
           {selected.length > 0 && (
             <div className="border-t border-border p-2">
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-full justify-center text-xs" onClick={() => onChange([])}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full justify-center text-xs"
+                onClick={() => {
+                  onChange([]);
+                  setOpen(false);
+                }}
+              >
                 Limpar seleção
               </Button>
             </div>
