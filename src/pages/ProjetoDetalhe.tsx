@@ -1401,8 +1401,36 @@ export default function ProjetoDetalhe() {
                 </CardBlock>
               </TabsContent>
 
-              {/* ----- ACTORS ----- */}
-              <TabsContent value="actors">
+              {/* ----- ESCOPO ----- */}
+              <TabsContent value="scope">
+                <AbaEscopo
+                  projectId={projectId!}
+                  initialValues={{
+                    business_context: project.business_context,
+                    scope_in: project.scope_in,
+                    scope_out: project.scope_out,
+                    premises: project.premises,
+                    deliverables: project.deliverables,
+                    technical_stack: project.technical_stack,
+                    identified_risks: project.identified_risks,
+                    acceptance_criteria: project.acceptance_criteria,
+                  }}
+                  onSaved={load}
+                />
+              </TabsContent>
+
+              {/* ----- MARCOS ----- */}
+              <TabsContent value="milestones">
+                <AbaMarcos projectId={projectId!} />
+              </TabsContent>
+
+              {/* ----- RISCOS ----- */}
+              <TabsContent value="risks">
+                <AbaRiscos projectId={projectId!} />
+              </TabsContent>
+
+              {/* ----- TIME & CONTRATOS ----- */}
+              <TabsContent value="team" className="space-y-4">
                 <CardBlock
                   title="Atores Alocados"
                   icon={Users}
@@ -1462,10 +1490,7 @@ export default function ProjetoDetalhe() {
                     </div>
                   )}
                 </CardBlock>
-              </TabsContent>
 
-              {/* ----- MAINTENANCE ----- */}
-              <TabsContent value="maintenance">
                 <CardBlock
                   title="Contratos de Manutenção"
                   icon={Wrench}
@@ -1549,6 +1574,19 @@ export default function ProjetoDetalhe() {
                     </div>
                   )}
                 </CardBlock>
+              </TabsContent>
+
+              {/* ----- DEPENDÊNCIAS ----- */}
+              <TabsContent value="dependencies">
+                <AbaDependencias
+                  projectId={projectId!}
+                  onProjectStatusChange={() => load()}
+                />
+              </TabsContent>
+
+              {/* ----- INTEGRAÇÕES ----- */}
+              <TabsContent value="integrations">
+                <AbaIntegracoes projectId={projectId!} />
               </TabsContent>
 
               {/* ----- ACTIVITY ----- */}
