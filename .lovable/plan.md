@@ -1,75 +1,74 @@
 
 
-## Máscaras em Dados Bancários e Chaves PIX
+## Máscara monetária BRL nos campos de Valores e Encargos
 
-Adicionar formatação automática nos campos **Agência**, **Conta** e **Chave PIX** da aba "Contas Bancárias" em Configurações Financeiras.
+Aplicar formatação automática (separador de milhar `.` e decimal `,`) em todos os campos numéricos da seção "Valores e Encargos" e "Impostos Retidos" da página de criar/editar movimentação (`MovimentacaoDetalhe.tsx`), e também no diálogo de baixa em `Movimentacoes.tsx`.
 
-### Mudança 1 — Máscaras de agência e conta (`shared.tsx`)
+Hoje os inputs são `<Input type="number">` puros — sem máscara, sem separador de milhar, e o valor digitado é ambíguo (digitar `19343` vira `19343,00` em vez de `193,43`).
 
-Adicionar dois helpers novos em `src/components/config-financeiras/shared.tsx`:
+### Comportamento desejado
 
-- **`applyAgenciaMask(v)`** — só dígitos, máx 5, formato `1234` ou `1234-5` (último dígito vira verificador quando há 5).
-- **`applyContaMask(v)`** — só dígitos + 1 dígito verificador no final, formato `12345-6` (sempre separa o último com hífen quando há ≥ 2 dígitos). Limite 13 dígitos.
+- Input se comporta como campo de moeda: digitar só dígitos, e a máscara forma o valor automaticamente da direita pra esquerda.
+  - Digita `1` → mostra `0,01`
+  - Digita `19343` → mostra `193,43`
+  - Digita `1934300` → mostra `19.343,00`
+- Sem permitir letras, sinais ou múltiplos pontos/vírgulas.
+- Ao colar valor `1.234,56` ou `1234.56`, normaliza para `1.234,56`.
+- Estado interno passa de `string numérica` (`"19343"`) para `string formatada` (`"19.343,00"`); na hora de salvar no banco, converte com `parseMoney(...)` (já existe em `shared.tsx`) e envia como `number`.
 
-### Mudança 2 — Detecção e máscara dinâmica de Chave PIX (`shared.tsx`)
+### Mudança 1 — Reutilizar helpers de `shared.tsx`
 
-Novo helper **`detectPixType(value)`** retorna: `"cpf" | "cnpj" | "email" | "telefone" | "aleatoria" | "indefinido"`.
+Já existem em `src/components/config-financeiras/shared.tsx`:
+- `applyMoneyMask(value)` — formata enquanto digita
+- `parseMoney(value)` — converte `"19.343,00"` → `19343`
+- `formatMoneyForInput(n)` — formata `number` → string para preencher input ao carregar registro existente
 
-Lógica:
-- Se contém `@` → **email** (sem máscara, valida formato no blur)
-- Se for só dígitos:
-  - 11 dígitos começando com `(` ou tendo padrão de DDD → **telefone** → máscara `(11) 91234-5678`
-  - 11 dígitos sem padrão telefônico → **CPF** → máscara `123.456.789-01`
-  - 14 dígitos → **CNPJ** → máscara `12.345.678/0001-90`
-- Se tem letras + números + 32 chars com hífens (UUID v4) → **chave aleatória** → mantém como digitado
-- Caso contrário → **indefinido** (sem máscara enquanto digita)
+Vou exportar/usar esses três (já são exports nomeados).
 
-Novo helper **`applyPixMask(value)`** que detecta o tipo em tempo real e aplica a máscara correspondente:
-- Detecção é por tentativa: se input começa com dígitos puros e tem ≤ 11 dígitos, aplica máscara progressiva de telefone OU CPF (escolhe pela presença de DDD válido nos 2 primeiros dígitos: 11-99); ao chegar em 14 dígitos puros, aplica máscara de CNPJ.
-- Se aparecer `@` ou letra (que não seja UUID), para de aplicar máscara numérica.
+### Mudança 2 — `MovimentacaoDetalhe.tsx` (criar/editar movimentação)
 
-### Mudança 3 — Aplicar nos inputs (`ContasBancariasTab.tsx`)
+**Campos afetados** (linhas 916-963 + impostos linhas 985-992):
+- Valor Base, Desconto Previsto, Juros, Multa, Taxas ADM
+- PIS, COFINS, CSLL, ISS, IR, INSS
 
-Linhas 259-260 (formulário edit/new):
-
+Para cada `<Input>`:
 ```tsx
-<Input value={form.agencia}
-  onChange={e => setForm({ ...form, agencia: applyAgenciaMask(e.target.value) })}
-  placeholder="1234" inputMode="numeric" />
-
-<Input value={form.conta}
-  onChange={e => setForm({ ...form, conta: applyContaMask(e.target.value) })}
-  placeholder="12345-6" inputMode="numeric" />
+<Input
+  inputMode="decimal"
+  value={form.valor_previsto}
+  onChange={(e) => setForm({ ...form, valor_previsto: applyMoneyMask(e.target.value) })}
+  placeholder="0,00"
+  className="text-right font-mono"  // alinhamento de moeda
+/>
 ```
 
-Linha 267 (input de nova chave PIX):
+Remover `type="number"` e `step="0.01"`.
 
-```tsx
-<Input value={newPix}
-  onChange={e => setNewPix(applyPixMask(e.target.value))}
-  placeholder="CPF, CNPJ, e-mail, telefone, chave aleatória..."
-  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPix())} />
-```
+**Carregamento de registro existente**: na função que popula `form` a partir do `mov` carregado do banco (números), usar `formatMoneyForInput(mov.valor_previsto ?? 0)` para preencher já formatado.
 
-Adicionar **badge sutil** ao lado do input mostrando o tipo detectado em tempo real (ex: chip `CPF`, `E-mail`, `Telefone`, `CNPJ`, `Aleatória`), usando `detectPixType(newPix)`. Isso dá feedback imediato sem ser intrusivo.
+**Submit**: na função `handleSave` (ou equivalente), antes de mandar pro Supabase, converter cada campo monetário com `parseMoney(form.valor_previsto)`.
 
-### Mudança 4 — Exibir tipo na lista de chaves cadastradas
+**Cálculo do total previsto**: a função `totalPrevisto` (que hoje soma `parseFloat(form.valor_previsto)`) precisa usar `parseMoney(...)` em cada parcela.
 
-Linha 269-274: junto de cada chave já adicionada, mostrar o tipo entre parênteses em texto muted:
+### Mudança 3 — `Movimentacoes.tsx` (diálogo de baixa)
 
-```
-[CPF]  123.456.789-01                                    [×]
-[E-mail]  daniel@getbrain.com                            [×]
-```
+Mesma transformação para os 5 campos do bloco "Valor + ajustes" (linhas 833-849) e os 6 impostos (linha 867). Atualizar `baixaTotals` para usar `parseMoney`.
 
-### Comportamento preservado
+### Mudança 4 — Valores derivados/exibidos
 
-- Dados antigos no banco (não formatados) continuam sendo exibidos como estão na view mode — a máscara só é aplicada na **edição/digitação**.
-- O salvamento mantém o valor formatado (com pontuação) — assim a busca e a exibição ficam consistentes.
-- Sem mudança de schema, sem migration. Apenas frontend.
+`formatCurrency(totalPrevisto)` no resumo (linha 968 de Detalhe e 856 de Movimentações) continua funcionando — só precisa receber `number` (resultado do `parseMoney + soma`), não muda.
+
+### Detalhes de UX
+
+- **Alinhamento à direita** + **`font-mono`** nos inputs monetários (padrão já usado nos totais), pra ficar consistente com como números financeiros são exibidos.
+- **`inputMode="decimal"`** pra teclado mobile abrir numérico com vírgula.
+- **`placeholder="0,00"`** (já está).
+- Valor inicial vazio mostra placeholder; assim que digitar o primeiro dígito vira `0,0X`.
 
 ### Arquivos afetados
 
-- **Modificado**: `src/components/config-financeiras/shared.tsx` — adiciona `applyAgenciaMask`, `applyContaMask`, `detectPixType`, `applyPixMask`
-- **Modificado**: `src/components/config-financeiras/ContasBancariasTab.tsx` — aplica máscaras nos 3 inputs + badge de tipo PIX
+- **Modificado**: `src/pages/MovimentacaoDetalhe.tsx` — máscara nos 11 inputs (5 valores + 6 impostos), conversão no load e no save, ajuste em `totalPrevisto`.
+- **Modificado**: `src/pages/Movimentacoes.tsx` — máscara nos 11 inputs do diálogo de baixa, conversão nos cálculos `baixaTotals` e no submit `handleBaixa`.
+
+Sem mudança de schema, sem migration. Apenas frontend, reusando helpers já existentes.
 
