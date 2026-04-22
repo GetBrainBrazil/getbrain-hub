@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { format } from "date-fns";
 import {
   Wallet,
   TrendingUp,
@@ -15,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useURLState } from "@/hooks/useURLState";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KPIBlock } from "@/components/dashboard/KPIBlock";
 import { EvolucaoCompetenciaChart } from "@/components/dashboard/EvolucaoCompetenciaChart";
@@ -22,6 +24,7 @@ import { FluxoProjetadoChart } from "@/components/dashboard/FluxoProjetadoChart"
 import { TopRanking, TopAtrasos } from "@/components/dashboard/TopRanking";
 import { ProximosVencimentos } from "@/components/dashboard/ProximosVencimentos";
 import { AlertasInteligentes } from "@/components/dashboard/AlertasInteligentes";
+import { PeriodFilter, PeriodPreset, getDateRange } from "@/components/PeriodFilter";
 import {
   useFinanceiroKPIs,
   useSerieMensal,
@@ -32,9 +35,19 @@ import {
   useContasBancariasOptions,
 } from "@/hooks/useFinanceiroDashboard";
 
+const toISODate = (d: Date | null) => (d ? format(d, "yyyy-MM-dd") : null);
+
 export default function FinanceiroVisaoGeral() {
   const navigate = useNavigate();
   const [contaFiltro, setContaFiltro] = useURLState<string>("conta", "__all__");
+  const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>(
+    "dashboard_financeiro_period",
+    "month"
+  );
+  const [customRange, setCustomRange] = usePersistedState<{ start: string | null; end: string | null }>(
+    "dashboard_financeiro_period_custom",
+    { start: null, end: null }
+  );
 
   // Atualiza status atrasado uma vez ao entrar
   useEffect(() => {
@@ -43,15 +56,24 @@ export default function FinanceiroVisaoGeral() {
 
   const contaId = contaFiltro === "__all__" ? null : contaFiltro;
 
-  const kpisQ = useFinanceiroKPIs();
+  const { startDate, endDate } = useMemo(
+    () => getDateRange(periodPreset, customRange),
+    [periodPreset, customRange]
+  );
+  const inicioISO = toISODate(startDate);
+  const fimISO = toISODate(endDate);
+
+  const kpisQ = useFinanceiroKPIs(inicioISO, fimISO);
   const serieQ = useSerieMensal(12, contaId);
   const fluxoQ = useFluxoProjetado(90, contaId);
   const saldosQ = useSaldosPorConta();
   const vencQ = useProximosVencimentos(7);
-  const topQ = useTopRankings();
+  const topQ = useTopRankings(inicioISO, fimISO);
   const contasOptQ = useContasBancariasOptions();
 
   const k = kpisQ.data;
+  const hasPeriod = inicioISO !== null && fimISO !== null;
+  const periodLabel = hasPeriod ? "vs período anterior" : "Sem comparativo";
 
   return (
     <div className="space-y-6">
@@ -62,8 +84,14 @@ export default function FinanceiroVisaoGeral() {
             Visão consolidada por competência — exclui transferências entre contas.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Conta bancária:</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <PeriodFilter
+            preset={periodPreset}
+            customRange={customRange}
+            onPresetChange={setPeriodPreset}
+            onCustomRangeChange={setCustomRange}
+          />
+          <span className="text-xs text-muted-foreground ml-2">Conta:</span>
           <Select value={contaFiltro} onValueChange={setContaFiltro}>
             <SelectTrigger className="w-[200px] h-9">
               <SelectValue />
@@ -80,39 +108,46 @@ export default function FinanceiroVisaoGeral() {
         </div>
       </div>
 
-      {/* KPIs — Linha 1: Resultado do mês corrente vs anterior */}
-      {kpisQ.isLoading || !k ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-[110px]" />
-          ))}
+      {/* ============ Resultado do período ============ */}
+      <div className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Resultado do período
+          </h2>
+          <span className="text-xs text-muted-foreground">{periodLabel}</span>
         </div>
-      ) : (
-        <>
+
+        {kpisQ.isLoading || !k ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-[110px]" />
+            ))}
+          </div>
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPIBlock
-              title="Receita do mês"
+              title="Receita realizada"
               value={k.mes_receita}
               icon={TrendingUp}
               variant="success"
-              comparePrev={k.mes_anterior_receita}
-              subtitle="Realizada por competência"
+              comparePrev={hasPeriod ? k.mes_anterior_receita : undefined}
+              subtitle="Por competência"
             />
             <KPIBlock
-              title="Despesa do mês"
+              title="Despesa realizada"
               value={k.mes_despesa}
               icon={TrendingDown}
               variant="danger"
-              comparePrev={k.mes_anterior_despesa}
-              subtitle="Realizada por competência"
+              comparePrev={hasPeriod ? k.mes_anterior_despesa : undefined}
+              subtitle="Por competência"
             />
             <KPIBlock
-              title="Resultado do mês"
+              title="Resultado"
               value={k.mes_resultado}
               icon={Activity}
               variant="dynamic"
-              comparePrev={k.mes_anterior_resultado}
-              subtitle={`Anterior: ${formatCurrency(k.mes_anterior_resultado)}`}
+              comparePrev={hasPeriod ? k.mes_anterior_resultado : undefined}
+              subtitle={hasPeriod ? `Anterior: ${formatCurrency(k.mes_anterior_resultado)}` : "Receita − Despesa"}
             />
             <KPIBlock
               title="Margem"
@@ -123,8 +158,39 @@ export default function FinanceiroVisaoGeral() {
               subtitle={`${k.mes_margem_percent.toFixed(1)}%`}
             />
           </div>
+        )}
 
-          {/* KPIs — Linha 2: Situação atual */}
+        {/* Top 5 do período */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TopRanking
+            title="Top 5 Categorias de Despesa"
+            items={topQ.data?.topCategorias || []}
+            barColor="danger"
+          />
+          <TopRanking
+            title="Top 5 Clientes — Receita Recebida"
+            items={topQ.data?.topClientes || []}
+            barColor="success"
+          />
+        </div>
+      </div>
+
+      {/* ============ Situação atual (não filtrada por período) ============ */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Situação atual
+          </h2>
+          <span className="text-xs text-muted-foreground">Fotografia agora · projeção futura</span>
+        </div>
+
+        {kpisQ.isLoading || !k ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-[110px]" />
+            ))}
+          </div>
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPIBlock
               title="Saldo total em contas"
@@ -171,43 +237,35 @@ export default function FinanceiroVisaoGeral() {
               subtitle={`${k.inadimplencia_percent.toFixed(1)}% do faturado no mês`}
             />
           </div>
-        </>
-      )}
-
-      {/* Alertas inteligentes */}
-      {k && fluxoQ.data && <AlertasInteligentes kpis={k} fluxo={fluxoQ.data} />}
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {serieQ.isLoading ? (
-          <Skeleton className="h-[380px]" />
-        ) : (
-          <EvolucaoCompetenciaChart data={serieQ.data || []} />
         )}
-        {fluxoQ.isLoading ? (
-          <Skeleton className="h-[380px]" />
-        ) : (
-          <FluxoProjetadoChart data={fluxoQ.data || []} />
-        )}
-      </div>
 
-      {/* Análises Top 5 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <TopRanking
-          title="Top 5 Categorias de Despesa (mês)"
-          items={topQ.data?.topCategorias || []}
-          barColor="danger"
-        />
-        <TopRanking
-          title="Top 5 Clientes — Receita Recebida (mês)"
-          items={topQ.data?.topClientes || []}
-          barColor="success"
-        />
-        <TopAtrasos items={topQ.data?.topAtrasos || []} />
-      </div>
+        {/* Alertas inteligentes */}
+        {k && fluxoQ.data && <AlertasInteligentes kpis={k} fluxo={fluxoQ.data} />}
 
-      {/* Listas operacionais */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gráficos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {serieQ.isLoading ? (
+            <Skeleton className="h-[380px]" />
+          ) : (
+            <EvolucaoCompetenciaChart data={serieQ.data || []} />
+          )}
+          {fluxoQ.isLoading ? (
+            <Skeleton className="h-[380px]" />
+          ) : (
+            <FluxoProjetadoChart data={fluxoQ.data || []} />
+          )}
+        </div>
+
+        {/* Top atrasos + listas operacionais */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TopAtrasos items={topQ.data?.topAtrasos || []} />
+          {vencQ.isLoading ? (
+            <Skeleton className="h-[280px]" />
+          ) : (
+            <ProximosVencimentos items={vencQ.data || []} />
+          )}
+        </div>
+
         <Card className="animate-fade-slide">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-base">Saldo por Conta Bancária</CardTitle>
@@ -226,7 +284,7 @@ export default function FinanceiroVisaoGeral() {
                 Nenhuma conta bancária cadastrada
               </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {(saldosQ.data || []).map((c) => (
                   <button
                     key={c.id}
@@ -250,12 +308,6 @@ export default function FinanceiroVisaoGeral() {
             )}
           </CardContent>
         </Card>
-
-        {vencQ.isLoading ? (
-          <Skeleton className="h-[280px]" />
-        ) : (
-          <ProximosVencimentos items={vencQ.data || []} />
-        )}
       </div>
     </div>
   );
