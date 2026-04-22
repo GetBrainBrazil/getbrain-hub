@@ -501,7 +501,7 @@ export default function MovimentacaoDetalhe() {
     if (!mov) return;
     const { error } = await supabase.from("movimentacoes").delete().eq("id", mov.id);
     if (error) {
-      toast.error("Erro ao excluir");
+      toast.error(`Não foi possível excluir: ${error.message}`);
       return;
     }
     toast.success("Movimentação excluída com sucesso");
