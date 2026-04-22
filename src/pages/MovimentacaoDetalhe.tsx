@@ -1187,7 +1187,7 @@ export default function MovimentacaoDetalhe() {
                 setBaixaForm((prev) => {
                   const upd = { ...prev };
                   if (res.data) { upd.data_pagamento = res.data; next.add("data_pagamento"); }
-                  if (res.valor != null) { upd.valor_realizado = String(res.valor); next.add("valor_realizado"); }
+                  if (res.valor != null) { upd.valor_realizado = formatMoneyForInput(Number(res.valor)); next.add("valor_realizado"); }
                   if (res.conta_bancaria_id) { upd.conta_bancaria_id = res.conta_bancaria_id; next.add("conta_bancaria_id"); }
                   return upd;
                 });
