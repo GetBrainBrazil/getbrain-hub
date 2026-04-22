@@ -67,17 +67,17 @@ export type AtrasoItem = {
 
 const num = (v: unknown) => (v == null ? 0 : Number(v));
 
-export function useFinanceiroKPIs() {
+export function useFinanceiroKPIs(inicio: string | null = null, fim: string | null = null) {
   return useQuery({
-    queryKey: ["financeiro_dashboard_kpis"],
+    queryKey: ["financeiro_dashboard_kpis", inicio, fim],
     staleTime: 30_000,
     queryFn: async (): Promise<DashboardKPIs> => {
-      const { data, error } = await supabase
-        .from("financeiro_dashboard" as any)
-        .select("*")
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("financeiro_dashboard" as any, {
+        p_inicio: inicio,
+        p_fim: fim,
+      });
       if (error) throw error;
-      const r: any = data || {};
+      const r: any = (Array.isArray(data) ? data[0] : data) || {};
       return {
         mes_receita: num(r.mes_receita),
         mes_despesa: num(r.mes_despesa),
@@ -203,51 +203,26 @@ export function useProximosVencimentos(dias = 7) {
   });
 }
 
-export function useTopRankings() {
+export function useTopRankings(inicio: string | null = null, fim: string | null = null) {
   return useQuery({
-    queryKey: ["top_rankings"],
+    queryKey: ["top_rankings", inicio, fim],
     staleTime: 30_000,
     queryFn: async () => {
-      const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-        .toISOString()
-        .split("T")[0];
+      const { data: rankings, error } = await supabase.rpc("financeiro_top_rankings" as any, {
+        p_inicio: inicio,
+        p_fim: fim,
+      });
+      if (error) throw error;
 
-      const { data: movs } = await supabase
-        .from("movimentacoes")
-        .select(
-          "tipo, status, valor_previsto, valor_realizado, data_competencia, data_vencimento, categoria:categorias(id, nome, is_transferencia), cliente:clientes(id, nome), fornecedor:fornecedores(id, nome)"
-        )
-        .gte("data_competencia", inicioMes);
+      const rows = (rankings || []) as Array<{ kind: string; label: string; valor: number }>;
+      const topCategorias: RankingItem[] = rows
+        .filter((r) => r.kind === "categoria")
+        .map((r) => ({ label: r.label, valor: num(r.valor) }));
+      const topClientes: RankingItem[] = rows
+        .filter((r) => r.kind === "cliente")
+        .map((r) => ({ label: r.label, valor: num(r.valor) }));
 
-      const list = (movs || []).filter((m: any) => !m.categoria?.is_transferencia);
-
-      // Top 5 categorias de despesa do mês
-      const catMap = new Map<string, number>();
-      list
-        .filter((m: any) => m.tipo === "despesa")
-        .forEach((m: any) => {
-          const k = m.categoria?.nome || "Sem categoria";
-          catMap.set(k, (catMap.get(k) || 0) + num(m.valor_realizado || m.valor_previsto));
-        });
-      const topCategorias: RankingItem[] = Array.from(catMap.entries())
-        .map(([label, valor]) => ({ label, valor }))
-        .sort((a, b) => b.valor - a.valor)
-        .slice(0, 5);
-
-      // Top 5 clientes por receita recebida
-      const cliMap = new Map<string, number>();
-      list
-        .filter((m: any) => m.tipo === "receita" && m.status === "pago" && m.cliente?.nome)
-        .forEach((m: any) => {
-          const k = m.cliente.nome;
-          cliMap.set(k, (cliMap.get(k) || 0) + num(m.valor_realizado || m.valor_previsto));
-        });
-      const topClientes: RankingItem[] = Array.from(cliMap.entries())
-        .map(([label, valor]) => ({ label, valor }))
-        .sort((a, b) => b.valor - a.valor)
-        .slice(0, 5);
-
-      // Top 5 atrasos (todos os tempos, vencidos)
+      // Top 5 atrasos (sempre snapshot atual — independe do período)
       const { data: vencidos } = await supabase
         .from("movimentacoes")
         .select(
