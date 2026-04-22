@@ -1,119 +1,75 @@
 
 
-## Reorganizar "Time & Contratos": fundir no Operacional + mover Contratos pro Financeiro
+## Máscaras em Dados Bancários e Chaves PIX
 
-A aba "Time & Contratos" some. O conteúdo é redistribuído:
+Adicionar formatação automática nos campos **Agência**, **Conta** e **Chave PIX** da aba "Contas Bancárias" em Configurações Financeiras.
 
-- **Contratos de Manutenção** → vira módulo dentro de **Financeiro** (com geração automática de recorrência mensal nas Contas a Receber)
-- **Time alocado** → vira card dentro da aba **Operacional**, sem sobrecarregar o layout
+### Mudança 1 — Máscaras de agência e conta (`shared.tsx`)
 
-### Mudança 1 — Aba "Operacional" ganha card de Time
+Adicionar dois helpers novos em `src/components/config-financeiras/shared.tsx`:
 
-Na `AbaOperacional.tsx`, adicionar uma seção compacta **abaixo dos 4 painéis** (não dentro do grid 2×2, para não desbalancear):
+- **`applyAgenciaMask(v)`** — só dígitos, máx 5, formato `1234` ou `1234-5` (último dígito vira verificador quando há 5).
+- **`applyContaMask(v)`** — só dígitos + 1 dígito verificador no final, formato `12345-6` (sempre separa o último com hífen quando há ≥ 2 dígitos). Limite 13 dígitos.
 
-```text
-┌──────────────────────────────────────────────────────┐
-│ 👥 TIME ALOCADO                    [+ Alocar Ator]   │
-│                                                        │
-│ [avatar] Vitor Hugo · Dev Full-Stack · 50%           │
-│         0 tarefas · 0h · custo: —      [Desalocar]   │
-│ [avatar] Daniel · PM · 20%                            │
-│         0 tarefas · 0h · custo: —      [Desalocar]   │
-│                                                        │
-│ Estado vazio: ícone + "Nenhum ator alocado"          │
-└──────────────────────────────────────────────────────┘
+### Mudança 2 — Detecção e máscara dinâmica de Chave PIX (`shared.tsx`)
+
+Novo helper **`detectPixType(value)`** retorna: `"cpf" | "cnpj" | "email" | "telefone" | "aleatoria" | "indefinido"`.
+
+Lógica:
+- Se contém `@` → **email** (sem máscara, valida formato no blur)
+- Se for só dígitos:
+  - 11 dígitos começando com `(` ou tendo padrão de DDD → **telefone** → máscara `(11) 91234-5678`
+  - 11 dígitos sem padrão telefônico → **CPF** → máscara `123.456.789-01`
+  - 14 dígitos → **CNPJ** → máscara `12.345.678/0001-90`
+- Se tem letras + números + 32 chars com hífens (UUID v4) → **chave aleatória** → mantém como digitado
+- Caso contrário → **indefinido** (sem máscara enquanto digita)
+
+Novo helper **`applyPixMask(value)`** que detecta o tipo em tempo real e aplica a máscara correspondente:
+- Detecção é por tentativa: se input começa com dígitos puros e tem ≤ 11 dígitos, aplica máscara progressiva de telefone OU CPF (escolhe pela presença de DDD válido nos 2 primeiros dígitos: 11-99); ao chegar em 14 dígitos puros, aplica máscara de CNPJ.
+- Se aparecer `@` ou letra (que não seja UUID), para de aplicar máscara numérica.
+
+### Mudança 3 — Aplicar nos inputs (`ContasBancariasTab.tsx`)
+
+Linhas 259-260 (formulário edit/new):
+
+```tsx
+<Input value={form.agencia}
+  onChange={e => setForm({ ...form, agencia: applyAgenciaMask(e.target.value) })}
+  placeholder="1234" inputMode="numeric" />
+
+<Input value={form.conta}
+  onChange={e => setForm({ ...form, conta: applyContaMask(e.target.value) })}
+  placeholder="12345-6" inputMode="numeric" />
 ```
 
-- Lista densa (1 linha por ator), mesmo padrão visual da aba antiga
-- Botão "+ Alocar Ator" abre `AlocarAtorDialog` (já existe)
-- "Desalocar" usa o handler existente
-- Métricas por ator (tarefas/horas/custo) ficam zeradas com "—" até Área Dev plugar
+Linha 267 (input de nova chave PIX):
 
-Como o Operacional hoje recebe só `projectId`, vou expandir o componente para também receber `allocs` + handlers (`onAllocate`, `onDeallocate`) — ProjetoDetalhe continua dono do estado e da carga.
-
-### Mudança 2 — Remover aba "Time & Contratos"
-
-Em `ProjetoDetalhe.tsx`:
-- Remover o item `["team", "Time & Contratos", ...]` da `TabsList`
-- Remover o `<TabsContent value="team">` inteiro (linhas ~1496-1641)
-- `NovoContratoDialog`, `AlocarAtorDialog` continuam importados (Alocar usado no Operacional; Contrato vai migrar de uso)
-
-Ordem final das abas: Visão Geral · Escopo · **Operacional** · Marcos · Dependências · Riscos · Integrações · Atividade
-
-### Mudança 3 — Novo módulo Financeiro: Contratos de Manutenção
-
-**Nova página** `src/pages/ContratosManutencao.tsx` em `/financeiro/contratos`:
-
-- Listagem de todos os `maintenance_contracts` (todos os projetos), com filtros por status (ativo/pausado/encerrado) e cliente
-- Colunas: Projeto · Cliente · Mensalidade líquida · Início · Fim · Status · MRR contribuído
-- Total no topo: **MRR ativo** (soma das mensalidades líquidas dos contratos `active`)
-- Botão "Novo Contrato" abre `NovoContratoDialog` (precisa virar genérico — escolher projeto)
-- Linha clicável → drawer/modal de detalhe com edição inline (mensalidade, desconto, bolsões, datas, status, observações)
-- Adicionar entrada no `AppSidebar` em Financeiro: "Contratos"
-
-### Mudança 4 — Geração automática de recorrência no Financeiro
-
-Quando um `maintenance_contract` é criado/atualizado para `status='active'`, gerar automaticamente lançamentos em `movimentacoes`:
-
-- 1 movimentação por mês entre `start_date` e `end_date` (ou 12 meses à frente se sem `end_date`)
-- `tipo='receita'`, `status='pendente'`, `valor_previsto = monthly_fee × (1 - discount/100)`
-- `data_vencimento` = mesmo dia de cada mês a partir do `start_date`
-- `data_competencia` = primeiro dia do mês de competência
-- `descricao` = `"Manutenção mensal — {projeto.code} — {mês/ano}"`
-- `cliente_id` = cliente do projeto
-- `source_module='maintenance_contracts'`, `source_entity_type='maintenance_contract'`, `source_entity_id=contract.id`
-- `is_automatic=true`, `recorrente=true`, `frequencia_recorrencia='mensal'`
-
-**Implementação**: trigger SQL `AFTER INSERT OR UPDATE OF status, monthly_fee, monthly_fee_discount_percent, start_date, end_date` em `maintenance_contracts`:
-
-1. Apaga (ou marca como cancelado) movimentações futuras pendentes vinculadas a esse contrato
-2. Recria as parcelas a partir do mês corrente
-3. **Nunca** mexe em movimentações já com `status='pago'`
-
-**Quando contrato vira `cancelled`/`paused`**: cancela apenas as parcelas futuras pendentes.
-
-Com isso, as parcelas já fluem para `project_metrics` via `source_entity_id` e aparecem no painel Financeiro do Operacional automaticamente.
-
-### Mudança 5 — Card "Contratos" no Operacional
-
-Dentro do **painel Financeiro** da aba Operacional, abaixo da margem real, adicionar uma linha resumo:
-
-```
-Contrato de manutenção:  R$ 750/mês ativo · até [data]   [Gerir →]
+```tsx
+<Input value={newPix}
+  onChange={e => setNewPix(applyPixMask(e.target.value))}
+  placeholder="CPF, CNPJ, e-mail, telefone, chave aleatória..."
+  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPix())} />
 ```
 
-ou (se sem contrato): `"Sem contrato de manutenção"  [Criar contrato →]`
+Adicionar **badge sutil** ao lado do input mostrando o tipo detectado em tempo real (ex: chip `CPF`, `E-mail`, `Telefone`, `CNPJ`, `Aleatória`), usando `detectPixType(newPix)`. Isso dá feedback imediato sem ser intrusivo.
 
-O link **[Gerir →]** leva para `/financeiro/contratos?projectId=<id>` filtrando por esse projeto. O **[Criar →]** abre o `NovoContratoDialog` direto na página atual.
+### Mudança 4 — Exibir tipo na lista de chaves cadastradas
 
-### Mudança 6 — Ajustar `NovoContratoDialog`
+Linha 269-274: junto de cada chave já adicionada, mostrar o tipo entre parênteses em texto muted:
 
-Adicionar prop opcional `defaultProjectId`. Quando vem definida, esconde o seletor de projeto e usa o valor; quando ausente, mostra um `<Select>` de projetos ativos (para uso na página de Contratos do Financeiro).
+```
+[CPF]  123.456.789-01                                    [×]
+[E-mail]  daniel@getbrain.com                            [×]
+```
+
+### Comportamento preservado
+
+- Dados antigos no banco (não formatados) continuam sendo exibidos como estão na view mode — a máscara só é aplicada na **edição/digitação**.
+- O salvamento mantém o valor formatado (com pontuação) — assim a busca e a exibição ficam consistentes.
+- Sem mudança de schema, sem migration. Apenas frontend.
 
 ### Arquivos afetados
 
-**Modificados:**
-- `src/pages/ProjetoDetalhe.tsx` — remove aba Team, passa `allocs`/handlers ao Operacional
-- `src/components/projetos/AbaOperacional.tsx` — recebe props de time, renderiza card de Time + linha de contrato no painel Financeiro
-- `src/components/projetos/NovoContratoDialog.tsx` — suporte a uso global (com seletor de projeto)
-- `src/components/AppSidebar.tsx` — nova entrada "Contratos" em Financeiro
-- `src/App.tsx` — rota `/financeiro/contratos`
-
-**Criados:**
-- `src/pages/ContratosManutencao.tsx` — listagem + detalhe de contratos
-- Migration SQL: trigger `maintenance_contract_recurrence_sync` em `maintenance_contracts` que mantém parcelas em `movimentacoes`
-
-### Pontos de UX preservados
-
-- Time não desaparece — está no Operacional, contexto certo (ver "como o projeto está indo" inclui ver o time)
-- Quem cria contrato no projeto continua tendo o atalho (botão no painel Financeiro do Operacional)
-- Daniel ganha visão consolidada de **MRR total** no Financeiro, sem ter que abrir projeto a projeto
-- Recorrência mensal nasce do contrato — zero trabalho manual
-
-### Confirmação antes de executar (read-only mode)
-
-Confirme só duas decisões antes de eu implementar:
-
-1. **Janela de geração de parcelas sem `end_date`**: 12 meses à frente, regenerando mensalmente (trigger detecta mês corrente e completa até 12 meses no futuro)? Ou outra janela?
-2. **Comportamento ao alterar `monthly_fee` em contrato ativo**: regenera só parcelas futuras pendentes (mantém pagas intactas) — ok?
+- **Modificado**: `src/components/config-financeiras/shared.tsx` — adiciona `applyAgenciaMask`, `applyContaMask`, `detectPixType`, `applyPixMask`
+- **Modificado**: `src/components/config-financeiras/ContasBancariasTab.tsx` — aplica máscaras nos 3 inputs + badge de tipo PIX
 
