@@ -905,17 +905,31 @@ export default function ProjetoDetalhe() {
             <Tabs defaultValue="overview" className="space-y-4">
               <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
                 {[
-                  ["overview", "Visão Geral"],
-                  ["actors", "Atores"],
-                  ["maintenance", "Manutenção"],
-                  ["activity", "Atividade"],
-                ].map(([v, label]) => (
+                  ["overview", "Visão Geral", null],
+                  ["scope", "Escopo", null],
+                  ["milestones", "Marcos", milestones.length || null],
+                  ["risks", "Riscos", null],
+                  ["team", "Time & Contratos", allocs.length || null],
+                  ["dependencies", "Dependências", blockingDeps.length || null],
+                  ["integrations", "Integrações", integrations.length || null],
+                  ["activity", "Atividade", null],
+                ].map(([v, label, count]) => (
                   <TabsTrigger
-                    key={v}
-                    value={v}
+                    key={v as string}
+                    value={v as string}
                     className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
                   >
                     {label}
+                    {count != null && (
+                      <span className={cn(
+                        "ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-mono",
+                        v === "dependencies" && blockingDeps.length > 0
+                          ? "bg-destructive/20 text-destructive"
+                          : "bg-muted text-muted-foreground",
+                      )}>
+                        {count}
+                      </span>
+                    )}
                   </TabsTrigger>
                 ))}
               </TabsList>
