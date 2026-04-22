@@ -147,16 +147,23 @@ export default function ContasPagar() {
     const { data: parentData, error } = await supabase.from("movimentacoes").insert(baseRecord).select().single();
     if (error) { toast.error("Erro ao salvar"); return; }
 
-    // If recorrente, create 119 more months (total 120 = 10 anos)
+    // Se recorrente: gera retroativo (data inicial → hoje, status "atrasado") + 120 meses futuros (status "pendente").
     if (form.recorrente && parentData) {
       const recurrences: any[] = [];
-      for (let i = 1; i <= 119; i++) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      for (let i = 1; i <= 240; i++) {
         const competencia = addMonths(form.data_competencia, i);
         const vencimento = addMonths(form.data_vencimento, i);
+        const venc = new Date(vencimento + "T12:00:00");
+        // Limite: hoje + 120 meses no futuro
+        const futureCutoff = new Date(); futureCutoff.setMonth(futureCutoff.getMonth() + 120); futureCutoff.setHours(0, 0, 0, 0);
+        if (venc > futureCutoff) break;
+        const status = venc < today ? "atrasado" : "pendente";
         recurrences.push({
           ...baseRecord,
           data_competencia: competencia,
           data_vencimento: vencimento,
+          status,
           movimentacao_pai_id: parentData.id,
         });
       }

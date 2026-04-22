@@ -406,20 +406,30 @@ export default function MovimentacaoDetalhe() {
       return;
     }
 
-    // Recorrência: cria ocorrências adicionais até "recAte" (se preenchido) ou 120 ocorrências (10 anos para mensal) por padrão.
+    // Recorrência: gera ocorrências retroativas (data inicial → hoje) e futuras (até "recAte" ou 120 períodos).
+    // Para frequência mensal sem prazo, o cron mensal "generate-recurring-movimentacoes" continua criando o mês corrente.
     if (recorrente) {
       const intervalo = Math.max(parseInt(recIntervalo) || 1, 1);
       const limite = recAte ? new Date(recAte + "T12:00:00") : null;
-      const maxOcorrencias = limite ? 240 : 120; // segurança / sem prazo: gera ~10 anos para mensal
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const maxOcorrencias = 240; // teto de segurança
       const recurrences: any[] = [];
       for (let i = 1; i < maxOcorrencias; i++) {
         const competencia = addByFrequency(form.data_competencia, intervalo * i, recPeriodo);
         const vencimento = addByFrequency(form.data_vencimento, intervalo * i, recPeriodo);
-        if (limite && new Date(vencimento + "T12:00:00") > limite) break;
+        const venc = new Date(vencimento + "T12:00:00");
+        if (limite && venc > limite) break;
+        // Sem prazo: gera tudo até hoje + 120 períodos no futuro
+        if (!limite) {
+          const futureCutoff = addByFrequency(ymdToday(), 120, recPeriodo);
+          if (vencimento > futureCutoff) break;
+        }
+        const status = venc < today ? "atrasado" : "pendente";
         recurrences.push({
           ...base,
           data_competencia: competencia,
           data_vencimento: vencimento,
+          status,
           movimentacao_pai_id: parent.id,
           recorrente: true,
           frequencia_recorrencia: recPeriodo,
