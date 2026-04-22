@@ -69,20 +69,29 @@ export function AppSidebar() {
           <img src={logo} alt="GetBrain" className={collapsed ? "h-6" : "h-8"} />
         </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
+      <SidebarContent className="gap-1">
+        <SidebarGroup className="px-2">
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end>
-                      <item.icon className="h-4 w-4" />
+              {mainItems.map((item) => {
+                const active = isActive(item.url);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <NavLink
+                      to={item.url}
+                      end
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors border-l-2 ${
+                        active
+                          ? "bg-sidebar-accent text-accent border-accent"
+                          : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                      }`}
+                    >
+                      <item.icon className="h-[18px] w-[18px]" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -91,33 +100,33 @@ export function AppSidebar() {
           <Collapsible open={finOpen} onOpenChange={setFinOpen}>
             <CollapsibleTrigger asChild>
               <button
-                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors border-l-2 ${
                   isFinActive
-                    ? "bg-accent text-primary-foreground shadow-md shadow-accent/25"
-                    : "bg-accent/15 text-accent hover:bg-accent/25"
+                    ? "bg-sidebar-accent text-accent border-accent"
+                    : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <DollarSign className="h-5 w-5" />
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-[18px] w-[18px]" />
                   {!collapsed && <span>Financeiro</span>}
                 </div>
                 {!collapsed && (
                   <ChevronUp
-                    className={`h-4 w-4 transition-transform duration-200 ${finOpen ? "" : "rotate-180"}`}
+                    className={`h-4 w-4 transition-transform duration-200 opacity-60 ${finOpen ? "" : "rotate-180"}`}
                   />
                 )}
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="mt-1 space-y-0.5 py-1">
+              <div className="mt-0.5 space-y-0.5 py-0.5">
                 {financeiroItems.map((item) => (
                   <NavLink
                     key={item.title}
                     to={item.url}
-                    className={`block px-4 py-2 text-sm rounded-md transition-colors ${
+                    className={`block px-4 py-1.5 ml-4 text-sm rounded-md transition-colors ${
                       isActive(item.url)
-                        ? "bg-accent/20 text-accent font-medium"
-                        : "text-sidebar-foreground/60 hover:text-accent hover:bg-accent/10"
+                        ? "text-accent font-medium"
+                        : "text-sidebar-foreground/55 hover:text-sidebar-foreground"
                     }`}
                   >
                     {item.title}
@@ -129,20 +138,20 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup className="px-2">
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {otherItems.map((item) => {
               const active = isActive(item.url);
               return (
                 <NavLink
                   key={item.title}
                   to={item.url}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors border-l-2 ${
                     active
-                      ? "bg-accent text-primary-foreground shadow-md shadow-accent/25"
-                      : "bg-accent/15 text-accent hover:bg-accent/25"
+                      ? "bg-sidebar-accent text-accent border-accent"
+                      : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   }`}
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon className="h-[18px] w-[18px]" />
                   {!collapsed && <span>{item.title}</span>}
                 </NavLink>
               );
