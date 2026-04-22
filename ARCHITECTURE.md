@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.2 — 21/04/2026**
+> **Versão atual: v1.3 — 21/04/2026**
 
 ---
 
@@ -84,6 +84,17 @@ Descrição textual simples não é suficiente para projetos profissionais. Todo
 - Riscos com severidade, probabilidade e plano de mitigação
 
 Essa estrutura responde diretamente a duas das 4 causas-raiz dos atrasos: escopo mal definido e cliente atrasando dependências externas.
+
+### 2.13 Integração entre módulos é de primeira classe
+
+Módulos do GetBrain Hub não são ilhas — devem se conversar por eventos e referências rastreáveis. Cada ação relevante em um módulo pode disparar automações em outros. Todo lançamento/registro derivado de outro módulo deve carregar rastreabilidade total:
+
+- `source_module` (text) — qual módulo originou (ex: 'projects', 'maintenance_contracts', 'tokens')
+- `source_entity_type` (text) — tipo da entidade de origem
+- `source_entity_id` (uuid) — id da entidade de origem
+- `is_automatic` (boolean) — se foi gerado por automação ou manual
+
+Isso permite: (a) saber de onde veio cada lançamento; (b) desfazer cascatas ao cancelar origem; (c) relatórios de "quanto faturei desse projeto vs quanto custou".
 
 ---
 
