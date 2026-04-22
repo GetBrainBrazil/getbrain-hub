@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { formatCurrency, StatusType } from "@/lib/formatters";
+import { formatCurrency, formatDate, StatusType } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -160,6 +160,9 @@ export default function MovimentacaoDetalhe() {
     data_pagamento: "",
     conta_bancaria_id: "",
     meio_pagamento_id: "",
+    desconto: "", juros: "", multa: "", taxas: "",
+    pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
+    observacoes_pagamento: "",
   });
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
@@ -527,37 +530,76 @@ export default function MovimentacaoDetalhe() {
 
   function openDarBaixa() {
     if (!mov) return;
-    const isEditingLiquidacao = mov.status === "pago";
-    const baseValor = isEditingLiquidacao
+    const isEditing = mov.status === "pago";
+    const fmt = (v: any) => (v != null && v !== 0 ? formatMoneyForInput(Number(v)) : "");
+    const baseValor = isEditing
       ? Number(mov.valor_realizado) || 0
       : totalPrevisto || parseMoney(form.valor_previsto || "0") || Number(mov.valor_previsto) || 0;
     setBaixaForm({
       valor_realizado: formatMoneyForInput(baseValor),
-      data_pagamento: isEditingLiquidacao
+      data_pagamento: isEditing
         ? mov.data_pagamento || new Date().toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
-      conta_bancaria_id: isEditingLiquidacao
+      conta_bancaria_id: isEditing
         ? mov.conta_bancaria_id || ""
         : form.conta_bancaria_id || mov.conta_bancaria_id || "",
-      meio_pagamento_id: isEditingLiquidacao ? mov.meio_pagamento_id || "" : "",
+      meio_pagamento_id: isEditing ? mov.meio_pagamento_id || "" : "",
+      desconto: isEditing ? fmt(mov.desconto_previsto) : "",
+      juros: isEditing ? fmt(mov.juros) : "",
+      multa: isEditing ? fmt(mov.multa) : "",
+      taxas: isEditing ? fmt(mov.taxas_adm) : "",
+      pis: isEditing ? fmt(mov.pis) : "",
+      cofins: isEditing ? fmt(mov.cofins) : "",
+      csll: isEditing ? fmt(mov.csll) : "",
+      iss: isEditing ? fmt(mov.iss) : "",
+      ir: isEditing ? fmt(mov.ir) : "",
+      inss: isEditing ? fmt(mov.inss) : "",
+      observacoes_pagamento: "",
     });
     setComprovanteFile(null);
     setAiFields(new Set());
     setOpenBaixa(true);
   }
 
+  const baixaTotals = useMemo(() => {
+    const pm = (v: string) => (v ? parseMoney(v) || 0 : 0);
+    const base = pm(baixaForm.valor_realizado);
+    const desconto = pm(baixaForm.desconto);
+    const juros = pm(baixaForm.juros);
+    const multa = pm(baixaForm.multa);
+    const taxas = pm(baixaForm.taxas);
+    const impostos = pm(baixaForm.pis) + pm(baixaForm.cofins) + pm(baixaForm.csll) + pm(baixaForm.iss) + pm(baixaForm.ir) + pm(baixaForm.inss);
+    const totalPago = base - desconto + juros + multa + taxas;
+    const valorOriginal = Number(mov?.valor_previsto) || 0;
+    const diferenca = totalPago - valorOriginal;
+    return { base, desconto, juros, multa, taxas, impostos, totalPago, valorOriginal, diferenca };
+  }, [baixaForm, mov]);
+
   async function handleBaixa() {
     if (!mov) return;
-    const valorRec = parseMoney(baixaForm.valor_realizado) || 0;
+    const wasAlreadyPaid = mov.status === "pago";
     const { error } = await supabase
       .from("movimentacoes")
       .update({
         status: "pago",
-        valor_realizado: valorRec,
+        valor_realizado: baixaTotals.totalPago,
         data_pagamento: baixaForm.data_pagamento,
         conta_bancaria_id: baixaForm.conta_bancaria_id || null,
         meio_pagamento_id: baixaForm.meio_pagamento_id || null,
-      })
+        desconto_previsto: parseMoney(baixaForm.desconto) || null,
+        juros: parseMoney(baixaForm.juros) || null,
+        multa: parseMoney(baixaForm.multa) || null,
+        taxas_adm: parseMoney(baixaForm.taxas) || null,
+        pis: parseMoney(baixaForm.pis) || null,
+        cofins: parseMoney(baixaForm.cofins) || null,
+        csll: parseMoney(baixaForm.csll) || null,
+        iss: parseMoney(baixaForm.iss) || null,
+        ir: parseMoney(baixaForm.ir) || null,
+        inss: parseMoney(baixaForm.inss) || null,
+        observacoes: baixaForm.observacoes_pagamento
+          ? `${mov.observacoes ? mov.observacoes + "\n\n" : ""}[Pagamento] ${baixaForm.observacoes_pagamento}`
+          : mov.observacoes,
+      } as any)
       .eq("id", mov.id);
     if (error) {
       toast.error("Erro ao registrar");
@@ -568,7 +610,7 @@ export default function MovimentacaoDetalhe() {
       catch (e) { console.error(e); toast.error("Pagamento registrado, mas falhou ao salvar o comprovante."); }
     }
     toast.success(
-      mov.status === "pago"
+      wasAlreadyPaid
         ? "Liquidação atualizada!"
         : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
     );
@@ -1314,15 +1356,17 @@ export default function MovimentacaoDetalhe() {
 
       {/* Baixa Dialog */}
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-7">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base font-semibold text-success flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
               {mov?.status === "pago"
                 ? "Editar Liquidação"
                 : isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+
+          <div className="space-y-5">
             <ComprovanteUploadField
               onFileChange={setComprovanteFile}
               valorEsperado={mov ? Number(mov.valor_previsto) : undefined}
@@ -1339,87 +1383,144 @@ export default function MovimentacaoDetalhe() {
                 setAiFields(next);
               }}
             />
+
+            {/* Linha 1: Data, Forma, Conta */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
+                  Data do {isPagar ? "Pagamento" : "Recebimento"}
+                  {aiFields.has("data_pagamento") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
+                </Label>
+                <Input type="date" value={baixaForm.data_pagamento} onChange={e => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })} className="h-10 text-sm" />
+              </div>
+              <div>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Forma de Pagamento</Label>
+                <Select value={baixaForm.meio_pagamento_id} onValueChange={v => setBaixaForm({ ...baixaForm, meio_pagamento_id: v })}>
+                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>{meios.map(m => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
+                  Conta Bancária
+                  {aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
+                </Label>
+                <Select value={baixaForm.conta_bancaria_id} onValueChange={v => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}>
+                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Bloco Valor + ajustes */}
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <div className="grid grid-cols-5 gap-3">
+                <div>
+                  <Label className="text-[11px] font-medium text-foreground mb-1.5 block">
+                    Valor Base (R$) *
+                    {aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5 inline-block ml-1" style={{ color: "#0EA5E9" }} />}
+                  </Label>
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.valor_realizado} onChange={e => setBaixaForm({ ...baixaForm, valor_realizado: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Desconto (-)</Label>
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.desconto} onChange={e => setBaixaForm({ ...baixaForm, desconto: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Juros (+)</Label>
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.juros} onChange={e => setBaixaForm({ ...baixaForm, juros: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Multa (+)</Label>
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.multa} onChange={e => setBaixaForm({ ...baixaForm, multa: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Taxas (+)</Label>
+                  <Input inputMode="decimal" placeholder="0,00" value={baixaForm.taxas} onChange={e => setBaixaForm({ ...baixaForm, taxas: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-md bg-muted/40 px-4 py-2.5">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                  Valor Total {isPagar ? "Pago" : "Recebido"}
+                </span>
+                <span className="text-lg font-bold font-mono text-foreground">{formatCurrency(baixaTotals.totalPago)}</span>
+              </div>
+            </div>
+
+            {/* Impostos retidos */}
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+              <p className="text-[11px] font-semibold text-destructive uppercase tracking-widest">Impostos Retidos</p>
+              <div className="grid grid-cols-6 gap-3">
+                {(["pis", "cofins", "csll", "iss", "ir", "inss"] as const).map(k => (
+                  <div key={k}>
+                    <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block uppercase">{k}</Label>
+                    <Input inputMode="decimal" placeholder="0,00" value={baixaForm[k]} onChange={e => setBaixaForm({ ...baixaForm, [k]: applyMoneyMask(e.target.value) })} className="h-10 text-sm text-right font-mono" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Resumo */}
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 grid grid-cols-6 gap-3 text-center">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Previsão Original</p>
+                <p className="text-xs font-semibold text-foreground">{mov?.data_vencimento ? formatDate(mov.data_vencimento) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Valor Original</p>
+                <p className="text-xs font-semibold text-foreground font-mono">{formatCurrency(baixaTotals.valorOriginal)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Descontos</p>
+                <p className="text-xs font-semibold text-success font-mono">- {formatCurrency(baixaTotals.desconto)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Juros/Multas/Taxas</p>
+                <p className="text-xs font-semibold text-warning font-mono">+ {formatCurrency(baixaTotals.juros + baixaTotals.multa + baixaTotals.taxas)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Impostos Retidos</p>
+                <p className="text-xs font-semibold text-destructive font-mono">- {formatCurrency(baixaTotals.impostos)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Diferença</p>
+                <p className={cn("text-xs font-semibold font-mono", baixaTotals.diferenca === 0 ? "text-muted-foreground" : baixaTotals.diferenca > 0 ? "text-success" : "text-destructive")}>
+                  {baixaTotals.diferenca >= 0 ? "+ " : "- "}{formatCurrency(Math.abs(baixaTotals.diferenca))}
+                </p>
+              </div>
+            </div>
+
+            {/* Observações */}
             <div>
-              <Label className="flex items-center gap-1">
-                Valor {isPagar ? "Pago" : "Recebido"} (R$)
-                {aiFields.has("valor_realizado") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}
-              </Label>
-              <Input
-                inputMode="decimal"
-                value={baixaForm.valor_realizado}
-                onChange={(e) => setBaixaForm({ ...baixaForm, valor_realizado: applyMoneyMask(e.target.value) })}
-                placeholder="0,00"
-                className="text-right font-mono"
+              <Label className="text-[12px] font-medium text-foreground mb-1.5 block">Observações deste {isPagar ? "Pagamento" : "Recebimento"}</Label>
+              <Textarea
+                placeholder={`Observações deste ${isPagar ? "pagamento" : "recebimento"}...`}
+                value={baixaForm.observacoes_pagamento}
+                onChange={e => setBaixaForm({ ...baixaForm, observacoes_pagamento: e.target.value })}
+                className="min-h-[72px] text-sm resize-none"
               />
             </div>
-            <div>
-              <Label className="flex items-center gap-1">
-                Data do {isPagar ? "Pagamento" : "Recebimento"}
-                {aiFields.has("data_pagamento") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}
-              </Label>
-              <Input
-                type="date"
-                value={baixaForm.data_pagamento}
-                onChange={(e) => setBaixaForm({ ...baixaForm, data_pagamento: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label className="flex items-center gap-1">
-                Conta Bancária
-                {aiFields.has("conta_bancaria_id") && <Sparkles className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />}
-              </Label>
-              <Select
-                value={baixaForm.conta_bancaria_id}
-                onValueChange={(v) => setBaixaForm({ ...baixaForm, conta_bancaria_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {contas.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Forma de {isPagar ? "Pagamento" : "Recebimento"}</Label>
-              <Select
-                value={baixaForm.meio_pagamento_id}
-                onValueChange={(v) => setBaixaForm({ ...baixaForm, meio_pagamento_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {meios.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2 pt-2">
+
+            {/* Footer */}
+            <div className="flex items-center gap-3 pt-2 border-t border-border">
               {mov?.status === "pago" && (
                 <Button
-                  type="button"
                   variant="outline"
-                  onClick={async () => {
-                    setOpenBaixa(false);
-                    await handleReabrir();
-                  }}
-                  className="gap-1.5 border-warning text-warning hover:bg-warning hover:text-white"
+                  onClick={async () => { setOpenBaixa(false); await handleReabrir(); }}
+                  className="px-5 h-10 border-warning text-warning hover:bg-warning hover:text-white gap-1.5"
                 >
                   <RotateCcw className="h-4 w-4" />
                   Reabrir conta
                 </Button>
               )}
-              <Button onClick={handleBaixa} className="flex-1">
-                Confirmar
-              </Button>
+              <div className="ml-auto flex gap-3">
+                <Button variant="outline" onClick={() => setOpenBaixa(false)} className="px-5 h-10">Cancelar</Button>
+                <Button onClick={handleBaixa} className="px-5 h-10 bg-success text-success-foreground hover:bg-success/90">
+                  {mov?.status === "pago"
+                    ? "Salvar Alterações"
+                    : `Confirmar ${isPagar ? "Pagamento" : "Recebimento"}`}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
