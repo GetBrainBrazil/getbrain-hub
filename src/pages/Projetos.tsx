@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   Table as TableIcon,
   MoreVertical,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +78,7 @@ export default function Projetos() {
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [rows, setRows] = useState<ProjectRow[]>([]);
   const [companies, setCompanies] = useState<{ id: string; label: string }[]>([]);
-  const [kpis, setKpis] = useState({ ativos: 0, manut: 0, contratado: 0, mrr: 0 });
+  const [kpis, setKpis] = useState({ ativos: 0, manut: 0, contratado: 0, mrr: 0, blockingDeps: 0 });
   const [loading, setLoading] = useState(true);
 
   // filters (persisted)
@@ -180,7 +181,23 @@ export default function Projetos() {
         s + Number(c.monthly_fee) * (1 - Number(c.monthly_fee_discount_percent || 0) / 100),
       0,
     );
-    setKpis({ ativos, manut, contratado, mrr });
+    const { data: blockDeps } = await supabase
+      .from("project_dependencies")
+      .select("project_id, status, is_blocking")
+      .is("deleted_at", null)
+      .or("is_blocking.eq.true,status.eq.bloqueante");
+    const activeProjIds = new Set(
+      projectRows
+        .filter((r) => !["cancelado", "arquivado", "entregue"].includes(r.status))
+        .map((r) => r.id),
+    );
+    const blockingDeps = (blockDeps || []).filter(
+      (d) =>
+        activeProjIds.has(d.project_id) &&
+        !["resolvido", "cancelado", "recebido"].includes(d.status),
+    ).length;
+
+    setKpis({ ativos, manut, contratado, mrr, blockingDeps });
     setLoading(false);
   }
 
@@ -266,7 +283,7 @@ export default function Projetos() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <KPICard title="Projetos Ativos" value={kpis.ativos} icon={PlayCircle} isCurrency={false} />
         <KPICard title="Em Manutenção" value={kpis.manut} icon={Wrench} variant="success" isCurrency={false} />
         <KPICard title="Valor Contratado Total" value={kpis.contratado} icon={DollarSign} />
@@ -276,6 +293,13 @@ export default function Projetos() {
           icon={Repeat}
           variant="success"
           change={0}
+        />
+        <KPICard
+          title="Dependências Bloqueantes"
+          value={kpis.blockingDeps}
+          icon={AlertTriangle}
+          variant={kpis.blockingDeps > 0 ? "danger" : "default"}
+          isCurrency={false}
         />
       </div>
 

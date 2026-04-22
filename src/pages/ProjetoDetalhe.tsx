@@ -64,11 +64,27 @@ import {
   Copy,
   Save,
   X,
+  Target,
+  Flag,
+  ShieldAlert,
+  AlertTriangle,
+  Compass,
 } from "lucide-react";
 import { AlocarAtorDialog } from "@/components/projetos/AlocarAtorDialog";
 import { NovoContratoDialog } from "@/components/projetos/NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { AbaEscopo } from "@/components/projetos/AbaEscopo";
+import { AbaMarcos } from "@/components/projetos/AbaMarcos";
+import { AbaRiscos } from "@/components/projetos/AbaRiscos";
+import { AbaDependencias } from "@/components/projetos/AbaDependencias";
+import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
+import {
+  dependencyStatusLabel,
+  milestoneStatusLabel,
+  integrationStatusLabel,
+  integrationStatusClass,
+} from "@/lib/escopo-helpers";
 
 // -----------------------------------------------------------
 // Tipagem leve
@@ -89,6 +105,13 @@ type Project = {
   acceptance_criteria: string | null;
   notes: string | null;
   token_budget_brl: number | null;
+  business_context: string | null;
+  scope_in: string | null;
+  scope_out: string | null;
+  premises: string | null;
+  deliverables: string | null;
+  technical_stack: string | null;
+  identified_risks: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -350,6 +373,9 @@ export default function ProjetoDetalhe() {
   const [contracts, setContracts] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [logActors, setLogActors] = useState<Record<string, string>>({});
+  const [dependencies, setDependencies] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [integrations, setIntegrations] = useState<any[]>([]);
   const [allocOpen, setAllocOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
 
@@ -432,6 +458,30 @@ export default function ProjetoDetalhe() {
       .is("deleted_at", null)
       .order("start_date", { ascending: false });
     setContracts(mc || []);
+
+    const [{ data: deps }, { data: ms }, { data: ints }] = await Promise.all([
+      supabase
+        .from("project_dependencies")
+        .select("id, title, status, is_blocking, dependency_type, expected_at, responsible_actor_id")
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .order("expected_at", { ascending: true, nullsFirst: false }),
+      supabase
+        .from("project_milestones")
+        .select("id, title, status, target_date, actual_date, sequence_order, triggers_billing, billing_amount")
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .order("sequence_order", { ascending: true }),
+      supabase
+        .from("project_integrations")
+        .select("id, name, provider, status, estimated_cost_monthly_brl")
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .order("name"),
+    ]);
+    setDependencies(deps || []);
+    setMilestones(ms || []);
+    setIntegrations(ints || []);
 
     const { data: al } = await supabase
       .from("audit_logs")
@@ -569,6 +619,33 @@ export default function ProjetoDetalhe() {
   }
 
   // ------- Cálculos derivados ---------
+  const blockingDeps = useMemo(
+    () =>
+      dependencies.filter(
+        (d) =>
+          (d.is_blocking || d.status === "bloqueante") &&
+          !["resolvido", "cancelado", "recebido"].includes(d.status),
+      ),
+    [dependencies],
+  );
+  const nextMilestone = useMemo(() => {
+    const open = milestones
+      .filter((m) => !["concluido", "cancelado"].includes(m.status))
+      .sort((a, b) => {
+        const da = a.target_date ? new Date(a.target_date).getTime() : Infinity;
+        const db = b.target_date ? new Date(b.target_date).getTime() : Infinity;
+        return da - db;
+      });
+    return open[0] ?? null;
+  }, [milestones]);
+  const activeIntegrations = useMemo(
+    () => integrations.filter((i) => i.status === "ativa"),
+    [integrations],
+  );
+  const erroredIntegrations = useMemo(
+    () => integrations.filter((i) => i.status === "com_erro"),
+    [integrations],
+  );
   const hasActiveContract = contracts.some((c) => c.status === "active");
   const activeContract = contracts.find((c) => c.status === "active");
   const mrr = activeContract
@@ -650,6 +727,41 @@ export default function ProjetoDetalhe() {
             <ChevronRight className="h-3 w-3" />
             <span className="font-mono text-foreground/80">{project.code}</span>
           </button>
+
+          {/* Banner de integrações */}
+          {(activeIntegrations.length > 0 || erroredIntegrations.length > 0) && (
+            <div
+              className={cn(
+                "flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border px-3 py-2 text-xs",
+                erroredIntegrations.length > 0
+                  ? "border-destructive/40 bg-destructive/5"
+                  : "border-success/30 bg-success/5",
+              )}
+            >
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Plug className={cn(
+                  "h-3.5 w-3.5",
+                  erroredIntegrations.length > 0 ? "text-destructive" : "text-success",
+                )} />
+                {erroredIntegrations.length > 0
+                  ? `${erroredIntegrations.length} integração(ões) com erro`
+                  : `${activeIntegrations.length} integração(ões) ativa(s)`}
+              </span>
+              <span className="flex flex-wrap gap-1.5">
+                {[...erroredIntegrations, ...activeIntegrations].slice(0, 6).map((i) => (
+                  <span
+                    key={i.id}
+                    className={cn(
+                      "rounded border px-1.5 py-0.5 font-medium",
+                      integrationStatusClass(i.status as any),
+                    )}
+                  >
+                    {i.name}
+                  </span>
+                ))}
+              </span>
+            </div>
+          )}
 
           {/* Title row */}
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -828,17 +940,31 @@ export default function ProjetoDetalhe() {
             <Tabs defaultValue="overview" className="space-y-4">
               <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
                 {[
-                  ["overview", "Visão Geral"],
-                  ["actors", "Atores"],
-                  ["maintenance", "Manutenção"],
-                  ["activity", "Atividade"],
-                ].map(([v, label]) => (
+                  ["overview", "Visão Geral", null],
+                  ["scope", "Escopo", null],
+                  ["milestones", "Marcos", milestones.length || null],
+                  ["risks", "Riscos", null],
+                  ["team", "Time & Contratos", allocs.length || null],
+                  ["dependencies", "Dependências", blockingDeps.length || null],
+                  ["integrations", "Integrações", integrations.length || null],
+                  ["activity", "Atividade", null],
+                ].map(([v, label, count]) => (
                   <TabsTrigger
-                    key={v}
-                    value={v}
+                    key={v as string}
+                    value={v as string}
                     className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
                   >
                     {label}
+                    {count != null && (
+                      <span className={cn(
+                        "ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-mono",
+                        v === "dependencies" && blockingDeps.length > 0
+                          ? "bg-destructive/20 text-destructive"
+                          : "bg-muted text-muted-foreground",
+                      )}>
+                        {count}
+                      </span>
+                    )}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -1310,8 +1436,36 @@ export default function ProjetoDetalhe() {
                 </CardBlock>
               </TabsContent>
 
-              {/* ----- ACTORS ----- */}
-              <TabsContent value="actors">
+              {/* ----- ESCOPO ----- */}
+              <TabsContent value="scope">
+                <AbaEscopo
+                  projectId={projectId!}
+                  initialValues={{
+                    business_context: project.business_context,
+                    scope_in: project.scope_in,
+                    scope_out: project.scope_out,
+                    premises: project.premises,
+                    deliverables: project.deliverables,
+                    technical_stack: project.technical_stack,
+                    identified_risks: project.identified_risks,
+                    acceptance_criteria: project.acceptance_criteria,
+                  }}
+                  onSaved={load}
+                />
+              </TabsContent>
+
+              {/* ----- MARCOS ----- */}
+              <TabsContent value="milestones">
+                <AbaMarcos projectId={projectId!} />
+              </TabsContent>
+
+              {/* ----- RISCOS ----- */}
+              <TabsContent value="risks">
+                <AbaRiscos projectId={projectId!} />
+              </TabsContent>
+
+              {/* ----- TIME & CONTRATOS ----- */}
+              <TabsContent value="team" className="space-y-4">
                 <CardBlock
                   title="Atores Alocados"
                   icon={Users}
@@ -1371,10 +1525,7 @@ export default function ProjetoDetalhe() {
                     </div>
                   )}
                 </CardBlock>
-              </TabsContent>
 
-              {/* ----- MAINTENANCE ----- */}
-              <TabsContent value="maintenance">
                 <CardBlock
                   title="Contratos de Manutenção"
                   icon={Wrench}
@@ -1458,6 +1609,19 @@ export default function ProjetoDetalhe() {
                     </div>
                   )}
                 </CardBlock>
+              </TabsContent>
+
+              {/* ----- DEPENDÊNCIAS ----- */}
+              <TabsContent value="dependencies">
+                <AbaDependencias
+                  projectId={projectId!}
+                  onProjectStatusChange={() => load()}
+                />
+              </TabsContent>
+
+              {/* ----- INTEGRAÇÕES ----- */}
+              <TabsContent value="integrations">
+                <AbaIntegracoes projectId={projectId!} />
               </TabsContent>
 
               {/* ----- ACTIVITY ----- */}
@@ -1621,8 +1785,103 @@ export default function ProjetoDetalhe() {
                 )}
               </SidebarSection>
 
+              <SidebarSection title="Dependências Bloqueantes">
+                {blockingDeps.length === 0 ? (
+                  <p className="py-1 text-xs text-muted-foreground">Nenhuma bloqueante</p>
+                ) : (
+                  <div className="space-y-2 py-1">
+                    {blockingDeps.slice(0, 4).map((d) => {
+                      const overdue =
+                        d.expected_at && new Date(d.expected_at) < new Date();
+                      return (
+                        <div
+                          key={d.id}
+                          className="rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5"
+                        >
+                          <div className="flex items-start gap-1.5">
+                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-destructive" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium text-foreground">
+                                {d.title}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {dependencyStatusLabel(d.status)}
+                                {d.expected_at && (
+                                  <span className={cn("ml-1", overdue && "text-destructive")}>
+                                    · {overdue ? "atrasada" : "prev."} {formatDate(d.expected_at)}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {blockingDeps.length > 4 && (
+                      <p className="text-[10px] text-muted-foreground">
+                        +{blockingDeps.length - 4} adicionais
+                      </p>
+                    )}
+                  </div>
+                )}
+              </SidebarSection>
+
+              <SidebarSection title="Próximo Marco">
+                {!nextMilestone ? (
+                  <p className="py-1 text-xs text-muted-foreground">Sem marcos abertos</p>
+                ) : (
+                  <div className="rounded-md border border-border/60 bg-card/40 px-2 py-2">
+                    <div className="flex items-start gap-1.5">
+                      <Flag className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-foreground">
+                          {nextMilestone.title}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {milestoneStatusLabel(nextMilestone.status)}
+                          {nextMilestone.target_date && (
+                            <> · {formatDate(nextMilestone.target_date)}</>
+                          )}
+                        </p>
+                        {nextMilestone.triggers_billing && nextMilestone.billing_amount && (
+                          <p className="mt-0.5 font-mono text-[10px] text-success">
+                            {formatCurrency(Number(nextMilestone.billing_amount))} ao concluir
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </SidebarSection>
+
               <SidebarSection title="Integrações">
-                <p className="py-1 text-xs text-muted-foreground">—</p>
+                {integrations.length === 0 ? (
+                  <p className="py-1 text-xs text-muted-foreground">Nenhuma cadastrada</p>
+                ) : (
+                  <div className="space-y-1.5 py-1">
+                    {integrations.slice(0, 5).map((i) => (
+                      <div key={i.id} className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <Plug className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate text-xs text-foreground">{i.name}</span>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide",
+                            integrationStatusClass(i.status as any),
+                          )}
+                        >
+                          {integrationStatusLabel(i.status as any)}
+                        </span>
+                      </div>
+                    ))}
+                    {integrations.length > 5 && (
+                      <p className="text-[10px] text-muted-foreground">
+                        +{integrations.length - 5} adicionais
+                      </p>
+                    )}
+                  </div>
+                )}
               </SidebarSection>
 
               <SidebarSection title="Atividade Recente" last>
