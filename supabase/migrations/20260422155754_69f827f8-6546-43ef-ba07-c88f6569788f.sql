@@ -1,0 +1,1 @@
+ALTER TABLE public.movimentacoes DROP CONSTRAINT IF EXISTS movimentacoes_projeto_id_fkey;

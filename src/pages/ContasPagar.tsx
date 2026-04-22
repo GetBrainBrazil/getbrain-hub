@@ -49,7 +49,7 @@ export default function ContasPagar() {
   const [fornecedorSearch, setFornecedorSearch] = useState("");
 
   const [form, setForm] = useState({
-    descricao: "", fornecedor_id: "", conta_bancaria_id: "",
+    descricao: "", fornecedor_id: "", conta_bancaria_id: "", projeto_id: "",
     valor_previsto: "", data_competencia: "", data_vencimento: "",
     recorrente: false, frequencia_recorrencia: "mensal", observacoes: "",
   });
@@ -64,11 +64,11 @@ export default function ContasPagar() {
   async function loadAll() {
     await supabase.rpc("update_status_atrasado" as any);
     const [r1, r2, r3, r4, r5, r6] = await Promise.all([
-      supabase.from("movimentacoes").select("*, fornecedores(nome), projetos(nome)").eq("tipo", "despesa").order("data_vencimento", { ascending: false }),
+      supabase.from("movimentacoes").select("*, fornecedores(nome)").eq("tipo", "despesa").order("data_vencimento", { ascending: false }),
       supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
       supabase.from("categorias").select("*").eq("ativo", true),
       supabase.from("contas_bancarias").select("*").eq("ativo", true),
-      supabase.from("projetos").select("*"),
+      supabase.from("projects").select("id, name, code").is("deleted_at", null).order("code"),
       supabase.from("meios_pagamento").select("*").eq("ativo", true),
     ]);
     setMovs(r1.data || []);
@@ -134,6 +134,7 @@ export default function ContasPagar() {
       descricao: form.descricao,
       fornecedor_id: form.fornecedor_id || null,
       conta_bancaria_id: form.conta_bancaria_id || null,
+      projeto_id: form.projeto_id || null,
       valor_previsto: parseFloat(form.valor_previsto),
       data_competencia: form.data_competencia,
       data_vencimento: form.data_vencimento,
@@ -173,7 +174,7 @@ export default function ContasPagar() {
 
     toast.success(form.recorrente ? "Conta recorrente criada (120 meses)!" : "Conta a pagar criada!");
     setOpenNew(false);
-    setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal", observacoes: "" });
+    setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", projeto_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal", observacoes: "" });
     setFornecedorSearch("");
     loadAll();
   }
@@ -353,12 +354,24 @@ export default function ContasPagar() {
               </div>
             </div>
 
-            <div className="mt-4 max-w-[240px]">
-              <Label className="text-[13px] font-semibold text-foreground mb-1 block">Conta Bancária</Label>
-              <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
-                <SelectTrigger className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-                <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-[13px] font-semibold text-foreground mb-1 block">Conta Bancária</Label>
+                <Select value={form.conta_bancaria_id} onValueChange={v => setForm({...form, conta_bancaria_id: v})}>
+                  <SelectTrigger className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                  <SelectContent>{contas.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[13px] font-semibold text-foreground mb-1 block">Projeto</Label>
+                <Select value={form.projeto_id || "none"} onValueChange={v => setForm({...form, projeto_id: v === "none" ? "" : v})}>
+                  <SelectTrigger className="h-10 text-sm bg-[#FDF8F4] dark:bg-muted border-border/50"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Nenhum —</SelectItem>
+                    {projetos.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.code} — {p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* OBSERVAÇÕES INTERNAS */}

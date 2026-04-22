@@ -1164,7 +1164,14 @@ export type Database = {
             foreignKeyName: "movimentacoes_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
-            referencedRelation: "projetos"
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
