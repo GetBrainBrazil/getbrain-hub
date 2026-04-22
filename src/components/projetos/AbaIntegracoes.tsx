@@ -37,6 +37,7 @@ import {
   integrationStatusLabel,
 } from "@/lib/escopo-helpers";
 import { GETBRAIN_ORG_ID } from "@/lib/projetos-helpers";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface Props {
   projectId: string;
@@ -83,7 +84,13 @@ export function AbaIntegracoes({ projectId }: Props) {
   }
 
   async function softDelete(id: string) {
-    if (!confirm("Remover esta integração?")) return;
+    const ok = await confirmDialog({
+      title: "Remover integração?",
+      description: "Esta ação enviará a integração para a lixeira (soft delete).",
+      confirmLabel: "Remover",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("project_integrations")
       .update({ deleted_at: new Date().toISOString() })

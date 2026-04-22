@@ -67,6 +67,7 @@ import {
 } from "lucide-react";
 import { AlocarAtorDialog } from "@/components/projetos/AlocarAtorDialog";
 import { NovoContratoDialog } from "@/components/projetos/NovoContratoDialog";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
 // -----------------------------------------------------------
@@ -507,12 +508,13 @@ export default function ProjetoDetalhe() {
 
   async function handleStatusChange(newStatus: ProjectStatus) {
     if (!project || !projectId || newStatus === project.status) return;
-    if (
-      !confirm(
-        `Mudar status para "${getStatusLabel(newStatus)}"?`,
-      )
-    )
-      return;
+    const ok = await confirmDialog({
+      title: "Mudar status do projeto?",
+      description: `Novo status: "${getStatusLabel(newStatus)}".`,
+      confirmLabel: "Mudar",
+      variant: "default",
+    });
+    if (!ok) return;
     const before = project.status;
     const { error } = await supabase.from("projects").update({ status: newStatus }).eq("id", projectId);
     if (error) {
@@ -552,7 +554,13 @@ export default function ProjetoDetalhe() {
 
   async function archiveProject() {
     if (!project) return;
-    if (!confirm("Arquivar este projeto?")) return;
+    const ok = await confirmDialog({
+      title: "Arquivar este projeto?",
+      description: "O projeto será movido para o status arquivado e sairá da listagem padrão.",
+      confirmLabel: "Arquivar",
+      variant: "destructive",
+    });
+    if (!ok) return;
     await patchProject(
       { status: "arquivado" as ProjectStatus } as any,
       { status: { before: project.status, after: "arquivado" } },

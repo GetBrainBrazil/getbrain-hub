@@ -13,6 +13,7 @@ import { getHierarchicalOptions, type CategoriaRaw } from "@/lib/categorias-hier
 import {
   Check, ChevronLeft, ChevronRight, FileUp, Loader2, Sparkles, Camera, X,
 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface Props {
   open: boolean;
@@ -315,9 +316,13 @@ export function RegistrarComprovanteWizard({ open, onOpenChange, contas }: Props
 
       let conciliarMatch = false;
       if (match) {
-        conciliarMatch = window.confirm(
-          `Encontramos um lançamento correspondente: ${match.descricao} de ${formatCurrency(match.valor_realizado ?? match.valor_previsto ?? 0)}.\n\nDeseja conciliar automaticamente?`
-        );
+        conciliarMatch = await confirmDialog({
+          title: "Conciliar com lançamento existente?",
+          description: `Encontramos um lançamento correspondente: "${match.descricao}" de ${formatCurrency(match.valor_realizado ?? match.valor_previsto ?? 0)}. Deseja conciliar automaticamente?`,
+          confirmLabel: "Conciliar",
+          cancelLabel: "Criar novo",
+          variant: "default",
+        });
       }
 
       const userId = (await supabase.auth.getUser()).data.user?.id;

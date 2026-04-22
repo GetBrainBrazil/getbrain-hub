@@ -63,6 +63,7 @@ import {
   milestoneStatusClass,
   milestoneStatusLabel,
 } from "@/lib/escopo-helpers";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { GETBRAIN_ORG_ID } from "@/lib/projetos-helpers";
 
 interface Props {
@@ -103,7 +104,13 @@ export function AbaMarcos({ projectId }: Props) {
   }
 
   async function softDelete(id: string) {
-    if (!confirm("Remover este marco?")) return;
+    const ok = await confirmDialog({
+      title: "Remover marco?",
+      description: "Esta ação enviará o marco para a lixeira (soft delete).",
+      confirmLabel: "Remover",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("project_milestones")
       .update({ deleted_at: new Date().toISOString() })

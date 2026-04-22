@@ -48,6 +48,7 @@ import {
 } from "@/lib/projetos-helpers";
 import { StatusBadge, TypeBadge } from "@/components/projetos/ProjetoBadges";
 import { ActorAvatar, ActorAvatarStack } from "@/components/projetos/ActorAvatar";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { NovoProjetoDialog } from "@/components/projetos/NovoProjetoDialog";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { toast } from "sonner";
@@ -222,7 +223,13 @@ export default function Projetos() {
   }
 
   async function archiveProject(id: string) {
-    if (!confirm("Arquivar este projeto?")) return;
+    const ok = await confirmDialog({
+      title: "Arquivar este projeto?",
+      description: "O projeto será movido para o status arquivado e sairá da listagem padrão.",
+      confirmLabel: "Arquivar",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("projects")
       .update({ status: "arquivado" as any })
