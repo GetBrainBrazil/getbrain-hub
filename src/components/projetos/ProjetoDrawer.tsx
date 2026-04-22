@@ -475,6 +475,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
           projectId={projectId!}
           onCreated={load}
         />
+        {confirmDialogEl}
       </SheetContent>
     </Sheet>
   );

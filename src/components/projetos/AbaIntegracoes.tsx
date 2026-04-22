@@ -230,6 +230,7 @@ export function AbaIntegracoes({ projectId }: Props) {
         editing={editing}
         onSaved={load}
       />
+      {confirmDialogEl}
     </div>
   );
 }

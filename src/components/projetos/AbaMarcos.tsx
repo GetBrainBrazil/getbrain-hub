@@ -479,6 +479,7 @@ export function AbaMarcos({ projectId }: Props) {
         nextOrder={Math.max(0, ...items.map((m) => m.sequence_order)) + 1}
         onSaved={load}
       />
+      {confirmDialogEl}
     </div>
   );
 }

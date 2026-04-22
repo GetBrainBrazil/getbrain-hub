@@ -570,6 +570,7 @@ export default function Projetos() {
           openDrawer(id);
         }}
       />
+      {confirmDialogEl}
     </div>
   );
 }

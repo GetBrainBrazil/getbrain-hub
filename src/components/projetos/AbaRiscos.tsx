@@ -351,6 +351,7 @@ export function AbaRiscos({ projectId }: Props) {
         editing={editing}
         onSaved={load}
       />
+      {confirmDialogEl}
     </div>
   );
 }

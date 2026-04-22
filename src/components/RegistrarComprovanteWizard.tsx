@@ -670,6 +670,7 @@ export function RegistrarComprovanteWizard({ open, onOpenChange, contas }: Props
           </div>
         )}
       </DialogContent>
+      {confirmDialogEl}
     </Dialog>
   );
 }

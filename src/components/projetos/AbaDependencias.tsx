@@ -393,6 +393,7 @@ export function AbaDependencias({ projectId, onProjectStatusChange }: Props) {
           }
         }}
       />
+      {confirmDialogEl}
     </div>
   );
 }
