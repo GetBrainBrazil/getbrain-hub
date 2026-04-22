@@ -373,6 +373,9 @@ export default function ProjetoDetalhe() {
   const [contracts, setContracts] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [logActors, setLogActors] = useState<Record<string, string>>({});
+  const [dependencies, setDependencies] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [integrations, setIntegrations] = useState<any[]>([]);
   const [allocOpen, setAllocOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
 
