@@ -1,0 +1,1 @@
+ALTER TABLE public.movimentacoes ADD COLUMN IF NOT EXISTS recorrencia_ativa boolean NOT NULL DEFAULT true;
