@@ -171,10 +171,54 @@ export default function MovimentacaoDetalhe() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  // ── Rascunho persistente (apenas no modo create) ─────────────────
+  // Salva o que o usuário está preenchendo em sessionStorage para que
+  // recargas acidentais (HMR, refresh do token, troca de aba) não percam dados.
+  const draftKey = isCreate ? `mov-draft::${tipoParam}` : null;
+  const draftLoadedRef = useRef(false);
+
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, tipoParam]);
+
+  // Restaura rascunho após load() inicial (apenas create)
+  useEffect(() => {
+    if (!draftKey || loading || draftLoadedRef.current) return;
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.form) setForm((prev) => ({ ...prev, ...parsed.form }));
+        if (parsed?.tipoLocal) setTipoLocal(parsed.tipoLocal);
+        if (typeof parsed?.recorrente === "boolean") setRecorrente(parsed.recorrente);
+        if (parsed?.recIntervalo) setRecIntervalo(parsed.recIntervalo);
+        if (parsed?.recPeriodo) setRecPeriodo(parsed.recPeriodo);
+        if (typeof parsed?.recAte === "string") setRecAte(parsed.recAte);
+      }
+    } catch { /* ignore */ }
+    draftLoadedRef.current = true;
+  }, [draftKey, loading]);
+
+  // Salva rascunho a cada mudança (debounced)
+  useEffect(() => {
+    if (!draftKey || !draftLoadedRef.current) return;
+    const t = setTimeout(() => {
+      try {
+        sessionStorage.setItem(
+          draftKey,
+          JSON.stringify({ form, tipoLocal, recorrente, recIntervalo, recPeriodo, recAte })
+        );
+      } catch { /* ignore */ }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [draftKey, form, tipoLocal, recorrente, recIntervalo, recPeriodo, recAte]);
+
+  function clearDraft() {
+    if (draftKey) {
+      try { sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
+    }
+  }
 
   async function loadReferences() {
     const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rMeios, rCentros, rProjetos] = await Promise.all([
