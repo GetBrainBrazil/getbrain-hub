@@ -78,7 +78,7 @@ export default function Projetos() {
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [rows, setRows] = useState<ProjectRow[]>([]);
   const [companies, setCompanies] = useState<{ id: string; label: string }[]>([]);
-  const [kpis, setKpis] = useState({ ativos: 0, manut: 0, contratado: 0, mrr: 0 });
+  const [kpis, setKpis] = useState({ ativos: 0, manut: 0, contratado: 0, mrr: 0, blockingDeps: 0 });
   const [loading, setLoading] = useState(true);
 
   // filters (persisted)
