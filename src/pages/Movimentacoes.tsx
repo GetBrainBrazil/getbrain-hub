@@ -637,30 +637,93 @@ export default function Movimentacoes() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-3 flex-wrap items-center">
+          <div className="relative flex-1 min-w-[220px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por descrição, vinculado, categoria, projeto..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <PeriodFilter preset={periodPreset as PeriodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
+          <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
+            Exibir Saldos Parciais
+            <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
+          </label>
+          <div className="flex items-center gap-1.5">
+            {statusButtons.map(s => (
+              <Button
+                key={s.key}
+                size="sm"
+                variant={statusFilter === s.key ? "default" : "outline"}
+                onClick={() => setStatusFilter(s.key)}
+                className="text-xs"
+              >
+                {s.label}
+              </Button>
+            ))}
+            <HelpTooltip content="Filtre as movimentações por status: Pendentes aguardam pagamento, Pagas já foram liquidadas, Atrasadas passaram do vencimento sem pagamento." className="ml-1" />
+          </div>
         </div>
-        <PeriodFilter preset={periodPreset as PeriodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
-        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-          <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
-          Exibir Saldos Parciais
-          <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
-        </label>
-        <div className="flex items-center gap-1.5">
-          {statusButtons.map(s => (
-            <Button
-              key={s.key}
-              size="sm"
-              variant={statusFilter === s.key ? "default" : "outline"}
-              onClick={() => setStatusFilter(s.key)}
-              className="text-xs"
-            >
-              {s.label}
+
+        <div className="flex gap-2 flex-wrap items-center">
+          <Select value={vinculadoFilter || "__all__"} onValueChange={(v) => setVinculadoFilter(v === "__all__" ? "" : v)}>
+            <SelectTrigger className="h-9 w-[200px] text-xs">
+              <SelectValue placeholder={isPagar ? "Vinculado (todos)" : "Cliente (todos)"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">{isPagar ? "Vinculado (todos)" : "Cliente (todos)"}</SelectItem>
+              {vinculadoOptions.map(o => (
+                <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={categoriaFilter || "__all__"} onValueChange={(v) => setCategoriaFilter(v === "__all__" ? "" : v)}>
+            <SelectTrigger className="h-9 w-[200px] text-xs">
+              <SelectValue placeholder="Categoria (todas)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Categoria (todas)</SelectItem>
+              {categoriaOptions.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={projetoFilter || "__all__"} onValueChange={(v) => setProjetoFilter(v === "__all__" ? "" : v)}>
+            <SelectTrigger className="h-9 w-[200px] text-xs">
+              <SelectValue placeholder="Projeto (todos)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Projeto (todos)</SelectItem>
+              {projetos.map((p: any) => (
+                <SelectItem key={p.id} value={p.id}>{p.nome || p.name || p.code}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={contaFilter || "__all__"} onValueChange={(v) => setContaFilter(v === "__all__" ? "" : v)}>
+            <SelectTrigger className="h-9 w-[200px] text-xs">
+              <SelectValue placeholder="Conta bancária (todas)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Conta bancária (todas)</SelectItem>
+              {contas.map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilters && (
+            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="text-xs h-9 gap-1">
+              <X className="h-3.5 w-3.5" /> Limpar filtros
             </Button>
-          ))}
-          <HelpTooltip content="Filtre as movimentações por status: Pendentes aguardam pagamento, Pagas já foram liquidadas, Atrasadas passaram do vencimento sem pagamento." className="ml-1" />
+          )}
         </div>
       </div>
 
