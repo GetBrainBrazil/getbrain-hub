@@ -131,7 +131,7 @@ export default function FinanceiroVisaoGeral() {
               icon={TrendingUp}
               variant="success"
               comparePrev={hasPeriod ? k.mes_anterior_receita : undefined}
-              subtitle="Por competência"
+              subtitle={`Prevista: ${formatCurrency(k.mes_receita_prevista)}`}
             />
             <KPIBlock
               title="Despesa realizada"
@@ -139,7 +139,7 @@ export default function FinanceiroVisaoGeral() {
               icon={TrendingDown}
               variant="danger"
               comparePrev={hasPeriod ? k.mes_anterior_despesa : undefined}
-              subtitle="Por competência"
+              subtitle={`Prevista: ${formatCurrency(k.mes_despesa_prevista)}`}
             />
             <KPIBlock
               title="Resultado"
@@ -155,7 +155,11 @@ export default function FinanceiroVisaoGeral() {
               icon={Percent}
               variant={k.mes_margem_percent >= 0 ? "success" : "danger"}
               isCurrency={false}
-              subtitle={`${k.mes_margem_percent.toFixed(1)}%`}
+              subtitle={
+                k.mes_receita > 0
+                  ? `${k.mes_margem_percent.toFixed(1)}% sobre receita realizada`
+                  : "Sem receita realizada no período"
+              }
             />
           </div>
         )}
