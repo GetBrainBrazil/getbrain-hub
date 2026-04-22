@@ -398,13 +398,19 @@ export default function Movimentacoes() {
     ];
   }, [clientes, colaboradores, fornecedores, isPagar]);
 
-  const categoriaOptions = useMemo<FilterOption[]>(() => ([
-    { value: "__none__", label: "Sem categoria", keywords: "sem" },
-    ...categorias
-      .filter((c) => !c.tipo || c.tipo === tipo)
-      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))
-      .map((c) => ({ value: c.id, label: c.nome })),
-  ]), [categorias, tipo]);
+  const categoriaOptions = useMemo<FilterOption[]>(() => {
+    // O banco grava o tipo como "despesas"/"receitas" (plural) ou "despesa"/"receita" (singular).
+    // Aceitamos ambas as formas e também categorias sem tipo definido.
+    const tipoSingular = tipo;
+    const tipoPlural = `${tipo}s`;
+    return [
+      { value: "__none__", label: "Sem categoria", keywords: "sem" },
+      ...categorias
+        .filter((c) => !c.tipo || c.tipo === tipoSingular || c.tipo === tipoPlural)
+        .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))
+        .map((c) => ({ value: c.id, label: c.nome })),
+    ];
+  }, [categorias, tipo]);
 
   const projetoOptions = useMemo<FilterOption[]>(() => ([
     { value: "__none__", label: "Sem projeto", keywords: "sem" },
