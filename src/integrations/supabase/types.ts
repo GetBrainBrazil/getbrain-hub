@@ -979,6 +979,7 @@ export type Database = {
           id: string
           inss: number | null
           ir: number | null
+          is_automatic: boolean
           iss: number | null
           juros: number | null
           meio_pagamento_id: string | null
@@ -990,6 +991,9 @@ export type Database = {
           pis: number | null
           projeto_id: string | null
           recorrente: boolean | null
+          source_entity_id: string | null
+          source_entity_type: string | null
+          source_module: string | null
           status: string | null
           tags: string[] | null
           taxas_adm: number | null
@@ -1020,6 +1024,7 @@ export type Database = {
           id?: string
           inss?: number | null
           ir?: number | null
+          is_automatic?: boolean
           iss?: number | null
           juros?: number | null
           meio_pagamento_id?: string | null
@@ -1031,6 +1036,9 @@ export type Database = {
           pis?: number | null
           projeto_id?: string | null
           recorrente?: boolean | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          source_module?: string | null
           status?: string | null
           tags?: string[] | null
           taxas_adm?: number | null
@@ -1061,6 +1069,7 @@ export type Database = {
           id?: string
           inss?: number | null
           ir?: number | null
+          is_automatic?: boolean
           iss?: number | null
           juros?: number | null
           meio_pagamento_id?: string | null
@@ -1072,6 +1081,9 @@ export type Database = {
           pis?: number | null
           projeto_id?: string | null
           recorrente?: boolean | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          source_module?: string | null
           status?: string | null
           tags?: string[] | null
           taxas_adm?: number | null
@@ -1334,27 +1346,382 @@ export type Database = {
           },
         ]
       }
+      project_dependencies: {
+        Row: {
+          created_at: string
+          created_by_actor_id: string | null
+          deleted_at: string | null
+          dependency_type: Database["public"]["Enums"]["project_dependency_type"]
+          description: string | null
+          expected_at: string | null
+          id: string
+          is_blocking: boolean
+          notes: string | null
+          organization_id: string
+          project_id: string
+          received_at: string | null
+          requested_at: string | null
+          requested_from: string | null
+          responsible_actor_id: string | null
+          status: Database["public"]["Enums"]["project_dependency_status"]
+          title: string
+          updated_at: string
+          updated_by_actor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          dependency_type: Database["public"]["Enums"]["project_dependency_type"]
+          description?: string | null
+          expected_at?: string | null
+          id?: string
+          is_blocking?: boolean
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          received_at?: string | null
+          requested_at?: string | null
+          requested_from?: string | null
+          responsible_actor_id?: string | null
+          status?: Database["public"]["Enums"]["project_dependency_status"]
+          title: string
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          dependency_type?: Database["public"]["Enums"]["project_dependency_type"]
+          description?: string | null
+          expected_at?: string | null
+          id?: string
+          is_blocking?: boolean
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          received_at?: string | null
+          requested_at?: string | null
+          requested_from?: string | null
+          responsible_actor_id?: string | null
+          status?: Database["public"]["Enums"]["project_dependency_status"]
+          title?: string
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_dependencies_created_by_actor_id_fkey"
+            columns: ["created_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_dependencies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_dependencies_responsible_actor_id_fkey"
+            columns: ["responsible_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_dependencies_updated_by_actor_id_fkey"
+            columns: ["updated_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_integrations: {
+        Row: {
+          created_at: string
+          created_by_actor_id: string | null
+          credentials_location: string | null
+          deleted_at: string | null
+          documentation_url: string | null
+          estimated_cost_monthly_brl: number | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          provider: string | null
+          purpose: string | null
+          status: Database["public"]["Enums"]["project_integration_status"]
+          updated_at: string
+          updated_by_actor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          credentials_location?: string | null
+          deleted_at?: string | null
+          documentation_url?: string | null
+          estimated_cost_monthly_brl?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          provider?: string | null
+          purpose?: string | null
+          status?: Database["public"]["Enums"]["project_integration_status"]
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          credentials_location?: string | null
+          deleted_at?: string | null
+          documentation_url?: string | null
+          estimated_cost_monthly_brl?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          provider?: string | null
+          purpose?: string | null
+          status?: Database["public"]["Enums"]["project_integration_status"]
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_integrations_created_by_actor_id_fkey"
+            columns: ["created_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_integrations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_integrations_updated_by_actor_id_fkey"
+            columns: ["updated_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_milestones: {
+        Row: {
+          acceptance_notes: string | null
+          actual_date: string | null
+          billing_amount: number | null
+          created_at: string
+          created_by_actor_id: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          organization_id: string
+          project_id: string
+          sequence_order: number
+          status: Database["public"]["Enums"]["project_milestone_status"]
+          target_date: string
+          title: string
+          triggers_billing: boolean
+          updated_at: string
+          updated_by_actor_id: string | null
+        }
+        Insert: {
+          acceptance_notes?: string | null
+          actual_date?: string | null
+          billing_amount?: number | null
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          organization_id: string
+          project_id: string
+          sequence_order: number
+          status?: Database["public"]["Enums"]["project_milestone_status"]
+          target_date: string
+          title: string
+          triggers_billing?: boolean
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Update: {
+          acceptance_notes?: string | null
+          actual_date?: string | null
+          billing_amount?: number | null
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          organization_id?: string
+          project_id?: string
+          sequence_order?: number
+          status?: Database["public"]["Enums"]["project_milestone_status"]
+          target_date?: string
+          title?: string
+          triggers_billing?: boolean
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_created_by_actor_id_fkey"
+            columns: ["created_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_milestones_updated_by_actor_id_fkey"
+            columns: ["updated_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_risks: {
+        Row: {
+          created_at: string
+          created_by_actor_id: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          identified_at: string
+          mitigation_plan: string | null
+          notes: string | null
+          organization_id: string
+          probability: Database["public"]["Enums"]["project_risk_probability"]
+          project_id: string
+          resolved_at: string | null
+          responsible_actor_id: string | null
+          severity: Database["public"]["Enums"]["project_risk_severity"]
+          status: Database["public"]["Enums"]["project_risk_status"]
+          title: string
+          updated_at: string
+          updated_by_actor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          identified_at?: string
+          mitigation_plan?: string | null
+          notes?: string | null
+          organization_id: string
+          probability?: Database["public"]["Enums"]["project_risk_probability"]
+          project_id: string
+          resolved_at?: string | null
+          responsible_actor_id?: string | null
+          severity?: Database["public"]["Enums"]["project_risk_severity"]
+          status?: Database["public"]["Enums"]["project_risk_status"]
+          title: string
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_actor_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          identified_at?: string
+          mitigation_plan?: string | null
+          notes?: string | null
+          organization_id?: string
+          probability?: Database["public"]["Enums"]["project_risk_probability"]
+          project_id?: string
+          resolved_at?: string | null
+          responsible_actor_id?: string | null
+          severity?: Database["public"]["Enums"]["project_risk_severity"]
+          status?: Database["public"]["Enums"]["project_risk_status"]
+          title?: string
+          updated_at?: string
+          updated_by_actor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_risks_created_by_actor_id_fkey"
+            columns: ["created_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_risks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_risks_responsible_actor_id_fkey"
+            columns: ["responsible_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_risks_updated_by_actor_id_fkey"
+            columns: ["updated_by_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           acceptance_criteria: string | null
           actual_delivery_date: string | null
+          business_context: string | null
           code: string
           company_id: string
           contract_value: number | null
           created_at: string
           created_by_actor_id: string | null
           deleted_at: string | null
+          deliverables: string | null
           description: string | null
           estimated_delivery_date: string | null
           id: string
+          identified_risks: string | null
           installments_count: number | null
           name: string
           notes: string | null
           organization_id: string
           owner_actor_id: string | null
+          premises: string | null
           project_type: Database["public"]["Enums"]["project_type"]
+          scope_in: string | null
+          scope_out: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
+          technical_stack: string | null
           token_budget_brl: number | null
           updated_at: string
           updated_by_actor_id: string | null
@@ -1362,23 +1729,30 @@ export type Database = {
         Insert: {
           acceptance_criteria?: string | null
           actual_delivery_date?: string | null
+          business_context?: string | null
           code?: string
           company_id: string
           contract_value?: number | null
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          deliverables?: string | null
           description?: string | null
           estimated_delivery_date?: string | null
           id?: string
+          identified_risks?: string | null
           installments_count?: number | null
           name: string
           notes?: string | null
           organization_id: string
           owner_actor_id?: string | null
+          premises?: string | null
           project_type: Database["public"]["Enums"]["project_type"]
+          scope_in?: string | null
+          scope_out?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          technical_stack?: string | null
           token_budget_brl?: number | null
           updated_at?: string
           updated_by_actor_id?: string | null
@@ -1386,23 +1760,30 @@ export type Database = {
         Update: {
           acceptance_criteria?: string | null
           actual_delivery_date?: string | null
+          business_context?: string | null
           code?: string
           company_id?: string
           contract_value?: number | null
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          deliverables?: string | null
           description?: string | null
           estimated_delivery_date?: string | null
           id?: string
+          identified_risks?: string | null
           installments_count?: number | null
           name?: string
           notes?: string | null
           organization_id?: string
           owner_actor_id?: string | null
+          premises?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
+          scope_in?: string | null
+          scope_out?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          technical_stack?: string | null
           token_budget_brl?: number | null
           updated_at?: string
           updated_by_actor_id?: string | null
@@ -1560,6 +1941,45 @@ export type Database = {
         | "designer"
         | "consultant"
         | "support"
+      project_dependency_status:
+        | "pendente"
+        | "solicitado"
+        | "em_andamento"
+        | "recebido"
+        | "atrasado"
+        | "bloqueante"
+        | "resolvido"
+        | "cancelado"
+      project_dependency_type:
+        | "acesso_api"
+        | "credenciais"
+        | "dados_cliente"
+        | "aprovacao"
+        | "documentacao"
+        | "homologacao"
+        | "infraestrutura"
+        | "outro"
+      project_integration_status:
+        | "planejada"
+        | "em_desenvolvimento"
+        | "testando"
+        | "ativa"
+        | "com_erro"
+        | "descontinuada"
+      project_milestone_status:
+        | "planejado"
+        | "em_andamento"
+        | "concluido"
+        | "atrasado"
+        | "cancelado"
+      project_risk_probability: "baixa" | "media" | "alta"
+      project_risk_severity: "baixa" | "media" | "alta" | "critica"
+      project_risk_status:
+        | "identificado"
+        | "em_mitigacao"
+        | "mitigado"
+        | "materializado"
+        | "aceito"
       project_status:
         | "proposta"
         | "aceito"
@@ -1735,6 +2155,50 @@ export const Constants = {
         "designer",
         "consultant",
         "support",
+      ],
+      project_dependency_status: [
+        "pendente",
+        "solicitado",
+        "em_andamento",
+        "recebido",
+        "atrasado",
+        "bloqueante",
+        "resolvido",
+        "cancelado",
+      ],
+      project_dependency_type: [
+        "acesso_api",
+        "credenciais",
+        "dados_cliente",
+        "aprovacao",
+        "documentacao",
+        "homologacao",
+        "infraestrutura",
+        "outro",
+      ],
+      project_integration_status: [
+        "planejada",
+        "em_desenvolvimento",
+        "testando",
+        "ativa",
+        "com_erro",
+        "descontinuada",
+      ],
+      project_milestone_status: [
+        "planejado",
+        "em_andamento",
+        "concluido",
+        "atrasado",
+        "cancelado",
+      ],
+      project_risk_probability: ["baixa", "media", "alta"],
+      project_risk_severity: ["baixa", "media", "alta", "critica"],
+      project_risk_status: [
+        "identificado",
+        "em_mitigacao",
+        "mitigado",
+        "materializado",
+        "aceito",
       ],
       project_status: [
         "proposta",
