@@ -123,6 +123,7 @@ export default function MovimentacaoDetalhe() {
   const { id, tipo: tipoParam } = useParams<{ id?: string; tipo?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
 
   // Modos: create | edit | view
   const isCreate = !id && !!tipoParam;
@@ -526,12 +527,19 @@ export default function MovimentacaoDetalhe() {
 
   function openDarBaixa() {
     if (!mov) return;
-    const baseValor = totalPrevisto || parseMoney(form.valor_previsto || "0") || Number(mov.valor_previsto) || 0;
+    const isEditingLiquidacao = mov.status === "pago";
+    const baseValor = isEditingLiquidacao
+      ? Number(mov.valor_realizado) || 0
+      : totalPrevisto || parseMoney(form.valor_previsto || "0") || Number(mov.valor_previsto) || 0;
     setBaixaForm({
       valor_realizado: formatMoneyForInput(baseValor),
-      data_pagamento: new Date().toISOString().split("T")[0],
-      conta_bancaria_id: form.conta_bancaria_id || mov.conta_bancaria_id || "",
-      meio_pagamento_id: "",
+      data_pagamento: isEditingLiquidacao
+        ? mov.data_pagamento || new Date().toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      conta_bancaria_id: isEditingLiquidacao
+        ? mov.conta_bancaria_id || ""
+        : form.conta_bancaria_id || mov.conta_bancaria_id || "",
+      meio_pagamento_id: isEditingLiquidacao ? mov.meio_pagamento_id || "" : "",
     });
     setComprovanteFile(null);
     setAiFields(new Set());
@@ -559,8 +567,44 @@ export default function MovimentacaoDetalhe() {
       try { await uploadComprovanteToMovimentacao(comprovanteFile, mov.id); }
       catch (e) { console.error(e); toast.error("Pagamento registrado, mas falhou ao salvar o comprovante."); }
     }
-    toast.success(isPagar ? "Pagamento registrado!" : "Recebimento registrado!");
+    toast.success(
+      mov.status === "pago"
+        ? "Liquidação atualizada!"
+        : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
+    );
     setOpenBaixa(false);
+    void load();
+  }
+
+  async function handleReabrir() {
+    if (!mov) return;
+    const ok = await confirmDialog({
+      title: "Reabrir conta?",
+      description: (
+        <>
+          A conta voltará para <span className="font-medium text-foreground">pendente</span> e o
+          pagamento registrado (valor, data, conciliação) será removido.
+        </>
+      ),
+      confirmLabel: "Reabrir",
+      variant: "default",
+    });
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from("movimentacoes")
+      .update({
+        status: "pendente",
+        valor_realizado: 0,
+        data_pagamento: null,
+        conciliado: false,
+      } as any)
+      .eq("id", mov.id);
+    if (error) {
+      toast.error(`Não foi possível reabrir: ${error.message}`);
+      return;
+    }
+    toast.success("Conta reaberta com sucesso");
     void load();
   }
 
