@@ -128,21 +128,26 @@ export function AppSidebar() {
           </Collapsible>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {otherItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
+        <SidebarGroup className="px-2">
+          <div className="space-y-1">
+            {otherItems.map((item) => {
+              const active = isActive(item.url);
+              return (
+                <NavLink
+                  key={item.title}
+                  to={item.url}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                    active
+                      ? "bg-accent text-primary-foreground shadow-md shadow-accent/25"
+                      : "bg-accent/15 text-accent hover:bg-accent/25"
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {!collapsed && <span>{item.title}</span>}
+                </NavLink>
+              );
+            })}
+          </div>
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
