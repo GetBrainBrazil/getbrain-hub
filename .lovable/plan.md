@@ -1,74 +1,83 @@
 
 
-## Máscara monetária BRL nos campos de Valores e Encargos
+## Recorrência: gerar retroativo + job mensal dia 01
 
-Aplicar formatação automática (separador de milhar `.` e decimal `,`) em todos os campos numéricos da seção "Valores e Encargos" e "Impostos Retidos" da página de criar/editar movimentação (`MovimentacaoDetalhe.tsx`), e também no diálogo de baixa em `Movimentacoes.tsx`.
+### Problema
 
-Hoje os inputs são `<Input type="number">` puros — sem máscara, sem separador de milhar, e o valor digitado é ambíguo (digitar `19343` vira `19343,00` em vez de `193,43`).
+Hoje, ao criar movimentação recorrente com início em `22/05/2025`:
+- Frontend cria o pai em 22/05/2025 e gera 119 ocorrências futuras (22/06, 22/07, ...).
+- **Não existe nada** rodando no servidor para "completar" o mês corrente nem para gerar a parcela do mês quando ele começa.
+- Se a data de início é passada, as parcelas até hoje só existem se o usuário criou uma a uma.
 
-### Comportamento desejado
+Você quer:
+1. Ao criar recorrência com início no passado → preencher **todas as ocorrências entre a data de início e hoje** automaticamente.
+2. Todo dia **01** de cada mês → o sistema cria a ocorrência daquele mês para cada recorrência ativa sem prazo (ou ainda dentro do prazo).
 
-- Input se comporta como campo de moeda: digitar só dígitos, e a máscara forma o valor automaticamente da direita pra esquerda.
-  - Digita `1` → mostra `0,01`
-  - Digita `19343` → mostra `193,43`
-  - Digita `1934300` → mostra `19.343,00`
-- Sem permitir letras, sinais ou múltiplos pontos/vírgulas.
-- Ao colar valor `1.234,56` ou `1234.56`, normaliza para `1.234,56`.
-- Estado interno passa de `string numérica` (`"19343"`) para `string formatada` (`"19.343,00"`); na hora de salvar no banco, converte com `parseMoney(...)` (já existe em `shared.tsx`) e envia como `number`.
+### Mudança 1 — Geração já inclui passado (frontend)
 
-### Mudança 1 — Reutilizar helpers de `shared.tsx`
+Em `MovimentacaoDetalhe.tsx` (linhas 409-436) e `ContasPagar.tsx` (linhas 150-165):
 
-Já existem em `src/components/config-financeiras/shared.tsx`:
-- `applyMoneyMask(value)` — formata enquanto digita
-- `parseMoney(value)` — converte `"19.343,00"` → `19343`
-- `formatMoneyForInput(n)` — formata `number` → string para preencher input ao carregar registro existente
+- Hoje o loop começa em `i = 1` (só futuro). Vai passar a iterar a partir da `data_competencia` do pai e gerar **todas as parcelas com vencimento ≤ hoje**, além das futuras até o limite (120 meses ou `recAte`).
+- O pai (`i=0`) continua sendo a primeira ocorrência. Se a data do pai for retroativa, ele já fica com vencimento atrasado — e as ocorrências subsequentes preenchem o gap até hoje.
+- Status de cada ocorrência:
+  - Vencimento `< hoje` → `atrasado`
+  - Vencimento `>= hoje` → `pendente`
 
-Vou exportar/usar esses três (já são exports nomeados).
+Isso resolve a parte retroativa **na hora da criação**.
 
-### Mudança 2 — `MovimentacaoDetalhe.tsx` (criar/editar movimentação)
+### Mudança 2 — Edge function + cron mensal (dia 01)
 
-**Campos afetados** (linhas 916-963 + impostos linhas 985-992):
-- Valor Base, Desconto Previsto, Juros, Multa, Taxas ADM
-- PIS, COFINS, CSLL, ISS, IR, INSS
+Criar edge function `generate-recurring-movimentacoes` que:
 
-Para cada `<Input>`:
-```tsx
-<Input
-  inputMode="decimal"
-  value={form.valor_previsto}
-  onChange={(e) => setForm({ ...form, valor_previsto: applyMoneyMask(e.target.value) })}
-  placeholder="0,00"
-  className="text-right font-mono"  // alinhamento de moeda
-/>
+1. Busca todas as movimentações **pai** (`movimentacao_pai_id IS NULL`) com `recorrente = true` e `status != 'cancelado'`.
+2. Para cada uma:
+   - Calcula a próxima competência esperada (mês corrente).
+   - Verifica se já existe ocorrência (pai ou filha) com `data_competencia` no mês corrente.
+   - Se **não existe** e a recorrência ainda está dentro do prazo (sem `recAte`, ou `recAte >= hoje`), cria a ocorrência do mês corrente clonando os campos do pai e ajustando `data_competencia` / `data_vencimento` (mantendo o mesmo dia do mês do pai; se o mês não tiver aquele dia, usa o último dia do mês).
+3. Marca como `is_automatic = true` e `source_module = 'recurrence_job'` para auditoria.
+
+Agendamento via `pg_cron` + `pg_net`:
+
+```sql
+select cron.schedule(
+  'generate-recurring-movimentacoes-monthly',
+  '0 3 1 * *',   -- dia 01 de cada mês, 03:00 UTC (00:00 BRT)
+  $$ select net.http_post(
+       url := 'https://xwwibclzfcbtkmesmhly.supabase.co/functions/v1/generate-recurring-movimentacoes',
+       headers := '{"Content-Type":"application/json","Authorization":"Bearer <ANON_KEY>"}'::jsonb,
+       body := '{}'::jsonb
+     ); $$
+);
 ```
 
-Remover `type="number"` e `step="0.01"`.
+Ativar extensions `pg_cron` e `pg_net` se ainda não estiverem.
 
-**Carregamento de registro existente**: na função que popula `form` a partir do `mov` carregado do banco (números), usar `formatMoneyForInput(mov.valor_previsto ?? 0)` para preencher já formatado.
+### Mudança 3 — Botão "Rodar agora" (opcional, mas útil)
 
-**Submit**: na função `handleSave` (ou equivalente), antes de mandar pro Supabase, converter cada campo monetário com `parseMoney(form.valor_previsto)`.
+Em `Configurações Financeiras` adicionar botão **"Sincronizar recorrências"** que chama a mesma edge function manualmente. Útil para testar sem esperar o dia 01 e para rodar uma vez agora e completar a sua recorrência do Claude.
 
-**Cálculo do total previsto**: a função `totalPrevisto` (que hoje soma `parseFloat(form.valor_previsto)`) precisa usar `parseMoney(...)` em cada parcela.
+### Frequências suportadas pelo job
 
-### Mudança 3 — `Movimentacoes.tsx` (diálogo de baixa)
+- Por enquanto **apenas `mensal`** (que é o caso descrito).
+- `semanal`, `diario`, `anual`: geração antecipada via frontend continua valendo (já cobrem 10 anos), o cron mensal não toca nelas.
 
-Mesma transformação para os 5 campos do bloco "Valor + ajustes" (linhas 833-849) e os 6 impostos (linha 867). Atualizar `baixaTotals` para usar `parseMoney`.
+### Comportamento ao desativar/cancelar
 
-### Mudança 4 — Valores derivados/exibidos
+- Se a movimentação pai estiver `cancelado` → o job ignora.
+- Se quiser parar a recorrência sem cancelar o histórico → adicionar campo `recorrencia_ativa boolean` no pai (default `true`); job só roda quando `true`. **Migration mínima: 1 coluna nullable com default.**
 
-`formatCurrency(totalPrevisto)` no resumo (linha 968 de Detalhe e 856 de Movimentações) continua funcionando — só precisa receber `number` (resultado do `parseMoney + soma`), não muda.
+### Confirmações antes de executar
 
-### Detalhes de UX
-
-- **Alinhamento à direita** + **`font-mono`** nos inputs monetários (padrão já usado nos totais), pra ficar consistente com como números financeiros são exibidos.
-- **`inputMode="decimal"`** pra teclado mobile abrir numérico com vírgula.
-- **`placeholder="0,00"`** (já está).
-- Valor inicial vazio mostra placeholder; assim que digitar o primeiro dígito vira `0,0X`.
+1. **Geração retroativa na criação**: ok preencher tudo entre data inicial e hoje na hora de salvar (pode gerar 10+ parcelas de uma vez se data antiga)?
+2. **Coluna `recorrencia_ativa`** para permitir pausar futuro sem mexer no passado, ou prefere usar `status='cancelado'` no pai?
+3. **Hora do cron**: 00:00 BRT (03:00 UTC) do dia 01 está bom?
 
 ### Arquivos afetados
 
-- **Modificado**: `src/pages/MovimentacaoDetalhe.tsx` — máscara nos 11 inputs (5 valores + 6 impostos), conversão no load e no save, ajuste em `totalPrevisto`.
-- **Modificado**: `src/pages/Movimentacoes.tsx` — máscara nos 11 inputs do diálogo de baixa, conversão nos cálculos `baixaTotals` e no submit `handleBaixa`.
-
-Sem mudança de schema, sem migration. Apenas frontend, reusando helpers já existentes.
+- **Modificado**: `src/pages/MovimentacaoDetalhe.tsx` — loop de recorrência inclui retroativo + status correto
+- **Modificado**: `src/pages/ContasPagar.tsx` — mesma mudança no diálogo rápido
+- **Novo**: `supabase/functions/generate-recurring-movimentacoes/index.ts`
+- **Novo**: migration ativando `pg_cron`/`pg_net` + agendando job (via supabase insert tool, não migration, conforme regra de cron)
+- **Opcional**: migration adicionando `recorrencia_ativa` em `movimentacoes`
+- **Opcional**: botão em `ConfiguracoesFinanceiras.tsx` para disparar o job manualmente
 
