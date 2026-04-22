@@ -329,6 +329,13 @@ export function AbaOperacional({
     }
   }
 
+  // ── Contrato ativo (para linha resumo no painel Financeiro) ──
+  const activeContract = contracts.find((c) => c.status === "active");
+  const activeContractNet = activeContract
+    ? Number(activeContract.monthly_fee) *
+      (1 - Number(activeContract.monthly_fee_discount_percent || 0) / 100)
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* ───── KPIs de saúde no topo ───── */}
