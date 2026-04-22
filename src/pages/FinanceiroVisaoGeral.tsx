@@ -64,7 +64,7 @@ export default function FinanceiroVisaoGeral() {
   const fimISO = toISODate(endDate);
 
   const kpisQ = useFinanceiroKPIs(inicioISO, fimISO);
-  const serieQ = useSerieMensal(12, contaId);
+  const serieQ = useSerieMensal(18, contaId);
   const fluxoQ = useFluxoProjetado(90, contaId);
   const saldosQ = useSaldosPorConta();
   const vencQ = useProximosVencimentos(7);
