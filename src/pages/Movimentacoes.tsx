@@ -235,10 +235,35 @@ export default function Movimentacoes() {
       if (statusFilter === "recebidas" && m.status !== "pago") return false;
       if (statusFilter === "pagas" && m.status !== "pago") return false;
       if (statusFilter === "atrasadas" && m.status !== "atrasado") return false;
-      if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
+
+      if (vinculadoFilter) {
+        const vincId = m.fornecedor_id || m.cliente_id || m.colaborador_id || "";
+        if (vincId !== vinculadoFilter) return false;
+      }
+      if (categoriaFilter && m.categoria_id !== categoriaFilter) return false;
+      if (projetoFilter && m.projeto_id !== projetoFilter) return false;
+      if (contaFilter && m.conta_bancaria_id !== contaFilter) return false;
+
+      if (search) {
+        const q = search.toLowerCase();
+        const desc = (m.descricao || "").toLowerCase();
+        const vincNome = (
+          m.fornecedores?.nome || m.clientes?.nome || m.colaboradores?.nome || ""
+        ).toLowerCase();
+        const catNome = (m.categorias?.nome || "").toLowerCase();
+        const projNome = (m.projects?.name || m.projects?.code || "").toLowerCase();
+        const obs = (m.observacoes || "").toLowerCase();
+        if (
+          !desc.includes(q) &&
+          !vincNome.includes(q) &&
+          !catNome.includes(q) &&
+          !projNome.includes(q) &&
+          !obs.includes(q)
+        ) return false;
+      }
       return true;
     }), sortConfig)
-  ), [periodFiltered, search, sortConfig, statusFilter]);
+  ), [periodFiltered, search, sortConfig, statusFilter, vinculadoFilter, categoriaFilter, projetoFilter, contaFilter]);
 
   const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => ({
     totalPendente: periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0),
