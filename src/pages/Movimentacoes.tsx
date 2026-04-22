@@ -57,6 +57,10 @@ export default function Movimentacoes() {
   const [meios, setMeios] = useState<any[]>([]);
   const [search, setSearch] = useURLState<string>("busca", "");
   const [statusFilter, setStatusFilter] = useURLState<string>("status", "todas");
+  const [vinculadoFilter, setVinculadoFilter] = useURLState<string>("vinculado", "");
+  const [categoriaFilter, setCategoriaFilter] = useURLState<string>("categoria", "");
+  const [projetoFilter, setProjetoFilter] = useURLState<string>("projeto", "");
+  const [contaFilter, setContaFilter] = useURLState<string>("conta", "");
   const [periodPreset, setPeriodPreset] = useURLState<string>("periodo", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
