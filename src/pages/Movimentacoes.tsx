@@ -642,18 +642,59 @@ export default function Movimentacoes() {
 
   function openDarBaixa(m: any) {
     setSelectedMov(m);
+    const isEditing = m.status === "pago";
+    const fmt = (v: any) => (v != null && v !== 0 ? formatMoneyForInput(Number(v)) : "");
     setBaixaForm({
-      valor_realizado: formatMoneyForInput(Number(m.valor_previsto) || 0),
-      data_pagamento: new Date().toISOString().split("T")[0],
+      valor_realizado: isEditing
+        ? fmt(m.valor_realizado || m.valor_previsto)
+        : formatMoneyForInput(Number(m.valor_previsto) || 0),
+      data_pagamento: isEditing
+        ? (m.data_pagamento || new Date().toISOString().split("T")[0])
+        : new Date().toISOString().split("T")[0],
       conta_bancaria_id: m.conta_bancaria_id || "",
-      meio_pagamento_id: "",
-      desconto: "", juros: "", multa: "", taxas: "",
-      pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
+      meio_pagamento_id: isEditing ? (m.meio_pagamento_id || "") : "",
+      desconto: isEditing ? fmt(m.desconto_previsto) : "",
+      juros: isEditing ? fmt(m.juros) : "",
+      multa: isEditing ? fmt(m.multa) : "",
+      taxas: isEditing ? fmt(m.taxas_adm) : "",
+      pis: isEditing ? fmt(m.pis) : "",
+      cofins: isEditing ? fmt(m.cofins) : "",
+      csll: isEditing ? fmt(m.csll) : "",
+      iss: isEditing ? fmt(m.iss) : "",
+      ir: isEditing ? fmt(m.ir) : "",
+      inss: isEditing ? fmt(m.inss) : "",
       observacoes_pagamento: "",
     });
     setComprovanteFile(null);
     setAiFields(new Set());
     setOpenBaixa(true);
+  }
+
+  async function handleReabrirFromBaixa() {
+    if (!selectedMov) return;
+    const ok = await confirmDialog({
+      title: "Reabrir conta?",
+      description: (
+        <>
+          A conta voltará para <span className="font-medium text-foreground">pendente</span> e o
+          pagamento registrado (valor, data, conciliação) será removido.
+        </>
+      ),
+      confirmLabel: "Reabrir",
+      variant: "default",
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("movimentacoes")
+      .update({ status: "pendente", valor_realizado: 0, data_pagamento: null, conciliado: false } as any)
+      .eq("id", selectedMov.id);
+    if (error) {
+      toast.error(`Não foi possível reabrir: ${error.message}`);
+      return;
+    }
+    toast.success("Conta reaberta com sucesso");
+    setOpenBaixa(false);
+    void refreshTabs([tab as TabType]);
   }
 
   const baixaTotals = useMemo(() => {
