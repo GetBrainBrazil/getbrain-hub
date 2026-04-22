@@ -614,6 +614,75 @@ export function AbaOperacional({
           <PanelFooter href="/tokens" label="Ver em Tokens" />
         </Panel>
       </div>
+
+      {/* ───── TIME ALOCADO ───── */}
+      <section className="rounded-lg border border-border bg-card p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-accent" />
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Time Alocado
+              {allocs.length > 0 && (
+                <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                  {allocs.length}
+                </span>
+              )}
+            </h3>
+          </div>
+          {onAllocate && (
+            <Button size="sm" variant="outline" onClick={onAllocate}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Alocar Ator
+            </Button>
+          )}
+        </div>
+
+        {allocs.length === 0 ? (
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <Users className="h-6 w-6 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">Nenhum ator alocado</p>
+            <p className="text-xs text-muted-foreground/70">
+              Aloque membros do time para registrar trabalho neste projeto.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-1.5">
+            {allocs.map((a) => (
+              <div
+                key={a.id}
+                className="group flex items-center gap-3 rounded-md border border-border/60 bg-card/40 px-3 py-2 transition-colors hover:border-accent/40"
+              >
+                <ActorAvatar
+                  name={a.actor?.display_name ?? "?"}
+                  avatarUrl={a.actor?.avatar_url}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {a.actor?.display_name ?? "—"}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {getRoleLabel(a.role_in_project)}
+                      {a.allocation_percent ? ` · ${a.allocation_percent}%` : ""}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/70">
+                    0 tarefas · 0h · custo: —
+                  </p>
+                </div>
+                {onDeallocate && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onDeallocate(a.id)}
+                    className="text-muted-foreground opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+                  >
+                    Desalocar
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
