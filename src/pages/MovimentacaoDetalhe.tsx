@@ -96,6 +96,7 @@ const emptyForm = {
   cliente_id: "",
   fornecedor_id: "",
   colaborador_id: "",
+  projeto_id: "",
   categoria_id: "",
   centro_custo_id: "",
   conta_bancaria_id: "",
@@ -138,6 +139,7 @@ export default function MovimentacaoDetalhe() {
   const [contas, setContas] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
   const [centros, setCentros] = useState<any[]>([]);
+  const [projetos, setProjetos] = useState<Array<{ id: string; name: string; code: string; company_id: string }>>([]);
   const [anexos, setAnexos] = useState<any[]>([]);
 
   const [form, setForm] = useState({ ...emptyForm });
@@ -175,7 +177,7 @@ export default function MovimentacaoDetalhe() {
   }, [id, tipoParam]);
 
   async function loadReferences() {
-    const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rMeios, rCentros] = await Promise.all([
+    const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rMeios, rCentros, rProjetos] = await Promise.all([
       supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("colaboradores").select("id, nome, cargo").eq("ativo", true).order("nome"),
@@ -183,6 +185,7 @@ export default function MovimentacaoDetalhe() {
       supabase.from("contas_bancarias").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("meios_pagamento").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("centros_custo").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("projects").select("id, name, code, company_id").is("deleted_at", null).order("code"),
     ]);
     setClientes(rClientes.data || []);
     setFornecedores(rFornecedores.data || []);
@@ -191,6 +194,7 @@ export default function MovimentacaoDetalhe() {
     setContas(rContas.data || []);
     setMeios(rMeios.data || []);
     setCentros(rCentros.data || []);
+    setProjetos(rProjetos.data || []);
   }
 
   async function load() {
@@ -225,6 +229,7 @@ export default function MovimentacaoDetalhe() {
         cliente_id: m.cliente_id || "",
         fornecedor_id: m.fornecedor_id || "",
         colaborador_id: (m as any).colaborador_id || "",
+        projeto_id: (m as any).projeto_id || "",
         categoria_id: m.categoria_id || "",
         centro_custo_id: m.centro_custo_id || "",
         conta_bancaria_id: m.conta_bancaria_id || "",
@@ -357,6 +362,7 @@ export default function MovimentacaoDetalhe() {
       colaborador_id: isPagar && isColab ? form.colaborador_id || null : null,
       categoria_id: form.categoria_id || null,
       centro_custo_id: form.centro_custo_id || null,
+      projeto_id: form.projeto_id || null,
       conta_bancaria_id: form.conta_bancaria_id || null,
       meio_pagamento_id: form.meio_pagamento_id || null,
       valor_previsto: num(form.valor_previsto),
@@ -729,6 +735,28 @@ export default function MovimentacaoDetalhe() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-[13px] font-medium mb-1.5 block">Projeto</Label>
+                <Select
+                  value={form.projeto_id || "none"}
+                  onValueChange={(v) => setForm({ ...form, projeto_id: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Nenhum —</SelectItem>
+                    {projetos.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.code} — {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Vincula esta movimentação ao projeto. Aparece nos relatórios financeiros do projeto.
+                </p>
               </div>
             </div>
           </section>
