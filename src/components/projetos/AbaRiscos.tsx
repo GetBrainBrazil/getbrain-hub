@@ -38,6 +38,7 @@ import {
   riskStatusClass,
   riskStatusLabel,
 } from "@/lib/escopo-helpers";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { GETBRAIN_ORG_ID } from "@/lib/projetos-helpers";
 import { ActorAvatar } from "./ActorAvatar";
 
@@ -55,6 +56,7 @@ const PROB_ROWS: RiskProbability[] = ["alta", "media", "baixa"];
 const SEV_COLS: RiskSeverity[] = ["baixa", "media", "alta", "critica"];
 
 export function AbaRiscos({ projectId }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [items, setItems] = useState<ProjectRisk[]>([]);
   const [actors, setActors] = useState<Actor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +117,13 @@ export function AbaRiscos({ projectId }: Props) {
   }
 
   async function softDelete(id: string) {
-    if (!confirm("Remover este risco?")) return;
+    const ok = await confirmDialog({
+      title: "Remover risco?",
+      description: "Esta ação enviará o risco para a lixeira (soft delete).",
+      confirmLabel: "Remover",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("project_risks")
       .update({ deleted_at: new Date().toISOString() })
@@ -343,6 +351,7 @@ export function AbaRiscos({ projectId }: Props) {
         editing={editing}
         onSaved={load}
       />
+      {confirmDialogEl}
     </div>
   );
 }

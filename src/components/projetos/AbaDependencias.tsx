@@ -57,6 +57,7 @@ import {
   diffDays,
   isCriticalBlocking,
 } from "@/lib/escopo-helpers";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { GETBRAIN_ORG_ID } from "@/lib/projetos-helpers";
 import { ActorAvatar } from "./ActorAvatar";
 
@@ -72,6 +73,7 @@ interface Props {
 }
 
 export function AbaDependencias({ projectId, onProjectStatusChange }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [items, setItems] = useState<ProjectDependency[]>([]);
   const [actors, setActors] = useState<Actor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,13 @@ export function AbaDependencias({ projectId, onProjectStatusChange }: Props) {
   }
 
   async function softDelete(id: string) {
-    if (!confirm("Remover esta dependência?")) return;
+    const ok = await confirmDialog({
+      title: "Remover dependência?",
+      description: "Esta ação enviará a dependência para a lixeira (soft delete).",
+      confirmLabel: "Remover",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("project_dependencies")
       .update({ deleted_at: new Date().toISOString() })
@@ -385,6 +393,7 @@ export function AbaDependencias({ projectId, onProjectStatusChange }: Props) {
           }
         }}
       />
+      {confirmDialogEl}
     </div>
   );
 }

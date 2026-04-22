@@ -23,6 +23,7 @@ import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Plus } from "lucide-react";
 import { AlocarAtorDialog } from "./AlocarAtorDialog";
 import { NovoContratoDialog } from "./NovoContratoDialog";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface Props {
   projectId: string | null;
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Props) {
+  const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [project, setProject] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
   const [allocs, setAllocs] = useState<any[]>([]);
@@ -152,8 +154,14 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
 
   async function handleStatusChange(newStatus: ProjectStatus) {
     if (!project || !projectId || newStatus === project.status) return;
-    if (!confirm(`Mudar status para "${PROJECT_STATUS_OPTIONS.find((o) => o.value === newStatus)?.label}"?`))
-      return;
+    const label = PROJECT_STATUS_OPTIONS.find((o) => o.value === newStatus)?.label;
+    const ok = await confirmDialog({
+      title: "Mudar status do projeto?",
+      description: `Novo status: "${label}".`,
+      confirmLabel: "Mudar",
+      variant: "default",
+    });
+    if (!ok) return;
     const before = project.status;
     const { error } = await supabase
       .from("projects")
@@ -467,6 +475,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
           projectId={projectId!}
           onCreated={load}
         />
+        {confirmDialogEl}
       </SheetContent>
     </Sheet>
   );
