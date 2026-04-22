@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { SortableTableHead, SortConfig, applySorting } from "@/components/SortableTableHead";
-import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown, ArrowDown, ArrowUp, MoreHorizontal, Copy, CornerDownRight } from "lucide-react";
+import { Search, Clock, TrendingUp, TrendingDown, AlertTriangle, Plus, X, CheckCircle, Pencil, Trash2, Building2, Check, ChevronsUpDown, ArrowDown, ArrowUp, MoreHorizontal, Copy, CornerDownRight, RotateCcw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedState } from "@/hooks/use-persisted-state";
@@ -797,6 +797,38 @@ export default function Movimentacoes() {
     navigate(`/financeiro/movimentacoes/${m.id}`);
   }
 
+  async function handleReabrir(m: any) {
+    const ok = await confirmDialog({
+      title: "Reabrir conta?",
+      description: (
+        <>
+          A conta <span className="font-medium text-foreground">"{m.descricao}"</span> voltará para
+          <span className="font-medium"> pendente</span> e o pagamento registrado será removido.
+        </>
+      ),
+      confirmLabel: "Reabrir",
+      variant: "default",
+    });
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from("movimentacoes")
+      .update({
+        status: "pendente",
+        valor_realizado: 0,
+        data_pagamento: null,
+        conciliado: false,
+      } as any)
+      .eq("id", m.id);
+
+    if (error) {
+      toast.error(`Não foi possível reabrir: ${error.message}`);
+      return;
+    }
+    toast.success("Conta reaberta com sucesso");
+    void refreshTabs([tab as TabType]);
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1016,6 +1048,12 @@ export default function Movimentacoes() {
                             <DropdownMenuItem onClick={() => openDarBaixa(m)} className="cursor-pointer">
                               <CheckCircle className="mr-2 h-4 w-4 text-success" />
                               Liquidar Conta
+                            </DropdownMenuItem>
+                          )}
+                          {m.status === "pago" && (
+                            <DropdownMenuItem onClick={() => handleReabrir(m)} className="cursor-pointer text-warning focus:text-warning">
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              Reabrir conta
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => openEditModal(m)} className="cursor-pointer">
