@@ -420,6 +420,40 @@ export function AbaOperacional({
               </div>
             </div>
           )}
+          {/* Contrato de manutenção (resumo) */}
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
+            <div className="flex min-w-0 items-center gap-2">
+              <Wrench className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+              {activeContract ? (
+                <span className="truncate text-muted-foreground">
+                  Manutenção:{" "}
+                  <span className="font-mono font-semibold text-foreground">
+                    {formatCurrency(activeContractNet)}
+                  </span>
+                  /mês ativo
+                  {activeContract.end_date ? ` · até ${formatDate(activeContract.end_date)}` : ""}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Sem contrato de manutenção</span>
+              )}
+            </div>
+            {activeContract ? (
+              <Link
+                to={`/financeiro/contratos?projectId=${projectId}`}
+                className="flex-shrink-0 text-[11px] font-medium uppercase tracking-wider text-accent hover:text-accent/80"
+              >
+                Gerir →
+              </Link>
+            ) : onCreateContract ? (
+              <button
+                type="button"
+                onClick={onCreateContract}
+                className="flex-shrink-0 text-[11px] font-medium uppercase tracking-wider text-accent hover:text-accent/80"
+              >
+                Criar →
+              </button>
+            ) : null}
+          </div>
           <div className="flex-1" />
           <PanelFooter href="/financeiro/movimentacoes" label="Ver no Financeiro" />
         </Panel>
