@@ -380,7 +380,7 @@ export default function ContasPagar() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">Conta recorrente</p>
-                <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 12 meses</p>
+                <p className="text-xs text-muted-foreground">Cria automaticamente para os próximos 120 meses (10 anos)</p>
               </div>
               <Switch checked={form.recorrente} onCheckedChange={v => setForm({...form, recorrente: v})} />
             </div>
