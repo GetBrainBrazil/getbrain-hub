@@ -160,6 +160,9 @@ export default function MovimentacaoDetalhe() {
     data_pagamento: "",
     conta_bancaria_id: "",
     meio_pagamento_id: "",
+    desconto: "", juros: "", multa: "", taxas: "",
+    pis: "", cofins: "", csll: "", iss: "", ir: "", inss: "",
+    observacoes_pagamento: "",
   });
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   const [aiFields, setAiFields] = useState<Set<"data_pagamento" | "valor_realizado" | "conta_bancaria_id">>(new Set());
@@ -527,37 +530,76 @@ export default function MovimentacaoDetalhe() {
 
   function openDarBaixa() {
     if (!mov) return;
-    const isEditingLiquidacao = mov.status === "pago";
-    const baseValor = isEditingLiquidacao
+    const isEditing = mov.status === "pago";
+    const fmt = (v: any) => (v != null && v !== 0 ? formatMoneyForInput(Number(v)) : "");
+    const baseValor = isEditing
       ? Number(mov.valor_realizado) || 0
       : totalPrevisto || parseMoney(form.valor_previsto || "0") || Number(mov.valor_previsto) || 0;
     setBaixaForm({
       valor_realizado: formatMoneyForInput(baseValor),
-      data_pagamento: isEditingLiquidacao
+      data_pagamento: isEditing
         ? mov.data_pagamento || new Date().toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
-      conta_bancaria_id: isEditingLiquidacao
+      conta_bancaria_id: isEditing
         ? mov.conta_bancaria_id || ""
         : form.conta_bancaria_id || mov.conta_bancaria_id || "",
-      meio_pagamento_id: isEditingLiquidacao ? mov.meio_pagamento_id || "" : "",
+      meio_pagamento_id: isEditing ? mov.meio_pagamento_id || "" : "",
+      desconto: isEditing ? fmt(mov.desconto_previsto) : "",
+      juros: isEditing ? fmt(mov.juros) : "",
+      multa: isEditing ? fmt(mov.multa) : "",
+      taxas: isEditing ? fmt(mov.taxas_adm) : "",
+      pis: isEditing ? fmt(mov.pis) : "",
+      cofins: isEditing ? fmt(mov.cofins) : "",
+      csll: isEditing ? fmt(mov.csll) : "",
+      iss: isEditing ? fmt(mov.iss) : "",
+      ir: isEditing ? fmt(mov.ir) : "",
+      inss: isEditing ? fmt(mov.inss) : "",
+      observacoes_pagamento: "",
     });
     setComprovanteFile(null);
     setAiFields(new Set());
     setOpenBaixa(true);
   }
 
+  const baixaTotals = useMemo(() => {
+    const pm = (v: string) => (v ? parseMoney(v) || 0 : 0);
+    const base = pm(baixaForm.valor_realizado);
+    const desconto = pm(baixaForm.desconto);
+    const juros = pm(baixaForm.juros);
+    const multa = pm(baixaForm.multa);
+    const taxas = pm(baixaForm.taxas);
+    const impostos = pm(baixaForm.pis) + pm(baixaForm.cofins) + pm(baixaForm.csll) + pm(baixaForm.iss) + pm(baixaForm.ir) + pm(baixaForm.inss);
+    const totalPago = base - desconto + juros + multa + taxas;
+    const valorOriginal = Number(mov?.valor_previsto) || 0;
+    const diferenca = totalPago - valorOriginal;
+    return { base, desconto, juros, multa, taxas, impostos, totalPago, valorOriginal, diferenca };
+  }, [baixaForm, mov]);
+
   async function handleBaixa() {
     if (!mov) return;
-    const valorRec = parseMoney(baixaForm.valor_realizado) || 0;
+    const wasAlreadyPaid = mov.status === "pago";
     const { error } = await supabase
       .from("movimentacoes")
       .update({
         status: "pago",
-        valor_realizado: valorRec,
+        valor_realizado: baixaTotals.totalPago,
         data_pagamento: baixaForm.data_pagamento,
         conta_bancaria_id: baixaForm.conta_bancaria_id || null,
         meio_pagamento_id: baixaForm.meio_pagamento_id || null,
-      })
+        desconto_previsto: parseMoney(baixaForm.desconto) || null,
+        juros: parseMoney(baixaForm.juros) || null,
+        multa: parseMoney(baixaForm.multa) || null,
+        taxas_adm: parseMoney(baixaForm.taxas) || null,
+        pis: parseMoney(baixaForm.pis) || null,
+        cofins: parseMoney(baixaForm.cofins) || null,
+        csll: parseMoney(baixaForm.csll) || null,
+        iss: parseMoney(baixaForm.iss) || null,
+        ir: parseMoney(baixaForm.ir) || null,
+        inss: parseMoney(baixaForm.inss) || null,
+        observacoes: baixaForm.observacoes_pagamento
+          ? `${mov.observacoes ? mov.observacoes + "\n\n" : ""}[Pagamento] ${baixaForm.observacoes_pagamento}`
+          : mov.observacoes,
+      } as any)
       .eq("id", mov.id);
     if (error) {
       toast.error("Erro ao registrar");
@@ -568,7 +610,7 @@ export default function MovimentacaoDetalhe() {
       catch (e) { console.error(e); toast.error("Pagamento registrado, mas falhou ao salvar o comprovante."); }
     }
     toast.success(
-      mov.status === "pago"
+      wasAlreadyPaid
         ? "Liquidação atualizada!"
         : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
     );
