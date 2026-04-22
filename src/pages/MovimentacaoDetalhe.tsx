@@ -1264,6 +1264,26 @@ export default function MovimentacaoDetalhe() {
                     {isPagar ? "Registrar Pagamento" : "Registrar Recebimento"}
                   </Button>
                 )}
+                {mov?.status === "pago" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={openDarBaixa}
+                      className="gap-1.5 border-success text-success hover:bg-success hover:text-white"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Editar Liquidação
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReabrir}
+                      className="gap-1.5 border-warning text-warning hover:bg-warning hover:text-white"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Reabrir conta
+                    </Button>
+                  </>
+                )}
               </>
             )}
             <div className="ml-auto flex items-center gap-2 flex-wrap">
