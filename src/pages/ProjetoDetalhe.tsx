@@ -64,11 +64,27 @@ import {
   Copy,
   Save,
   X,
+  Target,
+  Flag,
+  ShieldAlert,
+  AlertTriangle,
+  Compass,
 } from "lucide-react";
 import { AlocarAtorDialog } from "@/components/projetos/AlocarAtorDialog";
 import { NovoContratoDialog } from "@/components/projetos/NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { AbaEscopo } from "@/components/projetos/AbaEscopo";
+import { AbaMarcos } from "@/components/projetos/AbaMarcos";
+import { AbaRiscos } from "@/components/projetos/AbaRiscos";
+import { AbaDependencias } from "@/components/projetos/AbaDependencias";
+import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
+import {
+  dependencyStatusLabel,
+  milestoneStatusLabel,
+  integrationStatusLabel,
+  integrationStatusClass,
+} from "@/lib/escopo-helpers";
 
 // -----------------------------------------------------------
 // Tipagem leve
