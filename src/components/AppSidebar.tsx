@@ -78,15 +78,13 @@ export function AppSidebar() {
   });
 
   useEffect(() => {
-    setOpenMap((prev) => {
-      const next = { ...prev };
-      navItems.forEach((i) => {
-        if (i.children && location.pathname.startsWith(i.url)) {
-          next[i.title] = true;
-        }
-      });
-      return next;
+    const next: Record<string, boolean> = {};
+    navItems.forEach((i) => {
+      if (i.children) {
+        next[i.title] = location.pathname.startsWith(i.url);
+      }
     });
+    setOpenMap(next);
   }, [location.pathname]);
 
   return (
