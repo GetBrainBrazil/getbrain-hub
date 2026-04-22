@@ -38,6 +38,91 @@ export function formatMoneyForInput(n: number) {
   return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 }
 
+/* ─── Bank-specific masks ─── */
+export function applyAgenciaMask(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 5);
+  if (d.length <= 4) return d;
+  return `${d.slice(0, 4)}-${d.slice(4)}`;
+}
+
+export function applyContaMask(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 13);
+  if (d.length <= 1) return d;
+  return `${d.slice(0, -1)}-${d.slice(-1)}`;
+}
+
+/* ─── PIX key detection & masking ─── */
+export type PixType = "cpf" | "cnpj" | "email" | "telefone" | "aleatoria" | "indefinido";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function detectPixType(value: string): PixType {
+  const v = (value || "").trim();
+  if (!v) return "indefinido";
+  if (v.includes("@")) return "email";
+  if (UUID_RE.test(v)) return "aleatoria";
+  // Has letters but isn't a UUID → likely a partial random key
+  if (/[a-zA-Z]/.test(v)) return v.length >= 20 ? "aleatoria" : "indefinido";
+  const d = v.replace(/\D/g, "");
+  if (!d) return "indefinido";
+  if (d.length === 14) return "cnpj";
+  if (d.length === 11) {
+    const ddd = parseInt(d.slice(0, 2), 10);
+    // Phone: starts with valid DDD (11-99) AND third digit is 9 (mobile)
+    if (ddd >= 11 && ddd <= 99 && d[2] === "9") return "telefone";
+    return "cpf";
+  }
+  if (d.length === 10) {
+    const ddd = parseInt(d.slice(0, 2), 10);
+    if (ddd >= 11 && ddd <= 99) return "telefone";
+    return "indefinido";
+  }
+  return "indefinido";
+}
+
+export function pixTypeLabel(t: PixType): string {
+  switch (t) {
+    case "cpf": return "CPF";
+    case "cnpj": return "CNPJ";
+    case "email": return "E-mail";
+    case "telefone": return "Telefone";
+    case "aleatoria": return "Aleatória";
+    default: return "—";
+  }
+}
+
+export function applyPixMask(value: string): string {
+  const v = value || "";
+  if (!v) return "";
+  // Email or contains a non-digit alphabetic char that isn't part of UUID → leave as-is
+  if (v.includes("@")) return v.trim();
+  // If user typed letters (likely a random key/UUID), keep as-is
+  if (/[a-zA-Z]/.test(v)) return v.trim().slice(0, 36);
+  // Pure digits path
+  const d = v.replace(/\D/g, "");
+  if (!d) return "";
+  // CNPJ when 14 digits
+  if (d.length === 14) {
+    return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  }
+  // 11 digits → telefone (mobile pattern) or CPF
+  if (d.length === 11) {
+    const ddd = parseInt(d.slice(0, 2), 10);
+    if (ddd >= 11 && ddd <= 99 && d[2] === "9") {
+      return d.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    }
+    return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  }
+  if (d.length === 10) {
+    const ddd = parseInt(d.slice(0, 2), 10);
+    if (ddd >= 11 && ddd <= 99) {
+      return d.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+    }
+  }
+  // Progressive partial formatting (assume CPF/phone in progress, no formatting until complete to avoid ambiguity)
+  return d.slice(0, 14);
+}
+
 export function formatCpfCnpj(value: string | null | undefined, tipo?: string) {
   if (!value) return "—";
   const d = value.replace(/\D/g, "");
