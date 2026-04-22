@@ -499,6 +499,7 @@ export default function MovimentacaoDetalhe() {
 
     setSaving(false);
     toast.success(isPagar ? "Conta a pagar cadastrada com sucesso" : "Conta a receber cadastrada com sucesso");
+    clearDraft();
     navigate(backUrl);
   }
 
@@ -1220,7 +1221,7 @@ export default function MovimentacaoDetalhe() {
               </>
             )}
             <div className="ml-auto flex items-center gap-2 flex-wrap">
-              <Button variant="outline" onClick={() => navigate(backUrl)}>
+              <Button variant="outline" onClick={() => { clearDraft(); navigate(backUrl); }}>
                 Cancelar
               </Button>
               {isCreate ? (
