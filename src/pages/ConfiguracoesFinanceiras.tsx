@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Landmark, Users, Truck, Target, Tags, UserRound, Lightbulb, X } from "lucide-react";
+import { Search, Landmark, Users, Truck, Target, Tags, UserRound, Lightbulb, X, RefreshCw } from "lucide-react";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { useURLState } from "@/hooks/useURLState";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 import ContasBancariasTab from "@/components/config-financeiras/ContasBancariasTab";
 import ColaboradoresTab from "@/components/config-financeiras/ColaboradoresTab";
