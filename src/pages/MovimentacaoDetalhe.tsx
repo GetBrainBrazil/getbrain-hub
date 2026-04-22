@@ -256,6 +256,7 @@ export default function MovimentacaoDetalhe() {
   }
 
   const isPagar = tipoLocal === "despesa";
+  const backUrl = `/financeiro/movimentacoes?aba=${isPagar ? "pagar" : "receber"}`;
 
   const categoriasFiltradas = useMemo(() => {
     const restrict = isPagar ? (["despesas", "impostos"] as any) : (["receitas"] as any);
