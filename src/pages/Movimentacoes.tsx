@@ -36,6 +36,88 @@ import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/co
 
 type TabType = "pagar" | "receber";
 
+type FilterOption = {
+  value: string;
+  label: string;
+  keywords?: string;
+};
+
+function MultiSelectFilter({
+  title,
+  selected,
+  onChange,
+  options,
+  placeholder,
+}: {
+  title: string;
+  selected: string[];
+  onChange: (values: string[]) => void;
+  options: FilterOption[];
+  placeholder?: string;
+}) {
+  const selectedSet = new Set(selected);
+
+  const toggleValue = (value: string) => {
+    if (selectedSet.has(value)) {
+      onChange(selected.filter((item) => item !== value));
+      return;
+    }
+    onChange([...selected, value]);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 min-w-[180px] justify-between gap-2 text-xs">
+          <span className="truncate">
+            {title}
+            {selected.length > 0 ? ` (${selected.length})` : ""}
+          </span>
+          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[260px] p-0">
+        <Command>
+          <CommandInput placeholder={placeholder ?? `Buscar ${title.toLowerCase()}...`} />
+          <CommandList>
+            <CommandEmpty>Nenhuma opção encontrada.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => {
+                const checked = selectedSet.has(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    value={`${option.label} ${option.keywords ?? ""}`}
+                    onSelect={() => toggleValue(option.value)}
+                    className="gap-2"
+                  >
+                    <div
+                      className={cn(
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-primary",
+                        checked ? "bg-primary text-primary-foreground" : "bg-background text-transparent"
+                      )}
+                    >
+                      <Check className="h-3 w-3" />
+                    </div>
+                    <span className="truncate">{option.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+          {selected.length > 0 && (
+            <div className="border-t border-border p-2">
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-full justify-center text-xs" onClick={() => onChange([])}>
+                Limpar seleção
+              </Button>
+            </div>
+          )}
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const tipoByTab: Record<TabType, "despesa" | "receita"> = {
   pagar: "despesa",
   receber: "receita",
@@ -51,17 +133,21 @@ export default function Movimentacoes() {
   const [referencesLoading, setReferencesLoading] = useState(true);
   const [clientes, setClientes] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
+  const [colaboradores, setColaboradores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [contas, setContas] = useState<any[]>([]);
   const [projetos, setProjetos] = useState<any[]>([]);
   const [meios, setMeios] = useState<any[]>([]);
-  const [search, setSearch] = useURLState<string>("busca", "");
-  const [statusFilter, setStatusFilter] = useURLState<string>("status", "todas");
-  const [vinculadoFilter, setVinculadoFilter] = useURLState<string>("vinculado", "");
-  const [categoriaFilter, setCategoriaFilter] = useURLState<string>("categoria", "");
-  const [projetoFilter, setProjetoFilter] = useURLState<string>("projeto", "");
-  const [contaFilter, setContaFilter] = useURLState<string>("conta", "");
-  const [periodPreset, setPeriodPreset] = useURLState<string>("periodo", "month");
+  const [search, setSearch] = usePersistedState<string>("movimentacoes_filter_search", "");
+  const [statusFilter, setStatusFilter] = usePersistedState<string[]>("movimentacoes_filter_status", []);
+  const [vinculadoFilter, setVinculadoFilter] = usePersistedState<string[]>("movimentacoes_filter_vinculado", []);
+  const [categoriaFilter, setCategoriaFilter] = usePersistedState<string[]>("movimentacoes_filter_categoria", []);
+  const [projetoFilter, setProjetoFilter] = usePersistedState<string[]>("movimentacoes_filter_projeto", []);
+  const [contaFilter, setContaFilter] = usePersistedState<string[]>("movimentacoes_filter_conta", []);
+  const [meioFilter, setMeioFilter] = usePersistedState<string[]>("movimentacoes_filter_meio", []);
+  const [recorrenciaFilter, setRecorrenciaFilter] = usePersistedState<string[]>("movimentacoes_filter_recorrencia", []);
+  const [conciliacaoFilter, setConciliacaoFilter] = usePersistedState<string[]>("movimentacoes_filter_conciliacao", []);
+  const [periodPreset, setPeriodPreset] = usePersistedState<string>("movimentacoes_filter_periodo", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("movimentacoes_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("movimentacoes_sort", { key: null, direction: null });
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
@@ -116,23 +202,25 @@ export default function Movimentacoes() {
   function getMovimentacoesQuery(targetTab: TabType) {
     return supabase
       .from("movimentacoes")
-      .select("*, clientes(nome), fornecedores(nome), colaboradores(nome), categorias(nome), projects(name, code)")
+      .select("*, clientes(nome), fornecedores(nome), colaboradores(nome), categorias(nome), projects(id, name, code), contas_bancarias(nome), meios_pagamento(nome)")
       .eq("tipo", tipoByTab[targetTab])
       .order("data_vencimento", { ascending: false });
   }
 
   async function loadReferenceData() {
-    const [rClientes, rFornecedores, rCategorias, rContas, rProjetos, rMeios] = await Promise.all([
+    const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rProjetos, rMeios] = await Promise.all([
       supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
       supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
+      supabase.from("colaboradores").select("*").eq("ativo", true).order("nome"),
       supabase.from("categorias").select("*").eq("ativo", true),
-      supabase.from("contas_bancarias").select("*").eq("ativo", true),
-      supabase.from("projetos").select("*"),
-      supabase.from("meios_pagamento").select("*").eq("ativo", true),
+      supabase.from("contas_bancarias").select("*").eq("ativo", true).order("nome"),
+      supabase.from("projects").select("id, name, code").is("deleted_at", null).order("name"),
+      supabase.from("meios_pagamento").select("*").eq("ativo", true).order("nome"),
     ]);
 
     setClientes(rClientes.data || []);
     setFornecedores(rFornecedores.data || []);
+    setColaboradores(rColaboradores.data || []);
     setCategorias(rCategorias.data || []);
     setContas(rContas.data || []);
     setProjetos(rProjetos.data || []);
@@ -231,73 +319,154 @@ export default function Movimentacoes() {
 
   const filtered = useMemo(() => (
     applySorting(periodFiltered.filter(m => {
-      if (statusFilter === "pendentes" && m.status !== "pendente") return false;
-      if (statusFilter === "recebidas" && m.status !== "pago") return false;
-      if (statusFilter === "pagas" && m.status !== "pago") return false;
-      if (statusFilter === "atrasadas" && m.status !== "atrasado") return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(m.status || "__none__")) return false;
 
-      if (vinculadoFilter) {
-        const vincId = m.fornecedor_id || m.cliente_id || m.colaborador_id || "";
-        if (vincId !== vinculadoFilter) return false;
-      }
-      if (categoriaFilter && m.categoria_id !== categoriaFilter) return false;
-      if (projetoFilter && m.projeto_id !== projetoFilter) return false;
-      if (contaFilter && m.conta_bancaria_id !== contaFilter) return false;
+      const vincId = m.fornecedor_id || m.cliente_id || m.colaborador_id || "__none__";
+      if (vinculadoFilter.length > 0 && !vinculadoFilter.includes(vincId)) return false;
+
+      const categoriaId = m.categoria_id || "__none__";
+      if (categoriaFilter.length > 0 && !categoriaFilter.includes(categoriaId)) return false;
+
+      const projetoId = m.projeto_id || "__none__";
+      if (projetoFilter.length > 0 && !projetoFilter.includes(projetoId)) return false;
+
+      const contaId = m.conta_bancaria_id || "__none__";
+      if (contaFilter.length > 0 && !contaFilter.includes(contaId)) return false;
+
+      const meioId = m.meio_pagamento_id || "__none__";
+      if (meioFilter.length > 0 && !meioFilter.includes(meioId)) return false;
+
+      const recorrenciaValue = m.recorrente ? "recorrente" : "avulsa";
+      if (recorrenciaFilter.length > 0 && !recorrenciaFilter.includes(recorrenciaValue)) return false;
+
+      const conciliacaoValue = m.conciliado ? "conciliado" : "nao_conciliado";
+      if (conciliacaoFilter.length > 0 && !conciliacaoFilter.includes(conciliacaoValue)) return false;
 
       if (search) {
         const q = search.toLowerCase();
         const desc = (m.descricao || "").toLowerCase();
-        const vincNome = (
-          m.fornecedores?.nome || m.clientes?.nome || m.colaboradores?.nome || ""
-        ).toLowerCase();
+        const vincNome = (m.fornecedores?.nome || m.clientes?.nome || m.colaboradores?.nome || "").toLowerCase();
         const catNome = (m.categorias?.nome || "").toLowerCase();
         const projNome = (m.projects?.name || m.projects?.code || "").toLowerCase();
+        const contaNome = (m.contas_bancarias?.nome || "").toLowerCase();
+        const meioNome = (m.meios_pagamento?.nome || "").toLowerCase();
         const obs = (m.observacoes || "").toLowerCase();
         if (
           !desc.includes(q) &&
           !vincNome.includes(q) &&
           !catNome.includes(q) &&
           !projNome.includes(q) &&
+          !contaNome.includes(q) &&
+          !meioNome.includes(q) &&
           !obs.includes(q)
         ) return false;
       }
       return true;
     }), sortConfig)
-  ), [periodFiltered, search, sortConfig, statusFilter, vinculadoFilter, categoriaFilter, projetoFilter, contaFilter]);
+  ), [
+    periodFiltered,
+    search,
+    sortConfig,
+    statusFilter,
+    vinculadoFilter,
+    categoriaFilter,
+    projetoFilter,
+    contaFilter,
+    meioFilter,
+    recorrenciaFilter,
+    conciliacaoFilter,
+  ]);
 
-  /** Opções de "Vinculado" derivadas das movimentações da aba atual. */
-  const vinculadoOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    movs.forEach((m) => {
-      if (isPagar) {
-        if (m.fornecedor_id && m.fornecedores?.nome) map.set(m.fornecedor_id, m.fornecedores.nome);
-        if (m.colaborador_id && m.colaboradores?.nome) map.set(m.colaborador_id, m.colaboradores.nome);
-      } else {
-        if (m.cliente_id && m.clientes?.nome) map.set(m.cliente_id, m.clientes.nome);
-      }
-    });
-    return Array.from(map.entries())
-      .map(([id, nome]) => ({ id, nome }))
-      .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [movs, isPagar]);
+  const statusOptions = useMemo<FilterOption[]>(() => ([
+    { value: "pendente", label: "Pendentes", keywords: "pendente" },
+    { value: "pago", label: isPagar ? "Pagas" : "Recebidas", keywords: "pago recebido" },
+    { value: "atrasado", label: "Atrasadas", keywords: "atrasado vencido" },
+    { value: "cancelado", label: "Canceladas", keywords: "cancelado" },
+  ]), [isPagar]);
 
-  /** Categorias relevantes ao tipo da aba (despesa/receita). */
-  const categoriaOptions = useMemo(() => {
-    return categorias
+  const vinculadoOptions = useMemo<FilterOption[]>(() => {
+    const base = isPagar
+      ? [
+          ...fornecedores.map((f) => ({ value: f.id, label: `${f.nome} (Fornecedor)`, keywords: "fornecedor" })),
+          ...colaboradores.map((c) => ({ value: c.id, label: `${c.nome} (Colaborador)`, keywords: "colaborador" })),
+        ]
+      : clientes.map((c) => ({ value: c.id, label: c.nome, keywords: "cliente" }));
+
+    return [
+      { value: "__none__", label: isPagar ? "Sem vinculado" : "Sem cliente", keywords: "sem" },
+      ...base.sort((a, b) => a.label.localeCompare(b.label)),
+    ];
+  }, [clientes, colaboradores, fornecedores, isPagar]);
+
+  const categoriaOptions = useMemo<FilterOption[]>(() => ([
+    { value: "__none__", label: "Sem categoria", keywords: "sem" },
+    ...categorias
       .filter((c) => !c.tipo || c.tipo === tipo)
-      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-  }, [categorias, tipo]);
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))
+      .map((c) => ({ value: c.id, label: c.nome })),
+  ]), [categorias, tipo]);
+
+  const projetoOptions = useMemo<FilterOption[]>(() => ([
+    { value: "__none__", label: "Sem projeto", keywords: "sem" },
+    ...projetos
+      .map((p: any) => ({
+        value: p.id,
+        label: [p.code, p.name].filter(Boolean).join(" — ") || p.code || p.name,
+        keywords: [p.code, p.name].filter(Boolean).join(" "),
+      }))
+      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
+  ]), [projetos]);
+
+  const contaOptions = useMemo<FilterOption[]>(() => ([
+    { value: "__none__", label: "Sem conta bancária", keywords: "sem conta" },
+    ...contas
+      .map((c: any) => ({ value: c.id, label: c.nome, keywords: [c.banco, c.conta].filter(Boolean).join(" ") }))
+      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
+  ]), [contas]);
+
+  const meioOptions = useMemo<FilterOption[]>(() => ([
+    { value: "__none__", label: "Sem meio de pagamento", keywords: "sem meio" },
+    ...meios
+      .map((m: any) => ({ value: m.id, label: m.nome }))
+      .sort((a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label)),
+  ]), [meios]);
+
+  const recorrenciaOptions = useMemo<FilterOption[]>(() => ([
+    { value: "recorrente", label: "Recorrentes" },
+    { value: "avulsa", label: "Avulsas" },
+  ]), []);
+
+  const conciliacaoOptions = useMemo<FilterOption[]>(() => ([
+    { value: "conciliado", label: "Conciliadas" },
+    { value: "nao_conciliado", label: "Não conciliadas" },
+  ]), []);
 
   const hasActiveFilters =
-    !!search || !!vinculadoFilter || !!categoriaFilter || !!projetoFilter || !!contaFilter || statusFilter !== "todas";
+    !!search ||
+    statusFilter.length > 0 ||
+    vinculadoFilter.length > 0 ||
+    categoriaFilter.length > 0 ||
+    projetoFilter.length > 0 ||
+    contaFilter.length > 0 ||
+    meioFilter.length > 0 ||
+    recorrenciaFilter.length > 0 ||
+    conciliacaoFilter.length > 0 ||
+    periodPreset !== "month" ||
+    !!periodCustom.start ||
+    !!periodCustom.end;
 
   function clearAllFilters() {
     setSearch("");
-    setVinculadoFilter("");
-    setCategoriaFilter("");
-    setProjetoFilter("");
-    setContaFilter("");
-    setStatusFilter("todas");
+    setStatusFilter([]);
+    setVinculadoFilter([]);
+    setCategoriaFilter([]);
+    setProjetoFilter([]);
+    setContaFilter([]);
+    setMeioFilter([]);
+    setRecorrenciaFilter([]);
+    setConciliacaoFilter([]);
+    setPeriodPreset("month");
+    setPeriodCustom({ start: null, end: null });
   }
 
   const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => ({
@@ -527,7 +696,19 @@ export default function Movimentacoes() {
   }
 
   async function handleDuplicate(m: any) {
-    const { id, created_at, updated_at, clientes, fornecedores, categorias, projetos, ...rest } = m;
+    const {
+      id,
+      created_at,
+      updated_at,
+      clientes,
+      fornecedores,
+      colaboradores,
+      categorias,
+      projects,
+      contas_bancarias,
+      meios_pagamento,
+      ...rest
+    } = m;
     const { error } = await supabase.from("movimentacoes").insert({
       ...rest,
       descricao: `${m.descricao} (Cópia)`,
@@ -545,21 +726,6 @@ export default function Movimentacoes() {
   function openEditModal(m: any) {
     navigate(`/financeiro/movimentacoes/${m.id}`);
   }
-
-  const statusButtons = isPagar
-    ? [
-        { key: "todas", label: "Todas" },
-        { key: "pendentes", label: "Pendentes" },
-        { key: "pagas", label: "Pagas" },
-        { key: "atrasadas", label: "Atrasadas" },
-      ]
-    : [
-        { key: "todas", label: "Todas" },
-        { key: "pendentes", label: "Pendentes" },
-        { key: "recebidas", label: "Recebidas" },
-        { key: "atrasadas", label: "Atrasadas" },
-      ];
-
 
   return (
     <div className="space-y-6">
@@ -622,13 +788,13 @@ export default function Movimentacoes() {
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-border">
         <button
-          onClick={() => { setTab("pagar"); setStatusFilter("todas"); }}
+          onClick={() => setTab("pagar")}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Pagar
         </button>
         <button
-          onClick={() => { setTab("receber"); setStatusFilter("todas"); }}
+          onClick={() => setTab("receber")}
           className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Receber
@@ -639,10 +805,10 @@ export default function Movimentacoes() {
       {/* Filters */}
       <div className="flex flex-col gap-3">
         <div className="flex gap-3 flex-wrap items-center">
-          <div className="relative flex-1 min-w-[220px] max-w-sm">
+          <div className="relative flex-1 min-w-[240px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por descrição, vinculado, categoria, projeto..."
+              placeholder="Buscar por descrição, vinculado, categoria, projeto, conta..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9"
@@ -654,76 +820,23 @@ export default function Movimentacoes() {
             Exibir Saldos Parciais
             <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
           </label>
-          <div className="flex items-center gap-1.5">
-            {statusButtons.map(s => (
-              <Button
-                key={s.key}
-                size="sm"
-                variant={statusFilter === s.key ? "default" : "outline"}
-                onClick={() => setStatusFilter(s.key)}
-                className="text-xs"
-              >
-                {s.label}
-              </Button>
-            ))}
-            <HelpTooltip content="Filtre as movimentações por status: Pendentes aguardam pagamento, Pagas já foram liquidadas, Atrasadas passaram do vencimento sem pagamento." className="ml-1" />
-          </div>
+          {hasActiveFilters && (
+            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="h-9 gap-1 text-xs">
+              <X className="h-3.5 w-3.5" />
+              Limpar filtros
+            </Button>
+          )}
         </div>
 
         <div className="flex gap-2 flex-wrap items-center">
-          <Select value={vinculadoFilter || "__all__"} onValueChange={(v) => setVinculadoFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="h-9 w-[200px] text-xs">
-              <SelectValue placeholder={isPagar ? "Vinculado (todos)" : "Cliente (todos)"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">{isPagar ? "Vinculado (todos)" : "Cliente (todos)"}</SelectItem>
-              {vinculadoOptions.map(o => (
-                <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={categoriaFilter || "__all__"} onValueChange={(v) => setCategoriaFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="h-9 w-[200px] text-xs">
-              <SelectValue placeholder="Categoria (todas)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Categoria (todas)</SelectItem>
-              {categoriaOptions.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={projetoFilter || "__all__"} onValueChange={(v) => setProjetoFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="h-9 w-[200px] text-xs">
-              <SelectValue placeholder="Projeto (todos)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Projeto (todos)</SelectItem>
-              {projetos.map((p: any) => (
-                <SelectItem key={p.id} value={p.id}>{p.nome || p.name || p.code}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={contaFilter || "__all__"} onValueChange={(v) => setContaFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="h-9 w-[200px] text-xs">
-              <SelectValue placeholder="Conta bancária (todas)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Conta bancária (todas)</SelectItem>
-              {contas.map((c: any) => (
-                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {hasActiveFilters && (
-            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="text-xs h-9 gap-1">
-              <X className="h-3.5 w-3.5" /> Limpar filtros
-            </Button>
-          )}
+          <MultiSelectFilter title="Status" selected={statusFilter} onChange={setStatusFilter} options={statusOptions} placeholder="Buscar status..." />
+          <MultiSelectFilter title={isPagar ? "Vinculado" : "Cliente"} selected={vinculadoFilter} onChange={setVinculadoFilter} options={vinculadoOptions} placeholder={isPagar ? "Buscar fornecedor ou colaborador..." : "Buscar cliente..."} />
+          <MultiSelectFilter title="Categoria" selected={categoriaFilter} onChange={setCategoriaFilter} options={categoriaOptions} placeholder="Buscar categoria..." />
+          <MultiSelectFilter title="Projeto" selected={projetoFilter} onChange={setProjetoFilter} options={projetoOptions} placeholder="Buscar projeto..." />
+          <MultiSelectFilter title="Conta bancária" selected={contaFilter} onChange={setContaFilter} options={contaOptions} placeholder="Buscar conta..." />
+          <MultiSelectFilter title="Meio de pagamento" selected={meioFilter} onChange={setMeioFilter} options={meioOptions} placeholder="Buscar meio de pagamento..." />
+          <MultiSelectFilter title="Recorrência" selected={recorrenciaFilter} onChange={setRecorrenciaFilter} options={recorrenciaOptions} placeholder="Buscar recorrência..." />
+          <MultiSelectFilter title="Conciliação" selected={conciliacaoFilter} onChange={setConciliacaoFilter} options={conciliacaoOptions} placeholder="Buscar conciliação..." />
         </div>
       </div>
 
