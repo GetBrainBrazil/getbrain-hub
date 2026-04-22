@@ -64,7 +64,7 @@ export default function FinanceiroVisaoGeral() {
   const fimISO = toISODate(endDate);
 
   const kpisQ = useFinanceiroKPIs(inicioISO, fimISO);
-  const serieQ = useSerieMensal(12, contaId);
+  const serieQ = useSerieMensal(18, contaId);
   const fluxoQ = useFluxoProjetado(90, contaId);
   const saldosQ = useSaldosPorConta();
   const vencQ = useProximosVencimentos(7);
@@ -131,7 +131,7 @@ export default function FinanceiroVisaoGeral() {
               icon={TrendingUp}
               variant="success"
               comparePrev={hasPeriod ? k.mes_anterior_receita : undefined}
-              subtitle="Por competência"
+              subtitle={`Prevista: ${formatCurrency(k.mes_receita_prevista)}`}
             />
             <KPIBlock
               title="Despesa realizada"
@@ -139,7 +139,7 @@ export default function FinanceiroVisaoGeral() {
               icon={TrendingDown}
               variant="danger"
               comparePrev={hasPeriod ? k.mes_anterior_despesa : undefined}
-              subtitle="Por competência"
+              subtitle={`Prevista: ${formatCurrency(k.mes_despesa_prevista)}`}
             />
             <KPIBlock
               title="Resultado"
@@ -155,7 +155,11 @@ export default function FinanceiroVisaoGeral() {
               icon={Percent}
               variant={k.mes_margem_percent >= 0 ? "success" : "danger"}
               isCurrency={false}
-              subtitle={`${k.mes_margem_percent.toFixed(1)}%`}
+              subtitle={
+                k.mes_receita > 0
+                  ? `${k.mes_margem_percent.toFixed(1)}% sobre receita realizada`
+                  : "Sem receita realizada no período"
+              }
             />
           </div>
         )}
@@ -234,7 +238,11 @@ export default function FinanceiroVisaoGeral() {
                   : "success"
               }
               isCurrency={false}
-              subtitle={`${k.inadimplencia_percent.toFixed(1)}% do faturado no mês`}
+              subtitle={
+                k.total_a_receber > 0
+                  ? `${k.inadimplencia_percent.toFixed(1)}% da carteira a receber vencida`
+                  : "Sem recebíveis em aberto"
+              }
             />
           </div>
         )}
