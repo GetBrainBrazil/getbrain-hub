@@ -191,6 +191,8 @@ Tabelas que todos os módulos usam. Estas são criadas no Prompt 01 e **nunca** 
 
 > **Nota v1.5:** O schema de `tasks`/`sprints`/`task_assignees` introduzido no Prompt 03A alimenta tanto a sub-aba Kanban quanto a sub-aba Dashboard da Área Dev. Nenhuma tabela é específica de uma sub-aba — o schema é do domínio "engenharia", e cada sub-aba é uma lente sobre ele.
 
+> **Nota v1.5:** O schema de `tasks`/`sprints`/`task_assignees` introduzido no Prompt 03A alimenta tanto a sub-aba Kanban quanto a sub-aba Dashboard da Área Dev. Nenhuma tabela é específica de uma sub-aba — o schema é do domínio "engenharia", e cada sub-aba é uma lente sobre ele.
+
 ### 4.1 `organizations`
 Para multi-tenant futuro. Por ora, 1 registro fixo (GetBrain) com UUID `00000000-0000-0000-0000-000000000001`.
 ```
