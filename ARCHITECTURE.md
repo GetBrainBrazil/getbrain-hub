@@ -564,6 +564,41 @@ Sempre usar variáveis CSS / tokens do Tailwind, nunca hex hardcoded em componen
 
 ---
 
+### 6.Z Padrão de dashboard denso
+
+Dashboards do GetBrain Hub seguem estrutura hierárquica vertical:
+
+1. Cabeçalho com controles globais (escopo temporal, filtros)
+2. Linha de alertas acionáveis (só aparece se tem alerta — nunca vazia, nunca ornamental)
+3. Linha de KPIs macro (4-6 cards compactos com valor + delta + sparkline)
+4. Blocos temáticos (cada bloco responde a uma pergunta de negócio, título imperativo)
+
+**Regras obrigatórias:**
+
+- Todo KPI tem delta comparativo (vs período anterior). Sem histórico, mostrar "—", nunca mostrar 0 falso.
+- Toda visualização tem estado vazio explicativo (não mostrar eixos vazios).
+- Todo número é clicável quando faz sentido drill-down (lista de tasks, página de projeto, etc.). Número sem drill é candidato a ser removido.
+
+**Cores semânticas padronizadas:**
+
+- verde = bom / dentro da meta
+- amarelo = atenção / 80-100% de limite
+- vermelho = ruim / > 100% de limite ou atrasado
+- ciano (primary) = neutro / em andamento
+- cinza = sem dado
+
+**Nunca mostrar métrica vitrine.** Se uma métrica não gera decisão nem conversa, sai.
+
+**Dashboards são responsivos, mas priorizam desktop denso.** Mobile recebe reorganização vertical sem degradar informação.
+
+**Hierarquia visual de blocos:**
+
+- Título do bloco em text-lg font-semibold + subtítulo mutado com a pergunta que o bloco responde
+- Bloco contém 2-5 widgets em grid responsivo
+- Widget = card com título + visualização + legenda/contexto
+
+---
+
 ## 7. Padrões de autenticação
 
 ### 7.1 Usuários internos (humans)
