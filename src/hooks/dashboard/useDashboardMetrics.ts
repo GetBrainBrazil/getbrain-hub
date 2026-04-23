@@ -41,11 +41,17 @@ export function useDashboardMetrics(sprintIds: string[]) {
     enabled: sprintIds.length > 0,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        // @ts-expect-error - view não está nos types gerados
+      const { data, error } = await (supabase as unknown as {
+        from: (t: string) => {
+          select: (q: string) => {
+            in: (c: string, v: string[]) => Promise<{ data: unknown; error: unknown }>;
+          };
+        };
+      })
         .from("dev_dashboard_metrics")
         .select("*")
         .in("sprint_id", sprintIds);
+      if (error) throw error;
       if (error) throw error;
       return (data ?? []) as unknown as DashboardMetrics[];
     },
@@ -60,8 +66,15 @@ export function useRecentSprintsMetrics(limit = 6) {
     queryKey: ["dashboard-metrics-recent", limit],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        // @ts-expect-error - view não está nos types
+      const { data, error } = await (supabase as unknown as {
+        from: (t: string) => {
+          select: (q: string) => {
+            order: (c: string, o: { ascending: boolean }) => {
+              limit: (n: number) => Promise<{ data: unknown; error: unknown }>;
+            };
+          };
+        };
+      })
         .from("dev_dashboard_metrics")
         .select("*")
         .order("start_date", { ascending: false })
