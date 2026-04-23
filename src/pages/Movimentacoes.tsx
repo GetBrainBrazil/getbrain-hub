@@ -938,20 +938,32 @@ export default function Movimentacoes() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {loading ? (
-          <>
-            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
-            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
-            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
-          </>
-        ) : (
-          <>
-            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
-            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
-            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
-          </>
+      <div className="space-y-2">
+        {hasSelection && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">
+              Mostrando totais de <span className="font-semibold text-foreground">{selectedIds.size}</span> movimentaç{selectedIds.size === 1 ? "ão" : "ões"} selecionada{selectedIds.size === 1 ? "" : "s"}
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedIds(new Set())}>
+              <X className="h-3 w-3 mr-1" /> Limpar seleção
+            </Button>
+          </div>
         )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {loading ? (
+            <>
+              <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+              <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+              <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+            </>
+          ) : (
+            <>
+              <KPICard title="Total Pendente" value={totalPendente} icon={Clock} subtitle={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
+              <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" subtitle={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
+              <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" subtitle={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tip banner (first visit / no movements) */}
