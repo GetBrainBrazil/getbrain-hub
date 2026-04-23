@@ -439,7 +439,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
 
         <FormSection icon={MapPin} title="Endereço">
           <div className="grid grid-cols-[2fr_1fr_2fr] gap-3">
-            <div><Label>CEP</Label><Input value={form.cep} onChange={e => setForm({ ...form, cep: applyCepMask(e.target.value) })} placeholder="00000-000" /></div>
+            <div><Label>CEP</Label><Input value={form.cep} onChange={e => setForm({ ...form, cep: applyCepMask(e.target.value) })} placeholder="00000-000" inputMode="numeric" /></div>
             <div><Label>Estado</Label>
               <Select value={form.estado || "__none__"} onValueChange={v => setForm({ ...form, estado: v === "__none__" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -459,7 +459,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
         <FormSection icon={Briefcase} title="Informações Contratuais">
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Data de Admissão</Label><Input type="date" value={form.data_admissao} onChange={e => setForm({ ...form, data_admissao: e.target.value })} /></div>
-            <div><Label>Salário Base (R$)</Label><Input value={form.salario_base} onChange={e => setForm({ ...form, salario_base: applyMoneyMask(e.target.value) })} placeholder="0,00" /></div>
+            <div><Label>Salário Base (R$)</Label><Input value={form.salario_base} onChange={e => setForm({ ...form, salario_base: applyMoneyMask(e.target.value) })} placeholder="0,00" inputMode="decimal" /></div>
           </div>
         </FormSection>
 
@@ -493,7 +493,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Colaborador</Button>
+            {isAdmin && <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Colaborador</Button>}
             <HelpTooltip content="Cadastre funcionários e prestadores de serviço. Os dados bancários cadastrados aqui facilitam o registro de pagamentos." />
           </div>
         </div>
@@ -512,10 +512,10 @@ export default function ColaboradoresTab({ search }: { search: string }) {
                     <Badge variant="outline" className={i.ativo ? "border-success/40 text-success bg-success/10" : "border-muted-foreground/30 text-muted-foreground bg-muted/40"}>
                       {i.ativo ? "Ativo" : "Inativo"}
                     </Badge>
-                    <Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} />
+                    {canManageStatus() && <Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} />}
                   </div>
                 </TableCell>
-                <TableCell><Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
+                <TableCell>{canEditColaborador(i) ? <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /> : <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}</TableCell>
               </TableRow>
             ))}
             {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum colaborador encontrado para os filtros selecionados</TableCell></TableRow>}
