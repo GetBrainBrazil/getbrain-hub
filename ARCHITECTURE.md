@@ -785,6 +785,13 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
   - Nova Seção 13: Mapa de Integrações entre Módulos
   - Definida barra de qualidade: todo módulo tem Camada 1 (dados+funcionalidade), Camada 2 (visual premium estilo Pipedrive/HubSpot), Camada 3 (integrações/automações com outros módulos)
   - Definidos campos padrão para rastreabilidade de origem em lançamentos automáticos: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`
+- **v1.5 — 23/04/2026:**
+  - Área Dev redefinida como **módulo macro hub** (antes era macro plano)
+  - Sub-abas formalizadas: Dashboard, Kanban, Sprints, Backlog
+  - Adicionado padrão canônico de módulo hub vs plano (seção 6.X)
+  - Adicionado padrão canônico de página de detalhe em tela cheia (seção 6.Y)
+  - Nota de protocolo Lovable: sub-abas de hub viram prompts separados
+  - Sem alterações de schema nesta versão — é decisão arquitetural de UI/navegação
 - **v1.4 (22/04/2026):**
   - Novo princípio 2.14: módulos macro vs sub-abas com critério de agregação global
   - Novo princípio 2.15: views SQL em tempo real como padrão para métricas (proibido campos derivados via trigger)
