@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.4 — 22/04/2026**
+> **Versão atual: v1.5 — 23/04/2026**
 
 ---
 
@@ -188,6 +188,8 @@ Confundir os dois é erro de modelagem grave. Cliente "João da Silva" da Equipe
 ## 4. Modelo de dados — tabelas fundacionais
 
 Tabelas que todos os módulos usam. Estas são criadas no Prompt 01 e **nunca** devem ser recriadas ou duplicadas em prompts posteriores.
+
+> **Nota v1.5:** O schema de `tasks`/`sprints`/`task_assignees` introduzido no Prompt 03A alimenta tanto a sub-aba Kanban quanto a sub-aba Dashboard da Área Dev. Nenhuma tabela é específica de uma sub-aba — o schema é do domínio "engenharia", e cada sub-aba é uma lente sobre ele.
 
 ### 4.1 `organizations`
 Para multi-tenant futuro. Por ora, 1 registro fixo (GetBrain) com UUID `00000000-0000-0000-0000-000000000001`.
@@ -573,14 +575,22 @@ Sempre usar variáveis CSS / tokens do Tailwind, nunca hex hardcoded em componen
 
 ### 8.1 Módulos existentes (manter e integrar)
 - **Financeiro** — já construído. Será refatorado no Prompt 01 para usar `companies`, `actors`, `humans`, `projects`.
-- **Área Dev** — UI construída com dados mock. Será plugada ao schema real de `tasks` e `sprints` em prompts posteriores.
+- **Área Dev** — redefinida como **módulo macro hub** (v1.5). Estrutura: rota-mãe `/dev` com sub-abas internas (Dashboard, Kanban, Sprints, Backlog). Schema real de `tasks`, `sprints`, `task_assignees` introduzido no Prompt 03A.
 
 ### 8.2 Módulos macro (sidebar principal)
 
 1. **Dashboard** — visão executiva geral
-2. **Financeiro** — já construído
+2. **Financeiro** — já construído (módulo macro plano)
 3. **Projetos** — em construção (Prompts 02, 02b, 02c)
-4. **Área Dev** — UI pronta, plug em dados reais no Prompt 03
+4. **Área Dev** — módulo macro hub de engenharia. Rota-mãe: `/dev` Sub-abas:
+   - **Dashboard** `/dev` (default) — Métricas de produtividade, entrega, gargalos e qualidade. É a tela que Daniel abre na segunda-feira pra saber "estamos entregando?"
+   - **Kanban** `/dev/kanban` — Board operacional da sprint ativa. Tela principal dos devs no dia-a-dia.
+   - **Sprints** `/dev/sprints` — Gestão de sprints (criar, ativar, encerrar, comparar). Histórico e retrospectivas.
+   - **Backlog** `/dev/backlog` — Lista priorizável de tasks sem sprint atribuída. Ponte entre "ideia/bug reportado" e "Kanban".
+   
+   Tela cheia de task: `/dev/tasks/:code` (ex: `/dev/tasks/TASK-0042`) — padrão GitHub Issues / Linear. Layout 70/30, ver seção 6.
+   
+   **Princípio de separação:** o Dashboard responde perguntas, o Kanban é ferramenta de execução diária, Sprints é planejamento, Backlog é pipeline de entrada. Nunca duplicar função entre abas.
 5. **CRM** — futuro (pipeline comercial, leads, propostas)
 6. **Suporte** — futuro (tickets globais, kanban macro)
 7. **Manutenção** — futuro (contratos ativos, recorrência)
@@ -711,7 +721,31 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
 
 ## 12. Histórico de versões
 
-- **v1.0 (21/04/2026):** Documento inicial. Define Actors, entidades base, princípios, padrões de UI, convenções de schema e protocolo de trabalho com Lovable.
+- **v1.5 — 23/04/2026:**
+  - Área Dev redefinida como **módulo macro hub** (antes era macro plano)
+  - Sub-abas formalizadas: Dashboard, Kanban, Sprints, Backlog
+  - Adicionado padrão canônico de módulo hub vs plano (seção 6.X)
+  - Adicionado padrão canônico de página de detalhe em tela cheia (seção 6.Y)
+  - Nota de protocolo Lovable: sub-abas de hub viram prompts separados
+  - Sem alterações de schema nesta versão — é decisão arquitetural de UI/navegação
+- **v1.4 (22/04/2026):**
+  - Novo princípio 2.14: módulos macro vs sub-abas com critério de agregação global
+  - Novo princípio 2.15: views SQL em tempo real como padrão para métricas (proibido campos derivados via trigger)
+  - Seção 8 reorganizada com mapa consolidado de navegação
+  - Nova aba "Operacional" dentro de Projetos consolidando indicadores de módulos macro
+  - Seção 13 expandida com mapa de entradas (IN) para Projetos
+- **v1.3 (21/04/2026):**
+  - Novo princípio 2.13: integração entre módulos de primeira classe
+  - Nova Seção 13: Mapa de Integrações entre Módulos
+  - Definida barra de qualidade: todo módulo tem Camada 1 (dados+funcionalidade), Camada 2 (visual premium estilo Pipedrive/HubSpot), Camada 3 (integrações/automações com outros módulos)
+  - Definidos campos padrão para rastreabilidade de origem em lançamentos automáticos: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`
+- **v1.2 (21/04/2026):**
+  - Adicionados 7 campos TEXT à tabela `projects` para escopo estruturado (`business_context`, `scope_in`, `scope_out`, `premises`, `deliverables`, `technical_stack`, `identified_risks`)
+  - Adicionadas 4 tabelas fundacionais novas (`project_dependencies`, `project_milestones`, `project_integrations`, `project_risks`)
+  - Adicionados 7 enums novos correspondentes
+  - Novo princípio 2.12: escopo estruturado
+  - Drawer do projeto reorganizado em 8 abas: Visão Geral, Escopo, Dependências, Marcos, Riscos, Integrações, Atores & Manutenção, Atividade
+  - Novo KPI na listagem de Projetos: "Dependências Bloqueantes"
 - **v1.1 (21/04/2026):**
   - `project_type` reduzido para 5 opções (removido `manutencao`)
   - Adicionada tabela `maintenance_contracts` (seção 4.10)
@@ -723,24 +757,7 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
   - Código de projeto: formato PRJ-001 sequencial (confirmado)
   - Primary color: ciano #06b6d4 (confirmado)
   - Seção 11 atualizada com seed incluindo `maintenance_contracts`
-- **v1.2 (21/04/2026):**
-  - Adicionados 7 campos TEXT à tabela `projects` para escopo estruturado (`business_context`, `scope_in`, `scope_out`, `premises`, `deliverables`, `technical_stack`, `identified_risks`)
-  - Adicionadas 4 tabelas fundacionais novas (`project_dependencies`, `project_milestones`, `project_integrations`, `project_risks`)
-  - Adicionados 7 enums novos correspondentes
-  - Novo princípio 2.12: escopo estruturado
-  - Drawer do projeto reorganizado em 8 abas: Visão Geral, Escopo, Dependências, Marcos, Riscos, Integrações, Atores & Manutenção, Atividade
-  - Novo KPI na listagem de Projetos: "Dependências Bloqueantes"
-- **v1.3 (21/04/2026):**
-  - Novo princípio 2.13: integração entre módulos de primeira classe
-  - Nova Seção 13: Mapa de Integrações entre Módulos
-  - Definida barra de qualidade: todo módulo tem Camada 1 (dados+funcionalidade), Camada 2 (visual premium estilo Pipedrive/HubSpot), Camada 3 (integrações/automações com outros módulos)
-  - Definidos campos padrão para rastreabilidade de origem em lançamentos automáticos: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`
-- **v1.4 (22/04/2026):**
-  - Novo princípio 2.14: módulos macro vs sub-abas com critério de agregação global
-  - Novo princípio 2.15: views SQL em tempo real como padrão para métricas (proibido campos derivados via trigger)
-  - Seção 8 reorganizada com mapa consolidado de navegação
-  - Nova aba "Operacional" dentro de Projetos consolidando indicadores de módulos macro
-  - Seção 13 expandida com mapa de entradas (IN) para Projetos
+- **v1.0 (21/04/2026):** Documento inicial. Define Actors, entidades base, princípios, padrões de UI, convenções de schema e protocolo de trabalho com Lovable.
 
 ---
 
@@ -814,3 +831,137 @@ Toda mudança de status ou campo importante em qualquer módulo deve gerar entra
 ### 13.9 Princípio de agregação
 
 Todas as métricas cruzadas são expostas via view `project_metrics` (criada no Prompt 02c). Nenhum módulo precisa "saber" que Projetos está consumindo — o Projetos simplesmente lê a view, que faz LEFT JOIN com as tabelas dos outros módulos. Quando uma tabela-fonte ainda não existe (Suporte, Tokens), a view retorna 0 para aquele agregado — e passa a retornar dados reais automaticamente quando a tabela for criada no prompt futuro.
+
+---
+
+## 12. Histórico de versões
+
+- **v1.5 — 23/04/2026:**
+  - Área Dev redefinida como **módulo macro hub** (antes era macro plano)
+  - Sub-abas formalizadas: Dashboard, Kanban, Sprints, Backlog
+  - Adicionado padrão canônico de módulo hub vs plano (seção 6.X)
+  - Adicionado padrão canônico de página de detalhe em tela cheia (seção 6.Y)
+  - Nota de protocolo Lovable: sub-abas de hub viram prompts separados
+  - Sem alterações de schema nesta versão — é decisão arquitetural de UI/navegação
+- **v1.4 (22/04/2026):**
+  - Novo princípio 2.14: módulos macro vs sub-abas com critério de agregação global
+  - Novo princípio 2.15: views SQL em tempo real como padrão para métricas (proibido campos derivados via trigger)
+  - Seção 8 reorganizada com mapa consolidado de navegação
+  - Nova aba "Operacional" dentro de Projetos consolidando indicadores de módulos macro
+  - Seção 13 expandida com mapa de entradas (IN) para Projetos
+- **v1.3 (21/04/2026):**
+  - Novo princípio 2.13: integração entre módulos de primeira classe
+  - Nova Seção 13: Mapa de Integrações entre Módulos
+  - Definida barra de qualidade: todo módulo tem Camada 1 (dados+funcionalidade), Camada 2 (visual premium estilo Pipedrive/HubSpot), Camada 3 (integrações/automações com outros módulos)
+  - Definidos campos padrão para rastreabilidade de origem em lançamentos automáticos: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`
+- **v1.2 (21/04/2026):**
+  - Adicionados 7 campos TEXT à tabela `projects` para escopo estruturado (`business_context`, `scope_in`, `scope_out`, `premises`, `deliverables`, `technical_stack`, `identified_risks`)
+  - Adicionadas 4 tabelas fundacionais novas (`project_dependencies`, `project_milestones`, `project_integrations`, `project_risks`)
+  - Adicionados 7 enums novos correspondentes
+  - Novo princípio 2.12: escopo estruturado
+  - Drawer do projeto reorganizado em 8 abas: Visão Geral, Escopo, Dependências, Marcos, Riscos, Integrações, Atores & Manutenção, Atividade
+  - Novo KPI na listagem de Projetos: "Dependências Bloqueantes"
+- **v1.1 (21/04/2026):**
+  - `project_type` reduzido para 5 opções (removido `manutencao`)
+  - Adicionada tabela `maintenance_contracts` (seção 4.10)
+  - `monthly_fee` movido de `projects` para `maintenance_contracts`
+  - Novo princípio 2.11: separação entre projetos e contratos de manutenção
+  - Módulo "Suporte/Tickets" e "Portal do Cliente" refatorados em módulo combinado **Manutenção + Suporte** (item 5) + Portal do Cliente separado (item 6)
+  - Magic link do Portal do Cliente: 90 dias fixos (antes era 30)
+  - Daniel: role=owner, employment_type=founder (confirmado)
+  - Código de projeto: formato PRJ-001 sequencial (confirmado)
+  - Primary color: ciano #06b6d4 (confirmado)
+  - Seção 11 atualizada com seed incluindo `maintenance_contracts`
+- **v1.0 (21/04/2026):** Documento inicial. Define Actors, entidades base, princípios, padrões de UI, convenções de schema e protocolo de trabalho com Lovable.
+
+---
+
+## 13. Mapa de integrações entre módulos
+
+Esta seção define quais eventos de um módulo disparam quais ações em outro módulo. Todo prompt que cria ou modifica um módulo deve incluir seção "Integrações ativas deste módulo" com referência a esta tabela.
+
+### 13.1 Projetos → Financeiro
+
+| Evento gatilho | Ação automatizada | Quem dispara |
+|----------------|-------------------|--------------|
+| `projects.status` muda para `aceito` | Criar N lançamentos de Contas a Receber no Financeiro, um por parcela do `contract_value / installments_count`, espaçados mensalmente a partir de `start_date` ou data atual. Marca `source_module='projects'`, `is_automatic=true`. | Trigger no banco + Edge Function |
+| `projects.status` muda para `cancelado` | Listar lançamentos futuros com `source_entity_id = project.id` e marcar como `cancelled`. Perguntar ao usuário (modal) se deve estornar parcelas já pagas. | Edge Function |
+| `projects.status` muda para `entregue` | Sugerir (não criar automaticamente) abertura de `maintenance_contract` com valores pré-preenchidos baseados no tipo de projeto. Exibir modal de confirmação. | Frontend após trigger |
+| Ator alocado a projeto | Calcular custo projetado mensal (`humans.hourly_cost` × horas_semana × 4) e expor em "Custos do Projeto". | View ou função |
+
+### 13.2 Manutenção → Financeiro
+
+| Evento gatilho | Ação automatizada |
+|----------------|-------------------|
+| `maintenance_contract.status = active` criado | Criar série de lançamentos recorrentes mensais em Contas a Receber, a partir de `start_date`, com valor `monthly_fee × (1 - discount_percent/100)`. |
+| `maintenance_contract.status` muda para `paused` | Marcar lançamentos futuros (ainda não-pagos) como `paused`. |
+| `maintenance_contract.status` muda para `ended` / `cancelled` | Marcar lançamentos futuros como `cancelled`. Lançamentos já pagos ficam intactos. |
+| `maintenance_contract.end_date` atingido | Mudar status automaticamente para `ended` (Edge Function agendada). |
+
+### 13.3 Tokens → Financeiro (futuro, Prompt do módulo Tokens)
+
+| Evento gatilho | Ação |
+|----------------|------|
+| Consumo atinge 80% do `token_budget_brl` | Notificar Daniel (email/UI). |
+| Consumo ultrapassa 100% | Criar lançamento adicional em Contas a Receber com valor do excedente, `source_module='tokens'`. |
+
+### 13.4 CRM → Projetos (futuro, Prompt do módulo CRM)
+
+| Evento gatilho | Ação |
+|----------------|------|
+| Pipeline muda para `fechado` | Criar `project` com `status='aceito'`, pré-populando `company_id`, `project_type`, `contract_value`, descrição a partir do lead. |
+| Pipeline muda para `perdido` | Atualizar `companies.status='lost'`. |
+
+### 13.5 Suporte → Manutenção (futuro, Prompt do módulo Suporte)
+
+| Evento gatilho | Ação |
+|----------------|------|
+| Ticket resolvido | Registrar horas gastas no `maintenance_contract` vinculado. Alertar se acumulado > `hours_budget`. |
+| Ticket reaberto 2+ vezes | Aumentar prioridade, notificar Daniel. |
+
+### 13.6 Projetos → Atividade global
+
+Toda mudança de status ou campo importante em qualquer módulo deve gerar entrada em `audit_logs` — base para feed de atividade do projeto, dashboard global e auditoria.
+
+### 13.7 Regras gerais de implementação
+
+- **Edge Functions (Supabase)** implementam automações que atravessam tabelas.
+- **Triggers SQL** implementam automações simples dentro de uma tabela.
+- **Frontend** dispara eventos explicitamente quando user confirma ação que precisa de input (ex: sugerir criar contrato de manutenção).
+- Toda tabela que recebe eventos de outros módulos tem colunas: `source_module text`, `source_entity_type text`, `source_entity_id uuid`, `is_automatic boolean default false`.
+- **Nenhuma automação roda sem estar documentada aqui primeiro.** Se um prompt futuro precisa adicionar automação, atualizar esta seção.
+
+### 13.8 Projetos ← outros módulos (entradas)
+
+| Módulo origem | Evento | Como aparece em Projetos |
+|---------------|--------|--------------------------|
+| Área Dev (Tarefas) | Task criada/atualizada com `project_id` preenchido | Contagem no painel Tarefas da aba Operacional |
+| Área Dev (Tarefas) | Task com `hours_actual` registrado | Soma em `project_metrics.hours_actual` |
+| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pago | Soma em `project_metrics.revenue_received` |
+| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pendente | Soma em `project_metrics.revenue_pending` |
+| Suporte (Tickets) | Ticket criado com `project_id` | Contagem no painel Suporte |
+| Tokens | Consumo registrado com `project_id` | Soma no painel Tokens |
+| CRM | Pipeline fechado | Cria projeto automaticamente com `status='aceito'` |
+
+### 13.9 Princípio de agregação
+
+Todas as métricas cruzadas são expostas via view `project_metrics` (criada no Prompt 02c). Nenhum módulo precisa "saber" que Projetos está consumindo — o Projetos simplesmente lê a view, que faz LEFT JOIN com as tabelas dos outros módulos. Quando uma tabela-fonte ainda não existe (Suporte, Tokens), a view retorna 0 para aquele agregado — e passa a retornar dados reais automaticamente quando a tabela for criada no prompt futuro.
+
+---
+
+## 14. O que esta v1.5 NÃO faz
+
+Para evitar escopo inflado, o adendo não inclui:
+
+- Schema de tasks/sprints/task_assignees → fica no Prompt 03A
+- Definição detalhada do dashboard → fica no Prompt 03C (ARCHITECTURE só referencia a existência da view dev_dashboard_metrics, não detalha campos)
+- Regras de permissão para quem vê cada sub-aba → adiado para quando RLS for endurecido
+- Componentes visuais específicos do kanban denso → ficam no Prompt 03A
+
+---
+
+## 15. Próximos passos após aplicar este adendo
+
+1. Daniel aplica o adendo no ARCHITECTURE.md do repo, commita.
+2. Claude gera Prompt 03A — dados reais + kanban denso. O prompt já assumirá a estrutura de sub-abas desta v1.5, então vai incluir o esqueleto do macro hub (rota /dev com Tabs) além do kanban em si.
+3. Em seguida, Prompt 03B (tela cheia task) e 03C (dashboard).
