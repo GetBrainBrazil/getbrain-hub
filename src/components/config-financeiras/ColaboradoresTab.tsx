@@ -11,11 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, Phone, MapPin, StickyNote, Briefcase } from "lucide-react";
+import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, Phone, MapPin, StickyNote, Briefcase, ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import { FormMode, FormPageShell, FormSection, DetailField, ESTADOS_BR, applyCpfMask, applyPhoneMask, applyCepMask, applyMoneyMask, parseMoney, formatMoneyForInput, formatCpfCnpj, formatPhone, formatDateBR, buildAddressString } from "./shared";
+import { FormMode, FormPageShell, FormSection, DetailField, ESTADOS_BR, applyCpfMask, applyPhoneMask, applyCepMask, applyMoneyMask, parseMoney, formatMoneyForInput, formatCpfCnpj, formatPhone, formatDateBR, buildAddressString, applyAgenciaMask, applyContaMask, applyPixMask, detectPixType, pixTypeLabel } from "./shared";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useURLState } from "@/hooks/useURLState";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Form = {
   nome: string; cargo: string; cpf: string;
@@ -33,6 +34,8 @@ export default function ColaboradoresTab({ search }: { search: string }) {
   const [filterCargo, setFilterCargo] = useURLState<string>("cargo", "__all__");
   const [filterStatus, setFilterStatus] = useURLState<string>("status", "__all__");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);
@@ -43,7 +46,22 @@ export default function ColaboradoresTab({ search }: { search: string }) {
   const [copied, setCopied] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  useEffect(() => { load(); supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null)); }, []);
+  useEffect(() => {
+    load();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      setCurrentUserId(user?.id || null);
+      setCurrentUserEmail(user?.email?.toLowerCase() || null);
+      if (!user?.id) return;
+      const { data: role } = await supabase
+        .from("user_roles" as any)
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      setIsAdmin(!!role);
+    });
+  }, []);
   async function load() { const { data } = await supabase.from("colaboradores" as any).select("*").order("nome"); setItems((data as any[]) || []); }
 
   const cargos = Array.from(new Set(items.map(i => i.cargo).filter(Boolean))).sort();
