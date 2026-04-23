@@ -573,7 +573,11 @@ function BlockField({ task }: { task: Task }) {
           </div>
           <Switch
             checked={task.is_blocked}
-            onCheckedChange={(v) => (v ? null : unblock())}
+            onCheckedChange={(v) => {
+              if (!v) return unblock();
+              if (reason.trim()) return block();
+              toast.error("Informe o motivo do bloqueio antes de ativar");
+            }}
             disabled={saving}
           />
         </div>
@@ -582,21 +586,17 @@ function BlockField({ task }: { task: Task }) {
             Bloqueada há {daysSince(task.blocked_since)} dia(s)
           </p>
         )}
-        {(task.is_blocked || reason.trim()) && (
-          <>
-            <Textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              onBlur={() => task.is_blocked && reason.trim() !== task.blocked_reason && block()}
-              placeholder="Por que está bloqueada? (obrigatório)"
-              className="min-h-[60px] text-xs"
-            />
-            {!task.is_blocked && reason.trim() && (
-              <Button size="sm" onClick={block} disabled={saving} className="w-full">
-                {saving && <Loader2 className="h-3 w-3 animate-spin" />} Bloquear
-              </Button>
-            )}
-          </>
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          onBlur={() => task.is_blocked && reason.trim() !== task.blocked_reason && block()}
+          placeholder="Por que está bloqueada? (obrigatório para bloquear)"
+          className="min-h-[60px] text-xs"
+        />
+        {!task.is_blocked && reason.trim() && (
+          <Button size="sm" onClick={block} disabled={saving} className="w-full">
+            {saving && <Loader2 className="h-3 w-3 animate-spin" />} Bloquear
+          </Button>
         )}
       </div>
       {dialog}
