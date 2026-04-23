@@ -34,6 +34,7 @@ export type AlertKind =
 
 export interface DashboardAlerts {
   overdue: AlertTask[];
+  blocked_now: AlertTask[];
   blocked_long: AlertTask[];
   estimate_burst: AlertTask[];
   stale_review: AlertTask[];
@@ -74,6 +75,7 @@ export function useDashboardAlerts(sprintId: string | null) {
         overdue: open.filter(
           (t) => t.due_date && t.due_date < today,
         ),
+        blocked_now: open.filter((t) => t.is_blocked),
         blocked_long: open.filter(
           (t) => t.is_blocked && t.blocked_since && t.blocked_since < ago3d,
         ),

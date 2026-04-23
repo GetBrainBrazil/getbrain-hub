@@ -19,15 +19,9 @@ export function BlockedNowList({ sprintId }: Props) {
   if (isLoading) {
     return <div className="h-32 animate-pulse rounded bg-muted/30" />;
   }
-  const items = data?.blocked_long ?? [];
-  // Mostra todas as bloqueadas (não só >3d) — o alerta separa por tempo
-  const allBlocked = (data?.overdue ?? []).filter((t) => t.is_blocked).concat(items);
-  const unique = Array.from(new Map(allBlocked.map((t) => [t.id, t])).values());
-  const list = unique
-    .filter((t) => t.is_blocked)
-    .sort((a, b) =>
-      (a.blocked_since ?? "").localeCompare(b.blocked_since ?? ""),
-    );
+  const list = (data?.blocked_now ?? [])
+    .slice()
+    .sort((a, b) => (a.blocked_since ?? "").localeCompare(b.blocked_since ?? ""));
 
   if (!list.length) {
     return (
