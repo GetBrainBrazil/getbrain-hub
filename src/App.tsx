@@ -25,6 +25,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
+import Vendas from "./pages/Vendas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
