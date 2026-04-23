@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
     icon: DollarSign,
     children: [
       { title: "Dashboard", url: "/financeiro" },
+      { title: "Vendas", url: "/financeiro/vendas" },
       { title: "Contas a Pagar / Receber", url: "/financeiro/movimentacoes" },
       { title: "Contratos", url: "/financeiro/contratos" },
       { title: "Orçamento", url: "/financeiro/orcamento" },
