@@ -958,9 +958,9 @@ export default function Movimentacoes() {
             </>
           ) : (
             <>
-              <KPICard title="Total Pendente" value={totalPendente} icon={Clock} subtitle={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
-              <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" subtitle={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
-              <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" subtitle={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
+              <KPICard title="Total Pendente" value={totalPendente} icon={Clock} badgeText={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} badgeVariant="warning" helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
+              <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" badgeText={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} badgeVariant="warning" helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
+              <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" badgeText={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} badgeVariant="warning" helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
             </>
           )}
         </div>
