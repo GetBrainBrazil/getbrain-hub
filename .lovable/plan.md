@@ -1,44 +1,44 @@
 
 
-## Filtros de tempo no Dashboard Financeiro
+## KPIs do topo reagindo à seleção de movimentações
 
-Vou portar a mesma lógica de período de Contas a Pagar/Receber (`PeriodFilter` + presets "Hoje, Esta Semana, Este Mês, Este Ano, Últimos 30 dias, Personalizado") para o Dashboard Financeiro principal, persistindo a seleção no `usePersistedState` (sobrevive a refresh/troca de aba — segue a regra global do projeto).
+Hoje, em `src/pages/Movimentacoes.tsx`:
+- As **bolinhas de seleção** (linhas 981, 1022-1025) são apenas visuais — são `<input type="checkbox" />` sem `checked`, sem `onChange`, sem estado. Clicar nelas não faz nada (o "marcado" que você vê é o browser lembrando localmente até a próxima renderização).
+- Os KPIs **Total Pendente / Total Pago / Total em Atraso** (linhas 553-557, 898-900) são calculados sobre `periodFiltered` (tudo que passou nos filtros), ignorando seleção.
 
-### O que o filtro vai controlar
+Você quer que, ao marcar linhas, os 3 indicadores do topo passem a refletir **apenas a seleção**.
 
-Os KPIs e rankings hoje são travados em "mês corrente vs mês anterior" pela view SQL. Para que o filtro funcione de verdade:
+### Mudanças em `src/pages/Movimentacoes.tsx`
 
-1. **KPI Linha 1 (Receita / Despesa / Resultado / Margem)** — calculados pelo período escolhido, com comparativo automático contra o **período anterior de mesma duração** (ex: filtro "Últimos 30 dias" compara contra os 30 dias anteriores; "Este Mês" compara contra o mês anterior).
-2. **Top 5 Categorias / Top 5 Clientes** — recortados pelo mesmo período.
-3. **Gráfico "Evolução por Competência"** — mantém os 12 meses fixos (visão histórica longa, não faz sentido recortar).
-4. **Cards de situação atual** (Saldo total, A receber, A pagar, Inadimplência, Próximos vencimentos, Top Atrasos, Saldo por conta, Fluxo projetado 90d) — **não mudam com o filtro de período** porque representam fotografia atual / projeção futura. Vão ficar agrupados visualmente sob um rótulo "Situação atual" para deixar claro.
+**1. Estado de seleção**
+- `const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())`
+- Limpar seleção sempre que mudar `tipo` (tab A Pagar / A Receber), filtros, período ou busca — para evitar IDs "fantasmas" de linhas que não estão mais visíveis.
 
-### Mudanças
+**2. Checkbox de cada linha (linha 1022)**
+- `checked={selectedIds.has(m.id)}`
+- `onChange` alterna o ID no Set.
+- `onClick={e => e.stopPropagation()}` já existe no `<TableCell>` pai, mantido.
 
-**Backend (1 migration)**
-- Substituir a view `financeiro_dashboard` por **função** `financeiro_dashboard(p_inicio date, p_fim date)` que calcula receita/despesa/resultado/margem do período recebido + mesmos números do período anterior de mesma duração. Mantém saldo_total / a receber / a pagar / vencido / inadimplência como hoje (independentes do filtro).
-- Adicionar função `financeiro_top_rankings(p_inicio date, p_fim date)` retornando topCategorias e topClientes do período (move a lógica do front, hoje em `useTopRankings`, para SQL).
+**3. Checkbox do header (linha 981)**
+- Deixar de ser `disabled`.
+- `checked` = todas as linhas filtradas selecionadas; `indeterminate` quando parcial.
+- `onChange` seleciona/desseleciona todas as linhas atualmente filtradas (`filtered`).
 
-**Frontend**
-- `src/pages/FinanceiroVisaoGeral.tsx`:
-  - Adicionar `<PeriodFilter>` ao lado do filtro de conta no header, default `"month"`, persistido em `dashboard_financeiro_period` / `dashboard_financeiro_period_custom`.
-  - Calcular `periodRange` via `getDateRange()` e passar para os hooks.
-  - Reorganizar layout em 2 seções com títulos: **"Resultado do período"** (KPIs linha 1 + Top 5 Categorias/Clientes) e **"Situação atual"** (KPIs linha 2 + Próximos vencimentos + Top Atrasos + Saldo por conta + Fluxo projetado).
-  - Subtítulos dos KPIs viram dinâmicos: "vs período anterior" em vez de "Anterior: ...".
-- `src/hooks/useFinanceiroDashboard.ts`:
-  - `useFinanceiroKPIs(inicio, fim)` — chama RPC nova em vez de `.from("financeiro_dashboard")`.
-  - `useTopRankings(inicio, fim)` — chama nova RPC.
-  - Outros hooks (saldos, vencimentos, fluxo, série mensal) sem mudança.
+**4. KPIs dinâmicos (linhas 553-557)**
+- Se `selectedIds.size > 0`: calcular `totalPendente/totalRecebidoPago/totalAtrasado` apenas sobre `periodFiltered.filter(m => selectedIds.has(m.id))`.
+- Se nada selecionado: comportamento atual (todas as filtradas).
 
-### Detalhes técnicos
+**5. Indicador visual do modo "seleção"**
+- Quando houver seleção, adicionar subtítulo discreto aos 3 `KPICard` ("N selecionadas") e um botão "Limpar seleção" sutil próximo aos KPIs para o usuário voltar ao modo padrão. Sem mudar o layout principal.
 
-- `PeriodFilter` é reusado tal como está (mesmo componente já usado em ContasPagar/Receber/Movimentacoes — comportamento de teclado, custom range, "Limpar" idênticos).
-- Persistência: `usePersistedState` com chaves `dashboard_financeiro_period` e `dashboard_financeiro_period_custom` (segue regra `mem://preference/filter-persistence`).
-- Quando preset = `"all"` (Todo o Período), passa `null` nas datas e a função SQL ignora o filtro de competência para os KPIs do período.
-- Comparativo "período anterior": duração = `fim - inicio + 1`, anterior = `[inicio - duração, inicio - 1]`. Para `"all"`, comparativo fica zerado e o KPI esconde o delta.
-- Todos os hooks dependentes do período recebem `[inicio, fim]` no `queryKey` para invalidação automática do React Query.
+**6. Acessibilidade**
+- Adicionar `aria-label` nos checkboxes ("Selecionar movimentação X" / "Selecionar todas").
 
-### Arquivos
-- **Migration nova**: substitui view por função `financeiro_dashboard(date,date)` + cria `financeiro_top_rankings(date,date)`.
-- **Editado**: `src/pages/FinanceiroVisaoGeral.tsx`, `src/hooks/useFinanceiroDashboard.ts`.
+### Comportamento final
+- Nada selecionado → KPIs mostram o total do período filtrado (como hoje).
+- 1+ selecionadas → KPIs mostram apenas a soma das selecionadas, com indicação "N selecionadas" e botão para limpar.
+- Trocar tab / filtros / período / busca → seleção é descartada automaticamente.
+
+### Arquivo
+- **Editado**: `src/pages/Movimentacoes.tsx` (único arquivo).
 
