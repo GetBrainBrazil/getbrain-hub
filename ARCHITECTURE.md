@@ -573,14 +573,14 @@ Sempre usar variáveis CSS / tokens do Tailwind, nunca hex hardcoded em componen
 
 ### 8.1 Módulos existentes (manter e integrar)
 - **Financeiro** — já construído. Será refatorado no Prompt 01 para usar `companies`, `actors`, `humans`, `projects`.
-- **Área Dev** — UI construída com dados mock. Será plugada ao schema real de `tasks` e `sprints` em prompts posteriores.
+- **Área Dev** — redefinida como **módulo macro hub** (v1.5). Estrutura: rota-mãe `/dev` com sub-abas internas (Dashboard, Kanban, Sprints, Backlog). Schema real de `tasks`, `sprints`, `task_assignees` introduzido no Prompt 03A.
 
 ### 8.2 Módulos macro (sidebar principal)
 
 1. **Dashboard** — visão executiva geral
 2. **Financeiro** — já construído
 3. **Projetos** — em construção (Prompts 02, 02b, 02c)
-4. **Área Dev** — UI pronta, plug em dados reais no Prompt 03
+4. **Área Dev** — módulo macro hub de engenharia. Rota-mãe `/dev` com sub-abas: Dashboard (default), Kanban, Sprints, Backlog. Cada aba é uma lente diferente sobre o mesmo domínio de tasks/sprints.
 5. **CRM** — futuro (pipeline comercial, leads, propostas)
 6. **Suporte** — futuro (tickets globais, kanban macro)
 7. **Manutenção** — futuro (contratos ativos, recorrência)
