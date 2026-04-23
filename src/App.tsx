@@ -19,7 +19,11 @@ import ExtratoMovimentacaoDetalhe from "./pages/ExtratoMovimentacaoDetalhe";
 import ConfiguracoesFinanceiras from "./pages/ConfiguracoesFinanceiras";
 import Projetos from "./pages/Projetos";
 import ProjetoDetalhe from "./pages/ProjetoDetalhe";
-import AreaDev from "./pages/AreaDev";
+import DevLayout from "./components/dev/DevLayout";
+import DevDashboard from "./pages/dev/DevDashboard";
+import DevKanban from "./pages/dev/DevKanban";
+import DevSprints from "./pages/dev/DevSprints";
+import DevBacklog from "./pages/dev/DevBacklog";
 import Clientes from "./pages/Clientes";
 import Configuracoes from "./pages/Configuracoes";
 import Suporte from "./pages/Suporte";
@@ -79,7 +83,14 @@ const App = () => (
             <Route path="/financeiro/contratos" element={<ProtectedRoute><ContratosManutencao /></ProtectedRoute>} />
             <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
             <Route path="/projetos/:id" element={<ProtectedRoute><ProjetoDetalhe /></ProtectedRoute>} />
-            <Route path="/area-dev" element={<ProtectedRoute><AreaDev /></ProtectedRoute>} />
+            <Route path="/area-dev" element={<Navigate to="/dev/kanban" replace />} />
+            <Route path="/dev" element={<ProtectedRoute><DevLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<DevDashboard />} />
+              <Route path="kanban" element={<DevKanban />} />
+              <Route path="sprints" element={<DevSprints />} />
+              <Route path="backlog" element={<DevBacklog />} />
+            </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
