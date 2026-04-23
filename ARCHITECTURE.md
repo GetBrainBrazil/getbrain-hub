@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.5 — 23/04/2026**
+> **Versão atual: v1.6 — 23/04/2026**
 
 ---
 
@@ -190,6 +190,30 @@ Confundir os dois é erro de modelagem grave. Cliente "João da Silva" da Equipe
 Tabelas que todos os módulos usam. Estas são criadas no Prompt 01 e **nunca** devem ser recriadas ou duplicadas em prompts posteriores.
 
 > **Nota v1.5:** O schema de `tasks`/`sprints`/`task_assignees` introduzido no Prompt 03A alimenta tanto a sub-aba Kanban quanto a sub-aba Dashboard da Área Dev. Nenhuma tabela é específica de uma sub-aba — o schema é do domínio "engenharia", e cada sub-aba é uma lente sobre ele.
+
+> **Nota v1.6 — Views agregadas como padrão de métrica:**
+>
+> Todo módulo macro com dashboard interno tem sua própria view SQL agregada (padrão `<contexto>_metrics`). Regras:
+>
+> - **Por quê view e não campo denormalizado:** métricas sempre têm janelas móveis (sprint atual, últimos 30 dias, etc.). Campos denormalizados em trigger ficam obsoletos a cada mudança de janela. Views recalculam a cada query.
+> - **Performance:** começamos com views comuns. Se alguma ficar > 500ms em produção, migra para MATERIALIZED VIEW com refresh periódico. Sem premature optimization.
+> - **Nomenclatura:** `<dominio>_<granularidade>_metrics`:
+>   - `project_metrics` — 1 linha por projeto
+>   - `dev_dashboard_metrics` — 1 linha por sprint (recente) ou 1 linha por período (custom)
+>   - `financial_metrics` (futuro) — 1 linha por mês
+> - **Granularidade adicional via funções SQL:** quando o dashboard precisa de breakdown (por dev, por projeto, por tipo), criar funções SQL `get_*` em vez de múltiplas views. Exemplo: `get_dev_estimation_accuracy(sprint_id)` retorna set de `(actor_id, avg_accuracy, desvio)`.
+
+> **Nota v1.6 — Views agregadas como padrão de métrica:**
+>
+> Todo módulo macro com dashboard interno tem sua própria view SQL agregada (padrão `<contexto>_metrics`). Regras:
+>
+> - **Por quê view e não campo denormalizado:** métricas sempre têm janelas móveis (sprint atual, últimos 30 dias, etc.). Campos denormalizados em trigger ficam obsoletos a cada mudança de janela. Views recalculam a cada query.
+> - **Performance:** começamos com views comuns. Se alguma ficar > 500ms em produção, migra para MATERIALIZED VIEW com refresh periódico. Sem premature optimization.
+> - **Nomenclatura:** `<dominio>_<granularidade>_metrics`:
+>   - `project_metrics` — 1 linha por projeto
+>   - `dev_dashboard_metrics` — 1 linha por sprint (recente) ou 1 linha por período (custom)
+>   - `financial_metrics` (futuro) — 1 linha por mês
+> - **Granularidade adicional via funções SQL:** quando o dashboard precisa de breakdown (por dev, por projeto, por tipo), criar funções SQL `get_*` em vez de múltiplas views. Exemplo: `get_dev_estimation_accuracy(sprint_id)` retorna set de `(actor_id, avg_accuracy, desvio)`.
 
 ### 4.1 `organizations`
 Para multi-tenant futuro. Por ora, 1 registro fixo (GetBrain) com UUID `00000000-0000-0000-0000-000000000001`.
@@ -552,6 +576,43 @@ Sempre usar variáveis CSS / tokens do Tailwind, nunca hex hardcoded em componen
 
 ---
 
+### 6.Z Padrão de dashboard denso
+
+Dashboards do GetBrain Hub seguem estrutura hierárquica vertical:
+
+1. Cabeçalho com controles globais (escopo temporal, filtros)
+2. Linha de alertas acionáveis (só aparece se tem alerta — nunca vazia, nunca ornamental)
+3. Linha de KPIs macro (4-6 cards compactos com valor + delta + sparkline)
+4. Blocos temáticos (cada bloco responde a uma pergunta de negócio, título imperativo)
+
+**Regras obrigatórias:**
+
+- Todo KPI tem delta comparativo (vs período anterior). Sem histórico, mostrar "—", nunca mostrar 0 falso.
+- Toda visualização tem estado vazio explicativo (não mostrar eixos vazios).
+- Todo número é clicável quando faz sentido drill-down (lista de tasks, página de projeto, etc.). Número sem drill é candidato a ser removido.
+
+**Cores semânticas padronizadas:**
+
+- verde = bom / dentro da meta
+- amarelo = atenção / 80-100% de limite
+- vermelho = ruim / > 100% de limite ou atrasado
+- ciano (primary) = neutro / em andamento
+- cinza = sem dado
+
+**Nunca mostrar métrica vitrine.** Se uma métrica não gera decisão nem conversa, sai.
+
+**Dashboards são responsivos, mas priorizam desktop denso.** Mobile recebe reorganização vertical sem degradar informação.
+
+**Hierarquia visual de blocos:**
+
+- Título do bloco em text-lg font-semibold + subtítulo mutado com a pergunta que o bloco responde
+- Bloco contém 2-5 widgets em grid responsivo
+- Widget = card com título + visualização + legenda/contexto
+
+---
+
+## 7. Padrões de autenticação
+
 ## 7. Padrões de autenticação
 
 ### 7.1 Usuários internos (humans)
@@ -717,10 +778,27 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
 
 > As 4 novas tabelas (`project_dependencies`, `project_milestones`, `project_integrations`, `project_risks`) começam vazias. Serão populadas por Daniel à medida que ele configurar os 3 projetos existentes.
 
+> **Nota v1.6 — Seed histórico descartável:**
+>
+> Alguns módulos precisam de histórico para alimentar gráficos de tendência desde o primeiro dia. Exemplo: Dashboard Dev precisa de pelo menos 3 sprints para mostrar evolução de velocity, precisão de estimativa, etc.
+>
+> Quando isso ocorre, criar seed histórico descartável seguindo regras:
+>
+> - Sprints/entidades fake usam código fora do range natural (ex: SPR-000, SPR--001) pra serem visualmente identificáveis.
+> - Campo metadata JSONB da entidade (se houver) ou comentário no seed SQL marca: `"seed_fake": true`, `"discard_after": "quando houver 3 sprints reais"`.
+> - Criar migration separada `seeds/historical-discardable-<modulo>.sql` para facilitar remoção futura.
+> - Registrar na lista de "dívidas técnicas" do módulo que esse seed precisa ser limpo quando histórico real existir.
+
 ---
 
 ## 12. Histórico de versões
 
+- **v1.6 — 23/04/2026:**
+  - Padrão canônico de views agregadas de métricas (nomenclatura, regras de performance)
+  - Padrão canônico de dashboard denso (seção 6.Z) com regras de KPIs, alertas, cores semânticas e drill-down
+  - Conceito de seed histórico descartável formalizado
+  - Dashboard Dev (Prompt 03C) referenciado no mapa de integrações com view + funções SQL
+  - Dívida técnica nova registrada: limpeza de SPR-000 e SPR--001 quando houver 3 sprints reais encerradas
 - **v1.5 — 23/04/2026:**
   - Área Dev redefinida como **módulo macro hub** (antes era macro plano)
   - Sub-abas formalizadas: Dashboard, Kanban, Sprints, Backlog
@@ -830,12 +908,20 @@ Toda mudança de status ou campo importante em qualquer módulo deve gerar entra
 
 ### 13.9 Princípio de agregação
 
+> **Nota v1.6:** A linha referente ao Dashboard Dev passa de "a criar" para "view `dev_dashboard_metrics` + funções `get_dev_estimation_accuracy`, `get_dev_capacity`, `get_project_health_summary`".
+
 Todas as métricas cruzadas são expostas via view `project_metrics` (criada no Prompt 02c). Nenhum módulo precisa "saber" que Projetos está consumindo — o Projetos simplesmente lê a view, que faz LEFT JOIN com as tabelas dos outros módulos. Quando uma tabela-fonte ainda não existe (Suporte, Tokens), a view retorna 0 para aquele agregado — e passa a retornar dados reais automaticamente quando a tabela for criada no prompt futuro.
 
 ---
 
 ## 12. Histórico de versões
 
+- **v1.6 — 23/04/2026:**
+  - Padrão canônico de views agregadas de métricas (nomenclatura, regras de performance)
+  - Padrão canônico de dashboard denso (seção 6.Z) com regras de KPIs, alertas, cores semânticas e drill-down
+  - Conceito de seed histórico descartável formalizado
+  - Dashboard Dev (Prompt 03C) referenciado no mapa de integrações com view + funções SQL
+  - Dívida técnica nova registrada: limpeza de SPR-000 e SPR--001 quando houver 3 sprints reais encerradas
 - **v1.5 — 23/04/2026:**
   - Área Dev redefinida como **módulo macro hub** (antes era macro plano)
   - Sub-abas formalizadas: Dashboard, Kanban, Sprints, Backlog
