@@ -826,6 +826,12 @@ Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
 
 ## 12. Histórico de versões
 
+- **v1.6 — 23/04/2026:**
+  - Padrão canônico de views agregadas de métricas (nomenclatura, regras de performance)
+  - Padrão canônico de dashboard denso (seção 6.Z) com regras de KPIs, alertas, cores semânticas e drill-down
+  - Conceito de seed histórico descartável formalizado
+  - Dashboard Dev (Prompt 03C) referenciado no mapa de integrações com view + funções SQL
+  - Dívida técnica nova registrada: limpeza de SPR-000 e SPR--001 quando houver 3 sprints reais encerradas
 - **v1.5 — 23/04/2026:**
   - Área Dev redefinida como **módulo macro hub** (antes era macro plano)
   - Sub-abas formalizadas: Dashboard, Kanban, Sprints, Backlog
