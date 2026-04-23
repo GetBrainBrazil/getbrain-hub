@@ -1931,6 +1931,196 @@ export type Database = {
           },
         ]
       }
+      sprints: {
+        Row: {
+          actual_end_date: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          end_date: string
+          goal: string | null
+          id: string
+          name: string
+          organization_id: string
+          start_date: string
+          status: Database["public"]["Enums"]["sprint_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          actual_end_date?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          end_date: string
+          goal?: string | null
+          id?: string
+          name: string
+          organization_id?: string
+          start_date: string
+          status?: Database["public"]["Enums"]["sprint_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          actual_end_date?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          end_date?: string
+          goal?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["sprint_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      task_assignees: {
+        Row: {
+          actor_id: string
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          is_primary: boolean
+          role: string | null
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          actor_id: string
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_primary?: boolean
+          role?: string | null
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          actor_id?: string
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_primary?: boolean
+          role?: string | null
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          actual_hours: number
+          blocked_reason: string | null
+          blocked_since: string | null
+          code: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          is_blocked: boolean
+          organization_id: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          project_id: string
+          rework_count: number
+          rework_reason: string | null
+          sort_order: number
+          sprint_id: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          type: Database["public"]["Enums"]["task_type"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          actual_hours?: number
+          blocked_reason?: string | null
+          blocked_since?: string | null
+          code: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_blocked?: boolean
+          organization_id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          project_id: string
+          rework_count?: number
+          rework_reason?: string | null
+          sort_order?: number
+          sprint_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          type?: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          actual_hours?: number
+          blocked_reason?: string | null
+          blocked_since?: string | null
+          code?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_blocked?: boolean
+          organization_id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          project_id?: string
+          rework_count?: number
+          rework_reason?: string | null
+          sort_order?: number
+          sprint_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -2066,86 +2256,6 @@ export type Database = {
           total_dependencies: number | null
           total_risks: number | null
           updated_at: string | null
-        }
-        Insert: {
-          actors_allocated?: never
-          avg_resolution_hours?: never
-          blocking_dependencies?: never
-          cost_integrations_monthly?: never
-          cost_total_estimated?: never
-          created_at?: string | null
-          deleted_at?: string | null
-          estimated_delivery_date?: string | null
-          high_risks_active?: never
-          hours_actual?: never
-          hours_estimated?: never
-          integrations_active?: never
-          integrations_total?: never
-          margin_real?: never
-          milestones_done?: never
-          milestones_total?: never
-          next_milestone?: never
-          project_code?: string | null
-          project_id?: string | null
-          project_status?: Database["public"]["Enums"]["project_status"] | null
-          revenue_contracted?: never
-          revenue_pending?: never
-          revenue_received?: never
-          start_date?: string | null
-          tasks_backlog?: never
-          tasks_blocked?: never
-          tasks_completion_percent?: never
-          tasks_done?: never
-          tasks_in_progress?: never
-          tasks_total?: never
-          tickets_open?: never
-          tickets_resolved_30d?: never
-          tokens_budget_brl?: never
-          tokens_consumed_month_brl?: never
-          tokens_consumption_percent?: never
-          total_dependencies?: never
-          total_risks?: never
-          updated_at?: string | null
-        }
-        Update: {
-          actors_allocated?: never
-          avg_resolution_hours?: never
-          blocking_dependencies?: never
-          cost_integrations_monthly?: never
-          cost_total_estimated?: never
-          created_at?: string | null
-          deleted_at?: string | null
-          estimated_delivery_date?: string | null
-          high_risks_active?: never
-          hours_actual?: never
-          hours_estimated?: never
-          integrations_active?: never
-          integrations_total?: never
-          margin_real?: never
-          milestones_done?: never
-          milestones_total?: never
-          next_milestone?: never
-          project_code?: string | null
-          project_id?: string | null
-          project_status?: Database["public"]["Enums"]["project_status"] | null
-          revenue_contracted?: never
-          revenue_pending?: never
-          revenue_received?: never
-          start_date?: string | null
-          tasks_backlog?: never
-          tasks_blocked?: never
-          tasks_completion_percent?: never
-          tasks_done?: never
-          tasks_in_progress?: never
-          tasks_total?: never
-          tickets_open?: never
-          tickets_resolved_30d?: never
-          tokens_budget_brl?: never
-          tokens_consumed_month_brl?: never
-          tokens_consumption_percent?: never
-          total_dependencies?: never
-          total_risks?: never
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2313,6 +2423,16 @@ export type Database = {
         | "consultoria"
         | "interno"
         | "outro"
+      sprint_status: "planned" | "active" | "completed" | "cancelled"
+      task_priority: "low" | "medium" | "high" | "urgent"
+      task_status:
+        | "backlog"
+        | "todo"
+        | "in_progress"
+        | "in_review"
+        | "done"
+        | "cancelled"
+      task_type: "feature" | "bug" | "chore" | "refactor" | "docs" | "research"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2535,6 +2655,17 @@ export const Constants = {
         "interno",
         "outro",
       ],
+      sprint_status: ["planned", "active", "completed", "cancelled"],
+      task_priority: ["low", "medium", "high", "urgent"],
+      task_status: [
+        "backlog",
+        "todo",
+        "in_progress",
+        "in_review",
+        "done",
+        "cancelled",
+      ],
+      task_type: ["feature", "bug", "chore", "refactor", "docs", "research"],
     },
   },
 } as const
