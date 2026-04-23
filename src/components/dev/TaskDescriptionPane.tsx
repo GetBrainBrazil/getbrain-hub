@@ -450,7 +450,7 @@ function CommentRow({ comment, taskId }: { comment: TaskComment; taskId: string 
   const isMine = currentActorId && comment.actor_id === currentActorId;
   const update = useUpdateTaskComment(taskId);
   const remove = useDeleteTaskComment(taskId);
-  const confirm = useConfirm();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
 
