@@ -11,11 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, Phone, MapPin, StickyNote, Briefcase } from "lucide-react";
+import { Plus, Pencil, Eye, X, Copy, Check, Trash2, Landmark, FileText, Phone, MapPin, StickyNote, Briefcase, ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import { FormMode, FormPageShell, FormSection, DetailField, ESTADOS_BR, applyCpfMask, applyPhoneMask, applyCepMask, applyMoneyMask, parseMoney, formatMoneyForInput, formatCpfCnpj, formatPhone, formatDateBR, buildAddressString } from "./shared";
+import { FormMode, FormPageShell, FormSection, DetailField, ESTADOS_BR, applyCpfMask, applyPhoneMask, applyCepMask, applyMoneyMask, parseMoney, formatMoneyForInput, formatCpfCnpj, formatPhone, formatDateBR, buildAddressString, applyAgenciaMask, applyContaMask, applyPixMask, detectPixType, pixTypeLabel } from "./shared";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { useURLState } from "@/hooks/useURLState";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Form = {
   nome: string; cargo: string; cpf: string;
@@ -33,6 +34,8 @@ export default function ColaboradoresTab({ search }: { search: string }) {
   const [filterCargo, setFilterCargo] = useURLState<string>("cargo", "__all__");
   const [filterStatus, setFilterStatus] = useURLState<string>("status", "__all__");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [mode, setMode] = useState<FormMode>("list");
   const [selected, setSelected] = useState<any>(null);
@@ -43,7 +46,22 @@ export default function ColaboradoresTab({ search }: { search: string }) {
   const [copied, setCopied] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  useEffect(() => { load(); supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null)); }, []);
+  useEffect(() => {
+    load();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      setCurrentUserId(user?.id || null);
+      setCurrentUserEmail(user?.email?.toLowerCase() || null);
+      if (!user?.id) return;
+      const { data: role } = await supabase
+        .from("user_roles" as any)
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      setIsAdmin(!!role);
+    });
+  }, []);
   async function load() { const { data } = await supabase.from("colaboradores" as any).select("*").order("nome"); setItems((data as any[]) || []); }
 
   const cargos = Array.from(new Set(items.map(i => i.cargo).filter(Boolean))).sort();
@@ -59,29 +77,43 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     return true;
   });
 
-  function openNew() { setSelected(null); setForm(empty); setNewEmail(""); setNewPhone(""); setNewPix(""); setMode("new"); }
-  function openView(item: any) { setSelected(item); setMode("view"); }
-  function startEdit() {
-    if (!selected) return;
+  const normalizedUserEmail = currentUserEmail?.trim().toLowerCase() || null;
+  const isOwnColaborador = (item: any) => {
+    const itemEmails = ((item?.emails || []) as string[]).map((email) => email.trim().toLowerCase());
+    return !!item && ((currentUserId && item.created_by === currentUserId) || (normalizedUserEmail && itemEmails.includes(normalizedUserEmail)));
+  };
+  const canEditColaborador = (item: any) => isAdmin || isOwnColaborador(item);
+  const canDeleteColaborador = () => isAdmin;
+  const canManageStatus = () => isAdmin;
+  const normalizeText = (value: string) => value.trim().replace(/\s+/g, " ");
+
+  function openNew() {
+    if (!isAdmin) { toast.error("Apenas administradores podem cadastrar colaboradores"); return; }
+    setSelected(null); setForm(empty); setNewEmail(""); setNewPhone(""); setNewPix(""); setMode("new");
+  }
+  function openView(item: any) { setSelected(item); canEditColaborador(item) ? startEdit(item) : setMode("view"); }
+  function startEdit(item = selected) {
+    if (!item || !canEditColaborador(item)) return;
+    setSelected(item);
     setForm({
-      nome: selected.nome || "", cargo: selected.cargo || "", cpf: selected.cpf || "",
-      emails: selected.emails || [], telefones: selected.telefones || [],
-      banco: selected.banco || "", agencia: selected.agencia || "", conta: selected.conta || "",
-      tipo_conta: selected.tipo_conta || "corrente", chaves_pix: selected.chaves_pix || [],
-      cep: selected.cep || "", estado: selected.estado || "", cidade: selected.cidade || "",
-      endereco: selected.endereco || "", numero: selected.numero || "", bairro: selected.bairro || "",
-      complemento: selected.complemento || "",
-      data_admissao: selected.data_admissao || "",
-      salario_base: formatMoneyForInput(Number(selected.salario_base ?? 0)),
-      observacoes: selected.observacoes || "", ativo: selected.ativo ?? true,
+      nome: item.nome || "", cargo: item.cargo || "", cpf: item.cpf || "",
+      emails: item.emails || [], telefones: item.telefones || [],
+      banco: item.banco || "", agencia: applyAgenciaMask(item.agencia || ""), conta: applyContaMask(item.conta || ""),
+      tipo_conta: item.tipo_conta || "corrente", chaves_pix: (item.chaves_pix || []).map((pix: string) => applyPixMask(pix)),
+      cep: applyCepMask(item.cep || ""), estado: item.estado || "", cidade: item.cidade || "",
+      endereco: item.endereco || "", numero: item.numero || "", bairro: item.bairro || "",
+      complemento: item.complemento || "",
+      data_admissao: item.data_admissao || "",
+      salario_base: formatMoneyForInput(Number(item.salario_base ?? 0)),
+      observacoes: item.observacoes || "", ativo: item.ativo ?? true,
     });
     setNewEmail(""); setNewPhone(""); setNewPix(""); setMode("edit");
   }
   function backToList() { setMode("list"); setSelected(null); }
-  function cancelEdit() { if (mode === "new") backToList(); else setMode("view"); }
+  function cancelEdit() { if (mode === "new" || !selected || canEditColaborador(selected)) backToList(); else setMode("view"); }
 
   function addEmail() {
-    const e = newEmail.trim(); if (!e) return;
+    const e = newEmail.trim().toLowerCase(); if (!e) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast.error("E-mail inválido"); return; }
     if (form.emails.includes(e)) { toast.error("E-mail já cadastrado"); return; }
     setForm({ ...form, emails: [...form.emails, e] }); setNewEmail("");
@@ -92,7 +124,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     setForm({ ...form, telefones: [...form.telefones, p] }); setNewPhone("");
   }
   function addPix() {
-    const v = newPix.trim(); if (!v) return;
+    const v = applyPixMask(newPix.trim()); if (!v) return;
     if (form.chaves_pix.includes(v)) { toast.error("Chave PIX já cadastrada"); return; }
     setForm({ ...form, chaves_pix: [...form.chaves_pix, v] }); setNewPix("");
   }
@@ -105,7 +137,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
       chaves_pix: [...form.chaves_pix],
     };
 
-    const pendingEmail = newEmail.trim();
+    const pendingEmail = newEmail.trim().toLowerCase();
     if (pendingEmail) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pendingEmail)) {
         toast.error("E-mail inválido");
@@ -117,7 +149,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     const pendingPhone = newPhone.trim();
     if (pendingPhone && !nextForm.telefones.includes(pendingPhone)) nextForm.telefones.push(pendingPhone);
 
-    const pendingPix = newPix.trim();
+    const pendingPix = applyPixMask(newPix.trim());
     if (pendingPix && !nextForm.chaves_pix.includes(pendingPix)) nextForm.chaves_pix.push(pendingPix);
 
     return nextForm;
@@ -130,16 +162,16 @@ export default function ColaboradoresTab({ search }: { search: string }) {
 
     const salario = parseMoney(nextForm.salario_base);
     const payload: any = {
-      nome: nextForm.nome, cargo: nextForm.cargo || null, cpf: nextForm.cpf || null,
-      emails: nextForm.emails, telefones: nextForm.telefones,
-      banco: nextForm.banco || null, agencia: nextForm.agencia || null, conta: nextForm.conta || null,
-      tipo_conta: nextForm.tipo_conta, chaves_pix: nextForm.chaves_pix,
+      nome: normalizeText(nextForm.nome), cargo: normalizeText(nextForm.cargo) || null, cpf: applyCpfMask(nextForm.cpf) || null,
+      emails: nextForm.emails.map(e => e.trim().toLowerCase()), telefones: nextForm.telefones.map(applyPhoneMask),
+      banco: normalizeText(nextForm.banco) || null, agencia: applyAgenciaMask(nextForm.agencia) || null, conta: applyContaMask(nextForm.conta) || null,
+      tipo_conta: nextForm.tipo_conta, chaves_pix: nextForm.chaves_pix.map(applyPixMask),
       cep: nextForm.cep || null, estado: nextForm.estado || null, cidade: nextForm.cidade || null,
-      endereco: nextForm.endereco || null, numero: nextForm.numero || null, bairro: nextForm.bairro || null,
-      complemento: nextForm.complemento || null,
+      endereco: normalizeText(nextForm.endereco) || null, numero: normalizeText(nextForm.numero) || null, bairro: normalizeText(nextForm.bairro) || null,
+      complemento: normalizeText(nextForm.complemento) || null,
       data_admissao: nextForm.data_admissao || null,
       salario_base: isNaN(salario) ? 0 : salario,
-      observacoes: nextForm.observacoes || null,
+      observacoes: nextForm.observacoes.trim() || null,
     };
     setForm(nextForm);
     setNewEmail("");
@@ -166,13 +198,14 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     }
   }
   async function handleDelete() {
-    if (!selected) return;
+    if (!selected || !canDeleteColaborador()) return;
     const { error } = await supabase.from("colaboradores" as any).delete().eq("id", selected.id);
     if (error) { toast.error("Erro ao excluir colaborador"); return; }
     toast.success("Colaborador excluído com sucesso");
     setDeleteOpen(false); backToList(); load();
   }
   async function toggleAtivo(id: string, ativo: boolean) {
+    if (!canManageStatus()) { toast.error("Apenas administradores podem alterar status"); return; }
     await supabase.from("colaboradores" as any).update({ ativo: !ativo }).eq("id", id); load();
   }
   function handleCopyBank() {
@@ -184,27 +217,37 @@ export default function ColaboradoresTab({ search }: { search: string }) {
       setCopied(true); setTimeout(() => setCopied(false), 2000);
     });
   }
-  const canSeeSalary = selected && currentUserId && selected.created_by === currentUserId;
+  const canSeeSalary = selected && canEditColaborador(selected);
 
   /* ─── VIEW ─── */
   if (mode === "view" && selected) {
     return (
       <FormPageShell
         title="Detalhes do Colaborador"
-        subtitle="Visualize os dados do colaborador"
+        subtitle="Modo somente leitura"
         onBack={backToList}
         footer={
           <>
-            <Button variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="h-4 w-4" /> Excluir
-            </Button>
+            {canDeleteColaborador() ? (
+              <Button variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="h-4 w-4" /> Excluir
+              </Button>
+            ) : <span />}
             <div className="flex gap-2">
               <Button variant="outline" onClick={backToList}>Voltar</Button>
-              <Button className="gap-1.5" onClick={startEdit}><Pencil className="h-4 w-4" /> Editar</Button>
+              {canEditColaborador(selected) && <Button className="gap-1.5" onClick={() => startEdit()}><Pencil className="h-4 w-4" /> Editar</Button>}
             </div>
           </>
         }
       >
+        {!canEditColaborador(selected) && (
+          <Alert className="border-primary/20 bg-primary/5">
+            <ShieldCheck className="h-4 w-4" />
+            <AlertDescription>
+              Você está visualizando o cadastro de outro colaborador. Somente administradores ou o próprio colaborador podem editar estes dados.
+            </AlertDescription>
+          </Alert>
+        )}
         <FormSection icon={FileText} title="Dados Principais">
           <DetailField label="Nome Completo" value={selected.nome} />
           <div className="grid grid-cols-2 gap-4">
@@ -236,14 +279,11 @@ export default function ColaboradoresTab({ search }: { search: string }) {
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1.5 h-7 px-2 text-[13px] text-slate-500 hover:text-slate-700"
+              className="gap-1.5 h-7 px-2 text-[13px] text-muted-foreground hover:text-foreground"
               onClick={handleCopyBank}
             >
               {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-emerald-600">Copiado!</span>
-                </>
+                <><Check className="h-3.5 w-3.5 text-success" /><span className="text-success">Copiado!</span></>
               ) : (
                 <>
                   <Copy className="h-3.5 w-3.5" />
@@ -318,9 +358,9 @@ export default function ColaboradoresTab({ search }: { search: string }) {
           <div><Label>Nome Completo *</Label><Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Cargo</Label><Input value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} placeholder="Ex: Desenvolvedor" /></div>
-            <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm({ ...form, cpf: applyCpfMask(e.target.value) })} placeholder="000.000.000-00" /></div>
+            <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm({ ...form, cpf: applyCpfMask(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" /></div>
           </div>
-          {mode === "edit" && (
+          {mode === "edit" && canManageStatus() && (
             <div className="flex items-center gap-2">
               <Switch checked={form.ativo} onCheckedChange={v => setForm({ ...form, ativo: v })} />
               <Label>{form.ativo ? "Ativo" : "Inativo"}</Label>
@@ -334,7 +374,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               <Label>E-mails</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addEmail}><Plus className="h-3 w-3" /> Adicionar</Button>
             </div>
-            <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@exemplo.com" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmail())} />
+            <Input value={newEmail} onChange={e => setNewEmail(e.target.value.trim().toLowerCase())} placeholder="email@exemplo.com" inputMode="email" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmail())} />
             {form.emails.length > 0 ? (
               <div className="space-y-1 mt-2">{form.emails.map((em, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
@@ -349,7 +389,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               <Label>Telefones</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addPhone}><Plus className="h-3 w-3" /> Adicionar</Button>
             </div>
-            <Input value={newPhone} onChange={e => setNewPhone(applyPhoneMask(e.target.value))} placeholder="(00) 00000-0000" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPhone())} />
+            <Input value={newPhone} onChange={e => setNewPhone(applyPhoneMask(e.target.value))} placeholder="(00) 00000-0000" inputMode="tel" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPhone())} />
             {form.telefones.length > 0 ? (
               <div className="space-y-1 mt-2">{form.telefones.map((ph, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
@@ -364,8 +404,8 @@ export default function ColaboradoresTab({ search }: { search: string }) {
         <FormSection icon={Landmark} title="Dados Bancários">
           <div className="grid grid-cols-3 gap-3">
             <div><Label>Banco</Label><Input value={form.banco} onChange={e => setForm({ ...form, banco: e.target.value })} placeholder="Ex: Itaú" /></div>
-            <div><Label>Agência</Label><Input value={form.agencia} onChange={e => setForm({ ...form, agencia: e.target.value })} placeholder="1234" /></div>
-            <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: e.target.value })} placeholder="12345-6" /></div>
+            <div><Label>Agência</Label><Input value={form.agencia} onChange={e => setForm({ ...form, agencia: applyAgenciaMask(e.target.value) })} placeholder="1234-5" inputMode="numeric" /></div>
+            <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: applyContaMask(e.target.value) })} placeholder="12345-6" inputMode="numeric" /></div>
           </div>
           <div className="w-1/2">
             <Label>Tipo da Conta</Label>
@@ -382,11 +422,14 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               <Label>Chaves PIX</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addPix}><Plus className="h-3 w-3" /> Adicionar</Button>
             </div>
-            <Input value={newPix} onChange={e => setNewPix(e.target.value)} placeholder="CPF, e-mail, telefone, chave aleatória..." onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPix())} />
+            <div className="relative">
+              <Input value={newPix} onChange={e => setNewPix(applyPixMask(e.target.value))} placeholder="CPF, CNPJ, e-mail, telefone, chave aleatória..." onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPix())} className={newPix && detectPixType(newPix) !== "indefinido" ? "pr-24" : ""} />
+              {newPix && detectPixType(newPix) !== "indefinido" && <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] px-2 py-0 h-5 font-medium">{pixTypeLabel(detectPixType(newPix))}</Badge>}
+            </div>
             {form.chaves_pix.length > 0 ? (
               <div className="space-y-1 mt-2">{form.chaves_pix.map((k, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
-                  <span>{k}</span>
+                  <div className="flex items-center gap-2 min-w-0">{detectPixType(k) !== "indefinido" && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-medium shrink-0">{pixTypeLabel(detectPixType(k))}</Badge>}<span className="truncate">{k}</span></div>
                   <button type="button" className="text-muted-foreground hover:text-destructive transition-colors" onClick={() => setForm({ ...form, chaves_pix: form.chaves_pix.filter((_, i) => i !== idx) })}><X className="h-3.5 w-3.5" /></button>
                 </div>
               ))}</div>
@@ -396,7 +439,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
 
         <FormSection icon={MapPin} title="Endereço">
           <div className="grid grid-cols-[2fr_1fr_2fr] gap-3">
-            <div><Label>CEP</Label><Input value={form.cep} onChange={e => setForm({ ...form, cep: applyCepMask(e.target.value) })} placeholder="00000-000" /></div>
+            <div><Label>CEP</Label><Input value={form.cep} onChange={e => setForm({ ...form, cep: applyCepMask(e.target.value) })} placeholder="00000-000" inputMode="numeric" /></div>
             <div><Label>Estado</Label>
               <Select value={form.estado || "__none__"} onValueChange={v => setForm({ ...form, estado: v === "__none__" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -416,7 +459,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
         <FormSection icon={Briefcase} title="Informações Contratuais">
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Data de Admissão</Label><Input type="date" value={form.data_admissao} onChange={e => setForm({ ...form, data_admissao: e.target.value })} /></div>
-            <div><Label>Salário Base (R$)</Label><Input value={form.salario_base} onChange={e => setForm({ ...form, salario_base: applyMoneyMask(e.target.value) })} placeholder="0,00" /></div>
+            <div><Label>Salário Base (R$)</Label><Input value={form.salario_base} onChange={e => setForm({ ...form, salario_base: applyMoneyMask(e.target.value) })} placeholder="0,00" inputMode="decimal" /></div>
           </div>
         </FormSection>
 
@@ -450,7 +493,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Colaborador</Button>
+            {isAdmin && <Button size="sm" className="gap-1" onClick={openNew}><Plus className="h-4 w-4" /> Novo Colaborador</Button>}
             <HelpTooltip content="Cadastre funcionários e prestadores de serviço. Os dados bancários cadastrados aqui facilitam o registro de pagamentos." />
           </div>
         </div>
@@ -469,10 +512,10 @@ export default function ColaboradoresTab({ search }: { search: string }) {
                     <Badge variant="outline" className={i.ativo ? "border-success/40 text-success bg-success/10" : "border-muted-foreground/30 text-muted-foreground bg-muted/40"}>
                       {i.ativo ? "Ativo" : "Inativo"}
                     </Badge>
-                    <Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} />
+                    {canManageStatus() && <Switch checked={i.ativo} onCheckedChange={() => toggleAtivo(i.id, i.ativo)} />}
                   </div>
                 </TableCell>
-                <TableCell><Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></TableCell>
+                <TableCell>{canEditColaborador(i) ? <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /> : <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}</TableCell>
               </TableRow>
             ))}
             {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum colaborador encontrado para os filtros selecionados</TableCell></TableRow>}
