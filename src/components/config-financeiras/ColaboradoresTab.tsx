@@ -77,29 +77,43 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     return true;
   });
 
-  function openNew() { setSelected(null); setForm(empty); setNewEmail(""); setNewPhone(""); setNewPix(""); setMode("new"); }
-  function openView(item: any) { setSelected(item); setMode("view"); }
-  function startEdit() {
-    if (!selected) return;
+  const normalizedUserEmail = currentUserEmail?.trim().toLowerCase() || null;
+  const isOwnColaborador = (item: any) => {
+    const itemEmails = ((item?.emails || []) as string[]).map((email) => email.trim().toLowerCase());
+    return !!item && ((currentUserId && item.created_by === currentUserId) || (normalizedUserEmail && itemEmails.includes(normalizedUserEmail)));
+  };
+  const canEditColaborador = (item: any) => isAdmin || isOwnColaborador(item);
+  const canDeleteColaborador = () => isAdmin;
+  const canManageStatus = () => isAdmin;
+  const normalizeText = (value: string) => value.trim().replace(/\s+/g, " ");
+
+  function openNew() {
+    if (!isAdmin) { toast.error("Apenas administradores podem cadastrar colaboradores"); return; }
+    setSelected(null); setForm(empty); setNewEmail(""); setNewPhone(""); setNewPix(""); setMode("new");
+  }
+  function openView(item: any) { setSelected(item); canEditColaborador(item) ? startEdit(item) : setMode("view"); }
+  function startEdit(item = selected) {
+    if (!item || !canEditColaborador(item)) return;
+    setSelected(item);
     setForm({
-      nome: selected.nome || "", cargo: selected.cargo || "", cpf: selected.cpf || "",
-      emails: selected.emails || [], telefones: selected.telefones || [],
-      banco: selected.banco || "", agencia: selected.agencia || "", conta: selected.conta || "",
-      tipo_conta: selected.tipo_conta || "corrente", chaves_pix: selected.chaves_pix || [],
-      cep: selected.cep || "", estado: selected.estado || "", cidade: selected.cidade || "",
-      endereco: selected.endereco || "", numero: selected.numero || "", bairro: selected.bairro || "",
-      complemento: selected.complemento || "",
-      data_admissao: selected.data_admissao || "",
-      salario_base: formatMoneyForInput(Number(selected.salario_base ?? 0)),
-      observacoes: selected.observacoes || "", ativo: selected.ativo ?? true,
+      nome: item.nome || "", cargo: item.cargo || "", cpf: item.cpf || "",
+      emails: item.emails || [], telefones: item.telefones || [],
+      banco: item.banco || "", agencia: applyAgenciaMask(item.agencia || ""), conta: applyContaMask(item.conta || ""),
+      tipo_conta: item.tipo_conta || "corrente", chaves_pix: (item.chaves_pix || []).map((pix: string) => applyPixMask(pix)),
+      cep: applyCepMask(item.cep || ""), estado: item.estado || "", cidade: item.cidade || "",
+      endereco: item.endereco || "", numero: item.numero || "", bairro: item.bairro || "",
+      complemento: item.complemento || "",
+      data_admissao: item.data_admissao || "",
+      salario_base: formatMoneyForInput(Number(item.salario_base ?? 0)),
+      observacoes: item.observacoes || "", ativo: item.ativo ?? true,
     });
     setNewEmail(""); setNewPhone(""); setNewPix(""); setMode("edit");
   }
   function backToList() { setMode("list"); setSelected(null); }
-  function cancelEdit() { if (mode === "new") backToList(); else setMode("view"); }
+  function cancelEdit() { if (mode === "new" || !selected || canEditColaborador(selected)) backToList(); else setMode("view"); }
 
   function addEmail() {
-    const e = newEmail.trim(); if (!e) return;
+    const e = newEmail.trim().toLowerCase(); if (!e) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast.error("E-mail inválido"); return; }
     if (form.emails.includes(e)) { toast.error("E-mail já cadastrado"); return; }
     setForm({ ...form, emails: [...form.emails, e] }); setNewEmail("");
@@ -110,7 +124,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     setForm({ ...form, telefones: [...form.telefones, p] }); setNewPhone("");
   }
   function addPix() {
-    const v = newPix.trim(); if (!v) return;
+    const v = applyPixMask(newPix.trim()); if (!v) return;
     if (form.chaves_pix.includes(v)) { toast.error("Chave PIX já cadastrada"); return; }
     setForm({ ...form, chaves_pix: [...form.chaves_pix, v] }); setNewPix("");
   }
