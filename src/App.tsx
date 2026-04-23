@@ -66,6 +66,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroVisaoGeral /></ProtectedRoute>} />
+            <Route path="/financeiro/vendas" element={<ProtectedRoute><Vendas /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes" element={<ProtectedRoute><Movimentacoes /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes/novo/:tipo" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes/:id" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
