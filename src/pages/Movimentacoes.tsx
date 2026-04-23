@@ -1099,6 +1099,9 @@ export default function Movimentacoes() {
                     <TableCell className="pl-5 py-4" onClick={e => e.stopPropagation()}>
                       <input
                         type="checkbox"
+                        aria-label={`Selecionar movimentação ${m.descricao}`}
+                        checked={selectedIds.has(m.id)}
+                        onChange={() => toggleSelect(m.id)}
                         className="h-4 w-4 appearance-none rounded-full border border-input bg-background cursor-pointer transition-colors checked:border-primary checked:bg-primary checked:bg-[radial-gradient(circle,hsl(var(--primary-foreground))_35%,transparent_40%)]"
                       />
                     </TableCell>
