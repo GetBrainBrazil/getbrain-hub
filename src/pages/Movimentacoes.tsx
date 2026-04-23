@@ -550,11 +550,63 @@ export default function Movimentacoes() {
     setPeriodCustom({ start: null, end: null });
   }
 
-  const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => ({
-    totalPendente: periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0),
-    totalRecebidoPago: periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0),
-    totalAtrasado: periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0),
-  }), [periodFiltered]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear selection when filters, tab, period or search change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [
+    tab,
+    search,
+    statusFilter,
+    vinculadoFilter,
+    categoriaFilter,
+    projetoFilter,
+    contaFilter,
+    meioFilter,
+    recorrenciaFilter,
+    conciliacaoFilter,
+    periodPreset,
+    periodCustom.start,
+    periodCustom.end,
+  ]);
+
+  const hasSelection = selectedIds.size > 0;
+
+  const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => {
+    const source = hasSelection
+      ? periodFiltered.filter(m => selectedIds.has(m.id))
+      : periodFiltered;
+    return {
+      totalPendente: source.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0),
+      totalRecebidoPago: source.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0),
+      totalAtrasado: source.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0),
+    };
+  }, [periodFiltered, selectedIds, hasSelection]);
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(prev => {
+      const allIds = filtered.map((m: any) => m.id);
+      const allSelected = allIds.length > 0 && allIds.every(id => prev.has(id));
+      if (allSelected) {
+        const next = new Set(prev);
+        allIds.forEach(id => next.delete(id));
+        return next;
+      }
+      const next = new Set(prev);
+      allIds.forEach(id => next.add(id));
+      return next;
+    });
+  }
 
   const entityLabel = isPagar ? "Vinculado a" : "Cliente";
 
@@ -886,20 +938,32 @@ export default function Movimentacoes() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {loading ? (
-          <>
-            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
-            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
-            <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
-          </>
-        ) : (
-          <>
-            <KPICard title="Total Pendente" value={totalPendente} icon={Clock} helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
-            <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
-            <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
-          </>
+      <div className="space-y-2">
+        {hasSelection && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">
+              Mostrando totais de <span className="font-semibold text-foreground">{selectedIds.size}</span> movimentaç{selectedIds.size === 1 ? "ão" : "ões"} selecionada{selectedIds.size === 1 ? "" : "s"}
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedIds(new Set())}>
+              <X className="h-3 w-3 mr-1" /> Limpar seleção
+            </Button>
+          </div>
         )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {loading ? (
+            <>
+              <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+              <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+              <Card><CardContent className="p-6"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-32" /></CardContent></Card>
+            </>
+          ) : (
+            <>
+              <KPICard title="Total Pendente" value={totalPendente} icon={Clock} badgeText={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} badgeVariant="warning" helpText="Soma das movimentações que ainda não foram pagas nem recebidas e que não estão vencidas." />
+              <KPICard title={isPagar ? "Total Pago" : "Total Recebido"} value={totalRecebidoPago} icon={TrendingUp} variant="success" badgeText={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} badgeVariant="warning" helpText="Soma de todas as movimentações já liquidadas no período selecionado." />
+              <KPICard title="Total em Atraso" value={totalAtrasado} icon={AlertTriangle} variant="danger" badgeText={hasSelection ? `${selectedIds.size} selecionada${selectedIds.size === 1 ? "" : "s"}` : undefined} badgeVariant="warning" helpText="Soma das movimentações com data de vencimento ultrapassada e que ainda não foram pagas. Requer atenção imediata." />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tip banner (first visit / no movements) */}
@@ -978,7 +1042,21 @@ export default function Movimentacoes() {
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
                   <TableHead className="w-10 pl-5">
-                    <input type="checkbox" disabled className="h-4 w-4 rounded-full border-input accent-primary cursor-not-allowed opacity-60 appearance-none border bg-background" />
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todas as movimentações"
+                      checked={filtered.length > 0 && filtered.every((m: any) => selectedIds.has(m.id))}
+                      ref={el => {
+                        if (el) {
+                          const allIds = filtered.map((m: any) => m.id);
+                          const someSelected = allIds.some(id => selectedIds.has(id));
+                          const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
+                          el.indeterminate = someSelected && !allSelected;
+                        }
+                      }}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 appearance-none rounded-full border border-input bg-background cursor-pointer transition-colors checked:border-primary checked:bg-primary checked:bg-[radial-gradient(circle,hsl(var(--primary-foreground))_35%,transparent_40%)] indeterminate:border-primary indeterminate:bg-primary/40"
+                    />
                   </TableHead>
                   <SortableTableHead label={entityLabel.toUpperCase()} sortKey={isPagar ? "fornecedores" : "clientes"} currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
                   <SortableTableHead label="DESCRIÇÃO" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
@@ -1021,6 +1099,9 @@ export default function Movimentacoes() {
                     <TableCell className="pl-5 py-4" onClick={e => e.stopPropagation()}>
                       <input
                         type="checkbox"
+                        aria-label={`Selecionar movimentação ${m.descricao}`}
+                        checked={selectedIds.has(m.id)}
+                        onChange={() => toggleSelect(m.id)}
                         className="h-4 w-4 appearance-none rounded-full border border-input bg-background cursor-pointer transition-colors checked:border-primary checked:bg-primary checked:bg-[radial-gradient(circle,hsl(var(--primary-foreground))_35%,transparent_40%)]"
                       />
                     </TableCell>
