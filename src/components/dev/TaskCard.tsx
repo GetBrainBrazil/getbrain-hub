@@ -47,6 +47,7 @@ export function TaskCard({ task, onClick, dragging, compact }: Props) {
       onClick={onClick}
       className={cn(
         "group relative flex cursor-pointer overflow-hidden rounded-md border border-border bg-card text-left shadow-sm transition-all hover:border-accent/60 hover:shadow-lg",
+        compact ? "min-h-[150px]" : "min-h-[180px]",
         dragging && "opacity-40",
       )}
     >
