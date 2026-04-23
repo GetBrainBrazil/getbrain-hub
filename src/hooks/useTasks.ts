@@ -46,8 +46,8 @@ async function fetchTasks(filters: TaskFilters = {}): Promise<Task[]> {
   const { data: actors } = actorIds.length
     ? await sb.from("actors").select("id, type, display_name, avatar_url").in("id", actorIds)
     : { data: [] as any[] };
-  const actorMap = new Map((actors ?? []).map((a: any) => [a.id, a]));
-  const projMap = new Map((projects ?? []).map((p: any) => [p.id, p]));
+  const actorMap = new Map<string, any>((actors ?? []).map((a: any) => [a.id, a]));
+  const projMap = new Map<string, any>((projects ?? []).map((p: any) => [p.id, p]));
 
   const assignByTask = new Map<string, TaskAssignee[]>();
   for (const a of (assigns ?? []) as TaskAssignee[]) {
