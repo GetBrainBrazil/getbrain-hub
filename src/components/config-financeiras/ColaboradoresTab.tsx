@@ -358,7 +358,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
           <div><Label>Nome Completo *</Label><Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Cargo</Label><Input value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} placeholder="Ex: Desenvolvedor" /></div>
-            <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm({ ...form, cpf: applyCpfMask(e.target.value) })} placeholder="000.000.000-00" /></div>
+            <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm({ ...form, cpf: applyCpfMask(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" /></div>
           </div>
           {mode === "edit" && (
             <div className="flex items-center gap-2">
@@ -374,7 +374,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               <Label>E-mails</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addEmail}><Plus className="h-3 w-3" /> Adicionar</Button>
             </div>
-            <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@exemplo.com" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmail())} />
+            <Input value={newEmail} onChange={e => setNewEmail(e.target.value.trim().toLowerCase())} placeholder="email@exemplo.com" inputMode="email" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmail())} />
             {form.emails.length > 0 ? (
               <div className="space-y-1 mt-2">{form.emails.map((em, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
@@ -389,7 +389,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               <Label>Telefones</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addPhone}><Plus className="h-3 w-3" /> Adicionar</Button>
             </div>
-            <Input value={newPhone} onChange={e => setNewPhone(applyPhoneMask(e.target.value))} placeholder="(00) 00000-0000" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPhone())} />
+            <Input value={newPhone} onChange={e => setNewPhone(applyPhoneMask(e.target.value))} placeholder="(00) 00000-0000" inputMode="tel" onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPhone())} />
             {form.telefones.length > 0 ? (
               <div className="space-y-1 mt-2">{form.telefones.map((ph, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
@@ -404,8 +404,8 @@ export default function ColaboradoresTab({ search }: { search: string }) {
         <FormSection icon={Landmark} title="Dados Bancários">
           <div className="grid grid-cols-3 gap-3">
             <div><Label>Banco</Label><Input value={form.banco} onChange={e => setForm({ ...form, banco: e.target.value })} placeholder="Ex: Itaú" /></div>
-            <div><Label>Agência</Label><Input value={form.agencia} onChange={e => setForm({ ...form, agencia: e.target.value })} placeholder="1234" /></div>
-            <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: e.target.value })} placeholder="12345-6" /></div>
+            <div><Label>Agência</Label><Input value={form.agencia} onChange={e => setForm({ ...form, agencia: applyAgenciaMask(e.target.value) })} placeholder="1234-5" inputMode="numeric" /></div>
+            <div><Label>Conta</Label><Input value={form.conta} onChange={e => setForm({ ...form, conta: applyContaMask(e.target.value) })} placeholder="12345-6" inputMode="numeric" /></div>
           </div>
           <div className="w-1/2">
             <Label>Tipo da Conta</Label>
@@ -422,11 +422,14 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               <Label>Chaves PIX</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addPix}><Plus className="h-3 w-3" /> Adicionar</Button>
             </div>
-            <Input value={newPix} onChange={e => setNewPix(e.target.value)} placeholder="CPF, e-mail, telefone, chave aleatória..." onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPix())} />
+            <div className="relative">
+              <Input value={newPix} onChange={e => setNewPix(applyPixMask(e.target.value))} placeholder="CPF, CNPJ, e-mail, telefone, chave aleatória..." onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPix())} className={newPix && detectPixType(newPix) !== "indefinido" ? "pr-24" : ""} />
+              {newPix && detectPixType(newPix) !== "indefinido" && <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] px-2 py-0 h-5 font-medium">{pixTypeLabel(detectPixType(newPix))}</Badge>}
+            </div>
             {form.chaves_pix.length > 0 ? (
               <div className="space-y-1 mt-2">{form.chaves_pix.map((k, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-muted/50 rounded px-2.5 py-1.5 text-sm">
-                  <span>{k}</span>
+                  <div className="flex items-center gap-2 min-w-0">{detectPixType(k) !== "indefinido" && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-medium shrink-0">{pixTypeLabel(detectPixType(k))}</Badge>}<span className="truncate">{k}</span></div>
                   <button type="button" className="text-muted-foreground hover:text-destructive transition-colors" onClick={() => setForm({ ...form, chaves_pix: form.chaves_pix.filter((_, i) => i !== idx) })}><X className="h-3.5 w-3.5" /></button>
                 </div>
               ))}</div>
