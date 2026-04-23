@@ -2029,8 +2029,67 @@ export type Database = {
           },
         ]
       }
+      task_comments: {
+        Row: {
+          actor_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          organization_id: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          actor_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          organization_id?: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          actor_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          organization_id?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
+          acceptance_criteria: Json
           actual_hours: number
           blocked_reason: string | null
           blocked_since: string | null
@@ -2043,6 +2102,7 @@ export type Database = {
           estimated_hours: number | null
           id: string
           is_blocked: boolean
+          labels: string[]
           organization_id: string
           priority: Database["public"]["Enums"]["task_priority"]
           project_id: string
@@ -2058,6 +2118,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          acceptance_criteria?: Json
           actual_hours?: number
           blocked_reason?: string | null
           blocked_since?: string | null
@@ -2070,6 +2131,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           is_blocked?: boolean
+          labels?: string[]
           organization_id?: string
           priority?: Database["public"]["Enums"]["task_priority"]
           project_id: string
@@ -2085,6 +2147,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          acceptance_criteria?: Json
           actual_hours?: number
           blocked_reason?: string | null
           blocked_since?: string | null
@@ -2097,6 +2160,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           is_blocked?: boolean
+          labels?: string[]
           organization_id?: string
           priority?: Database["public"]["Enums"]["task_priority"]
           project_id?: string

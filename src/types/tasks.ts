@@ -12,6 +12,14 @@ export interface TaskAssignee {
   actor?: { id: string; type: "human" | "ai_agent"; display_name: string; avatar_url: string | null } | null;
 }
 
+export interface AcceptanceCriterion {
+  id: string;
+  text: string;
+  checked: boolean;
+  checked_at: string | null;
+  checked_by: string | null;
+}
+
 export interface Task {
   id: string;
   code: string;
@@ -31,10 +39,34 @@ export interface Task {
   completed_at: string | null;
   rework_count: number;
   sort_order: number;
+  acceptance_criteria: AcceptanceCriterion[];
+  labels: string[];
   created_at: string;
   updated_at: string;
+  created_by?: string | null;
   assignees?: TaskAssignee[];
   project?: { id: string; code: string; name: string } | null;
+}
+
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  actor_id: string;
+  body: string;
+  edited_at: string | null;
+  created_at: string;
+  updated_at: string;
+  actor?: { id: string; type: "human" | "ai_agent"; display_name: string; avatar_url: string | null } | null;
+}
+
+export interface TaskActivityEntry {
+  id: string;
+  action: string;
+  actor_id: string | null;
+  changes: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  actor?: { id: string; display_name: string; avatar_url: string | null } | null;
 }
 
 export interface Sprint {
