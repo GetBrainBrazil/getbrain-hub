@@ -46,7 +46,17 @@ const navItems: NavItem[] = [
     ],
   },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
-  { title: "Área Dev", url: "/area-dev", icon: Code2 },
+  {
+    title: "Área Dev",
+    url: "/dev",
+    icon: Code2,
+    children: [
+      { title: "Dashboard", url: "/dev/dashboard" },
+      { title: "Kanban", url: "/dev/kanban" },
+      { title: "Sprints", url: "/dev/sprints" },
+      { title: "Backlog", url: "/dev/backlog" },
+    ],
+  },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
