@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskType, TaskTypeKind } from "@/types/tasks";
+import type { TaskPriority, TaskTypeKind } from "@/types/tasks";
 
 /** Cor da barra lateral do card por prioridade. */
 export const PRIORITY_BAR_CLASS: Record<TaskPriority, string> = {
