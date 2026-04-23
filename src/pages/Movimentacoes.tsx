@@ -1042,7 +1042,21 @@ export default function Movimentacoes() {
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
                   <TableHead className="w-10 pl-5">
-                    <input type="checkbox" disabled className="h-4 w-4 rounded-full border-input accent-primary cursor-not-allowed opacity-60 appearance-none border bg-background" />
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todas as movimentações"
+                      checked={filtered.length > 0 && filtered.every((m: any) => selectedIds.has(m.id))}
+                      ref={el => {
+                        if (el) {
+                          const allIds = filtered.map((m: any) => m.id);
+                          const someSelected = allIds.some(id => selectedIds.has(id));
+                          const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
+                          el.indeterminate = someSelected && !allSelected;
+                        }
+                      }}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 appearance-none rounded-full border border-input bg-background cursor-pointer transition-colors checked:border-primary checked:bg-primary checked:bg-[radial-gradient(circle,hsl(var(--primary-foreground))_35%,transparent_40%)] indeterminate:border-primary indeterminate:bg-primary/40"
+                    />
                   </TableHead>
                   <SortableTableHead label={entityLabel.toUpperCase()} sortKey={isPagar ? "fornecedores" : "clientes"} currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
                   <SortableTableHead label="DESCRIÇÃO" sortKey="descricao" currentSort={sortConfig} onSort={setSortConfig} className="text-[11px] font-semibold tracking-wider text-muted-foreground" />
