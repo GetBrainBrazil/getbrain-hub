@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.5 — 23/04/2026**
+> **Versão atual: v1.6 — 23/04/2026**
 
 ---
 
@@ -190,6 +190,18 @@ Confundir os dois é erro de modelagem grave. Cliente "João da Silva" da Equipe
 Tabelas que todos os módulos usam. Estas são criadas no Prompt 01 e **nunca** devem ser recriadas ou duplicadas em prompts posteriores.
 
 > **Nota v1.5:** O schema de `tasks`/`sprints`/`task_assignees` introduzido no Prompt 03A alimenta tanto a sub-aba Kanban quanto a sub-aba Dashboard da Área Dev. Nenhuma tabela é específica de uma sub-aba — o schema é do domínio "engenharia", e cada sub-aba é uma lente sobre ele.
+
+> **Nota v1.6 — Views agregadas como padrão de métrica:**
+>
+> Todo módulo macro com dashboard interno tem sua própria view SQL agregada (padrão `<contexto>_metrics`). Regras:
+>
+> - **Por quê view e não campo denormalizado:** métricas sempre têm janelas móveis (sprint atual, últimos 30 dias, etc.). Campos denormalizados em trigger ficam obsoletos a cada mudança de janela. Views recalculam a cada query.
+> - **Performance:** começamos com views comuns. Se alguma ficar > 500ms em produção, migra para MATERIALIZED VIEW com refresh periódico. Sem premature optimization.
+> - **Nomenclatura:** `<dominio>_<granularidade>_metrics`:
+>   - `project_metrics` — 1 linha por projeto
+>   - `dev_dashboard_metrics` — 1 linha por sprint (recente) ou 1 linha por período (custom)
+>   - `financial_metrics` (futuro) — 1 linha por mês
+> - **Granularidade adicional via funções SQL:** quando o dashboard precisa de breakdown (por dev, por projeto, por tipo), criar funções SQL `get_*` em vez de múltiplas views. Exemplo: `get_dev_estimation_accuracy(sprint_id)` retorna set de `(actor_id, avg_accuracy, desvio)`.
 
 ### 4.1 `organizations`
 Para multi-tenant futuro. Por ora, 1 registro fixo (GetBrain) com UUID `00000000-0000-0000-0000-000000000001`.
