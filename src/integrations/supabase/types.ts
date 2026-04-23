@@ -1949,6 +1949,81 @@ export type Database = {
         }
         Relationships: []
       }
+      vendas: {
+        Row: {
+          categoria_id: string | null
+          centro_custo_id: string | null
+          cliente_id: string | null
+          conta_bancaria_id: string | null
+          created_at: string
+          created_by: string | null
+          data_primeira_parcela: string | null
+          data_venda: string
+          deleted_at: string | null
+          descricao: string | null
+          id: string
+          maintenance_contract_id: string | null
+          meio_pagamento_id: string | null
+          numero: string
+          observacoes: string | null
+          organization_id: string
+          project_id: string
+          quantidade_parcelas: number
+          status: string
+          tipo_venda: string
+          updated_at: string
+          valor_total: number
+        }
+        Insert: {
+          categoria_id?: string | null
+          centro_custo_id?: string | null
+          cliente_id?: string | null
+          conta_bancaria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_primeira_parcela?: string | null
+          data_venda?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          maintenance_contract_id?: string | null
+          meio_pagamento_id?: string | null
+          numero?: string
+          observacoes?: string | null
+          organization_id?: string
+          project_id: string
+          quantidade_parcelas?: number
+          status?: string
+          tipo_venda: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Update: {
+          categoria_id?: string | null
+          centro_custo_id?: string | null
+          cliente_id?: string | null
+          conta_bancaria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_primeira_parcela?: string | null
+          data_venda?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          maintenance_contract_id?: string | null
+          meio_pagamento_id?: string | null
+          numero?: string
+          observacoes?: string | null
+          organization_id?: string
+          project_id?: string
+          quantidade_parcelas?: number
+          status?: string
+          tipo_venda?: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       project_metrics: {
@@ -2127,6 +2202,7 @@ export type Database = {
         }[]
       }
       generate_project_code: { Args: never; Returns: string }
+      generate_venda_numero: { Args: never; Returns: string }
       getbrain_org_id: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -2136,6 +2212,20 @@ export type Database = {
         Returns: boolean
       }
       update_status_atrasado: { Args: never; Returns: undefined }
+      vendas_cancelar: { Args: { p_venda_id: string }; Returns: undefined }
+      vendas_dashboard: {
+        Args: { p_fim?: string; p_inicio?: string }
+        Returns: {
+          qtd_vendas: number
+          ticket_medio: number
+          total_a_receber: number
+          total_atrasado: number
+          total_recebido: number
+          total_vendido: number
+        }[]
+      }
+      vendas_gerar_parcelas: { Args: { p_venda_id: string }; Returns: number }
+      vendas_importar_existentes: { Args: never; Returns: number }
     }
     Enums: {
       actor_status: "active" | "inactive" | "archived"
