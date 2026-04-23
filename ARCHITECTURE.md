@@ -941,12 +941,20 @@ Toda mudança de status ou campo importante em qualquer módulo deve gerar entra
 
 ### 13.9 Princípio de agregação
 
+> **Nota v1.6:** A linha referente ao Dashboard Dev passa de "a criar" para "view `dev_dashboard_metrics` + funções `get_dev_estimation_accuracy`, `get_dev_capacity`, `get_project_health_summary`".
+
 Todas as métricas cruzadas são expostas via view `project_metrics` (criada no Prompt 02c). Nenhum módulo precisa "saber" que Projetos está consumindo — o Projetos simplesmente lê a view, que faz LEFT JOIN com as tabelas dos outros módulos. Quando uma tabela-fonte ainda não existe (Suporte, Tokens), a view retorna 0 para aquele agregado — e passa a retornar dados reais automaticamente quando a tabela for criada no prompt futuro.
 
 ---
 
 ## 12. Histórico de versões
 
+- **v1.6 — 23/04/2026:**
+  - Padrão canônico de views agregadas de métricas (nomenclatura, regras de performance)
+  - Padrão canônico de dashboard denso (seção 6.Z) com regras de KPIs, alertas, cores semânticas e drill-down
+  - Conceito de seed histórico descartável formalizado
+  - Dashboard Dev (Prompt 03C) referenciado no mapa de integrações com view + funções SQL
+  - Dívida técnica nova registrada: limpeza de SPR-000 e SPR--001 quando houver 3 sprints reais encerradas
 - **v1.5 — 23/04/2026:**
   - Área Dev redefinida como **módulo macro hub** (antes era macro plano)
   - Sub-abas formalizadas: Dashboard, Kanban, Sprints, Backlog
