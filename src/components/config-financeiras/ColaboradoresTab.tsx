@@ -224,20 +224,30 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     return (
       <FormPageShell
         title="Detalhes do Colaborador"
-        subtitle="Visualize os dados do colaborador"
+        subtitle="Modo somente leitura"
         onBack={backToList}
         footer={
           <>
-            <Button variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="h-4 w-4" /> Excluir
-            </Button>
+            {canDeleteColaborador() ? (
+              <Button variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="h-4 w-4" /> Excluir
+              </Button>
+            ) : <span />}
             <div className="flex gap-2">
               <Button variant="outline" onClick={backToList}>Voltar</Button>
-              <Button className="gap-1.5" onClick={startEdit}><Pencil className="h-4 w-4" /> Editar</Button>
+              {canEditColaborador(selected) && <Button className="gap-1.5" onClick={() => startEdit()}><Pencil className="h-4 w-4" /> Editar</Button>}
             </div>
           </>
         }
       >
+        {!canEditColaborador(selected) && (
+          <Alert className="border-primary/20 bg-primary/5">
+            <ShieldCheck className="h-4 w-4" />
+            <AlertDescription>
+              Você está visualizando o cadastro de outro colaborador. Somente administradores ou o próprio colaborador podem editar estes dados.
+            </AlertDescription>
+          </Alert>
+        )}
         <FormSection icon={FileText} title="Dados Principais">
           <DetailField label="Nome Completo" value={selected.nome} />
           <div className="grid grid-cols-2 gap-4">
@@ -273,10 +283,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
               onClick={handleCopyBank}
             >
               {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-emerald-600">Copiado!</span>
-                </>
+                <><Check className="h-3.5 w-3.5 text-success" /><span className="text-success">Copiado!</span></>
               ) : (
                 <>
                   <Copy className="h-3.5 w-3.5" />
