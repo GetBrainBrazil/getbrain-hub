@@ -1,90 +1,222 @@
 
+Plano para corrigir a aba de Colaboradores com máscaras, abertura direta em edição e permissões por perfil.
 
-## Submódulo de Vendas em `/financeiro/vendas`
+## Objetivo
 
-### Conceito
+Na criação/edição de colaborador:
 
-Hoje uma "venda" não existe como entidade — ela está implícita em `projects` (one-shot) + `maintenance_contracts` (recorrente) + parcelas em `movimentacoes`. Vou criar a entidade **Venda** que **conecta esses três módulos** numa única tela operacional, sem duplicar dado: cada venda referencia um projeto e gera (ou anexa) suas parcelas em `contas a receber`.
+1. Aplicar máscara campo por campo nos dados pessoais, contatos, dados bancários, PIX, endereço e contrato.
+2. Ao abrir um colaborador:
+   - ADMIN abre direto em modo edição para qualquer colaborador.
+   - Usuário comum abre direto em modo edição apenas quando for o próprio colaborador.
+   - Usuário comum abre em modo visualização quando for colaborador de outra pessoa.
+3. Garantir que a regra não seja apenas visual: aplicar também proteção no backend para impedir edição indevida.
 
-Tipos de venda suportados:
-- **Implementação (one-shot)** — N parcelas geradas a partir do `contract_value` e `installments_count` do projeto.
-- **Recorrente (manutenção)** — vincula a um `maintenance_contracts` existente.
-- **Avulso** — venda extra para um projeto/cliente já existente (ex.: módulo adicional, hora extra).
+## Parte 1 — Máscaras no formulário de colaborador
 
-### Backend (1 migration de schema + 1 função SQL)
+Arquivo principal:
 
-**Tabela nova `vendas`** (referencia projects e gera movimentações):
-- `id`, `organization_id` (default GetBrain), `numero` text único auto (`VND-001`, `VND-002`...) via sequence.
-- `project_id` (FK lógica para `projects`, nullable não — toda venda pertence a um projeto).
-- `cliente_id` (FK lógica para `clientes`, derivado mas armazenado para histórico).
-- `tipo_venda` text: `implementacao` | `recorrente` | `avulso`.
-- `descricao` text, `valor_total` numeric, `quantidade_parcelas` int default 1, `data_venda` date default hoje, `data_primeira_parcela` date.
-- `categoria_id`, `centro_custo_id`, `conta_bancaria_id`, `meio_pagamento_id` (defaults para as parcelas geradas).
-- `maintenance_contract_id` nullable (quando `tipo_venda='recorrente'`).
-- `status` text: `rascunho` | `confirmada` | `cancelada`.
-- `observacoes` text, `created_at`, `updated_at`, `created_by`, `deleted_at`.
-- RLS: `auth.uid() IS NOT NULL` (mesmo padrão das outras tabelas financeiras).
+- `src/components/config-financeiras/ColaboradoresTab.tsx`
 
-**Função `vendas_gerar_parcelas(p_venda_id uuid)`** — quando a venda é confirmada:
-- Para `implementacao`: cria N linhas em `movimentacoes` (`tipo='receita'`, `status='pendente'`, vencimento mensal a partir de `data_primeira_parcela`, valor = `valor_total / quantidade_parcelas`, com `source_module='vendas'`, `source_entity_type='venda'`, `source_entity_id=p_venda_id`).
-- Para `avulso`: 1 linha em `movimentacoes`.
-- Para `recorrente`: não gera (o trigger de `maintenance_contracts` já cuida).
-- Idempotente: ignora se já existem parcelas com mesmo `source_entity_id`.
+Vou reaproveitar os helpers já existentes em:
 
-**Reaproveitamento de dados existentes**: na primeira execução, oferecer um botão "Importar vendas dos projetos atuais" que cria 1 venda por projeto agrupando as receitas órfãs por `projeto_id` (`source_module IS NULL`), preservando IDs originais via `source_entity_id` da venda criada — sem duplicar movimentação. PRJ-001 vira `VND-001` com 12 parcelas, PRJ-003 vira `VND-002` com 2 parcelas.
+- `src/components/config-financeiras/shared.tsx`
 
-**Função RPC `vendas_dashboard(p_inicio, p_fim)`** — agrega para a página:
-- Total vendido no período (sum `valor_total` confirmadas).
-- Total recebido (sum movimentações `pago` originadas de vendas).
-- Total a receber e atrasado (mesmas regras do dashboard financeiro, escopo vendas).
-- Ticket médio, qtd de vendas, top 5 clientes por valor vendido.
+Máscaras/correções por campo:
 
-### Frontend
+### Dados principais
 
-**Nova rota** `/financeiro/vendas` adicionada em `src/App.tsx` e `AppSidebar.tsx` (logo abaixo de Dashboard, dentro de Financeiro). Submenu fica: Dashboard → **Vendas** → Contas a Pagar/Receber → ...
+- `CPF`
+  - Já usa `applyCpfMask`.
+  - Vou manter e garantir `inputMode="numeric"`.
 
-**Página `src/pages/Vendas.tsx`** — segue o padrão visual de `Movimentacoes.tsx`/`ContasReceber.tsx`:
-- **Header**: título + botão "Nova Venda" + `PeriodFilter` (presets, persistido em `vendas_period`).
-- **KPIs (4 cards)**: Total Vendido · Total Recebido · A Receber · Ticket Médio (com Δ vs período anterior).
-- **Filtros**: tipo de venda (multi), status (rascunho/confirmada/cancelada), cliente (select), projeto (select), busca textual. Persistidos via `usePersistedState` (regra `mem://preference/filter-persistence`).
-- **Tabela**: número · data · cliente · projeto (chip clicável → `/projetos/:id`) · tipo · valor total · parcelas (`pagas/total` + barra de progresso) · status · ações.
-- Linha clicável abre **Drawer de detalhe** lateral com: dados gerais editáveis, linha do tempo das parcelas (link para cada movimentação), botões "Confirmar venda" (gera parcelas), "Cancelar venda" (marca `cancelada` + cancela parcelas pendentes).
-- Empty state com botão "Importar vendas existentes dos projetos" (chama uma RPC `vendas_importar_existentes()` que faz a operação descrita acima).
+### Contatos
 
-**Dialog `NovaVendaDialog.tsx`**:
-- Step 1: tipo de venda (radio) → projeto (combobox com `code + name`) → cliente é **derivado e bloqueado** (a partir do `company_id` do projeto via `clientes`).
-- Step 2 condicional ao tipo:
-  - `implementacao`: valor total, qtd parcelas, data 1ª parcela, intervalo (mensal). Mostra preview "12x R$ X" antes de confirmar.
-  - `avulso`: valor, data vencimento, descrição.
-  - `recorrente`: select de contrato existente OU botão "Criar contrato" (reusa `NovoContratoDialog`).
-- Step 3: defaults financeiros (categoria, centro de custo, conta bancária, meio de pagamento). Categoria sugerida = "Receita de Projeto".
-- Ao salvar com status `confirmada`, chama `vendas_gerar_parcelas`.
+- `Telefone`
+  - Já usa `applyPhoneMask`.
+  - Vou manter e garantir `inputMode="tel"`.
+- `E-mail`
+  - Não tem máscara visual, mas terá normalização:
+    - `trim`
+    - lowercase ao adicionar
+    - validação antes de inserir na lista.
 
-**Hook `src/hooks/useVendas.ts`** (React Query):
-- `useVendas(filters)` — lista paginada com joins de cliente/projeto e contagem de parcelas pagas.
-- `useVendaDetail(id)` — venda + parcelas (movimentacoes filtradas por `source_entity_id`).
-- `useVendasDashboard(inicio, fim)` — RPC para KPIs.
-- Invalidações cruzadas: ao confirmar/cancelar venda, invalidar `["movimentacoes"]`, `["financeiro_dashboard_kpis"]` e `["projetos"]` para refletir em todo o sistema.
+### Dados bancários
 
-**Conexão com Projetos**: na página `ProjetoDetalhe.tsx`, adicionar uma mini-seção "Vendas vinculadas" (lista compacta + botão "Nova Venda" pré-preenchido com o projeto). Sem redesenhar a aba — só um card extra na aba Operacional.
+- `Agência`
+  - Usar `applyAgenciaMask`.
+  - Exemplo: `1234-5`.
+  - `inputMode="numeric"`.
+- `Conta`
+  - Usar `applyContaMask`.
+  - Exemplo: `12345-6`.
+  - `inputMode="numeric"`.
+- `Chaves PIX`
+  - Usar `applyPixMask`.
+  - Detectar tipo com `detectPixType`.
+  - Mostrar badge do tipo da chave:
+    - CPF
+    - CNPJ
+    - Telefone
+    - E-mail
+    - Aleatória
+  - Igual ao padrão já usado em `ContasBancariasTab.tsx`.
 
-**Conexão com Contas a Pagar/Receber**: cada parcela em `movimentacoes` originada de venda mostra um chip "Venda VND-XXX" clicável (link para o drawer da venda) na coluna descrição. Lógica: se `source_module='vendas'`, render chip.
+### Endereço
 
-### Detalhes técnicos
+- `CEP`
+  - Já usa `applyCepMask`.
+  - Vou garantir `inputMode="numeric"`.
+- `Estado`
+  - Já usa select com UF.
+- `Cidade`, `Endereço`, `Número`, `Bairro`, `Complemento`
+  - Não exigem máscara numérica, mas vou normalizar espaços ao salvar.
+  - `Número` continuará livre porque pode conter `S/N`, bloco, casa, etc.
 
-- Migration: `CREATE SEQUENCE venda_numero_seq`, função `generate_venda_numero()`, tabela `vendas` com defaults, RLS, índice em `(project_id)` e `(cliente_id)`. Funções `vendas_gerar_parcelas`, `vendas_importar_existentes`, `vendas_dashboard`.
-- Toda parcela carrega `source_module='vendas'` para auditoria — isso permite distinguir vendas, contratos e lançamentos manuais.
-- Ao cancelar venda: parcelas `pendente` viram `cancelado` (parcelas `pago` permanecem intactas, regra do projeto).
-- Sem alteração em `projects`/`movimentacoes`/`maintenance_contracts` — apenas adição de tabela e funções.
-- Reuso integral de `PeriodFilter`, `KPICard`, `usePersistedState`, `useConfirm`, `StatusBadge`, padrões de drawer (`ProjetoDrawer` como referência).
+### Informações contratuais
 
-### Arquivos
+- `Data de Admissão`
+  - Já usa `type="date"`.
+- `Salário Base`
+  - Já usa `applyMoneyMask`.
+  - Vou garantir `inputMode="decimal"`.
 
-- **Migration nova**: tabela `vendas` + sequence + funções `vendas_gerar_parcelas`, `vendas_importar_existentes`, `vendas_dashboard`.
-- **Novos**: `src/pages/Vendas.tsx`, `src/pages/VendaDetalhe.tsx` (ou drawer dentro de Vendas.tsx), `src/components/vendas/NovaVendaDialog.tsx`, `src/components/vendas/VendaDrawer.tsx`, `src/hooks/useVendas.ts`, `src/lib/vendas-helpers.ts`.
-- **Editados**: `src/App.tsx` (rota), `src/components/AppSidebar.tsx` (item de menu), `src/pages/ProjetoDetalhe.tsx` (card "Vendas vinculadas"), `src/pages/Movimentacoes.tsx` (chip "Venda VND-XXX" quando `source_module='vendas'`).
+## Parte 2 — Abrir colaborador direto no modo correto
 
-### Resultado em produção
+Hoje o fluxo é:
 
-Após aprovar, ao abrir `/financeiro/vendas` você verá imediatamente: PRJ-001 e PRJ-003 já listados como vendas existentes (botão "Importar"), R$ 14.408 em vendas confirmadas, 14 parcelas com status real (todas pagas), e poderá lançar PRJ-002 e novas vendas com fluxo guiado que automaticamente gera as parcelas em Contas a Receber.
+```text
+Lista → Visualização → botão Editar → Edição
+```
 
+Vou alterar para:
+
+```text
+ADMIN clicou em qualquer colaborador → Edição direta
+Usuário comum clicou no próprio colaborador → Edição direta
+Usuário comum clicou em colaborador de outra pessoa → Visualização
+```
+
+Também vou ajustar os botões:
+
+- No modo visualização para usuário comum:
+  - Não exibir botão `Editar` quando ele não puder editar aquele colaborador.
+  - Não exibir `Excluir`.
+  - Não permitir ativar/inativar na listagem.
+- Para ADMIN:
+  - Pode editar qualquer colaborador.
+  - Pode ativar/inativar qualquer colaborador.
+  - Pode excluir, mantendo a confirmação atual.
+- Para usuário comum no próprio registro:
+  - Pode editar o próprio registro.
+  - Não poderá excluir o próprio colaborador.
+  - Não poderá ativar/inativar, a menos que seja ADMIN.
+
+## Parte 3 — Como identificar ADMIN e “o próprio colaborador”
+
+Vou usar a estrutura já existente de roles:
+
+- tabela `user_roles`
+- função `has_role`
+- role `admin`
+
+No frontend:
+
+- Buscar se o usuário atual é ADMIN consultando sua role.
+- Considerar que o colaborador pertence ao usuário quando:
+  - o e-mail do usuário logado aparece em `colaboradores.emails`, ou
+  - `colaboradores.created_by` é o usuário atual como fallback para registros antigos.
+
+Essa abordagem evita criar uma relação frágil com tabela de usuários e funciona com os dados que já existem no formulário.
+
+## Parte 4 — Segurança no backend
+
+Será necessária uma migration para trocar a política ampla atual de `colaboradores`.
+
+Hoje existe:
+
+```sql
+Authenticated full access colaboradores
+```
+
+Isso permite que qualquer usuário autenticado edite qualquer colaborador.
+
+Vou substituir por políticas mais restritas:
+
+### Select
+
+Todos os usuários autenticados continuam podendo visualizar colaboradores:
+
+```text
+authenticated can select colaboradores
+```
+
+Motivo: o usuário pediu que usuários comuns consigam abrir os cards de outras pessoas em modo visualização.
+
+### Insert
+
+Apenas ADMIN poderá criar colaboradores.
+
+Motivo: se usuário comum pudesse criar colaborador livremente, poderia criar um registro com seu e-mail e ganhar controle indevido.
+
+### Update
+
+Pode atualizar quando:
+
+```text
+admin
+OU
+auth.email() está dentro de colaboradores.emails
+OU
+created_by = auth.uid()
+```
+
+### Delete
+
+Apenas ADMIN poderá excluir.
+
+### Observação importante
+
+Também vou impedir no frontend ações que o backend bloquearia, para a experiência ficar limpa, mas a regra real ficará protegida no backend.
+
+## Parte 5 — Ajustes visuais e UX
+
+No `ColaboradoresTab.tsx`:
+
+- Substituir o ícone de olho por um indicador coerente:
+  - ADMIN / próprio usuário: ícone de edição.
+  - Outros colaboradores: ícone de visualização.
+- Ajustar títulos:
+  - Edição direta: `Editar Colaborador`
+  - Visualização: `Detalhes do Colaborador`
+- Quando usuário comum abrir colaborador de outra pessoa:
+  - Mostrar um aviso discreto no topo ou subtítulo dizendo que ele está em modo somente leitura.
+
+## Arquivos previstos
+
+### Alterar
+
+- `src/components/config-financeiras/ColaboradoresTab.tsx`
+
+### Criar migration
+
+- `supabase/migrations/<timestamp>_restrict_colaboradores_permissions.sql`
+
+## Validação
+
+Após implementar, vou validar:
+
+1. TypeScript sem erros.
+2. Máscaras funcionando:
+   - CPF
+   - telefone
+   - agência
+   - conta
+   - PIX
+   - CEP
+   - salário
+3. Clique no colaborador:
+   - ADMIN abre direto editando.
+   - usuário comum abre o próprio direto editando.
+   - usuário comum abre outros em visualização.
+4. Backend bloqueia update/delete indevido mesmo que alguém tente forçar pela interface.
