@@ -470,7 +470,7 @@ function CommentRow({ comment, taskId }: { comment: TaskComment; taskId: string 
     const ok = await confirm({
       title: "Excluir comentário?",
       description: "Esta ação não pode ser desfeita.",
-      confirmText: "Excluir",
+      confirmLabel: "Excluir",
       variant: "destructive",
     });
     if (ok) remove.mutate(comment.id);
