@@ -2183,6 +2183,13 @@ export type Database = {
             foreignKeyName: "tasks_sprint_id_fkey"
             columns: ["sprint_id"]
             isOneToOne: false
+            referencedRelation: "dev_dashboard_metrics"
+            referencedColumns: ["sprint_id"]
+          },
+          {
+            foreignKeyName: "tasks_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
             referencedRelation: "sprints"
             referencedColumns: ["id"]
           },
@@ -2283,6 +2290,38 @@ export type Database = {
       }
     }
     Views: {
+      dev_dashboard_metrics: {
+        Row: {
+          actual_end_date: string | null
+          avg_cycle_time_hours: number | null
+          end_date: string | null
+          estimation_accuracy_pct: number | null
+          hours_actual_total: number | null
+          hours_estimated_total: number | null
+          rework_total: number | null
+          sprint_code: string | null
+          sprint_elapsed_days: number | null
+          sprint_id: string | null
+          sprint_name: string | null
+          sprint_remaining_days: number | null
+          sprint_status: Database["public"]["Enums"]["sprint_status"] | null
+          sprint_total_days: number | null
+          start_date: string | null
+          tasks_backlog: number | null
+          tasks_blocked_now: number | null
+          tasks_cancelled: number | null
+          tasks_done: number | null
+          tasks_done_late: number | null
+          tasks_done_on_time: number | null
+          tasks_in_progress: number | null
+          tasks_in_review: number | null
+          tasks_overdue: number | null
+          tasks_reworked: number | null
+          tasks_todo: number | null
+          tasks_total: number | null
+        }
+        Relationships: []
+      }
       project_metrics: {
         Row: {
           actors_allocated: number | null
@@ -2380,6 +2419,59 @@ export type Database = {
       }
       generate_project_code: { Args: never; Returns: string }
       generate_venda_numero: { Args: never; Returns: string }
+      get_dev_capacity: {
+        Args: { p_sprint_id: string }
+        Returns: {
+          actor_id: string
+          actor_name: string
+          avatar_url: string
+          hours_actual_sprint: number
+          hours_planned_sprint: number
+          hours_remaining: number
+          tasks_blocked: number
+          tasks_in_progress: number
+          tasks_open: number
+        }[]
+      }
+      get_dev_estimation_accuracy: {
+        Args: { p_sprint_ids: string[] }
+        Returns: {
+          actor_id: string
+          actor_name: string
+          avg_accuracy_pct: number
+          avg_deviation_hours: number
+          tasks_accurate: number
+          tasks_counted: number
+          tasks_overestimated: number
+          tasks_underestimated: number
+        }[]
+      }
+      get_project_health_summary: {
+        Args: { p_sprint_ids: string[] }
+        Returns: {
+          bug_rate_pct: number
+          consumption_pct: number
+          hours_actual: number
+          hours_estimated: number
+          project_code: string
+          project_id: string
+          project_name: string
+          rework_rate_pct: number
+          tasks_bugs: number
+          tasks_done: number
+          tasks_rework: number
+          tasks_total: number
+        }[]
+      }
+      get_sprint_burndown: {
+        Args: { p_sprint_id: string }
+        Returns: {
+          day: string
+          ideal_remaining: number
+          remaining_tasks: number
+          total_tasks: number
+        }[]
+      }
       getbrain_org_id: { Args: never; Returns: string }
       has_role: {
         Args: {
