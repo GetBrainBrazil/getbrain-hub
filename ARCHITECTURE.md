@@ -203,6 +203,18 @@ Tabelas que todos os módulos usam. Estas são criadas no Prompt 01 e **nunca** 
 >   - `financial_metrics` (futuro) — 1 linha por mês
 > - **Granularidade adicional via funções SQL:** quando o dashboard precisa de breakdown (por dev, por projeto, por tipo), criar funções SQL `get_*` em vez de múltiplas views. Exemplo: `get_dev_estimation_accuracy(sprint_id)` retorna set de `(actor_id, avg_accuracy, desvio)`.
 
+> **Nota v1.6 — Views agregadas como padrão de métrica:**
+>
+> Todo módulo macro com dashboard interno tem sua própria view SQL agregada (padrão `<contexto>_metrics`). Regras:
+>
+> - **Por quê view e não campo denormalizado:** métricas sempre têm janelas móveis (sprint atual, últimos 30 dias, etc.). Campos denormalizados em trigger ficam obsoletos a cada mudança de janela. Views recalculam a cada query.
+> - **Performance:** começamos com views comuns. Se alguma ficar > 500ms em produção, migra para MATERIALIZED VIEW com refresh periódico. Sem premature optimization.
+> - **Nomenclatura:** `<dominio>_<granularidade>_metrics`:
+>   - `project_metrics` — 1 linha por projeto
+>   - `dev_dashboard_metrics` — 1 linha por sprint (recente) ou 1 linha por período (custom)
+>   - `financial_metrics` (futuro) — 1 linha por mês
+> - **Granularidade adicional via funções SQL:** quando o dashboard precisa de breakdown (por dev, por projeto, por tipo), criar funções SQL `get_*` em vez de múltiplas views. Exemplo: `get_dev_estimation_accuracy(sprint_id)` retorna set de `(actor_id, avg_accuracy, desvio)`.
+
 ### 4.1 `organizations`
 Para multi-tenant futuro. Por ora, 1 registro fixo (GetBrain) com UUID `00000000-0000-0000-0000-000000000001`.
 ```
@@ -599,6 +611,41 @@ Dashboards do GetBrain Hub seguem estrutura hierárquica vertical:
 
 ---
 
+### 6.Z Padrão de dashboard denso
+
+Dashboards do GetBrain Hub seguem estrutura hierárquica vertical:
+
+1. Cabeçalho com controles globais (escopo temporal, filtros)
+2. Linha de alertas acionáveis (só aparece se tem alerta — nunca vazia, nunca ornamental)
+3. Linha de KPIs macro (4-6 cards compactos com valor + delta + sparkline)
+4. Blocos temáticos (cada bloco responde a uma pergunta de negócio, título imperativo)
+
+**Regras obrigatórias:**
+
+- Todo KPI tem delta comparativo (vs período anterior). Sem histórico, mostrar "—", nunca mostrar 0 falso.
+- Toda visualização tem estado vazio explicativo (não mostrar eixos vazios).
+- Todo número é clicável quando faz sentido drill-down (lista de tasks, página de projeto, etc.). Número sem drill é candidato a ser removido.
+
+**Cores semânticas padronizadas:**
+
+- verde = bom / dentro da meta
+- amarelo = atenção / 80-100% de limite
+- vermelho = ruim / > 100% de limite ou atrasado
+- ciano (primary) = neutro / em andamento
+- cinza = sem dado
+
+**Nunca mostrar métrica vitrine.** Se uma métrica não gera decisão nem conversa, sai.
+
+**Dashboards são responsivos, mas priorizam desktop denso.** Mobile recebe reorganização vertical sem degradar informação.
+
+**Hierarquia visual de blocos:**
+
+- Título do bloco em text-lg font-semibold + subtítulo mutado com a pergunta que o bloco responde
+- Bloco contém 2-5 widgets em grid responsivo
+- Widget = card com título + visualização + legenda/contexto
+
+---
+
 ## 7. Padrões de autenticação
 
 ### 7.1 Usuários internos (humans)
@@ -763,6 +810,17 @@ Ao final da Fundação (Prompt 01), o banco deve conter:
 Sem dados fictícios. Sem "João Mendes" ou "Ana Ribeiro".
 
 > As 4 novas tabelas (`project_dependencies`, `project_milestones`, `project_integrations`, `project_risks`) começam vazias. Serão populadas por Daniel à medida que ele configurar os 3 projetos existentes.
+
+> **Nota v1.6 — Seed histórico descartável:**
+>
+> Alguns módulos precisam de histórico para alimentar gráficos de tendência desde o primeiro dia. Exemplo: Dashboard Dev precisa de pelo menos 3 sprints para mostrar evolução de velocity, precisão de estimativa, etc.
+>
+> Quando isso ocorre, criar seed histórico descartável seguindo regras:
+>
+> - Sprints/entidades fake usam código fora do range natural (ex: SPR-000, SPR--001) pra serem visualmente identificáveis.
+> - Campo metadata JSONB da entidade (se houver) ou comentário no seed SQL marca: `"seed_fake": true`, `"discard_after": "quando houver 3 sprints reais"`.
+> - Criar migration separada `seeds/historical-discardable-<modulo>.sql` para facilitar remoção futura.
+> - Registrar na lista de "dívidas técnicas" do módulo que esse seed precisa ser limpo quando histórico real existir.
 
 ---
 
