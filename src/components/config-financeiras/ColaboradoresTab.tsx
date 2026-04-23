@@ -137,7 +137,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
       chaves_pix: [...form.chaves_pix],
     };
 
-    const pendingEmail = newEmail.trim();
+    const pendingEmail = newEmail.trim().toLowerCase();
     if (pendingEmail) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pendingEmail)) {
         toast.error("E-mail inválido");
@@ -149,7 +149,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     const pendingPhone = newPhone.trim();
     if (pendingPhone && !nextForm.telefones.includes(pendingPhone)) nextForm.telefones.push(pendingPhone);
 
-    const pendingPix = newPix.trim();
+    const pendingPix = applyPixMask(newPix.trim());
     if (pendingPix && !nextForm.chaves_pix.includes(pendingPix)) nextForm.chaves_pix.push(pendingPix);
 
     return nextForm;
@@ -162,16 +162,16 @@ export default function ColaboradoresTab({ search }: { search: string }) {
 
     const salario = parseMoney(nextForm.salario_base);
     const payload: any = {
-      nome: nextForm.nome, cargo: nextForm.cargo || null, cpf: nextForm.cpf || null,
-      emails: nextForm.emails, telefones: nextForm.telefones,
-      banco: nextForm.banco || null, agencia: nextForm.agencia || null, conta: nextForm.conta || null,
-      tipo_conta: nextForm.tipo_conta, chaves_pix: nextForm.chaves_pix,
+      nome: normalizeText(nextForm.nome), cargo: normalizeText(nextForm.cargo) || null, cpf: applyCpfMask(nextForm.cpf) || null,
+      emails: nextForm.emails.map(e => e.trim().toLowerCase()), telefones: nextForm.telefones.map(applyPhoneMask),
+      banco: normalizeText(nextForm.banco) || null, agencia: applyAgenciaMask(nextForm.agencia) || null, conta: applyContaMask(nextForm.conta) || null,
+      tipo_conta: nextForm.tipo_conta, chaves_pix: nextForm.chaves_pix.map(applyPixMask),
       cep: nextForm.cep || null, estado: nextForm.estado || null, cidade: nextForm.cidade || null,
-      endereco: nextForm.endereco || null, numero: nextForm.numero || null, bairro: nextForm.bairro || null,
-      complemento: nextForm.complemento || null,
+      endereco: normalizeText(nextForm.endereco) || null, numero: normalizeText(nextForm.numero) || null, bairro: normalizeText(nextForm.bairro) || null,
+      complemento: normalizeText(nextForm.complemento) || null,
       data_admissao: nextForm.data_admissao || null,
       salario_base: isNaN(salario) ? 0 : salario,
-      observacoes: nextForm.observacoes || null,
+      observacoes: nextForm.observacoes.trim() || null,
     };
     setForm(nextForm);
     setNewEmail("");
@@ -198,13 +198,14 @@ export default function ColaboradoresTab({ search }: { search: string }) {
     }
   }
   async function handleDelete() {
-    if (!selected) return;
+    if (!selected || !canDeleteColaborador()) return;
     const { error } = await supabase.from("colaboradores" as any).delete().eq("id", selected.id);
     if (error) { toast.error("Erro ao excluir colaborador"); return; }
     toast.success("Colaborador excluído com sucesso");
     setDeleteOpen(false); backToList(); load();
   }
   async function toggleAtivo(id: string, ativo: boolean) {
+    if (!canManageStatus()) { toast.error("Apenas administradores podem alterar status"); return; }
     await supabase.from("colaboradores" as any).update({ ativo: !ativo }).eq("id", id); load();
   }
   function handleCopyBank() {
@@ -216,7 +217,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
       setCopied(true); setTimeout(() => setCopied(false), 2000);
     });
   }
-  const canSeeSalary = selected && currentUserId && selected.created_by === currentUserId;
+  const canSeeSalary = selected && canEditColaborador(selected);
 
   /* ─── VIEW ─── */
   if (mode === "view" && selected) {
