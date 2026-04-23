@@ -24,6 +24,7 @@ import DevDashboard from "./pages/dev/DevDashboard";
 import DevKanban from "./pages/dev/DevKanban";
 import DevSprints from "./pages/dev/DevSprints";
 import DevBacklog from "./pages/dev/DevBacklog";
+import TaskDetail from "./pages/dev/TaskDetail";
 import Clientes from "./pages/Clientes";
 import Configuracoes from "./pages/Configuracoes";
 import Suporte from "./pages/Suporte";
@@ -91,6 +92,8 @@ const App = () => (
               <Route path="sprints" element={<DevSprints />} />
               <Route path="backlog" element={<DevBacklog />} />
             </Route>
+            {/* Tela cheia da task — fora do DevLayout (sem sub-tabs do hub) */}
+            <Route path="/dev/tasks/:code" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />

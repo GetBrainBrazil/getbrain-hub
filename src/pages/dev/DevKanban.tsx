@@ -2,9 +2,11 @@
  * Página /dev/kanban — kanban denso plugado em dados reais.
  * 4 colunas (todo, in_progress, in_review, done). Filtros vivem no
  * useDevHubStore (compartilhados entre sub-abas do hub).
+ *
+ * Clique no card → navega para /dev/tasks/<code> (tela cheia).
  */
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   DndContext,
   DragOverlay,
@@ -33,7 +35,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTasks, useUpdateTaskStatus } from "@/hooks/useTasks";
 import { useDevHubStore } from "@/hooks/useDevHubStore";
 import { TaskCard } from "@/components/dev/TaskCard";
-import { TaskDrawer } from "@/components/dev/TaskDrawer";
 import { NovaTaskDialog } from "@/components/dev/NovaTaskDialog";
 import type { Task, TaskPriority, TaskStatus, TaskTypeKind } from "@/types/tasks";
 import { PRIORITY_LABEL, TYPE_ICON, TYPE_LABEL } from "@/lib/tasks-helpers";
@@ -120,6 +121,7 @@ const TYPES: TaskTypeKind[] = ["feature", "bug", "chore", "refactor", "docs", "r
 const PRIORITIES: TaskPriority[] = ["urgent", "high", "medium", "low"];
 
 export default function DevKanban() {
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const selectedSprintId = useDevHubStore((s) => s.selectedSprintId);
   const projectFilter = useDevHubStore((s) => s.projectFilter);
@@ -135,8 +137,6 @@ export default function DevKanban() {
 
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [actors, setActors] = useState<ActorRow[]>([]);
-  const [openTask, setOpenTask] = useState<Task | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDefaults, setCreateDefaults] = useState<{ status: TaskStatus; project_id?: string }>({ status: "todo" });
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -323,10 +323,7 @@ export default function DevKanban() {
                 status={col.id}
                 title={col.title}
                 tasks={grouped.get(col.id) ?? []}
-                onOpenTask={(t) => {
-                  setOpenTask(t);
-                  setDrawerOpen(true);
-                }}
+                onOpenTask={(t) => navigate(`/dev/tasks/${t.code}`)}
                 onAddTask={(s) => {
                   setCreateDefaults({ status: s });
                   setCreateOpen(true);
@@ -340,13 +337,13 @@ export default function DevKanban() {
         </DndContext>
       )}
 
-      <TaskDrawer task={openTask} open={drawerOpen} onOpenChange={setDrawerOpen} />
       <NovaTaskDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         defaultStatus={createDefaults.status}
         defaultProjectId={createDefaults.project_id}
         defaultSprintId={selectedSprintId}
+        onCreated={(code) => navigate(`/dev/tasks/${code}`)}
       />
     </TooltipProvider>
   );

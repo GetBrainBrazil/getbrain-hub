@@ -2099,6 +2099,7 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           description: string | null
+          due_date: string | null
           estimated_hours: number | null
           id: string
           is_blocked: boolean
@@ -2128,6 +2129,7 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           description?: string | null
+          due_date?: string | null
           estimated_hours?: number | null
           id?: string
           is_blocked?: boolean
@@ -2157,6 +2159,7 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           description?: string | null
+          due_date?: string | null
           estimated_hours?: number | null
           id?: string
           is_blocked?: boolean

@@ -1,10 +1,10 @@
 /**
  * Aba "Tarefas" da página de detalhe do projeto — mini-kanban filtrado
- * por project_id. Cards compactos. Atalho "Ver na Área Dev" leva para
- * /dev/kanban?projects=<CODE>.
+ * por project_id. Cards compactos. Clique → tela cheia /dev/tasks/<code>.
+ * Atalho "Ver na Área Dev" leva para /dev/kanban?projects=<CODE>.
  */
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ExternalLink, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjectMetrics } from "@/hooks/useProjectMetrics";
 import { TaskCard } from "@/components/dev/TaskCard";
-import { TaskDrawer } from "@/components/dev/TaskDrawer";
 import { NovaTaskDialog } from "@/components/dev/NovaTaskDialog";
 import type { Task, TaskStatus } from "@/types/tasks";
 
@@ -30,8 +29,7 @@ interface Props {
 }
 
 export function AbaTarefas({ projectId, projectCode }: Props) {
-  const [openTask, setOpenTask] = useState<Task | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
 
   const { data: tasks = [], isLoading } = useTasks({
@@ -68,7 +66,6 @@ export function AbaTarefas({ projectId, projectCode }: Props) {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="space-y-4">
-        {/* KPIs */}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <MiniKPI label="Tarefas abertas" value={tasksOpen} />
           <MiniKPI label="Concluídas" value={metrics?.tasks_done ?? 0} tone="success" />
@@ -79,7 +76,6 @@ export function AbaTarefas({ projectId, projectCode }: Props) {
           />
         </div>
 
-        {/* Header com ações */}
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
             {tasks.length} tarefa(s) ativa(s) neste projeto
@@ -96,7 +92,6 @@ export function AbaTarefas({ projectId, projectCode }: Props) {
           </div>
         </div>
 
-        {/* Mini-kanban */}
         {tasks.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-muted/10 p-12 text-center">
             <p className="text-sm font-medium text-foreground">Nenhuma tarefa ativa</p>
@@ -124,10 +119,7 @@ export function AbaTarefas({ projectId, projectCode }: Props) {
                         key={t.id}
                         task={t}
                         compact
-                        onClick={() => {
-                          setOpenTask(t);
-                          setDrawerOpen(true);
-                        }}
+                        onClick={() => navigate(`/dev/tasks/${t.code}`)}
                       />
                     ))}
                     {list.length === 0 && (
@@ -140,12 +132,12 @@ export function AbaTarefas({ projectId, projectCode }: Props) {
           </div>
         )}
 
-        <TaskDrawer task={openTask} open={drawerOpen} onOpenChange={setDrawerOpen} />
         <NovaTaskDialog
           open={createOpen}
           onOpenChange={setCreateOpen}
           defaultStatus="todo"
           defaultProjectId={projectId}
+          onCreated={(code) => navigate(`/dev/tasks/${code}`)}
         />
       </div>
     </TooltipProvider>

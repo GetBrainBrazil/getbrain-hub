@@ -35,6 +35,8 @@ interface Props {
   defaultStatus?: TaskStatus;
   defaultProjectId?: string;
   defaultSprintId?: string | null;
+  /** Callback após criar — recebe o code (ex: TASK-0007) para deep-link. */
+  onCreated?: (code: string) => void;
 }
 
 interface ProjectRow {
@@ -52,6 +54,7 @@ export function NovaTaskDialog({
   defaultStatus = "todo",
   defaultProjectId,
   defaultSprintId = null,
+  onCreated,
 }: Props) {
   const create = useCreateTask();
   const [title, setTitle] = useState("");
@@ -107,7 +110,7 @@ export function NovaTaskDialog({
     }
     setSubmitting(true);
     try {
-      await create.mutateAsync({
+      const created = await create.mutateAsync({
         title: title.trim(),
         description: description.trim() || null,
         project_id: projectId,
@@ -121,6 +124,7 @@ export function NovaTaskDialog({
       toast({ title: "Tarefa criada" });
       reset();
       onOpenChange(false);
+      if (onCreated && created?.code) onCreated(created.code);
     } catch (e) {
       toast({
         title: "Erro ao criar tarefa",
@@ -138,7 +142,7 @@ export function NovaTaskDialog({
         <DialogHeader>
           <DialogTitle className="font-display">Nova Tarefa</DialogTitle>
           <DialogDescription>
-            Criação rápida. Edição completa estará disponível na tela cheia em breve.
+            Criação rápida. Após criar, você é levado para a tela cheia da task.
           </DialogDescription>
         </DialogHeader>
 
