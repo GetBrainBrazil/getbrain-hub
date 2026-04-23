@@ -550,11 +550,63 @@ export default function Movimentacoes() {
     setPeriodCustom({ start: null, end: null });
   }
 
-  const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => ({
-    totalPendente: periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0),
-    totalRecebidoPago: periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0),
-    totalAtrasado: periodFiltered.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0),
-  }), [periodFiltered]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear selection when filters, tab, period or search change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [
+    tab,
+    search,
+    statusFilter,
+    vinculadoFilter,
+    categoriaFilter,
+    projetoFilter,
+    contaFilter,
+    meioFilter,
+    recorrenciaFilter,
+    conciliacaoFilter,
+    periodPreset,
+    periodCustom.start,
+    periodCustom.end,
+  ]);
+
+  const hasSelection = selectedIds.size > 0;
+
+  const { totalPendente, totalRecebidoPago, totalAtrasado } = useMemo(() => {
+    const source = hasSelection
+      ? periodFiltered.filter(m => selectedIds.has(m.id))
+      : periodFiltered;
+    return {
+      totalPendente: source.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0),
+      totalRecebidoPago: source.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado || m.valor_previsto), 0),
+      totalAtrasado: source.filter(m => m.status === "atrasado").reduce((s, m) => s + Number(m.valor_previsto), 0),
+    };
+  }, [periodFiltered, selectedIds, hasSelection]);
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(prev => {
+      const allIds = filtered.map((m: any) => m.id);
+      const allSelected = allIds.length > 0 && allIds.every(id => prev.has(id));
+      if (allSelected) {
+        const next = new Set(prev);
+        allIds.forEach(id => next.delete(id));
+        return next;
+      }
+      const next = new Set(prev);
+      allIds.forEach(id => next.add(id));
+      return next;
+    });
+  }
 
   const entityLabel = isPagar ? "Vinculado a" : "Cliente";
 
