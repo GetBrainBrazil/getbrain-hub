@@ -622,7 +622,15 @@ Entidades operacionais densas (task, ticket de suporte, projeto, contrato) abrem
 1. **Dashboard** — visão executiva geral
 2. **Financeiro** — já construído
 3. **Projetos** — em construção (Prompts 02, 02b, 02c)
-4. **Área Dev** — módulo macro hub de engenharia. Rota-mãe `/dev` com sub-abas: Dashboard (default), Kanban, Sprints, Backlog. Cada aba é uma lente diferente sobre o mesmo domínio de tasks/sprints.
+4. **Área Dev** — módulo macro hub de engenharia. Rota-mãe: `/dev` Sub-abas:
+   - **Dashboard** `/dev` (default) — Métricas de produtividade, entrega, gargalos e qualidade. É a tela que Daniel abre na segunda-feira pra saber "estamos entregando?"
+   - **Kanban** `/dev/kanban` — Board operacional da sprint ativa. Tela principal dos devs no dia-a-dia.
+   - **Sprints** `/dev/sprints` — Gestão de sprints (criar, ativar, encerrar, comparar). Histórico e retrospectivas.
+   - **Backlog** `/dev/backlog` — Lista priorizável de tasks sem sprint atribuída. Ponte entre "ideia/bug reportado" e "Kanban".
+   
+   Tela cheia de task: `/dev/tasks/:code` (ex: `/dev/tasks/TASK-0042`) — padrão GitHub Issues / Linear. Layout 70/30, ver seção 6.
+   
+   **Princípio de separação:** o Dashboard responde perguntas, o Kanban é ferramenta de execução diária, Sprints é planejamento, Backlog é pipeline de entrada. Nunca duplicar função entre abas.
 5. **CRM** — futuro (pipeline comercial, leads, propostas)
 6. **Suporte** — futuro (tickets globais, kanban macro)
 7. **Manutenção** — futuro (contratos ativos, recorrência)
