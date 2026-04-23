@@ -102,6 +102,7 @@ import { AbaRiscos } from "@/components/projetos/AbaRiscos";
 import { AbaDependencias } from "@/components/projetos/AbaDependencias";
 import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
 import { AbaOperacional } from "@/components/projetos/AbaOperacional";
+import { AbaTarefas } from "@/components/projetos/AbaTarefas";
 import {
   dependencyStatusLabel,
   milestoneStatusLabel,
@@ -966,6 +967,7 @@ export default function ProjetoDetalhe() {
                   ["overview", "Visão Geral", null],
                   ["scope", "Escopo", null],
                   ["operacional", "Operacional", null],
+                  ["tasks", "Tarefas", null],
                   ["milestones", "Marcos", milestones.length || null],
                   ["dependencies", "Dependências", blockingDeps.length || null],
                   ["risks", "Riscos", null],
@@ -1487,6 +1489,13 @@ export default function ProjetoDetalhe() {
                   onDeallocate={handleDeallocate}
                   onCreateContract={() => setContractOpen(true)}
                 />
+              </TabsContent>
+
+              {/* ----- TAREFAS ----- */}
+              <TabsContent value="tasks">
+                {project && (
+                  <AbaTarefas projectId={projectId!} projectCode={project.code} />
+                )}
               </TabsContent>
 
               {/* ----- MARCOS ----- */}
