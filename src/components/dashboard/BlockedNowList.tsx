@@ -2,7 +2,7 @@
  * Lista de tasks bloqueadas no momento (sprint atual). Clica → tela cheia.
  */
 import { useNavigate } from "react-router-dom";
-import { Lock, ChevronRight } from "lucide-react";
+import { Lock, ChevronRight, ShieldCheck } from "lucide-react";
 import { useDashboardAlerts } from "@/hooks/dashboard/useDashboardAlerts";
 import { formatDistanceToNowStrict, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -31,9 +31,16 @@ export function BlockedNowList({ sprintId }: Props) {
 
   if (!list.length) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        🎉 Nenhuma task bloqueada no momento.
-      </p>
+      <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-6 py-8 text-center">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
+          <ShieldCheck className="h-6 w-6 text-emerald-500" />
+        </div>
+        <p className="text-sm font-medium text-foreground">Tudo fluindo</p>
+        <p className="mt-1 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
+          Nenhuma task bloqueada nesta sprint. Quando alguém marcar uma task como bloqueada,
+          ela aparece aqui ordenada pela mais antiga.
+        </p>
+      </div>
     );
   }
 

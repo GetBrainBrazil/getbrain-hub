@@ -2,7 +2,7 @@
  * Tasks paradas em code review há mais de 2 dias.
  */
 import { useNavigate } from "react-router-dom";
-import { Clock, ChevronRight } from "lucide-react";
+import { Clock, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useDashboardAlerts } from "@/hooks/dashboard/useDashboardAlerts";
 import { formatDistanceToNowStrict, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,9 +21,15 @@ export function StaleReviewList({ sprintId }: Props) {
   const list = (data?.stale_review ?? []).slice(0, 5);
   if (!list.length) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        ✅ Nenhuma task parada em review.
-      </p>
+      <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-6 py-8 text-center">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
+          <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+        </div>
+        <p className="text-sm font-medium text-foreground">Review em dia</p>
+        <p className="mt-1 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
+          Nenhum PR esquecido. Só aparecem aqui tasks em <span className="font-medium text-foreground">code review</span> sem update há mais de 2 dias.
+        </p>
+      </div>
     );
   }
 
