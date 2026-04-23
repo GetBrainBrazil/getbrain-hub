@@ -548,6 +548,48 @@ Sempre usar variáveis CSS / tokens do Tailwind, nunca hex hardcoded em componen
 - Percentual: `12,5%`.
 - Valores negativos em vermelho, com sinal de menos.
 
+### 6.X Padrões de módulo macro
+
+O GetBrain Hub reconhece dois tipos de módulo macro:
+
+**Tipo 1 — Macro plano (Financeiro, CRM futuro):**
+- Sidebar própria
+- Navegação horizontal por sub-rotas (/financeiro/pagar, /financeiro/receber)
+- Cada sub-rota é uma tela independente
+- Bom para: módulos com entidades distintas que compartilham configuração mas não compartilham contexto de sessão
+
+**Tipo 2 — Macro hub (Área Dev, possivelmente Suporte futuro):**
+- Sidebar própria
+- Rota-mãe única (/dev) com sub-abas em Tabs no topo da página
+- Contexto compartilhado entre abas (ex: sprint selecionada persiste ao trocar de aba)
+- Bom para: módulos onde as abas são lentes diferentes sobre o mesmo domínio
+
+**Decisão ao criar módulo novo:** se ao alternar entre telas o usuário perderia contexto que ele quer preservar (sprint ativa, filtros, seleções), é hub. Se cada tela é um mundo à parte, é plano.
+
+**Padrão visual de sub-abas em módulo hub:**
+- shadcn/ui Tabs no topo, logo abaixo do cabeçalho da página
+- Estado da aba na URL (/dev/kanban, /dev/sprints) — não só em state — para deep-link funcionar
+- A sub-aba Dashboard é sempre a default (rota-mãe sem sufixo abre Dashboard)
+- Transição entre abas é instantânea (sem loading full-page); dados de cada aba carregam via React Query com cache compartilhado
+
+### 6.Y Padrão de página de detalhe em tela cheia
+
+Entidades operacionais densas (task, ticket de suporte, projeto, contrato) abrem em tela cheia, não em drawer lateral.
+
+**Regra de decisão:** drawer vale para preview/edição rápida. Se o usuário precisa ler, editar múltiplos campos, ver atividade, comentar e voltar a ler — é tela cheia.
+
+**Rota:** sempre inclui o code da entidade (/dev/tasks/TASK-0042, /projetos/PRJ-001, /suporte/TKT-0123). Deep-link é obrigatório.
+
+**Layout padrão 70/30:**
+- 70% esquerda: conteúdo principal (descrição, atividade, comentários, acceptance criteria, sub-tasks)
+- 30% direita: sidebar de metadados (status, assignees, projeto, sprint, prioridade, time tracking, bloqueio, labels, datas)
+
+**Cabeçalho denso:** breadcrumb + code + título editável inline + ações (botão "voltar", compartilhar, mais opções)
+
+**Edição inline:** todos os campos da sidebar direita são editáveis com clique (dropdown, date picker, multi-select). Sem modal de edição.
+
+**Drawer lateral continua válido para:** preview rápido ao hover de card, criação nova (quando o usuário ainda não se comprometeu com a entidade), confirmações leves.
+
 ---
 
 ## 7. Padrões de autenticação
