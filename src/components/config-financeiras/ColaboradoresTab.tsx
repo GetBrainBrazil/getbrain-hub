@@ -279,7 +279,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1.5 h-7 px-2 text-[13px] text-slate-500 hover:text-slate-700"
+              className="gap-1.5 h-7 px-2 text-[13px] text-muted-foreground hover:text-foreground"
               onClick={handleCopyBank}
             >
               {copied ? (
@@ -360,7 +360,7 @@ export default function ColaboradoresTab({ search }: { search: string }) {
             <div><Label>Cargo</Label><Input value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} placeholder="Ex: Desenvolvedor" /></div>
             <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm({ ...form, cpf: applyCpfMask(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" /></div>
           </div>
-          {mode === "edit" && (
+          {mode === "edit" && canManageStatus() && (
             <div className="flex items-center gap-2">
               <Switch checked={form.ativo} onCheckedChange={v => setForm({ ...form, ativo: v })} />
               <Label>{form.ativo ? "Ativo" : "Inativo"}</Label>
