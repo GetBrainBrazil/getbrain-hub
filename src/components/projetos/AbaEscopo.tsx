@@ -540,7 +540,7 @@ function CriteriaList({
 }) {
   const lines = text.split("\n");
   const items = lines.map((l, i) => {
-    const m = l.match(/^\s*-\s+\[( |x|X)\]\s+(.*)$/);
+    const m = l.match(/^\s*-\s+\[( |x|X|)\]\s*(.*)$/);
     if (m) {
       return {
         idx: i,
@@ -560,10 +560,11 @@ function CriteriaList({
 
   function toggle(idx: number) {
     const newLines = [...lines];
-    const m = newLines[idx].match(/^(\s*-\s+\[)( |x|X)(\]\s+.*)$/);
+    const m = newLines[idx].match(/^(\s*-\s+\[)( |x|X|)(\]\s*)(.*)$/);
     if (!m) return;
     const next = m[2].toLowerCase() === "x" ? " " : "x";
-    newLines[idx] = `${m[1]}${next}${m[3]}`;
+    const tail = m[3].endsWith(" ") ? m[3] : m[3] + " ";
+    newLines[idx] = `${m[1]}${next}${tail}${m[4]}`;
     onToggle(newLines.join("\n"));
   }
 
