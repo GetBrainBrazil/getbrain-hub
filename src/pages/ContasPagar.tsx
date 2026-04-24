@@ -40,6 +40,7 @@ export default function ContasPagar() {
   const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("contas_pagar_period", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("contas_pagar_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("contas_pagar_sort", { key: null, direction: null });
+  const [lancamentoOrder, setLancamentoOrder] = usePersistedState<"none" | "recent" | "old">("contas_pagar_lancamento_order", "none");
   const [openNew, setOpenNew] = useState(false);
   const [openPag, setOpenPag] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
