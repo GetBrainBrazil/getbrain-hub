@@ -568,6 +568,25 @@ export default function ProjetoDetalhe() {
     } as any);
   }
 
+  async function reloadLogs() {
+    if (!projectId) return;
+    const { data: al } = await supabase
+      .from("audit_logs")
+      .select("id, action, changes, created_at, actor_id, metadata")
+      .eq("entity_type", "project")
+      .eq("entity_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setLogs(al || []);
+    if (al && al.length > 0) {
+      const aids = Array.from(new Set(al.map((l) => l.actor_id).filter(Boolean))) as string[];
+      if (aids.length > 0) {
+        const { data: ar } = await supabase.from("actors").select("id, display_name").in("id", aids);
+        setLogActors((prev) => ({ ...prev, ...Object.fromEntries((ar || []).map((a) => [a.id, a.display_name])) }));
+      }
+    }
+  }
+
   async function patchProject(updates: Partial<Project>, changes: Record<string, { before: any; after: any }>) {
     if (!projectId || !project) return;
     if (Object.keys(updates).length === 0) return;
@@ -576,9 +595,13 @@ export default function ProjetoDetalhe() {
       toast.error(error.message);
       return;
     }
-    if (Object.keys(changes).length > 0) await logChange("update", changes);
+    // Atualização otimista — sem recarregar a página inteira
+    setProject((prev) => (prev ? { ...prev, ...(updates as any) } : prev));
+    if (Object.keys(changes).length > 0) {
+      await logChange("update", changes);
+      reloadLogs();
+    }
     toast.success("Salvo", { duration: 1500 });
-    load();
   }
 
   async function handleStatusChange(newStatus: ProjectStatus) {
@@ -596,9 +619,10 @@ export default function ProjetoDetalhe() {
       toast.error(error.message);
       return;
     }
+    setProject((prev) => (prev ? { ...prev, status: newStatus } : prev));
     await logChange("status_change", { status: { before, after: newStatus } });
+    reloadLogs();
     toast.success(`Status atualizado para ${getStatusLabel(newStatus)}`);
-    load();
   }
 
   async function saveName() {
@@ -623,8 +647,8 @@ export default function ProjetoDetalhe() {
       toast.error(error.message);
       return;
     }
+    setAllocs((prev) => prev.filter((a) => a.id !== allocId));
     toast.success("Ator desalocado");
-    load();
   }
 
   async function archiveProject() {
