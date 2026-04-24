@@ -32,7 +32,7 @@ async function hydrateDeals(rows: unknown[]): Promise<Deal[]> {
   const leadMap = new Map<string, { id: string; code: string; source: string | null }>((leads ?? []).map((x: { id: string; code: string; source: string | null }) => [x.id, x]));
   const activityMap = new Map<string, DealActivity>();
   for (const a of (activities ?? []) as DealActivity[]) if (a.deal_id && !activityMap.has(a.deal_id)) activityMap.set(a.deal_id, a);
-  return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null, origin_source: d.origin_lead_id ? leadMap.get(d.origin_lead_id)?.source ?? null : 'direto', last_activity: activityMap.get(d.id) ?? null }));
+  return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null, origin_source: d.origin_lead_id ? leadMap.get(d.origin_lead_id)?.source ?? null : 'direto', origin_code: d.origin_lead_id ? leadMap.get(d.origin_lead_id)?.code ?? null : null, last_activity: activityMap.get(d.id) ?? null }));
 }
 
 async function hydrateLeads(rows: unknown[]): Promise<Lead[]> {
@@ -41,15 +41,18 @@ async function hydrateLeads(rows: unknown[]): Promise<Lead[]> {
   const companyIds = Array.from(new Set(list.map((d) => d.company_id).filter(Boolean)));
   const personIds = Array.from(new Set(list.map((d) => d.contact_person_id).filter(Boolean)));
   const actorIds = Array.from(new Set(list.map((d) => d.owner_actor_id).filter(Boolean)));
-  const [{ data: companies }, { data: people }, { data: actors }] = await Promise.all([
+  const dealIds = Array.from(new Set(list.map((d) => d.converted_to_deal_id).filter(Boolean)));
+  const [{ data: companies }, { data: people }, { data: actors }, { data: deals }] = await Promise.all([
     companyIds.length ? sb.from('companies').select('id, legal_name, trade_name, relationship_status').in('id', companyIds) : { data: [] },
     personIds.length ? sb.from('people').select('id, full_name, email, phone, role_in_company').in('id', personIds) : { data: [] },
     actorIds.length ? sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] },
+    dealIds.length ? sb.from('deals').select('id, code').in('id', dealIds) : { data: [] },
   ]);
   const companyMap = new Map<string, CrmCompany>((companies ?? []).map((x: CrmCompany) => [x.id, x]));
   const personMap = new Map<string, CrmPerson>((people ?? []).map((x: CrmPerson) => [x.id, x]));
   const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x]));
-  return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null }));
+  const dealMap = new Map<string, { id: string; code: string }>((deals ?? []).map((x: { id: string; code: string }) => [x.id, x]));
+  return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null, converted_deal_code: d.converted_to_deal_id ? dealMap.get(d.converted_to_deal_id)?.code ?? null : null }));
 }
 
 export function useDealByCode(code?: string) {
