@@ -18,12 +18,13 @@ export interface Deal {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null; origin_lead_id: string | null;
   stage: DealStage; estimated_value: number | null; probability_pct: number; expected_close_date: string | null; project_type: string | null;
   scope_summary: string | null; proposal_url: string | null; notes: string | null; stage_changed_at: string; closed_at: string | null; lost_reason: string | null; generated_project_id: string | null;
-  company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; origin_source?: string | null; origin_code?: string | null; last_activity?: DealActivity | null;
+  created_at?: string; company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; origin_source?: string | null; origin_code?: string | null; last_activity?: DealActivity | null;
 }
 
 export interface DealActivity {
   id: string; deal_id: string | null; lead_id: string | null; type: ActivityType; title: string; description: string | null;
   scheduled_at: string | null; happened_at: string | null; duration_minutes: number | null; outcome: string | null; owner_actor_id: string | null; participants: string[];
+  deal_code?: string | null; lead_code?: string | null; owner?: CrmActor | null;
 }
 
 export interface CrmFilters { ownerIds: string[]; sourceIds: string[]; valueRange: [number, number] | null; search: string; }
