@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,11 @@ import {
   Pencil,
   Save,
   X,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -110,10 +115,10 @@ const CARDS: ScopeCard[] = [
 interface Props {
   projectId: string;
   initialValues: Record<ScopeField, string | null>;
-  onSaved: () => void;
+  onFieldSaved: (field: ScopeField, value: string | null) => void;
 }
 
-export function AbaEscopo({ projectId, initialValues, onSaved }: Props) {
+export function AbaEscopo({ projectId, initialValues, onFieldSaved }: Props) {
   return (
     <div className="space-y-4">
       {CARDS.map((card) => (
@@ -122,7 +127,7 @@ export function AbaEscopo({ projectId, initialValues, onSaved }: Props) {
           card={card}
           projectId={projectId}
           initialValue={initialValues[card.field]}
-          onSaved={onSaved}
+          onFieldSaved={onFieldSaved}
         />
       ))}
     </div>
@@ -133,17 +138,18 @@ function ScopeCardBlock({
   card,
   projectId,
   initialValue,
-  onSaved,
+  onFieldSaved,
 }: {
   card: ScopeCard;
   projectId: string;
   initialValue: string | null;
-  onSaved: () => void;
+  onFieldSaved: (field: ScopeField, value: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialValue ?? "");
   const [saving, setSaving] = useState(false);
   const [value, setValue] = useState<string | null>(initialValue);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setValue(initialValue);
@@ -152,7 +158,6 @@ function ScopeCardBlock({
 
   async function save(opts?: { silent?: boolean }) {
     const next = draft.trim() || null;
-    // Sem alterações? Apenas sai do modo de edição.
     if (next === (value ?? null)) {
       setEditing(false);
       return;
@@ -170,7 +175,7 @@ function ScopeCardBlock({
     setValue(next);
     setEditing(false);
     if (!opts?.silent) toast.success("Salvo", { duration: 1500 });
-    onSaved();
+    onFieldSaved(card.field, next);
   }
 
   function cancel() {
@@ -214,18 +219,54 @@ function ScopeCardBlock({
       <div className="px-5 py-4">
         {editing ? (
           <div className="space-y-2">
+            <MarkdownToolbar
+              textareaRef={textareaRef}
+              draft={draft}
+              setDraft={setDraft}
+              showChecklist={card.isCriteria}
+            />
             <Textarea
+              ref={textareaRef}
               autoFocus
               rows={6}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              onBlur={() => save({ silent: true })}
-              placeholder={card.placeholder}
-              className={cn("resize-y", card.isCriteria && "font-mono text-sm")}
+              onBlur={(e) => {
+                // Não salvar se o foco foi para um botão da toolbar
+                const next = e.relatedTarget as HTMLElement | null;
+                if (next?.closest?.("[data-md-toolbar]")) return;
+                save({ silent: true });
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Escape") cancel();
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") save();
+                // Continuar lista ao pressionar Enter dentro de bullet
+                if (e.key === "Enter") {
+                  const ta = e.currentTarget;
+                  const before = ta.value.slice(0, ta.selectionStart);
+                  const lineStart = before.lastIndexOf("\n") + 1;
+                  const line = before.slice(lineStart);
+                  const m = line.match(/^(\s*)([-*]\s\[[ xX]\]\s|[-*]\s|\d+\.\s)/);
+                  if (m) {
+                    e.preventDefault();
+                    const prefix = m[1] + m[2].replace(/\[[xX]\]/, "[ ]");
+                    if (line.trim() === m[2].trim()) {
+                      // linha vazia: encerra a lista
+                      const start = lineStart;
+                      const end = ta.selectionStart;
+                      const newVal = ta.value.slice(0, start) + ta.value.slice(end);
+                      setDraft(newVal);
+                      requestAnimationFrame(() => {
+                        ta.selectionStart = ta.selectionEnd = start;
+                      });
+                    } else {
+                      insertAtCursor(ta, "\n" + prefix, setDraft);
+                    }
+                  }
+                }
               }}
+              placeholder={card.placeholder}
+              className={cn("resize-y font-mono text-sm")}
             />
             {card.hint && (
               <p className="text-[11px] text-muted-foreground">{card.hint}</p>
@@ -250,20 +291,248 @@ function ScopeCardBlock({
               }
               setValue(newText);
               setDraft(newText);
-              onSaved();
+              onFieldSaved("acceptance_criteria", newText);
             }}
           />
         ) : (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-            {value}
-          </p>
+          <MarkdownView text={value!} />
         )}
       </div>
     </section>
   );
 }
 
-// Reaproveita a mesma lógica de checkbox markdown da aba Visão Geral.
+// =============== Toolbar / helpers ===============
+
+function insertAtCursor(
+  ta: HTMLTextAreaElement,
+  text: string,
+  setDraft: (v: string) => void,
+) {
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const newVal = ta.value.slice(0, start) + text + ta.value.slice(end);
+  setDraft(newVal);
+  requestAnimationFrame(() => {
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = start + text.length;
+  });
+}
+
+function wrapSelection(
+  ta: HTMLTextAreaElement,
+  wrapper: string,
+  setDraft: (v: string) => void,
+  placeholder = "texto",
+) {
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const selected = ta.value.slice(start, end) || placeholder;
+  const newVal =
+    ta.value.slice(0, start) + wrapper + selected + wrapper + ta.value.slice(end);
+  setDraft(newVal);
+  requestAnimationFrame(() => {
+    ta.focus();
+    ta.selectionStart = start + wrapper.length;
+    ta.selectionEnd = start + wrapper.length + selected.length;
+  });
+}
+
+function prefixLines(
+  ta: HTMLTextAreaElement,
+  prefix: string | ((idx: number) => string),
+  setDraft: (v: string) => void,
+) {
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const before = ta.value.slice(0, start);
+  const sel = ta.value.slice(start, end) || "item";
+  const after = ta.value.slice(end);
+  const lineStart = before.lastIndexOf("\n") + 1;
+  const head = ta.value.slice(lineStart, start);
+  const block = head + sel;
+  const lines = block.split("\n");
+  const transformed = lines
+    .map((l, i) => (l.match(/^(\s*)([-*]\s\[[ xX]\]\s|[-*]\s|\d+\.\s)/) ? l : (typeof prefix === "function" ? prefix(i) : prefix) + l))
+    .join("\n");
+  const newVal = ta.value.slice(0, lineStart) + transformed + after;
+  setDraft(newVal);
+  requestAnimationFrame(() => {
+    ta.focus();
+    ta.selectionStart = lineStart;
+    ta.selectionEnd = lineStart + transformed.length;
+  });
+}
+
+function MarkdownToolbar({
+  textareaRef,
+  draft,
+  setDraft,
+  showChecklist,
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  draft: string;
+  setDraft: (v: string) => void;
+  showChecklist?: boolean;
+}) {
+  const act = (fn: (ta: HTMLTextAreaElement) => void) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const ta = textareaRef.current;
+    if (!ta) return;
+    fn(ta);
+  };
+
+  return (
+    <div
+      data-md-toolbar
+      className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-muted/20 p-1"
+    >
+      <ToolbarButton
+        title="Negrito (Ctrl+B)"
+        onMouseDown={act((ta) => wrapSelection(ta, "**", setDraft, "negrito"))}
+      >
+        <Bold className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton
+        title="Itálico (Ctrl+I)"
+        onMouseDown={act((ta) => wrapSelection(ta, "*", setDraft, "itálico"))}
+      >
+        <Italic className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <span className="mx-1 h-4 w-px bg-border" />
+      <ToolbarButton
+        title="Lista com marcadores"
+        onMouseDown={act((ta) => prefixLines(ta, "- ", setDraft))}
+      >
+        <List className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton
+        title="Lista numerada"
+        onMouseDown={act((ta) => prefixLines(ta, (i) => `${i + 1}. `, setDraft))}
+      >
+        <ListOrdered className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      {showChecklist && (
+        <ToolbarButton
+          title="Checklist"
+          onMouseDown={act((ta) => prefixLines(ta, "- [ ] ", setDraft))}
+        >
+          <CheckSquare className="h-3.5 w-3.5" />
+        </ToolbarButton>
+      )}
+    </div>
+  );
+}
+
+function ToolbarButton({
+  children,
+  title,
+  onMouseDown,
+}: {
+  children: React.ReactNode;
+  title: string;
+  onMouseDown: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={onMouseDown}
+      className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+    >
+      {children}
+    </button>
+  );
+}
+
+// =============== Markdown rendering (simples) ===============
+
+/**
+ * Renderizador minimalista: suporta **negrito**, *itálico*, listas com `-`/`*`,
+ * listas numeradas `1.` e parágrafos. Suficiente para os campos de escopo.
+ */
+function MarkdownView({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const blocks: React.ReactNode[] = [];
+  let i = 0;
+  let key = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^\s*[-*]\s/.test(line) && !/^\s*[-*]\s\[[ xX]\]\s/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*[-*]\s/.test(lines[i]) && !/^\s*[-*]\s\[[ xX]\]\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[-*]\s/, ""));
+        i++;
+      }
+      blocks.push(
+        <ul key={key++} className="ml-4 list-disc space-y-1 text-sm text-foreground/90">
+          {items.map((it, idx) => (
+            <li key={idx}>{renderInline(it)}</li>
+          ))}
+        </ul>,
+      );
+      continue;
+    }
+    if (/^\s*\d+\.\s/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*\d+\.\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+\.\s/, ""));
+        i++;
+      }
+      blocks.push(
+        <ol key={key++} className="ml-4 list-decimal space-y-1 text-sm text-foreground/90">
+          {items.map((it, idx) => (
+            <li key={idx}>{renderInline(it)}</li>
+          ))}
+        </ol>,
+      );
+      continue;
+    }
+    if (line.trim() === "") {
+      blocks.push(<div key={key++} className="h-2" />);
+      i++;
+      continue;
+    }
+    blocks.push(
+      <p key={key++} className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+        {renderInline(line)}
+      </p>,
+    );
+    i++;
+  }
+  return <div className="space-y-1">{blocks}</div>;
+}
+
+function renderInline(text: string): React.ReactNode[] {
+  // Tokeniza **bold** e *italic*. Ordem importa: bold antes de italic.
+  const out: React.ReactNode[] = [];
+  const regex = /(\*\*([^*]+)\*\*|\*([^*]+)\*)/g;
+  let lastIndex = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > lastIndex) out.push(text.slice(lastIndex, m.index));
+    if (m[2] !== undefined) {
+      out.push(
+        <strong key={key++} className="font-semibold text-foreground">
+          {m[2]}
+        </strong>,
+      );
+    } else if (m[3] !== undefined) {
+      out.push(
+        <em key={key++} className="italic">
+          {m[3]}
+        </em>,
+      );
+    }
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < text.length) out.push(text.slice(lastIndex));
+  return out.length ? out : [text];
+}
+
+// =============== Critérios de aceite (checkboxes) ===============
+
 function CriteriaList({
   text,
   onToggle,
@@ -288,7 +557,7 @@ function CriteriaList({
 
   const tasks = items.filter((it) => it.isTask);
   if (tasks.length === 0) {
-    return <p className="whitespace-pre-wrap text-sm text-foreground/90">{text}</p>;
+    return <MarkdownView text={text} />;
   }
 
   function toggle(idx: number) {
@@ -337,12 +606,12 @@ function CriteriaList({
                   it.checked && "text-muted-foreground line-through",
                 )}
               >
-                {it.label}
+                {renderInline(it.label)}
               </span>
             </li>
           ) : it.raw.trim() ? (
             <li key={it.idx} className="text-sm text-foreground/80">
-              {it.raw}
+              {renderInline(it.raw)}
             </li>
           ) : null,
         )}
