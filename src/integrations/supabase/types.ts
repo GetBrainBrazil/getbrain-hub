@@ -2668,6 +2668,37 @@ export type Database = {
       }
     }
     Views: {
+      crm_funnel_metrics: {
+        Row: {
+          avg_deal_cycle_days: number | null
+          deal_win_rate_30d: number | null
+          deals_created_30d: number | null
+          deals_created_90d: number | null
+          deals_em_negociacao_current: number | null
+          deals_lost_90d: number | null
+          deals_orcamento_enviado_current: number | null
+          deals_overdue: number | null
+          deals_presencial_agendada_current: number | null
+          deals_presencial_feita_current: number | null
+          deals_stalled_14d: number | null
+          deals_won_30d: number | null
+          deals_won_90d: number | null
+          lead_conversion_rate_30d: number | null
+          leads_converted_30d: number | null
+          leads_converted_90d: number | null
+          leads_created_30d: number | null
+          leads_created_90d: number | null
+          leads_discarded_total: number | null
+          leads_novo_current: number | null
+          leads_ready_stale: number | null
+          leads_triagem_agendada_current: number | null
+          leads_triagem_feita_current: number | null
+          overdue_activities: number | null
+          revenue_won_30d: number | null
+          revenue_won_90d: number | null
+        }
+        Relationships: []
+      }
       crm_pipeline_metrics: {
         Row: {
           conversion_rate_pct: number | null
@@ -2827,6 +2858,43 @@ export type Database = {
       }
       generate_project_code: { Args: never; Returns: string }
       generate_venda_numero: { Args: never; Returns: string }
+      get_crm_owner_performance: {
+        Args: { p_days_back?: number }
+        Returns: {
+          activities_completed: number
+          deals_handled: number
+          deals_lost: number
+          deals_won: number
+          leads_converted: number
+          leads_handled: number
+          owner_actor_id: string
+          owner_name: string
+          revenue_generated: number
+          win_rate_pct: number
+        }[]
+      }
+      get_crm_source_performance: {
+        Args: { p_days_back?: number }
+        Returns: {
+          avg_ticket: number
+          conversion_rate_pct: number
+          deals_won: number
+          leads_converted: number
+          leads_discarded: number
+          leads_total: number
+          revenue_generated: number
+          source: string
+        }[]
+      }
+      get_crm_velocity_by_stage: {
+        Args: { p_days_back?: number }
+        Returns: {
+          avg_days_in_stage: number
+          deals_passed_through: number
+          median_days_in_stage: number
+          stage: Database["public"]["Enums"]["deal_stage"]
+        }[]
+      }
       get_dev_capacity: {
         Args: { p_sprint_id: string }
         Returns: {
