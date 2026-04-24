@@ -632,11 +632,18 @@ export default function ProjetoFinanceiroDetalhe() {
         icon={Receipt}
         title="Custos do projeto"
         action={
-          <Button asChild size="sm" variant="outline">
-            <Link to={novoCustoHref}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> Registrar custo
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
+              <Link to={verContasPagarHref}>
+                <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ver em Contas a Pagar
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to={novoCustoHref}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Registrar custo
+              </Link>
+            </Button>
+          </div>
         }
       >
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
