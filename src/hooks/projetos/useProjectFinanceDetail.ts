@@ -53,6 +53,7 @@ export interface ProjectFinanceDetail {
   recurring_receitas: ProjectMovimentacao[];
   contracts: ProjectMaintenanceContract[];
   integrations: ProjectIntegration[];
+  categoriasMap: Record<string, string>;
 }
 
 export function useProjectFinanceDetail(projectId: string | undefined) {
@@ -114,12 +115,34 @@ export function useProjectFinanceDetail(projectId: string | undefined) {
       const despesas = all.filter((m) => m.tipo === "despesa");
       const recurring_receitas = all.filter((m) => m.tipo === "receita" && m.recorrente);
 
+      // Resolve nomes das categorias usadas em todas as movimentações
+      const categoriaIds = Array.from(
+        new Set(all.map((m) => m.categoria_id).filter(Boolean) as string[]),
+      );
+      let categoriasMap: Record<string, string> = {};
+      if (categoriaIds.length > 0) {
+        const catRes = await (supabase as any)
+          .from("categorias")
+          .select("id, nome")
+          .in("id", categoriaIds);
+        if (!catRes.error && catRes.data) {
+          categoriasMap = (catRes.data as { id: string; nome: string }[]).reduce(
+            (acc, c) => {
+              acc[c.id] = c.nome;
+              return acc;
+            },
+            {} as Record<string, string>,
+          );
+        }
+      }
+
       return {
         receitas: receitas as ProjectMovimentacao[],
         despesas: despesas as ProjectMovimentacao[],
         recurring_receitas: recurring_receitas as ProjectMovimentacao[],
         contracts: (contractsRes.data ?? []) as ProjectMaintenanceContract[],
         integrations: (integrationsRes.data ?? []) as ProjectIntegration[],
+        categoriasMap,
       };
     },
   });

@@ -29,6 +29,11 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { getEffectiveMrr } from "@/lib/maintenance";
@@ -233,46 +238,70 @@ const MES_LABEL = [
   "jan", "fev", "mar", "abr", "mai", "jun",
   "jul", "ago", "set", "out", "nov", "dez",
 ];
+const MES_LABEL_FULL = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
-function ParcelasCalendar({ items }: { items: ProjectMovimentacao[] }) {
-  if (items.length === 0) {
+function categoriaLabel(
+  m: ProjectMovimentacao,
+  categoriasMap: Record<string, string>,
+): string {
+  if (m.categoria_id && categoriasMap[m.categoria_id]) {
+    return categoriasMap[m.categoria_id];
+  }
+  if (m.source_entity_type === "maintenance_contract") return "Manutenção";
+  if (m.tipo === "despesa") {
+    const desc = (m.descricao ?? "").toLowerCase();
+    if (desc.includes("salário") || desc.includes("salario")) return "Salário";
+  }
+  return "Sem categoria";
+}
+
+function ParcelasCalendar({
+  receitas,
+  despesas,
+  categoriasMap,
+}: {
+  receitas: ProjectMovimentacao[];
+  despesas: ProjectMovimentacao[];
+  categoriasMap: Record<string, string>;
+}) {
+  const allItems = [...receitas, ...despesas];
+
+  if (allItems.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-border/60 text-xs text-muted-foreground">
-        Sem parcelas para exibir
+        Sem lançamentos para exibir
       </div>
     );
   }
 
-  const counts = items.reduce(
-    (acc, m) => {
-      const s = parcelStatus(m);
-      acc[s]++;
-      return acc;
-    },
-    { recebido: 0, previsto: 0, atrasado: 0 } as Record<ParcelStatus, number>,
-  );
-
-  // Agrupa parcelas por YYYY-MM
-  const byMonth = new Map<string, ProjectMovimentacao[]>();
-  for (const m of items) {
+  // Agrupa por YYYY-MM
+  const byMonth = new Map<
+    string,
+    { receitas: ProjectMovimentacao[]; despesas: ProjectMovimentacao[] }
+  >();
+  for (const m of allItems) {
     const d = new Date(m.data_vencimento);
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()).padStart(2, "0")}`;
-    if (!byMonth.has(key)) byMonth.set(key, []);
-    byMonth.get(key)!.push(m);
+    if (!byMonth.has(key)) byMonth.set(key, { receitas: [], despesas: [] });
+    if (m.tipo === "receita") byMonth.get(key)!.receitas.push(m);
+    else byMonth.get(key)!.despesas.push(m);
   }
 
-  // Determina range completo (min..max) para incluir meses vazios
-  const dates = items.map((m) => new Date(m.data_vencimento));
-  const minDate = new Date(
-    Math.min(...dates.map((d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))),
+  // Range completo
+  const dates = allItems.map((m) => new Date(m.data_vencimento));
+  const minTime = Math.min(
+    ...dates.map((d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)),
   );
-  const maxDate = new Date(
-    Math.max(...dates.map((d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))),
+  const maxTime = Math.max(
+    ...dates.map((d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)),
   );
 
   const months: { key: string; year: number; month: number }[] = [];
-  const cursor = new Date(Date.UTC(minDate.getUTCFullYear(), minDate.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(maxDate.getUTCFullYear(), maxDate.getUTCMonth(), 1));
+  const cursor = new Date(minTime);
+  const end = new Date(maxTime);
   while (cursor.getTime() <= end.getTime()) {
     const y = cursor.getUTCFullYear();
     const m = cursor.getUTCMonth();
@@ -283,7 +312,38 @@ function ParcelasCalendar({ items }: { items: ProjectMovimentacao[] }) {
   const today = new Date();
   const todayKey = `${today.getUTCFullYear()}-${String(today.getUTCMonth()).padStart(2, "0")}`;
 
-  // Agrupa por ano para exibir cabeçalho de ano
+  // Para heatmap: maior |saldo| do range
+  const monthSaldos = months.map((mo) => {
+    const b = byMonth.get(mo.key);
+    if (!b) return 0;
+    const ent = b.receitas.reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
+    const sai = b.despesas.reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
+    return ent - sai;
+  });
+  const maxAbs = Math.max(1, ...monthSaldos.map((v) => Math.abs(v)));
+
+  // Totais do range
+  const totalEntradas = receitas.reduce(
+    (s, p) => s + (p.valor_realizado || p.valor_previsto || 0),
+    0,
+  );
+  const totalSaidas = despesas.reduce(
+    (s, p) => s + (p.valor_realizado || p.valor_previsto || 0),
+    0,
+  );
+  const totalSaldo = totalEntradas - totalSaidas;
+
+  // Contagem de status (apenas receitas — manter legenda atual)
+  const counts = receitas.reduce(
+    (acc, m) => {
+      const s = parcelStatus(m);
+      acc[s]++;
+      return acc;
+    },
+    { recebido: 0, previsto: 0, atrasado: 0 } as Record<ParcelStatus, number>,
+  );
+
+  // Agrupa por ano
   const yearGroups = months.reduce<{ year: number; months: typeof months }[]>(
     (acc, m) => {
       const last = acc[acc.length - 1];
@@ -295,64 +355,103 @@ function ParcelasCalendar({ items }: { items: ProjectMovimentacao[] }) {
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-success" />
+    <div className="space-y-4">
+      {/* Header: legenda + totais */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-success" />
+            <span className="text-muted-foreground">
+              Recebido <span className="font-mono font-semibold text-foreground">{counts.recebido}</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-accent" />
+            <span className="text-muted-foreground">
+              Previsto <span className="font-mono font-semibold text-foreground">{counts.previsto}</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-destructive" />
+            <span className="text-muted-foreground">
+              Atrasado <span className="font-mono font-semibold text-foreground">{counts.atrasado}</span>
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] tabular-nums">
           <span className="text-muted-foreground">
-            Recebido{" "}
-            <span className="font-mono font-semibold text-foreground">
-              {counts.recebido}
+            Entradas <span className="font-semibold text-success">{formatCurrency(totalEntradas)}</span>
+          </span>
+          <span className="text-muted-foreground">
+            Saídas <span className="font-semibold text-destructive">{formatCurrency(totalSaidas)}</span>
+          </span>
+          <span className="text-muted-foreground">
+            Saldo{" "}
+            <span
+              className={cn(
+                "font-semibold",
+                totalSaldo >= 0 ? "text-success" : "text-destructive",
+              )}
+            >
+              {totalSaldo >= 0 ? "+" : "−"}
+              {formatCurrency(Math.abs(totalSaldo))}
             </span>
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-accent" />
-          <span className="text-muted-foreground">
-            Previsto{" "}
-            <span className="font-mono font-semibold text-foreground">
-              {counts.previsto}
-            </span>
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-destructive" />
-          <span className="text-muted-foreground">
-            Atrasado{" "}
-            <span className="font-mono font-semibold text-foreground">
-              {counts.atrasado}
-            </span>
-          </span>
-        </div>
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground/60">
-          {items.length} {items.length === 1 ? "parcela" : "parcelas"}
-        </span>
       </div>
 
-      <div className="space-y-3">
+      {/* Grid por ano */}
+      <div className="space-y-4">
         {yearGroups.map((yg) => (
-          <div key={yg.year} className="space-y-1.5">
+          <div key={yg.year} className="space-y-2">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
               {yg.year}
             </p>
-            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
               {yg.months.map((mo) => {
-                const parcelas = byMonth.get(mo.key) ?? [];
-                const total = parcelas.reduce(
-                  (sum, p) => sum + (p.valor_previsto ?? 0),
+                const bucket = byMonth.get(mo.key) ?? { receitas: [], despesas: [] };
+                const entradas = bucket.receitas.reduce(
+                  (s, p) => s + (p.valor_realizado || p.valor_previsto || 0),
                   0,
                 );
+                const saidas = bucket.despesas.reduce(
+                  (s, p) => s + (p.valor_realizado || p.valor_previsto || 0),
+                  0,
+                );
+                const saldo = entradas - saidas;
+                const totalCount = bucket.receitas.length + bucket.despesas.length;
                 const isToday = mo.key === todayKey;
-                const isEmpty = parcelas.length === 0;
-                return (
+                const isEmpty = totalCount === 0;
+
+                // Heatmap em 3 níveis
+                let heatClass = "";
+                if (!isEmpty) {
+                  const ratio = Math.abs(saldo) / maxAbs;
+                  const level = ratio > 0.66 ? 3 : ratio > 0.33 ? 2 : 1;
+                  if (saldo > 0) {
+                    heatClass =
+                      level === 3 ? "bg-success/15" : level === 2 ? "bg-success/10" : "bg-success/5";
+                  } else if (saldo < 0) {
+                    heatClass =
+                      level === 3
+                        ? "bg-destructive/15"
+                        : level === 2
+                        ? "bg-destructive/10"
+                        : "bg-destructive/5";
+                  } else {
+                    heatClass = "bg-muted/30";
+                  }
+                }
+
+                const cell = (
                   <div
-                    key={mo.key}
                     className={cn(
-                      "group relative flex min-h-[68px] flex-col gap-1 rounded-md border bg-card/40 px-2 py-1.5 transition-colors",
+                      "group relative flex h-full min-h-[92px] cursor-default flex-col gap-1.5 rounded-lg border px-3 py-2 transition-all",
                       isEmpty
-                        ? "border-border/30 bg-transparent"
-                        : "border-border/60 hover:border-accent/40",
-                      isToday && "ring-2 ring-accent/60",
+                        ? "border-dashed border-border/30 bg-transparent"
+                        : "border-border/60 hover:border-accent/50 hover:shadow-sm",
+                      !isEmpty && heatClass,
+                      isToday && "ring-2 ring-accent/60 ring-offset-1 ring-offset-background",
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -364,45 +463,181 @@ function ParcelasCalendar({ items }: { items: ProjectMovimentacao[] }) {
                       >
                         {MES_LABEL[mo.month]}
                       </span>
-                      {parcelas.length > 0 && (
-                        <span className="font-mono text-[9px] text-muted-foreground/60">
-                          {parcelas.length}
+                      {totalCount > 0 && (
+                        <span className="rounded-full bg-background/60 px-1.5 py-px font-mono text-[9px] text-muted-foreground/70">
+                          {totalCount}
                         </span>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-1">
-                      {parcelas.slice(0, 8).map((p) => {
-                        const s = parcelStatus(p);
-                        return (
-                          <span
-                            key={p.id}
-                            title={`${p.descricao} · ${formatCurrency(p.valor_previsto)} · ${formatDate(p.data_vencimento)} · ${statusLabel(s)}`}
-                            className={cn(
-                              "h-2 w-2 rounded-full border border-card transition-transform hover:scale-150",
-                              statusColor(s),
-                            )}
-                          />
-                        );
-                      })}
-                      {parcelas.length > 8 && (
-                        <span className="font-mono text-[9px] text-muted-foreground/60">
-                          +{parcelas.length - 8}
-                        </span>
-                      )}
-                    </div>
-
-                    {parcelas.length > 0 && (
-                      <span className="mt-auto font-mono text-[10px] font-semibold tabular-nums text-foreground/80">
-                        {formatCurrency(total)}
+                    {isEmpty ? (
+                      <span className="my-auto text-center font-mono text-[9px] text-muted-foreground/40">
+                        —
                       </span>
+                    ) : (
+                      <>
+                        <div className="space-y-0.5 font-mono text-[10.5px] tabular-nums">
+                          {entradas > 0 && (
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-success/90">↑</span>
+                              <span className="font-semibold text-success">
+                                {formatCurrency(entradas)}
+                              </span>
+                            </div>
+                          )}
+                          {saidas > 0 && (
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-destructive/90">↓</span>
+                              <span className="font-semibold text-destructive">
+                                {formatCurrency(saidas)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-1">
+                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60">
+                            Saldo
+                          </span>
+                          <span
+                            className={cn(
+                              "font-mono text-[10.5px] font-bold tabular-nums",
+                              saldo > 0 && "text-success",
+                              saldo < 0 && "text-destructive",
+                              saldo === 0 && "text-muted-foreground",
+                            )}
+                          >
+                            {saldo >= 0 ? "+" : "−"}
+                            {formatCurrency(Math.abs(saldo))}
+                          </span>
+                        </div>
+                      </>
                     )}
                   </div>
+                );
+
+                if (isEmpty) {
+                  return <div key={mo.key}>{cell}</div>;
+                }
+
+                return (
+                  <HoverCard key={mo.key} openDelay={120} closeDelay={80}>
+                    <HoverCardTrigger asChild>{cell}</HoverCardTrigger>
+                    <HoverCardContent
+                      side="top"
+                      align="center"
+                      className="w-[360px] p-0"
+                    >
+                      <MonthHoverDetail
+                        title={`${MES_LABEL_FULL[mo.month]} · ${mo.year}`}
+                        receitas={bucket.receitas}
+                        despesas={bucket.despesas}
+                        entradas={entradas}
+                        saidas={saidas}
+                        saldo={saldo}
+                        categoriasMap={categoriasMap}
+                      />
+                    </HoverCardContent>
+                  </HoverCard>
                 );
               })}
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function MonthHoverDetail({
+  title,
+  receitas,
+  despesas,
+  entradas,
+  saidas,
+  saldo,
+  categoriasMap,
+}: {
+  title: string;
+  receitas: ProjectMovimentacao[];
+  despesas: ProjectMovimentacao[];
+  entradas: number;
+  saidas: number;
+  saldo: number;
+  categoriasMap: Record<string, string>;
+}) {
+  const sortByDate = (a: ProjectMovimentacao, b: ProjectMovimentacao) =>
+    a.data_vencimento.localeCompare(b.data_vencimento);
+
+  const renderRow = (m: ProjectMovimentacao) => {
+    const s = parcelStatus(m);
+    const dia = new Date(m.data_vencimento).getUTCDate();
+    const cat = categoriaLabel(m, categoriasMap);
+    const valor = m.valor_realizado || m.valor_previsto || 0;
+    return (
+      <Link
+        key={m.id}
+        to={`/financeiro/movimentacoes/${m.id}`}
+        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] transition-colors hover:bg-muted/60"
+      >
+        <span
+          className={cn("h-1.5 w-1.5 flex-shrink-0 rounded-full", statusColor(s))}
+          title={statusLabel(s)}
+        />
+        <span className="w-7 flex-shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
+          {String(dia).padStart(2, "0")}
+        </span>
+        <span className="flex-1 truncate text-foreground">{m.descricao}</span>
+        <span className="flex-shrink-0 rounded-sm bg-muted/70 px-1.5 py-px font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+          {cat}
+        </span>
+        <span
+          className={cn(
+            "w-20 flex-shrink-0 text-right font-mono text-[10.5px] font-semibold tabular-nums",
+            m.tipo === "receita" ? "text-success" : "text-destructive",
+          )}
+        >
+          {m.tipo === "receita" ? "+" : "−"}
+          {formatCurrency(valor)}
+        </span>
+      </Link>
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-foreground">
+          {title}
+        </p>
+        <span
+          className={cn(
+            "font-mono text-[11px] font-bold tabular-nums",
+            saldo >= 0 ? "text-success" : "text-destructive",
+          )}
+        >
+          {saldo >= 0 ? "+" : "−"}
+          {formatCurrency(Math.abs(saldo))}
+        </span>
+      </div>
+
+      <div className="max-h-[320px] space-y-2 overflow-y-auto px-2 pb-2">
+        {receitas.length > 0 && (
+          <div className="space-y-0.5">
+            <p className="px-2 pt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-success/80">
+              Entradas · {formatCurrency(entradas)}
+            </p>
+            {[...receitas].sort(sortByDate).map(renderRow)}
+          </div>
+        )}
+        {despesas.length > 0 && (
+          <div className="space-y-0.5">
+            <p className="px-2 pt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-destructive/80">
+              Saídas · {formatCurrency(saidas)}
+            </p>
+            {[...despesas].sort(sortByDate).map(renderRow)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -736,12 +971,16 @@ export default function ProjetoFinanceiroDetalhe() {
           </div>
         </div>
 
-        {/* Calendário geral em baixo */}
+        {/* Calendário financeiro completo */}
         <div className="mt-6 border-t border-border/60 pt-4">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Calendário de parcelas (todas)
+            Calendário financeiro
           </p>
-          <ParcelasCalendar items={allReceitas} />
+          <ParcelasCalendar
+            receitas={allReceitas}
+            despesas={detail?.despesas ?? []}
+            categoriasMap={detail?.categoriasMap ?? {}}
+          />
         </div>
       </DetalheBloco>
 
