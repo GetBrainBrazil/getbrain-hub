@@ -408,6 +408,8 @@ export default function ProjetoDetalhe() {
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [company, setCompany] = useState<{ id: string; legal_name: string; trade_name: string | null } | null>(null);
+  const { data: projectContactsList = [] } = useProjectContacts(company?.id ?? null);
+  const primaryContact = projectContactsList.find((c) => c.is_primary_contact) ?? projectContactsList[0] ?? null;
   const [allocs, setAllocs] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
