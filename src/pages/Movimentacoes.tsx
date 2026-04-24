@@ -189,6 +189,8 @@ export default function Movimentacoes() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const projectIdFromUrl = searchParams.get("projectId") || "";
   const [tab, setTab] = useURLState<string>("aba", "pagar");
   const tabKey = tab === "receber" ? "receber" : "pagar";
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
