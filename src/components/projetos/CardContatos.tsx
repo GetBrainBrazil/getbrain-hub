@@ -53,13 +53,13 @@ function ContactRow({
 }) {
   const setPrimary = useSetPrimaryContact();
   const unlink = useUnlinkProjectContact();
-  const confirm = useConfirm();
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const handleUnlink = async () => {
     const ok = await confirm({
       title: "Remover contato do projeto?",
       description: `${contact.full_name} continuará existindo no CRM, mas não estará mais vinculado a esta empresa.`,
-      confirmText: "Remover",
+      confirmLabel: "Remover",
       variant: "destructive",
     });
     if (!ok) return;
