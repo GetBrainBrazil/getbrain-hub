@@ -607,7 +607,7 @@ export default function Movimentacoes() {
 
   function toggleSelectAll() {
     setSelectedIds(prev => {
-      const allIds = filtered.map((m: any) => m.id);
+      const allIds = ordered.map((m: any) => m.id);
       const allSelected = allIds.length > 0 && allIds.every(id => prev.has(id));
       if (allSelected) {
         const next = new Set(prev);
