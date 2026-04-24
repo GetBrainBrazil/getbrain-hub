@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
-import { Mail, Phone, Plus, Star, StarOff, Trash2, Pencil, Save, X, User, Briefcase, UserPlus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Mail, Phone, Plus, Star, StarOff, Trash2, Pencil, Save, X, User, Briefcase, UserPlus, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatPhoneBR } from "@/lib/formatters";
