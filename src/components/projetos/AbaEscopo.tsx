@@ -196,7 +196,7 @@ function ScopeCardBlock({
         >
           {editing ? (
             <>
-              <Button size="sm" variant="ghost" onClick={save} disabled={saving}>
+              <Button size="sm" variant="ghost" onClick={() => save()} disabled={saving}>
                 <Save className="mr-1 h-3.5 w-3.5" /> Salvar
               </Button>
               <Button size="sm" variant="ghost" onClick={cancel}>
@@ -219,6 +219,7 @@ function ScopeCardBlock({
               rows={6}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              onBlur={() => save({ silent: true })}
               placeholder={card.placeholder}
               className={cn("resize-y", card.isCriteria && "font-mono text-sm")}
               onKeyDown={(e) => {
@@ -230,7 +231,7 @@ function ScopeCardBlock({
               <p className="text-[11px] text-muted-foreground">{card.hint}</p>
             )}
             <p className="text-[11px] text-muted-foreground">
-              ⌘/Ctrl+Enter para salvar · Esc para cancelar
+              Salva ao sair do campo · ⌘/Ctrl+Enter para salvar · Esc para cancelar
             </p>
           </div>
         ) : isEmpty ? (
