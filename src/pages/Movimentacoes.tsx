@@ -523,6 +523,17 @@ export default function Movimentacoes() {
     sortConfig,
   ]);
 
+  const ordered = useMemo(() => {
+    if (lancamentoOrder === "none") return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const da = new Date(a.created_at ?? 0).getTime();
+      const db = new Date(b.created_at ?? 0).getTime();
+      return lancamentoOrder === "recent" ? db - da : da - db;
+    });
+    return arr;
+  }, [filtered, lancamentoOrder]);
+
   const hasActiveFilters =
     !!search ||
     statusFilter.length > 0 ||
