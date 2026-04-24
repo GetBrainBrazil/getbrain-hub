@@ -1,80 +1,54 @@
-# Separar Implementação x Manutenção pela categoria
+## Objetivo
 
-## Problema
-
-Hoje a separação está sendo feita pelo campo `recorrente` e por `source_entity_type`, o que classifica errado várias parcelas. O correto é usar a **categoria** do lançamento (em Contas a Pagar/Receber).
-
-Existem duas categorias canônicas no banco (filhas de "Vendas"):
-- **Implementação** — `54986866-7bd2-42e5-abec-2378b3e7c6a9`
-- **Manutenção** — `fd3b23be-1101-4122-83d1-6b559c64c04b`
-
-Os lançamentos automáticos gerados pelo contrato de manutenção (`source_entity_type='maintenance_contract'`) hoje têm categoria nula — eles serão tratados como Manutenção por origem (fallback), mas idealmente deveriam receber a categoria certa na criação.
-
-## Conferência com seus dados (PRJ-001)
-
-| Origem | Recebido | Em aberto |
-|---|---|---|
-| Categoria = Implementação | R$ 10.125 (8 parcelas pagas) | R$ 0 |
-| Categoria = Manutenção | R$ 4.875 (8 parcelas pagas) | R$ 0 |
-| Contrato manutenção (auto) | R$ 0 | R$ 9.000 (12 parcelas) |
-| **Total Implementação** | **R$ 10.125** | **R$ 0** |
-| **Total Manutenção** | **R$ 4.875** | **R$ 9.000** |
-
-Contratado de implementação = R$ 12.750. Então **falta R$ 2.625** de implementação a receber — diferente do que mostra hoje (15.000 / 12.750 = 100%).
+Substituir a "Linha do tempo de parcelas (todas)" do card **Saúde financeira** (aba Operacional do projeto) por uma **visualização em calendário mensal**, mais legível que a régua horizontal atual onde os pontos se sobrepõem.
 
 ## O que muda
 
-### 1. Banco — view `project_metrics`
+Apenas o componente `Timeline` em `src/pages/projetos/ProjetoFinanceiroDetalhe.tsx` (linhas ~229-323) será substituído por um novo `ParcelasCalendar`. Tudo mais (dados, filtros, métricas, blocos abaixo) permanece igual.
 
-Substituir a regra atual (`recorrente` / `source_entity_type`) por classificação **pela categoria**:
+## Visualização proposta
 
-```
-Implementação = categoria_id = '54986866-...'
-Manutenção    = categoria_id = 'fd3b23be-...'
-                OU source_entity_type = 'maintenance_contract' (fallback p/ auto-gerados sem categoria)
-Sem categoria classificável → não entra em nenhum dos dois (fica só no total geral)
-```
+Calendário compacto agrupando parcelas por mês, do primeiro ao último mês com lançamentos:
 
-Atualizar as 4 colunas:
-- `revenue_received_implementation`
-- `revenue_pending_implementation`
-- `revenue_received_maintenance`
-- `revenue_pending_maintenance`
-
-### 2. Frontend — tela de detalhes `/projetos/:id/financeiro`
-
-No hook `useProjectFinanceDetail.ts`, expor `categoria_id` no `ProjectMovimentacao` (já lido na query, falta tipar e devolver) e atualizar o classificador:
-
-```ts
-const IMPL_CAT = '54986866-7bd2-42e5-abec-2378b3e7c6a9';
-const MANUT_CAT = 'fd3b23be-1101-4122-83d1-6b559c64c04b';
-
-const isMaintenance = (r) =>
-  r.categoria_id === MANUT_CAT ||
-  r.source_entity_type === 'maintenance_contract';
-
-const isImplementation = (r) =>
-  r.categoria_id === IMPL_CAT;
+```text
+┌─ Recebido 16   ● Previsto 11   ● Atrasado 1 ──────── [‹ 2025 ›] ─┐
+│                                                                  │
+│  JAN/25   FEV/25   MAR/25   ABR/25   MAI/25   JUN/25             │
+│  ──       ──       ──       ──       ──       ●                  │
+│                                                R$ 725             │
+│                                                                  │
+│  JUL/25   AGO/25   SET/25   OUT/25   NOV/25   DEZ/25             │
+│  ●        ●        ●        ●        ● ●      ●                  │
+│  R$725    R$725    R$725    R$750    R$1.500  R$750               │
+│                                                                  │
+│  JAN/26   FEV/26   MAR/26  [ABR/26] MAI/26    JUN/26             │
+│  ●        ●        ●        ● ●     ○         ○                  │
+│  R$750    R$750    R$750    R$1.500 R$750     R$750               │
+└──────────────────────────────────────────────────────────────────┘
+● recebido  ● atrasado  ○ previsto       Mês de hoje destacado
 ```
 
-Com isso:
-- Donut/lista de **Implementação** mostra só categoria Implementação.
-- Donut/lista de **Manutenção** mostra categoria Manutenção + auto-gerados do contrato.
-- Lançamentos sem categoria nem origem ficam fora dos dois donuts (mas continuam aparecendo na timeline geral e na lista geral — adicionar uma terceira lista "Outros / sem categoria" se houver).
+Características:
+- **Grade mensal** (4 colunas em mobile, 6 em desktop) cobrindo o intervalo completo das parcelas.
+- Cada célula mostra **mês/ano**, **bolinhas coloridas** (uma por parcela, cor = status) e o **total do mês** em fonte mono.
+- **Mês atual** com borda destacada (ring accent).
+- **Hover/tooltip** em cada bolinha com descrição, valor e data (mantém comportamento atual).
+- **Clique na bolinha**: abre tooltip detalhado (descrição + valor + data + status). Sem navegação por enquanto para manter escopo enxuto.
+- Legenda no topo (Recebido / Previsto / Atrasado) — preservada.
 
-### 3. Card operacional `/projetos/:id`
+## Implementação técnica
 
-Lê os campos da view (`revenue_received_implementation`, etc.). Como a view será corrigida, **não precisa mudar nada no card** — os números corretos passam a aparecer automaticamente.
+Arquivo único alterado: `src/pages/projetos/ProjetoFinanceiroDetalhe.tsx`
 
-## Detalhes técnicos
+1. Remover a função `Timeline` (linhas ~229-323).
+2. Criar `ParcelasCalendar({ items }: { items: ProjectMovimentacao[] })`:
+   - Agrupa `items` por `YYYY-MM` de `data_vencimento` usando `date-fns` (`format`, `startOfMonth`, `eachMonthOfInterval`).
+   - Gera todos os meses entre `min` e `max` (inclui meses vazios para manter continuidade visual).
+   - Para cada mês: lista de parcelas + soma de `valor_previsto`.
+   - Reusa helpers existentes: `parcelStatus`, `statusColor`, `statusLabel`, `formatCurrency`, `formatDate`.
+   - Renderiza grid Tailwind (`grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2`).
+   - Cada célula = `Tooltip` (shadcn) wrappando bolinhas; mês atual recebe `ring-2 ring-accent`.
+3. Trocar a chamada `<Timeline items={allReceitas} />` (linha 666) por `<ParcelasCalendar items={allReceitas} />`.
+4. Atualizar o título do bloco (linha 664) de "Linha do tempo de parcelas (todas)" para **"Calendário de parcelas (todas)"**.
 
-- IDs das categorias serão centralizados em `src/lib/financeCategories.ts` (`CATEGORIA_IMPLEMENTACAO_ID`, `CATEGORIA_MANUTENCAO_ID`) para reutilizar entre views/SQL e frontend.
-- Migration recria a view `project_metrics` (DROP + CREATE) trocando a regra de classificação dentro das 4 colunas de implementação/manutenção. Demais colunas ficam idênticas.
-- Hook `useProjectFinanceDetail.ts`: adicionar `categoria_id` na interface `ProjectMovimentacao` (já vem do `select`, só falta tipar).
-- `ProjetoFinanceiroDetalhe.tsx`: trocar `isMaintenance` para usar categoria + fallback de origem; adicionar `isImplementation`; (opcional) bloco "Outros" para lançamentos sem categoria classificável.
-- Sem mudanças no `AbaOperacional.tsx` — ele já consome os campos da view.
-
-## Resultado esperado para PRJ-001
-
-- **Implementação:** R$ 10.125 pagos / R$ 12.750 contratado = **79%**, restante R$ 2.625
-- **Manutenção:** R$ 4.875 já recebido + R$ 9.000 a vencer (12 parcelas geradas pelo contrato)
+Sem mudanças em banco, queries, tipos, rotas ou outros componentes. Sem novas dependências (`date-fns` já está no projeto).
