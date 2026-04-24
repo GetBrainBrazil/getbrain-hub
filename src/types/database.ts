@@ -27,6 +27,11 @@ export type ProjectMetrics = {
   revenue_contracted: number;
   revenue_received: number;
   revenue_pending: number;
+  // Separação implementação x manutenção (one-shot vs recorrente)
+  revenue_received_implementation: number;
+  revenue_pending_implementation: number;
+  revenue_received_maintenance: number;
+  revenue_pending_maintenance: number;
   cost_integrations_monthly: number;
   cost_total_estimated: number;
   margin_real: number;
