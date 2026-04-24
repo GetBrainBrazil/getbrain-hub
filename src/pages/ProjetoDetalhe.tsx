@@ -1049,17 +1049,22 @@ export default function ProjetoDetalhe() {
                           onClick={async () => {
                             const changes: Record<string, { before: any; after: any }> = {};
                             const updates: any = {};
+                            const nextName = nameDraft.trim();
+                            if (nextName && nextName !== project.name) {
+                              updates.name = nextName;
+                              changes.name = { before: project.name, after: nextName };
+                            }
                             if (draftType !== project.project_type) {
                               updates.project_type = draftType;
                               changes.project_type = { before: project.project_type, after: draftType };
                             }
                             await patchProject(updates, changes);
-                            setEditing(null);
+                            closeEditor();
                           }}
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -1149,7 +1154,7 @@ export default function ProjetoDetalhe() {
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -1255,7 +1260,7 @@ export default function ProjetoDetalhe() {
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
