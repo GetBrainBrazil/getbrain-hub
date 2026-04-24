@@ -25,6 +25,14 @@ import DevKanban from "./pages/dev/DevKanban";
 import DevSprints from "./pages/dev/DevSprints";
 import DevBacklog from "./pages/dev/DevBacklog";
 import TaskDetail from "./pages/dev/TaskDetail";
+import CrmLayout from "./pages/crm/CrmLayout";
+import CrmPipeline from "./pages/crm/CrmPipeline";
+import {
+  CrmCalendarioPlaceholder,
+  CrmDashboardPlaceholder,
+  CrmEmpresasPlaceholder,
+  CrmLeadsPlaceholder,
+} from "./pages/crm/CrmPlaceholders";
 import Clientes from "./pages/Clientes";
 import Configuracoes from "./pages/Configuracoes";
 import Suporte from "./pages/Suporte";
@@ -94,6 +102,14 @@ const App = () => (
             </Route>
             {/* Tela cheia da task — fora do DevLayout (sem sub-tabs do hub) */}
             <Route path="/dev/tasks/:code" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
+            <Route path="/crm" element={<ProtectedRoute><CrmLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="pipeline" replace />} />
+              <Route path="dashboard" element={<CrmDashboardPlaceholder />} />
+              <Route path="pipeline" element={<CrmPipeline />} />
+              <Route path="leads" element={<CrmLeadsPlaceholder />} />
+              <Route path="empresas" element={<CrmEmpresasPlaceholder />} />
+              <Route path="calendario" element={<CrmCalendarioPlaceholder />} />
+            </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
