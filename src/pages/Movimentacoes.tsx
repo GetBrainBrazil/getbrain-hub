@@ -214,6 +214,7 @@ export default function Movimentacoes() {
   const [periodPreset, setPeriodPreset] = usePersistedState<string>(`movimentacoes_${tabKey}_filter_periodo`, "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>(`movimentacoes_${tabKey}_period_custom`, { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>(`movimentacoes_${tabKey}_sort`, { key: null, direction: null });
+  const [lancamentoOrder, setLancamentoOrder] = usePersistedState<"none" | "recent" | "old">(`movimentacoes_${tabKey}_lancamento_order`, "none");
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
   const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
   const [openNew, setOpenNew] = useState(false);
