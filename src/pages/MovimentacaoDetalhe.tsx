@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getHierarchicalOptions, getVinculacaoTipo, type VinculacaoTipo } from "@/lib/categorias-hierarchy";
 import CategoryPicker from "@/components/CategoryPicker";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowDown,
