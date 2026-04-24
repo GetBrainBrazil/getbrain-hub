@@ -1570,39 +1570,108 @@ export default function ProjetoDetalhe() {
                       )}
                     </PropRow>
 
-                    {/* --- Manutenção mensal --- */}
+                    {/* --- Manutenção mensal (editável inline junto com o card Financeiro) --- */}
                     <div className="flex items-center justify-between px-1 pt-3 pb-1">
                       <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Manutenção
                       </span>
-                      {activeContract ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7"
-                          onClick={() => {
-                            setEditingContractId(activeContract.id);
-                            setContractOpen(true);
-                          }}
-                        >
-                          <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7"
-                          onClick={() => {
-                            setEditingContractId(null);
-                            setContractOpen(true);
-                          }}
-                        >
-                          <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
-                        </Button>
+                      {!activeContract && editing !== "financial" && (
+                        <span className="text-[11px] text-muted-foreground">
+                          clique em editar para adicionar
+                        </span>
                       )}
                     </div>
 
-                    {activeContract ? (
+                    {editing === "financial" ? (
+                      <>
+                        <PropRow label="Mensalidade">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={draftMonthlyFee}
+                            onChange={(e) => setDraftMonthlyFee(e.target.value)}
+                            placeholder="0,00"
+                            className="ml-auto h-8 w-[180px] text-right font-mono"
+                          />
+                        </PropRow>
+                        <PropRow label="Desconto (%)">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={draftDiscountPct}
+                            onChange={(e) => setDraftDiscountPct(e.target.value)}
+                            placeholder="0"
+                            className="ml-auto h-8 w-[120px] text-right font-mono"
+                          />
+                        </PropRow>
+                        {Number(draftDiscountPct) > 0 && (
+                          <PropRow label="Duração do desconto">
+                            <div className="ml-auto flex items-center gap-2">
+                              <select
+                                value={draftDiscountIndefinite ? "indef" : "fixed"}
+                                onChange={(e) =>
+                                  setDraftDiscountIndefinite(e.target.value === "indef")
+                                }
+                                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                              >
+                                <option value="indef">Indefinido</option>
+                                <option value="fixed">Por X meses</option>
+                              </select>
+                              {!draftDiscountIndefinite && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={draftDiscountMonths}
+                                    onChange={(e) => setDraftDiscountMonths(e.target.value)}
+                                    placeholder="meses"
+                                    className="h-8 w-[80px] text-right font-mono"
+                                  />
+                                  <span className="text-xs text-muted-foreground">meses</span>
+                                </>
+                              )}
+                            </div>
+                          </PropRow>
+                        )}
+                        <PropRow label="Bolsão tokens">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={draftContractTokenBudget}
+                            onChange={(e) => setDraftContractTokenBudget(e.target.value)}
+                            placeholder="opcional"
+                            className="ml-auto h-8 w-[180px] text-right font-mono"
+                          />
+                        </PropRow>
+                        <PropRow label="Início">
+                          <Input
+                            type="date"
+                            value={draftContractStartDate}
+                            onChange={(e) => setDraftContractStartDate(e.target.value)}
+                            className="ml-auto h-8 w-[170px] font-mono"
+                          />
+                        </PropRow>
+                        {activeContract && (
+                          <PropRow label="Status">
+                            <select
+                              value={draftContractStatus}
+                              onChange={(e) =>
+                                setDraftContractStatus(e.target.value as any)
+                              }
+                              className="ml-auto h-8 rounded-md border border-input bg-background px-2 text-xs"
+                            >
+                              <option value="active">Ativo</option>
+                              <option value="paused">Pausado</option>
+                              <option value="cancelled">Cancelado</option>
+                            </select>
+                          </PropRow>
+                        )}
+                      </>
+                    ) : activeContract ? (
                       <>
                         <PropRow label="Mensalidade">
                           <span className="font-mono">
@@ -1618,11 +1687,11 @@ export default function ProjetoDetalhe() {
                                 {discountInfo.indefinite
                                   ? "indefinido"
                                   : discountInfo.endsAt
-                                  ? `por ${(activeContract as any).discount_duration_months} meses (até ${formatDate(
+                                  ? `por ${activeContract.discount_duration_months} meses (até ${formatDate(
                                       discountInfo.endsAt.toISOString().slice(0, 10),
                                     )})`
                                   : ""}
-                                {!discountInfo.active && !discountInfo.indefinite && (
+                                {discountInfo.expired && (
                                   <span className="ml-1 text-destructive">expirado</span>
                                 )}
                               </span>
