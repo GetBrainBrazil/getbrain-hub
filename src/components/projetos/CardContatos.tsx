@@ -138,6 +138,8 @@ function RoleCombobox({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
+function ContactRow({
+  contact,
   companyId,
   onEdit,
 }: {
