@@ -26,6 +26,7 @@ import { AlocarAtorDialog } from "./AlocarAtorDialog";
 import { NovoContratoDialog } from "./NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface Props {
   projectId: string | null;
@@ -354,7 +355,13 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
             </div>
             <div>
               <Label>Critérios de Aceite</Label>
-              <Textarea rows={3} value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder="- [ ] Entrega A&#10;- [ ] Entrega B" />
+              <RichTextEditor
+                value={criteria}
+                onChange={setCriteria}
+                rows={3}
+                autoFocus={false}
+                placeholder="- [ ] Entrega A&#10;- [ ] Entrega B"
+              />
             </div>
             <div>
               <Label>Observações</Label>
