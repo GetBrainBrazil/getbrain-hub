@@ -1936,9 +1936,10 @@ export default function ProjetoDetalhe() {
                     <MaintenanceStatusBadge status={activeContract.status} />
                     <div className="font-mono text-sm font-bold text-foreground">
                       {formatCurrency(mrr)}
-                      {Number(activeContract.monthly_fee_discount_percent) > 0 && (
+                      {discountInfo.active && (
                         <span className="ml-1 text-[11px] font-normal text-success">
-                          (-{activeContract.monthly_fee_discount_percent}%)
+                          (-{activeContract.monthly_fee_discount_percent}%
+                          {discountInfo.endsAt && ` até ${formatDate(discountInfo.endsAt.toISOString().slice(0, 10))}`})
                         </span>
                       )}
                     </div>
