@@ -214,6 +214,7 @@ export default function Movimentacoes() {
   const [periodPreset, setPeriodPreset] = usePersistedState<string>(`movimentacoes_${tabKey}_filter_periodo`, "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>(`movimentacoes_${tabKey}_period_custom`, { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>(`movimentacoes_${tabKey}_sort`, { key: null, direction: null });
+  const [lancamentoOrder, setLancamentoOrder] = usePersistedState<"none" | "recent" | "old">(`movimentacoes_${tabKey}_lancamento_order`, "none");
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
   const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
   const [openNew, setOpenNew] = useState(false);
@@ -522,6 +523,17 @@ export default function Movimentacoes() {
     sortConfig,
   ]);
 
+  const ordered = useMemo(() => {
+    if (lancamentoOrder === "none") return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const da = new Date(a.created_at ?? 0).getTime();
+      const db = new Date(b.created_at ?? 0).getTime();
+      return lancamentoOrder === "recent" ? db - da : da - db;
+    });
+    return arr;
+  }, [filtered, lancamentoOrder]);
+
   const hasActiveFilters =
     !!search ||
     statusFilter.length > 0 ||
@@ -595,7 +607,7 @@ export default function Movimentacoes() {
 
   function toggleSelectAll() {
     setSelectedIds(prev => {
-      const allIds = filtered.map((m: any) => m.id);
+      const allIds = ordered.map((m: any) => m.id);
       const allSelected = allIds.length > 0 && allIds.every(id => prev.has(id));
       if (allSelected) {
         const next = new Set(prev);
@@ -1031,6 +1043,16 @@ export default function Movimentacoes() {
           <MultiSelectFilter title="Meio de pagamento" selected={meioFilter} onChange={setMeioFilter} options={meioOptions} placeholder="Buscar meio de pagamento..." />
           <MultiSelectFilter title="Recorrência" selected={recorrenciaFilter} onChange={setRecorrenciaFilter} options={recorrenciaOptions} placeholder="Buscar recorrência..." />
           <MultiSelectFilter title="Conciliação" selected={conciliacaoFilter} onChange={setConciliacaoFilter} options={conciliacaoOptions} placeholder="Buscar conciliação..." />
+          <Select value={lancamentoOrder} onValueChange={(v) => setLancamentoOrder(v as "none" | "recent" | "old")}>
+            <SelectTrigger className="h-8 w-auto gap-1.5 px-2.5 text-xs font-normal">
+              <SelectValue placeholder="Lançamentos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Lançamentos: padrão</SelectItem>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="old">Mais antigos</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -1045,10 +1067,10 @@ export default function Movimentacoes() {
                     <input
                       type="checkbox"
                       aria-label="Selecionar todas as movimentações"
-                      checked={filtered.length > 0 && filtered.every((m: any) => selectedIds.has(m.id))}
+                      checked={ordered.length > 0 && ordered.every((m: any) => selectedIds.has(m.id))}
                       ref={el => {
                         if (el) {
-                          const allIds = filtered.map((m: any) => m.id);
+                          const allIds = ordered.map((m: any) => m.id);
                           const someSelected = allIds.some(id => selectedIds.has(id));
                           const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
                           el.indeterminate = someSelected && !allSelected;
@@ -1077,13 +1099,13 @@ export default function Movimentacoes() {
                       ))}
                     </TableRow>
                   ))
-                ) : filtered.length === 0 ? (
+                ) : ordered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-10 text-muted-foreground text-sm">
                       Nenhuma movimentação encontrada com os filtros atuais.
                     </TableCell>
                   </TableRow>
-                ) : filtered.map(m => {
+                ) : ordered.map(m => {
                   const valueColor = isPagar ? "text-destructive" : "text-success";
                   const valorPrevisto = Number(m.valor_previsto) || 0;
                   const valorPago = Number(m.valor_realizado) || 0;
