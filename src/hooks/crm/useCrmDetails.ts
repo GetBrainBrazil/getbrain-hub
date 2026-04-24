@@ -26,10 +26,10 @@ async function hydrateDeals(rows: unknown[]): Promise<Deal[]> {
     leadIds.length ? sb.from('leads').select('id, code, source').in('id', leadIds) : { data: [] },
     dealIds.length ? sb.from('deal_activities').select('*').in('deal_id', dealIds).is('deleted_at', null).order('scheduled_at', { ascending: false }) : { data: [] },
   ]);
-  const companyMap = new Map((companies ?? []).map((x: CrmCompany) => [x.id, x]));
-  const personMap = new Map((people ?? []).map((x: CrmPerson) => [x.id, x]));
-  const actorMap = new Map((actors ?? []).map((x: CrmActor) => [x.id, x]));
-  const leadMap = new Map((leads ?? []).map((x: { id: string; code: string; source: string | null }) => [x.id, x]));
+  const companyMap = new Map<string, CrmCompany>((companies ?? []).map((x: CrmCompany) => [x.id, x]));
+  const personMap = new Map<string, CrmPerson>((people ?? []).map((x: CrmPerson) => [x.id, x]));
+  const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x]));
+  const leadMap = new Map<string, { id: string; code: string; source: string | null }>((leads ?? []).map((x: { id: string; code: string; source: string | null }) => [x.id, x]));
   const activityMap = new Map<string, DealActivity>();
   for (const a of (activities ?? []) as DealActivity[]) if (a.deal_id && !activityMap.has(a.deal_id)) activityMap.set(a.deal_id, a);
   return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null, origin_source: d.origin_lead_id ? leadMap.get(d.origin_lead_id)?.source ?? null : 'direto', last_activity: activityMap.get(d.id) ?? null }));
@@ -46,9 +46,9 @@ async function hydrateLeads(rows: unknown[]): Promise<Lead[]> {
     personIds.length ? sb.from('people').select('id, full_name, email, phone, role_in_company').in('id', personIds) : { data: [] },
     actorIds.length ? sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] },
   ]);
-  const companyMap = new Map((companies ?? []).map((x: CrmCompany) => [x.id, x]));
-  const personMap = new Map((people ?? []).map((x: CrmPerson) => [x.id, x]));
-  const actorMap = new Map((actors ?? []).map((x: CrmActor) => [x.id, x]));
+  const companyMap = new Map<string, CrmCompany>((companies ?? []).map((x: CrmCompany) => [x.id, x]));
+  const personMap = new Map<string, CrmPerson>((people ?? []).map((x: CrmPerson) => [x.id, x]));
+  const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x]));
   return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null }));
 }
 
