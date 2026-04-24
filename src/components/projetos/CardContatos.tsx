@@ -280,7 +280,7 @@ function ContactForm({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Cargo</Label>
-          <Input value={form.role_in_company} onChange={(e) => setForm((f) => ({ ...f, role_in_company: e.target.value }))} placeholder="Ex: Diretor de TI" />
+          <RoleCombobox value={form.role_in_company} onChange={(v) => setForm((f) => ({ ...f, role_in_company: v }))} />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Email</Label>
