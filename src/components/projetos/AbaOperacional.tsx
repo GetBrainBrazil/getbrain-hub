@@ -406,7 +406,7 @@ export function AbaOperacional({
       {/* ───── 4 painéis ───── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* ─── FINANCEIRO ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/financeiro`}>
           <PanelHeader
             icon={DollarSign}
             title="Financeiro"
@@ -485,11 +485,11 @@ export function AbaOperacional({
             ) : null}
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/financeiro/movimentacoes" label="Ver no Financeiro" />
+          <PanelFooter href={`/projetos/${projectId}/financeiro`} label="Abrir detalhes" />
         </Panel>
 
         {/* ─── TAREFAS ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/tarefas`}>
           <PanelHeader
             icon={ListChecks}
             title="Tarefas"
@@ -540,11 +540,11 @@ export function AbaOperacional({
             )}
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/area-dev" label="Ver na Área Dev" />
+          <PanelFooter href={`/projetos/${projectId}/tarefas`} label="Abrir detalhes" />
         </Panel>
 
         {/* ─── SUPORTE ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/suporte`}>
           <PanelHeader
             icon={Headphones}
             title="Suporte"
@@ -582,11 +582,11 @@ export function AbaOperacional({
             )}
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/suporte" label="Ver no Suporte" />
+          <PanelFooter href={`/projetos/${projectId}/suporte`} label="Abrir detalhes" />
         </Panel>
 
         {/* ─── TOKENS DE IA ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/tokens`}>
           <PanelHeader
             icon={Brain}
             title="Tokens de IA"
@@ -641,7 +641,7 @@ export function AbaOperacional({
             <ComingSoonBanner>Módulo Tokens em breve.</ComingSoonBanner>
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/tokens" label="Ver em Tokens" />
+          <PanelFooter href={`/projetos/${projectId}/tokens`} label="Abrir detalhes" />
         </Panel>
       </div>
 
