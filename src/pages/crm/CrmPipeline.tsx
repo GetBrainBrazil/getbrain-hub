@@ -33,7 +33,14 @@ function Column({ stage, deals, onOpen, onAdd }: { stage: DealStage; deals: Deal
 
 export default function CrmPipeline() {
   const navigate = useNavigate();
-  const filters = useCrmHubStore((s) => ({ ownerIds: s.ownerFilter, sourceIds: s.sourceFilter, valueRange: s.valueRange, search: s.search }));
+  const ownerFilter = useCrmHubStore((s) => s.ownerFilter);
+  const sourceFilter = useCrmHubStore((s) => s.sourceFilter);
+  const valueRange = useCrmHubStore((s) => s.valueRange);
+  const search = useCrmHubStore((s) => s.search);
+  const filters = useMemo(
+    () => ({ ownerIds: ownerFilter, sourceIds: sourceFilter, valueRange, search }),
+    [ownerFilter, sourceFilter, valueRange, search],
+  );
   const { data: metrics, isLoading: metricsLoading } = useCrmMetrics();
   const { data: deals = [], isLoading } = useDeals(filters);
   const updateStage = useUpdateDealStage();
