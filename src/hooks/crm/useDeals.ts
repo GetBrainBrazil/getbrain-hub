@@ -25,7 +25,9 @@ async function hydrateDeals(rows: any[]): Promise<Deal[]> {
   const companyMap = new Map((companies ?? []).map((x: any) => [x.id, x]));
   const personMap = new Map((people ?? []).map((x: any) => [x.id, x]));
   const actorMap = new Map((actors ?? []).map((x: any) => [x.id, x]));
-  const leadMap = new Map((leads ?? []).map((x: any) => [x.id, x]));
+  const leadMap = new Map<string, { id: string; source: string | null }>(
+    ((leads ?? []) as any[]).map((x) => [x.id, x]),
+  );
   const activityMap = new Map<string, DealActivity>();
   for (const a of (activities ?? []) as DealActivity[]) if (!activityMap.has(a.deal_id!)) activityMap.set(a.deal_id!, a);
 

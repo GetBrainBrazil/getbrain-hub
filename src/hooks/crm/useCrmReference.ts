@@ -111,7 +111,9 @@ export function useDistinctLeadSources() {
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await sb.from('leads').select('source').not('source', 'is', null).is('deleted_at', null);
       if (error) throw error;
-      return Array.from(new Set((data ?? []).map((r: any) => r.source).filter(Boolean))).sort();
+      return Array.from(
+        new Set<string>((data ?? []).map((r: any) => String(r.source)).filter(Boolean)),
+      ).sort();
     },
     staleTime: 60_000,
   });
