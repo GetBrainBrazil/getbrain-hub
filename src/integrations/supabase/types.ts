@@ -2763,6 +2763,14 @@ export type Database = {
       }
     }
     Functions: {
+      close_deal_as_won: {
+        Args: {
+          p_deal_id: string
+          p_installments?: Json
+          p_project_data?: Json
+        }
+        Returns: Json
+      }
       convert_lead_to_deal: {
         Args: { p_deal_data?: Json; p_lead_id: string }
         Returns: string
