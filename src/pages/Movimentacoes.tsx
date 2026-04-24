@@ -256,6 +256,29 @@ export default function Movimentacoes() {
     void loadInitialData();
   }, []);
 
+  // Filtro vindo de deep-link (ex.: /projetos/:id/financeiro → "Ver em Contas a…")
+  // Quando ?projectId=... está na URL, aplica como filtro único do Projeto na aba ativa.
+  useEffect(() => {
+    if (!projectIdFromUrl) return;
+    if (projetoFilter.length === 1 && projetoFilter[0] === projectIdFromUrl) return;
+    setProjetoFilter([projectIdFromUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectIdFromUrl, tabKey]);
+
+  function clearProjectIdFilter() {
+    setProjetoFilter([]);
+    if (projectIdFromUrl) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("projectId");
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }
+
   function setTabsLoading(targetTabs: TabType[], value: boolean) {
     setLoadingByTab((prev) => {
       const next = { ...prev };
