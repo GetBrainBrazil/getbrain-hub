@@ -312,15 +312,22 @@ function ParcelasCalendar({
   const today = new Date();
   const todayKey = `${today.getUTCFullYear()}-${String(today.getUTCMonth()).padStart(2, "0")}`;
 
-  // Para heatmap: maior |saldo| do range
-  const monthSaldos = months.map((mo) => {
+  // Heatmap usa apenas saldo REALIZADO (caixa de fato) para não confundir
+  // o usuário pintando de verde meses cujas receitas ainda não foram recebidas.
+  const isRealizado = (m: ProjectMovimentacao) =>
+    m.status === "pago" || !!m.data_pagamento;
+  const monthSaldosRealizados = months.map((mo) => {
     const b = byMonth.get(mo.key);
     if (!b) return 0;
-    const ent = b.receitas.reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
-    const sai = b.despesas.reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
+    const ent = b.receitas
+      .filter(isRealizado)
+      .reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
+    const sai = b.despesas
+      .filter(isRealizado)
+      .reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
     return ent - sai;
   });
-  const maxAbs = Math.max(1, ...monthSaldos.map((v) => Math.abs(v)));
+  const maxAbs = Math.max(1, ...monthSaldosRealizados.map((v) => Math.abs(v)));
 
   // Totais do range
   const totalEntradas = receitas.reduce(
@@ -418,28 +425,36 @@ function ParcelasCalendar({
                   (s, p) => s + (p.valor_realizado || p.valor_previsto || 0),
                   0,
                 );
+                const entradasRealizadas = bucket.receitas
+                  .filter(isRealizado)
+                  .reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
+                const saidasRealizadas = bucket.despesas
+                  .filter(isRealizado)
+                  .reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
                 const saldo = entradas - saidas;
+                const saldoRealizado = entradasRealizadas - saidasRealizadas;
                 const totalCount = bucket.receitas.length + bucket.despesas.length;
                 const isToday = mo.key === todayKey;
                 const isEmpty = totalCount === 0;
 
-                // Heatmap em 3 níveis
+                // Heatmap: pinta verde APENAS quando o caixa foi efetivamente
+                // positivo (receitas pagas > despesas pagas no mês). Pinta
+                // vermelho quando o caixa foi efetivamente negativo. Meses só
+                // com previsões/atrasos ficam neutros para não confundir.
                 let heatClass = "";
-                if (!isEmpty) {
-                  const ratio = Math.abs(saldo) / maxAbs;
+                if (!isEmpty && saldoRealizado !== 0) {
+                  const ratio = Math.abs(saldoRealizado) / maxAbs;
                   const level = ratio > 0.66 ? 3 : ratio > 0.33 ? 2 : 1;
-                  if (saldo > 0) {
+                  if (saldoRealizado > 0) {
                     heatClass =
                       level === 3 ? "bg-success/15" : level === 2 ? "bg-success/10" : "bg-success/5";
-                  } else if (saldo < 0) {
+                  } else {
                     heatClass =
                       level === 3
                         ? "bg-destructive/15"
                         : level === 2
                         ? "bg-destructive/10"
                         : "bg-destructive/5";
-                  } else {
-                    heatClass = "bg-muted/30";
                   }
                 }
 
