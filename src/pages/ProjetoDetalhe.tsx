@@ -435,6 +435,16 @@ export default function ProjetoDetalhe() {
   const [draftNotes, setDraftNotes] = useState("");
   const [draftCompanyId, setDraftCompanyId] = useState<string>("");
 
+  // drafts da seção de manutenção (editáveis dentro do card Financeiro)
+  const [draftMonthlyFee, setDraftMonthlyFee] = useState("");
+  const [draftDiscountPct, setDraftDiscountPct] = useState("");
+  const [draftDiscountIndefinite, setDraftDiscountIndefinite] = useState(true);
+  const [draftDiscountMonths, setDraftDiscountMonths] = useState("");
+  const [draftContractTokenBudget, setDraftContractTokenBudget] = useState("");
+  const [draftContractStartDate, setDraftContractStartDate] = useState("");
+  const [draftContractStatus, setDraftContractStatus] = useState<"active" | "paused" | "cancelled">("active");
+  const [savingContract, setSavingContract] = useState(false);
+
   // Combobox / criação de empresa
   const [companies, setCompanies] = useState<Array<{ id: string; legal_name: string; trade_name: string | null }>>([]);
   const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
