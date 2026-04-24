@@ -787,6 +787,29 @@ export default function ProjetoFinanceiroDetalhe() {
             ) : null}
           </div>
         </div>
+
+        {receitasOutras.length > 0 && (
+          <div className="mt-4 border-t border-border/60 pt-4">
+            <div className="mb-2 flex items-baseline justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Outros / sem categoria · {receitasOutras.length}
+              </p>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                não classificado como Implementação nem Manutenção
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              {receitasOutras.map((mov) => (
+                <li key={mov.id}>
+                  <ParcelaRow m={mov} />
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              Defina a categoria como <strong>Implementação</strong> ou <strong>Manutenção</strong> em Contas a Receber para que entrem na visão correta.
+            </p>
+          </div>
+        )}
       </DetalheBloco>
 
       <DetalheBloco
