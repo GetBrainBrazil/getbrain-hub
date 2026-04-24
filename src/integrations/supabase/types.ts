@@ -2794,6 +2794,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_account_balance: {
+        Args: { p_ate_data?: string; p_conta_id: string }
+        Returns: number
+      }
       close_deal_as_won: {
         Args: {
           p_deal_id: string
@@ -2858,6 +2862,31 @@ export type Database = {
       }
       generate_project_code: { Args: never; Returns: string }
       generate_venda_numero: { Args: never; Returns: string }
+      get_account_balances: {
+        Args: { p_days_history?: number }
+        Returns: {
+          banco: string
+          conta_id: string
+          conta_nome: string
+          saldo_anterior: number
+          saldo_atual: number
+          tipo: string
+          variacao_pct: number
+        }[]
+      }
+      get_cash_projection: {
+        Args: {
+          p_account_ids?: string[]
+          p_days_ahead?: number
+          p_scenario?: string
+        }
+        Returns: {
+          entradas_dia: number
+          projection_date: string
+          saidas_dia: number
+          saldo_projetado: number
+        }[]
+      }
       get_crm_owner_performance: {
         Args: { p_days_back?: number }
         Returns: {
@@ -2922,6 +2951,57 @@ export type Database = {
           tasks_underestimated: number
         }[]
       }
+      get_expense_by_category: {
+        Args: {
+          p_account_ids?: string[]
+          p_end_date: string
+          p_project_ids?: string[]
+          p_regime?: string
+          p_start_date: string
+        }
+        Returns: {
+          category_id: string
+          category_name: string
+          count_movimentacoes: number
+          pct_do_total: number
+          valor_pendente: number
+          valor_realizado: number
+          valor_total: number
+        }[]
+      }
+      get_expense_by_project: {
+        Args: { p_end_date: string; p_regime?: string; p_start_date: string }
+        Returns: {
+          pct_do_total: number
+          project_code: string
+          project_id: string
+          project_name: string
+          valor_pendente: number
+          valor_realizado: number
+          valor_total: number
+        }[]
+      }
+      get_financial_summary: {
+        Args: {
+          p_account_ids?: string[]
+          p_category_ids?: string[]
+          p_end_date: string
+          p_project_ids?: string[]
+          p_regime?: string
+          p_start_date: string
+        }
+        Returns: {
+          count_movimentacoes: number
+          despesa_pendente: number
+          despesa_realizada: number
+          despesa_total: number
+          margem_pct: number
+          receita_bruta: number
+          receita_pendente: number
+          receita_realizada: number
+          resultado: number
+        }[]
+      }
       get_project_health_summary: {
         Args: { p_sprint_ids: string[] }
         Returns: {
@@ -2937,6 +3017,37 @@ export type Database = {
           tasks_done: number
           tasks_rework: number
           tasks_total: number
+        }[]
+      }
+      get_revenue_by_category: {
+        Args: {
+          p_account_ids?: string[]
+          p_end_date: string
+          p_project_ids?: string[]
+          p_regime?: string
+          p_start_date: string
+        }
+        Returns: {
+          category_id: string
+          category_name: string
+          count_movimentacoes: number
+          pct_do_total: number
+          valor_pendente: number
+          valor_realizado: number
+          valor_total: number
+        }[]
+      }
+      get_revenue_by_project: {
+        Args: { p_end_date: string; p_regime?: string; p_start_date: string }
+        Returns: {
+          has_overdue: boolean
+          pct_do_total: number
+          project_code: string
+          project_id: string
+          project_name: string
+          valor_pendente: number
+          valor_recebido: number
+          valor_total: number
         }[]
       }
       get_sprint_burndown: {
