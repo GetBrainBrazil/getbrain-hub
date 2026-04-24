@@ -490,8 +490,8 @@ export default function ProjetoFinanceiroDetalhe() {
   const novaParcelaHref = `/financeiro/movimentacoes/novo/receber?projectId=${projectId}`;
   const novaRecorrenciaHref = `/financeiro/contratos?projectId=${projectId}&new=1`;
   const novoCustoHref = `/financeiro/movimentacoes/novo/pagar?projectId=${projectId}`;
-  const verContasReceberHref = `/financeiro/contas-receber?projectId=${projectId}`;
-  const verContasPagarHref = `/financeiro/contas-pagar?projectId=${projectId}`;
+  const verContasReceberHref = `/financeiro/movimentacoes?aba=receber&projectId=${projectId}`;
+  const verContasPagarHref = `/financeiro/movimentacoes?aba=pagar&projectId=${projectId}`;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
