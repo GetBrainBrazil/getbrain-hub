@@ -432,6 +432,14 @@ export default function ProjetoDetalhe() {
   const [draftDescription, setDraftDescription] = useState("");
   const [draftCriteria, setDraftCriteria] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
+  const [draftCompanyId, setDraftCompanyId] = useState<string>("");
+
+  // Combobox / criação de empresa
+  const [companies, setCompanies] = useState<Array<{ id: string; legal_name: string; trade_name: string | null }>>([]);
+  const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
+  const [newCompanyOpen, setNewCompanyOpen] = useState(false);
+  const [newCompanyForm, setNewCompanyForm] = useState({ legal_name: "", cnpj: "", industry: "", website: "" });
+  const [creatingCompany, setCreatingCompany] = useState(false);
 
   function syncDrafts(source: Partial<Project>) {
     setNameDraft(source.name ?? "");
