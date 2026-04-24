@@ -29,12 +29,12 @@ import CrmLayout from "./pages/crm/CrmLayout";
 import CrmPipeline from "./pages/crm/CrmPipeline";
 import CrmCompanyDetail from "./pages/crm/CrmCompanyDetail";
 import CrmDealDetail from "./pages/crm/CrmDealDetail";
+import CrmEmpresas from "./pages/crm/CrmEmpresas";
+import CrmLeads from "./pages/crm/CrmLeads";
 import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
 import {
   CrmCalendarioPlaceholder,
   CrmDashboardPlaceholder,
-  CrmEmpresasPlaceholder,
-  CrmLeadsPlaceholder,
 } from "./pages/crm/CrmPlaceholders";
 import Clientes from "./pages/Clientes";
 import Configuracoes from "./pages/Configuracoes";
@@ -112,8 +112,8 @@ const App = () => (
               <Route index element={<Navigate to="pipeline" replace />} />
               <Route path="dashboard" element={<CrmDashboardPlaceholder />} />
               <Route path="pipeline" element={<CrmPipeline />} />
-              <Route path="leads" element={<CrmLeadsPlaceholder />} />
-              <Route path="empresas" element={<CrmEmpresasPlaceholder />} />
+              <Route path="leads" element={<CrmLeads />} />
+              <Route path="empresas" element={<CrmEmpresas />} />
               <Route path="calendario" element={<CrmCalendarioPlaceholder />} />
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
