@@ -1,123 +1,113 @@
 ## Objetivo
 
-Hoje os campos de edição inline (como o "Nome" do projeto na tela de detalhe) têm largura fixa em pixels (`w-[320px]`). Quando o texto digitado é maior que a caixa, o conteúdo fica oculto e o usuário só vê a parte final via cursor.
+No card **Financeiro** do detalhe do projeto, hoje só aparecem campos do projeto principal (valor contratado, parcelas, token budget). Não há como criar/visualizar a **manutenção mensal** dali — o usuário precisa ir até a aba "Operacional" ou outra tela. Além disso, quando há **desconto**, não há como dizer **por quanto tempo** ele vale (3 meses, 6 meses, indefinido).
 
-Quero introduzir um padrão **reutilizável em todo o sistema**: inputs/textos editáveis que **expandem horizontalmente** conforme o usuário digita, até um limite máximo, mantendo a UI estável.
+Vou:
+
+1. Adicionar a manutenção como uma seção dentro do card Financeiro do detalhe, com criação inline.
+2. Adicionar **duração do desconto** ao schema e à UI: opções `Indefinido` (default) ou `N meses` a partir do início.
+3. Refletir o desconto e sua expiração no MRR efetivo exibido no sidebar.
 
 ## Comportamento
 
-- Largura inicial igual a um valor mínimo (ex.: 220–320px, configurável por uso).
-- À medida que o texto cresce, a largura do input cresce em conjunto, sempre cabendo o texto + um padding pequeno.
-- Limite máximo configurável (default: largura do container pai). Quando atinge o máximo, comportamento volta ao scroll horizontal nativo do `<input>`.
-- Funciona ao colar texto, ao usar `defaultValue`, ao mudar a fonte/tamanho — porque mede a partir das próprias estilizações do input.
-- Não muda a altura — continua single-line. Para multilinha existe `<Textarea>` (fora de escopo).
-- Acessibilidade preservada: continua sendo um `<input>` nativo, com todas as props (placeholder, aria-*, name, etc.).
+### Card Financeiro (no detalhe do projeto)
+
+Estrutura (em ordem):
+
+```
+Valor Contratado          R$ 50.000,00
+Nº de Parcelas            5x
+Parcela Mensal            R$ 10.000,00
+Token Budget              R$ 2.000,00
+─────────────────────────────────────
+Manutenção Mensal         [+ Adicionar]   ← quando não há contrato ativo
+```
+
+Quando há contrato ativo, em vez do botão aparece:
+
+```
+Manutenção Mensal         R$ 1.500,00 / mês
+Desconto                  10% por 6 meses (até 24/10/2026)   ← ou "Indefinido"
+Token Budget (manut.)     R$ 500,00
+Início                    24/04/2026
+[Editar contrato]
+```
+
+- Botão **+ Adicionar** abre o `NovoContratoDialog` já existente, com `projectId` pré-preenchido.
+- Botão **Editar contrato** abre o mesmo dialog em modo edição (passando o `contractId`), permitindo ajustar mensalidade, desconto, duração, datas e bolsão de tokens.
+
+### Duração do desconto
+
+No `NovoContratoDialog`, quando `Desconto > 0`, aparece um seletor extra:
+
+```
+Desconto válido por: ( ) Tempo indefinido
+                     (•) Por X meses     [ 6 ]
+```
+
+- Default ao habilitar desconto: **Indefinido**.
+- Se "Por X meses": exibe input numérico (mín 1).
+- Se "Indefinido": campo de meses some.
+- A data de fim do desconto é calculada como `start_date + N meses`. Mostrada no card para referência.
+
+Quando `Desconto = 0`, o seletor não aparece.
+
+### Cálculo do MRR efetivo (sidebar "Manutenção")
+
+- Hoje: `mrr = monthly_fee * (1 - discount/100)` sempre.
+- Novo: se `discount_duration_months IS NOT NULL` e `today > start_date + N meses`, o desconto **expirou** → `mrr = monthly_fee` cheio. Caso contrário, mantém o cálculo atual.
+- O sidebar passa a mostrar, quando o desconto está vigente e tem prazo: `(-10% até 24/10/2026)`. Quando indefinido: `(-10%)`. Quando expirou: nada.
 
 ## Implementação técnica
 
-### 1. Novo componente `AutoWidthInput`
+### 1. Migração
 
-Arquivo novo: `src/components/ui/auto-width-input.tsx`.
+Adicionar coluna `discount_duration_months INTEGER NULL` em `public.maintenance_contracts`. `NULL` = indefinido. Sem default — preserva linhas atuais. Sem mudança de RLS.
 
-API:
+### 2. `src/components/projetos/NovoContratoDialog.tsx`
 
-```tsx
-<AutoWidthInput
-  value={nameDraft}
-  onChange={(e) => setNameDraft(e.target.value)}
-  minWidth={220}        // px, default 160
-  maxWidth="100%"       // px | string CSS, default "100%"
-  placeholder="..."
-  className="h-8 ..."   // mesmas classes do Input atual
-/>
+- Adicionar `contractId?: string` à interface — quando presente, dialog opera em modo edição: carrega o contrato no open, troca título para "Editar Contrato de Manutenção" e usa `update` em vez de `insert`.
+- Estados novos:
+  - `discountDurationMode: "indefinite" | "months"` (default `"indefinite"`).
+  - `discountDurationMonths: string` (default `"6"`).
+- UI: abaixo da linha "Mensalidade / Desconto", quando `Number(discount) > 0`, renderizar bloco com `RadioGroup` (Indefinido / Por X meses) + Input number.
+- No save: `discount_duration_months = discountDurationMode === "months" ? Number(discountDurationMonths) : null`. Se `Number(discount) === 0`, sempre grava `null`.
+- No load (modo edição): popular os campos a partir do contrato.
+
+### 3. `src/pages/ProjetoDetalhe.tsx` — card Financeiro
+
+- Logo abaixo do `Token Budget` PropRow, adicionar uma seção "Manutenção" com PropRows:
+  - Se `activeContract` é null: PropRow "Manutenção Mensal" com botão `+ Adicionar` à direita (chama `setContractOpen(true)`).
+  - Se `activeContract` existe: 4 PropRows (Mensalidade, Desconto+duração, Token Budget mensal, Início) + botão `Editar` que abre o dialog com `contractId={activeContract.id}`.
+- Estado novo: `editingContractId: string | null`.
+- Passar `contractId={editingContractId ?? undefined}` ao `NovoContratoDialog`. Quando `contractOpen` fecha, resetar `editingContractId`.
+- Renderizar duração do desconto: `{discount}% {duration ? `por ${duration} meses (até ${formatDate(addMonths(start_date, duration))})` : 'indefinido'}`. Adicionar helper `addMonths` em `src/lib/formatters.ts` (ou inline).
+
+### 4. `src/pages/ProjetoDetalhe.tsx` — recalcular MRR
+
+Substituir o cálculo atual de `mrr` para considerar expiração:
+
+```ts
+const discountActive = (() => {
+  if (!activeContract || Number(activeContract.monthly_fee_discount_percent) <= 0) return false;
+  const months = activeContract.discount_duration_months;
+  if (!months) return true; // indefinido
+  const end = addMonths(new Date(activeContract.start_date), months);
+  return new Date() <= end;
+})();
+const mrr = activeContract
+  ? Number(activeContract.monthly_fee) * (discountActive ? (1 - Number(activeContract.monthly_fee_discount_percent) / 100) : 1)
+  : 0;
 ```
 
-Implementação:
+Sidebar "Manutenção" exibe a tag `(-X% até DD/MM/AAAA)` ou `(-X%)` apenas quando `discountActive`.
 
-- Wrapper `<span class="relative inline-block align-middle">` com:
-  - Um `<span aria-hidden>` invisível (`whitespace-pre`, `absolute opacity-0 pointer-events-none`, `top-0 left-0`, mesmas propriedades tipográficas do input via `font-inherit` / `text-base md:text-sm`) que renderiza `value || placeholder || ' '` + 1ch de folga.
-  - O `<input>` real com `width: <medida>` aplicado via `style`, clamp entre `minWidth` e `maxWidth` usando `min(maxWidth, max(minWidth, measuredWidth + paddingX))`.
-- Mede via `useLayoutEffect` lendo `spanRef.current.offsetWidth` sempre que `value` (ou placeholder) mudar.
-- Padding/border do input contabilizados: medir o conteúdo e somar `2*px-3 (24px) + 2*border (2px) = 26px`, mais 2px de folga para evitar que o caret empurre o caractere.
-- Classes base idênticas às do `<Input>` shadcn (`flex h-10 rounded-md border border-input bg-background px-3 py-2 …`) — reaproveitar via `cn()` para herdar a mesma estética.
-- Encaminhar `ref` com `forwardRef<HTMLInputElement>`.
+### 5. Tipos
 
-Pseudo-código:
-
-```tsx
-export const AutoWidthInput = React.forwardRef<HTMLInputElement, Props>(
-  ({ value, placeholder, minWidth = 160, maxWidth = "100%", className, style, ...rest }, ref) => {
-    const mirrorRef = useRef<HTMLSpanElement>(null);
-    const [width, setWidth] = useState<number>(minWidth);
-
-    useLayoutEffect(() => {
-      if (!mirrorRef.current) return;
-      const measured = mirrorRef.current.offsetWidth;
-      // px-3 (12*2) + border (1*2) + caret folga (2)
-      setWidth(Math.max(minWidth, measured + 28));
-    }, [value, placeholder, minWidth]);
-
-    const widthStyle =
-      typeof maxWidth === "number"
-        ? { width: Math.min(maxWidth, width) }
-        : { width, maxWidth };
-
-    return (
-      <span className="relative inline-block max-w-full align-middle">
-        <span
-          ref={mirrorRef}
-          aria-hidden
-          className={cn(
-            "invisible absolute left-0 top-0 whitespace-pre",
-            // mesmas classes tipográficas do input
-            "text-base md:text-sm px-0",
-            className,
-          )}
-        >
-          {String(value ?? "") || placeholder || " "}
-        </span>
-        <input
-          ref={ref}
-          value={value}
-          placeholder={placeholder}
-          className={cn(
-            "flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-            className,
-          )}
-          style={{ ...widthStyle, ...style }}
-          {...rest}
-        />
-      </span>
-    );
-  },
-);
-```
-
-Observações:
-- Usa `whitespace-pre` para preservar espaços no medidor.
-- O mirror herda o mesmo `className` do input para garantir mesmo `font-size`/`font-weight`/`tracking` (importante quando o `nameDraft` está em `text-2xl font-bold`, por exemplo).
-- `max-w-full` no wrapper impede que o input "estoure" o container pai, ainda que `maxWidth="100%"`.
-
-### 2. Aplicação inicial — onde trocar `<Input>` por `<AutoWidthInput>`
-
-Critério: **somente em campos de edição inline** onde a largura fixa é arbitrária e o texto pode crescer (nomes, títulos, códigos curtos). **Não trocar** em formulários de Dialog/cards onde o input já ocupa a largura total do grid (lá `w-full` faz sentido).
-
-Locais a atualizar nesta primeira leva:
-
-- `src/pages/ProjetoDetalhe.tsx`:
-  - Campo "Nome" no card "Informações do Projeto" (linha ~1159): substituir.
-  - Edição inline do título grande no header (`saveName` / `<Input … h-9 min-w-[320px] text-2xl font-bold>`): substituir, com `minWidth={320}`.
-- `src/pages/ProjetoDetalhe.tsx`: campo "Tipo" continua `Select`, sem mudança.
-
-Para outros lugares do sistema com o mesmo problema (CRM, tarefas, etc.), o componente fica disponível e iremos migrando sob demanda — não vou varrer o sistema inteiro de uma vez para evitar regressões; aplico nesta tela como referência e o usuário decide quais próximos.
-
-### 3. Sem mudanças
-
-- Não muda `src/components/ui/input.tsx` (Input padrão continua igual, com largura controlada por classe).
-- Não muda schema, hooks ou rotas.
-- Não muda Textarea (fora de escopo).
+A tabela `maintenance_contracts` é regenerada em `src/integrations/supabase/types.ts` automaticamente após a migração. Nenhuma edição manual.
 
 ## Fora de escopo
 
-- Auto-resize de **altura** (multilinha) — usar `<Textarea>` com componente próprio se necessário no futuro.
-- Migrar todos os formulários do sistema agora — só os pontos de edição inline da tela de detalhe do projeto. O componente fica pronto para uso global.
+- Trocar a lógica que cria movimentações financeiras a partir do contrato (esse fluxo já existe via outro caminho; só estamos representando a duração do desconto no contrato).
+- Modificar `src/pages/ContratosManutencao.tsx` ou `Projetos.tsx` agora — o dialog já é compartilhado, então a mudança aparece neles automaticamente; só não vou ajustar a tabela/lista visual desses lugares para mostrar a duração do desconto. Posso fazer depois sob demanda.
+- Migrar contratos antigos (todos ficam com `discount_duration_months = NULL` = indefinido, comportamento atual preservado).
