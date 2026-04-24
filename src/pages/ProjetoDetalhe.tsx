@@ -42,6 +42,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -421,6 +432,14 @@ export default function ProjetoDetalhe() {
   const [draftDescription, setDraftDescription] = useState("");
   const [draftCriteria, setDraftCriteria] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
+  const [draftCompanyId, setDraftCompanyId] = useState<string>("");
+
+  // Combobox / criação de empresa
+  const [companies, setCompanies] = useState<Array<{ id: string; legal_name: string; trade_name: string | null }>>([]);
+  const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
+  const [newCompanyOpen, setNewCompanyOpen] = useState(false);
+  const [newCompanyForm, setNewCompanyForm] = useState({ legal_name: "", cnpj: "", industry: "", website: "" });
+  const [creatingCompany, setCreatingCompany] = useState(false);
 
   function syncDrafts(source: Partial<Project>) {
     setNameDraft(source.name ?? "");
@@ -434,6 +453,7 @@ export default function ProjetoDetalhe() {
     setDraftDescription(source.description ?? "");
     setDraftCriteria(source.acceptance_criteria ?? "");
     setDraftNotes(source.notes ?? "");
+    setDraftCompanyId((source as any).company_id ?? "");
   }
 
   function openEditor(section: NonNullable<typeof editing>) {
@@ -444,6 +464,52 @@ export default function ProjetoDetalhe() {
   function closeEditor() {
     if (project) syncDrafts(project);
     setEditing(null);
+    setNewCompanyOpen(false);
+    setNewCompanyForm({ legal_name: "", cnpj: "", industry: "", website: "" });
+    setCompanyPickerOpen(false);
+  }
+
+  async function loadCompanies() {
+    const { data } = await supabase
+      .from("companies")
+      .select("id, legal_name, trade_name")
+      .is("deleted_at", null)
+      .order("legal_name");
+    setCompanies((data as any[]) || []);
+  }
+
+  async function createCompanyInline() {
+    const name = newCompanyForm.legal_name.trim();
+    if (!name) {
+      toast.error("Informe o nome da empresa");
+      return;
+    }
+    setCreatingCompany(true);
+    const { data, error } = await supabase
+      .from("companies")
+      .insert({
+        organization_id: GETBRAIN_ORG_ID,
+        legal_name: name,
+        trade_name: name,
+        cnpj: newCompanyForm.cnpj.trim() || null,
+        industry: newCompanyForm.industry.trim() || null,
+        website: newCompanyForm.website.trim() || null,
+        company_type: "client",
+        relationship_status: "cliente" as any,
+        status: "active" as any,
+      } as any)
+      .select("id, legal_name, trade_name")
+      .single();
+    setCreatingCompany(false);
+    if (error || !data) {
+      toast.error(error?.message || "Erro ao criar empresa");
+      return;
+    }
+    setCompanies((prev) => [...prev, data as any].sort((a, b) => a.legal_name.localeCompare(b.legal_name)));
+    setDraftCompanyId((data as any).id);
+    setNewCompanyOpen(false);
+    setNewCompanyForm({ legal_name: "", cnpj: "", industry: "", website: "" });
+    toast.success("Empresa criada");
   }
 
   useEffect(() => {
@@ -471,6 +537,7 @@ export default function ProjetoDetalhe() {
       .eq("id", p.company_id)
       .maybeSingle();
     setCompany(c as any);
+    loadCompanies();
 
     const { data: pa } = await supabase
       .from("project_actors")
@@ -613,6 +680,10 @@ export default function ProjetoDetalhe() {
     const nextProject = { ...project, ...(updates as any) } as Project;
     setProject(nextProject);
     syncDrafts(nextProject);
+    if ((updates as any).company_id && (updates as any).company_id !== company?.id) {
+      const found = companies.find((c) => c.id === (updates as any).company_id);
+      if (found) setCompany(found);
+    }
     if (Object.keys(changes).length > 0) {
       await logChange("update", changes);
       reloadLogs();
@@ -1058,6 +1129,13 @@ export default function ProjetoDetalhe() {
                               updates.project_type = draftType;
                               changes.project_type = { before: project.project_type, after: draftType };
                             }
+                            if (draftCompanyId && draftCompanyId !== project.company_id) {
+                              const beforeName = company?.trade_name || company?.legal_name || project.company_id;
+                              const afterCompany = companies.find((c) => c.id === draftCompanyId);
+                              const afterName = afterCompany ? (afterCompany.trade_name || afterCompany.legal_name) : draftCompanyId;
+                              updates.company_id = draftCompanyId;
+                              changes.company_id = { before: beforeName, after: afterName };
+                            }
                             await patchProject(updates, changes);
                             closeEditor();
                           }}
@@ -1091,10 +1169,127 @@ export default function ProjetoDetalhe() {
                       <span className="font-mono text-accent">{project.code}</span>
                     </PropRow>
                     <PropRow label="Cliente">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        {companyLabel}
-                      </span>
+                      {editing === "info" ? (
+                        <div className="ml-auto flex w-full max-w-[420px] flex-col gap-2">
+                          <Popover open={companyPickerOpen} onOpenChange={setCompanyPickerOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={companyPickerOpen}
+                                className="h-8 w-full justify-between font-normal"
+                              >
+                                <span className="inline-flex items-center gap-1.5 truncate">
+                                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {(() => {
+                                    const sel = companies.find((c) => c.id === draftCompanyId);
+                                    return sel ? (sel.trade_name || sel.legal_name) : "Selecionar cliente…";
+                                  })()}
+                                </span>
+                                <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[380px] p-0" align="end">
+                              <Command>
+                                <CommandInput placeholder="Buscar empresa…" />
+                                <CommandList>
+                                  <CommandEmpty>Nenhuma empresa encontrada.</CommandEmpty>
+                                  <CommandGroup>
+                                    {companies.map((c) => {
+                                      const label = c.trade_name || c.legal_name;
+                                      return (
+                                        <CommandItem
+                                          key={c.id}
+                                          value={`${label} ${c.legal_name}`}
+                                          onSelect={() => {
+                                            setDraftCompanyId(c.id);
+                                            setCompanyPickerOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-3.5 w-3.5",
+                                              draftCompanyId === c.id ? "opacity-100" : "opacity-0",
+                                            )}
+                                          />
+                                          {label}
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          {!newCompanyOpen ? (
+                            <button
+                              type="button"
+                              onClick={() => setNewCompanyOpen(true)}
+                              className="self-start text-xs text-accent hover:underline"
+                            >
+                              + Nova empresa
+                            </button>
+                          ) : (
+                            <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-2.5">
+                              <div className="grid gap-1.5">
+                                <Label className="text-[11px] text-muted-foreground">Nome da empresa *</Label>
+                                <Input
+                                  value={newCompanyForm.legal_name}
+                                  onChange={(e) => setNewCompanyForm((f) => ({ ...f, legal_name: e.target.value }))}
+                                  placeholder="Ex.: Acme Ltda"
+                                  className="h-8"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={newCompanyForm.cnpj}
+                                  onChange={(e) => setNewCompanyForm((f) => ({ ...f, cnpj: e.target.value }))}
+                                  placeholder="CNPJ"
+                                  className="h-8"
+                                />
+                                <Input
+                                  value={newCompanyForm.industry}
+                                  onChange={(e) => setNewCompanyForm((f) => ({ ...f, industry: e.target.value }))}
+                                  placeholder="Indústria"
+                                  className="h-8"
+                                />
+                              </div>
+                              <Input
+                                value={newCompanyForm.website}
+                                onChange={(e) => setNewCompanyForm((f) => ({ ...f, website: e.target.value }))}
+                                placeholder="Website"
+                                className="h-8"
+                              />
+                              <div className="flex justify-end gap-1.5">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7"
+                                  onClick={() => {
+                                    setNewCompanyOpen(false);
+                                    setNewCompanyForm({ legal_name: "", cnpj: "", industry: "", website: "" });
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-7"
+                                  disabled={!newCompanyForm.legal_name.trim() || creatingCompany}
+                                  onClick={createCompanyInline}
+                                >
+                                  {creatingCompany ? "Criando…" : "Criar empresa"}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          {companyLabel}
+                        </span>
+                      )}
                     </PropRow>
                     <PropRow label="Tipo">
                       {editing === "info" ? (

@@ -1,222 +1,70 @@
-
-Plano para corrigir a aba de Colaboradores com máscaras, abertura direta em edição e permissões por perfil.
-
 ## Objetivo
 
-Na criação/edição de colaborador:
+No card "Informações do Projeto" da tela de detalhe (`/projetos/:id`), o campo **Cliente** hoje é apenas leitura. Vou torná-lo editável dentro do mesmo modo "Editar" do bloco, permitindo:
 
-1. Aplicar máscara campo por campo nos dados pessoais, contatos, dados bancários, PIX, endereço e contrato.
-2. Ao abrir um colaborador:
-   - ADMIN abre direto em modo edição para qualquer colaborador.
-   - Usuário comum abre direto em modo edição apenas quando for o próprio colaborador.
-   - Usuário comum abre em modo visualização quando for colaborador de outra pessoa.
-3. Garantir que a regra não seja apenas visual: aplicar também proteção no backend para impedir edição indevida.
+1. Trocar o cliente por outra empresa já cadastrada (busca por nome).
+2. Criar uma nova empresa diretamente no formulário, sem sair da tela.
 
-## Parte 1 — Máscaras no formulário de colaborador
+## Comportamento
 
-Arquivo principal:
+Ao clicar em **Editar** no bloco "Informações do Projeto":
 
-- `src/components/config-financeiras/ColaboradoresTab.tsx`
+- O campo Cliente vira um **combobox com busca** (lista de `companies`, ordenadas, filtradas conforme o usuário digita).
+- Mostra `trade_name || legal_name`. Item atualmente selecionado fica destacado.
+- Logo abaixo do combobox aparece um botão pequeno **"+ Nova empresa"**.
+- Ao clicar em "+ Nova empresa", abre um mini-form inline (mesmo padrão do `NewLeadDialog`):
+  - Campos: **Nome da empresa** (obrigatório), CNPJ, Indústria, Website.
+  - Botão **Criar empresa** insere em `companies` com `company_type='cliente'`, `status='active'`, `relationship_status='cliente'`, `organization_id=getbrain_org_id()`.
+  - Após criar, a nova empresa é automaticamente selecionada no combobox e o mini-form fecha.
+- Ao clicar **Salvar** no bloco, o `patchProject` passa a incluir `company_id` quando alterado, e o estado local de `company` é atualizado para refletir o novo cliente sem reload de página (mantendo o padrão otimista já em vigor).
+- Ao clicar **Cancelar**, o draft do company_id e o mini-form de criação são resetados.
 
-Vou reaproveitar os helpers já existentes em:
+Fora do modo edição, a exibição do Cliente continua igual (ícone Building2 + nome). Nada muda no header, sidebar ou demais blocos.
 
-- `src/components/config-financeiras/shared.tsx`
+## Implementação técnica
 
-Máscaras/correções por campo:
+Arquivo único: `src/pages/ProjetoDetalhe.tsx`.
 
-### Dados principais
+1. **Estado novo**:
+   - `draftCompanyId: string` (sincronizado em `syncDrafts` a partir de `project.company_id`).
+   - `companies: Array<{id, legal_name, trade_name}>` carregado uma vez (no `load()` ou em `useEffect` separado, ordenado por nome).
+   - `companyQuery: string` para o filtro do combobox.
+   - `newCompanyOpen: boolean` e `newCompanyForm: { legal_name, cnpj, industry, website }`.
 
-- `CPF`
-  - Já usa `applyCpfMask`.
-  - Vou manter e garantir `inputMode="numeric"`.
+2. **UI no `PropRow label="Cliente"`** (linhas 1093-1098): condicional em `editing === "info"`:
+   - Modo leitura: como hoje.
+   - Modo edição: usar `Popover` + `Command` (cmdk, já instalado via shadcn — verificar `src/components/ui/command.tsx`) ou um `Select` com `Input` de busca. Preferência por `Popover`+`Command` (padrão combobox shadcn) para suportar busca de muitas empresas. Botão "+ Nova empresa" abaixo, e mini-form colapsável.
 
-### Contatos
+3. **`patchProject`**: incluir `company_id: draftCompanyId` no payload `update`. Após sucesso, atualizar `setCompany` localmente (buscando da lista `companies` em memória pelo id, evitando ida ao banco).
 
-- `Telefone`
-  - Já usa `applyPhoneMask`.
-  - Vou manter e garantir `inputMode="tel"`.
-- `E-mail`
-  - Não tem máscara visual, mas terá normalização:
-    - `trim`
-    - lowercase ao adicionar
-    - validação antes de inserir na lista.
+4. **Criação de empresa**: função `async function createCompany()`:
+   ```ts
+   const { data, error } = await supabase
+     .from("companies")
+     .insert({
+       legal_name: form.legal_name.trim(),
+       trade_name: null,
+       cnpj: form.cnpj || null,
+       industry: form.industry || null,
+       website: form.website || null,
+       company_type: "cliente",
+       status: "active",
+       relationship_status: "cliente",
+       organization_id: <getbrain_org_id via RPC ou constante>,
+     })
+     .select("id, legal_name, trade_name")
+     .single();
+   ```
+   Em sucesso: `setCompanies(prev => [...prev, data])`, `setDraftCompanyId(data.id)`, fecha mini-form, toast.
 
-### Dados bancários
+   - Verificar como o resto do código obtém `organization_id`. O hook `useCompanies` (em `src/hooks/...`) já deve fazer isso; vou reutilizar a mesma lógica. Se houver função RPC `getbrain_org_id()`, usar `supabase.rpc('getbrain_org_id')`. Se outros componentes (NewLeadDialog) já têm `useCreateCompany`, reaproveitar esse hook em vez de SQL inline.
 
-- `Agência`
-  - Usar `applyAgenciaMask`.
-  - Exemplo: `1234-5`.
-  - `inputMode="numeric"`.
-- `Conta`
-  - Usar `applyContaMask`.
-  - Exemplo: `12345-6`.
-  - `inputMode="numeric"`.
-- `Chaves PIX`
-  - Usar `applyPixMask`.
-  - Detectar tipo com `detectPixType`.
-  - Mostrar badge do tipo da chave:
-    - CPF
-    - CNPJ
-    - Telefone
-    - E-mail
-    - Aleatória
-  - Igual ao padrão já usado em `ContasBancariasTab.tsx`.
+5. **Validação**: botão Salvar do bloco fica desabilitado se `draftCompanyId` for vazio (cliente é obrigatório no schema, `company_id NOT NULL`).
 
-### Endereço
+6. **Sem mudanças no schema** — `company_type='cliente'` já existe no enum (usado por `NewLeadDialog`, etc.).
 
-- `CEP`
-  - Já usa `applyCepMask`.
-  - Vou garantir `inputMode="numeric"`.
-- `Estado`
-  - Já usa select com UF.
-- `Cidade`, `Endereço`, `Número`, `Bairro`, `Complemento`
-  - Não exigem máscara numérica, mas vou normalizar espaços ao salvar.
-  - `Número` continuará livre porque pode conter `S/N`, bloco, casa, etc.
+## Fora de escopo
 
-### Informações contratuais
-
-- `Data de Admissão`
-  - Já usa `type="date"`.
-- `Salário Base`
-  - Já usa `applyMoneyMask`.
-  - Vou garantir `inputMode="decimal"`.
-
-## Parte 2 — Abrir colaborador direto no modo correto
-
-Hoje o fluxo é:
-
-```text
-Lista → Visualização → botão Editar → Edição
-```
-
-Vou alterar para:
-
-```text
-ADMIN clicou em qualquer colaborador → Edição direta
-Usuário comum clicou no próprio colaborador → Edição direta
-Usuário comum clicou em colaborador de outra pessoa → Visualização
-```
-
-Também vou ajustar os botões:
-
-- No modo visualização para usuário comum:
-  - Não exibir botão `Editar` quando ele não puder editar aquele colaborador.
-  - Não exibir `Excluir`.
-  - Não permitir ativar/inativar na listagem.
-- Para ADMIN:
-  - Pode editar qualquer colaborador.
-  - Pode ativar/inativar qualquer colaborador.
-  - Pode excluir, mantendo a confirmação atual.
-- Para usuário comum no próprio registro:
-  - Pode editar o próprio registro.
-  - Não poderá excluir o próprio colaborador.
-  - Não poderá ativar/inativar, a menos que seja ADMIN.
-
-## Parte 3 — Como identificar ADMIN e “o próprio colaborador”
-
-Vou usar a estrutura já existente de roles:
-
-- tabela `user_roles`
-- função `has_role`
-- role `admin`
-
-No frontend:
-
-- Buscar se o usuário atual é ADMIN consultando sua role.
-- Considerar que o colaborador pertence ao usuário quando:
-  - o e-mail do usuário logado aparece em `colaboradores.emails`, ou
-  - `colaboradores.created_by` é o usuário atual como fallback para registros antigos.
-
-Essa abordagem evita criar uma relação frágil com tabela de usuários e funciona com os dados que já existem no formulário.
-
-## Parte 4 — Segurança no backend
-
-Será necessária uma migration para trocar a política ampla atual de `colaboradores`.
-
-Hoje existe:
-
-```sql
-Authenticated full access colaboradores
-```
-
-Isso permite que qualquer usuário autenticado edite qualquer colaborador.
-
-Vou substituir por políticas mais restritas:
-
-### Select
-
-Todos os usuários autenticados continuam podendo visualizar colaboradores:
-
-```text
-authenticated can select colaboradores
-```
-
-Motivo: o usuário pediu que usuários comuns consigam abrir os cards de outras pessoas em modo visualização.
-
-### Insert
-
-Apenas ADMIN poderá criar colaboradores.
-
-Motivo: se usuário comum pudesse criar colaborador livremente, poderia criar um registro com seu e-mail e ganhar controle indevido.
-
-### Update
-
-Pode atualizar quando:
-
-```text
-admin
-OU
-auth.email() está dentro de colaboradores.emails
-OU
-created_by = auth.uid()
-```
-
-### Delete
-
-Apenas ADMIN poderá excluir.
-
-### Observação importante
-
-Também vou impedir no frontend ações que o backend bloquearia, para a experiência ficar limpa, mas a regra real ficará protegida no backend.
-
-## Parte 5 — Ajustes visuais e UX
-
-No `ColaboradoresTab.tsx`:
-
-- Substituir o ícone de olho por um indicador coerente:
-  - ADMIN / próprio usuário: ícone de edição.
-  - Outros colaboradores: ícone de visualização.
-- Ajustar títulos:
-  - Edição direta: `Editar Colaborador`
-  - Visualização: `Detalhes do Colaborador`
-- Quando usuário comum abrir colaborador de outra pessoa:
-  - Mostrar um aviso discreto no topo ou subtítulo dizendo que ele está em modo somente leitura.
-
-## Arquivos previstos
-
-### Alterar
-
-- `src/components/config-financeiras/ColaboradoresTab.tsx`
-
-### Criar migration
-
-- `supabase/migrations/<timestamp>_restrict_colaboradores_permissions.sql`
-
-## Validação
-
-Após implementar, vou validar:
-
-1. TypeScript sem erros.
-2. Máscaras funcionando:
-   - CPF
-   - telefone
-   - agência
-   - conta
-   - PIX
-   - CEP
-   - salário
-3. Clique no colaborador:
-   - ADMIN abre direto editando.
-   - usuário comum abre o próprio direto editando.
-   - usuário comum abre outros em visualização.
-4. Backend bloqueia update/delete indevido mesmo que alguém tente forçar pela interface.
+- Editar dados da empresa existente (nome, CNPJ etc.) a partir desta tela — para isso o usuário continua indo em `/crm/empresas/:id`.
+- Mudança no header ou sidebar.
+- Migração de schema.
