@@ -20,6 +20,7 @@ import {
 import { StatusBadge, MaintenanceStatusBadge } from "./ProjetoBadges";
 import { ActorAvatar } from "./ActorAvatar";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { getEffectiveMrr, getDiscountInfo } from "@/lib/maintenance";
 import { Plus } from "lucide-react";
 import { AlocarAtorDialog } from "./AlocarAtorDialog";
 import { NovoContratoDialog } from "./NovoContratoDialog";
@@ -406,8 +407,8 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
             ) : (
               <div className="space-y-2">
                 {contracts.map((c) => {
-                  const liquido =
-                    Number(c.monthly_fee) * (1 - Number(c.monthly_fee_discount_percent || 0) / 100);
+                  const liquido = getEffectiveMrr(c);
+                  const info = getDiscountInfo(c);
                   return (
                     <div key={c.id} className="p-3 rounded-lg border bg-muted/30 space-y-2">
                       <div className="flex items-center justify-between">
@@ -417,7 +418,19 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
                       <div className="text-xs text-muted-foreground space-y-0.5">
                         <p>
                           Mensalidade: {formatCurrency(Number(c.monthly_fee))}
-                          {Number(c.monthly_fee_discount_percent) > 0 && ` (- ${c.monthly_fee_discount_percent}%)`}
+                          {info.hasDiscount && (
+                            <>
+                              {" "}(- {c.monthly_fee_discount_percent}%
+                              {info.indefinite
+                                ? " indef."
+                                : info.endsAt
+                                ? ` ${info.expired ? "exp." : "até"} ${formatDate(
+                                    info.endsAt.toISOString().slice(0, 10),
+                                  )}`
+                                : ""}
+                              )
+                            </>
+                          )}
                         </p>
                         <p>
                           Período: {formatDate(c.start_date)} —{" "}
