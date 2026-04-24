@@ -114,11 +114,24 @@ export default function ContasPagar() {
     });
   }, [movs, periodRange]);
 
-  const filtered = applySorting(periodFiltered.filter(m => {
+  const baseFiltered = periodFiltered.filter(m => {
     if (statusFilter !== "todos" && m.status !== statusFilter) return false;
     if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
-  }), sortConfig);
+  });
+
+  const filtered = useMemo(() => {
+    if (lancamentoOrder !== "none") {
+      const arr = [...baseFiltered];
+      arr.sort((a, b) => {
+        const da = new Date(a.created_at ?? 0).getTime();
+        const db = new Date(b.created_at ?? 0).getTime();
+        return lancamentoOrder === "recent" ? db - da : da - db;
+      });
+      return arr;
+    }
+    return applySorting(baseFiltered, sortConfig);
+  }, [baseFiltered, sortConfig, lancamentoOrder]);
 
   const totalPendente = periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
   const pagoMes = periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado), 0);
