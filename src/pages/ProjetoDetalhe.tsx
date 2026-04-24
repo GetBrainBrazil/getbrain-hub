@@ -784,9 +784,25 @@ export default function ProjetoDetalhe() {
   );
   const hasActiveContract = contracts.some((c) => c.status === "active");
   const activeContract = contracts.find((c) => c.status === "active");
+
+  // Vigência do desconto: se duração definida em meses, expira após start_date + N meses.
+  const discountInfo = (() => {
+    if (!activeContract) return { active: false, endsAt: null as Date | null, indefinite: true };
+    const pct = Number(activeContract.monthly_fee_discount_percent || 0);
+    if (pct <= 0) return { active: false, endsAt: null, indefinite: true };
+    const months = (activeContract as any).discount_duration_months as number | null | undefined;
+    if (!months) return { active: true, endsAt: null, indefinite: true };
+    const start = activeContract.start_date ? new Date(activeContract.start_date) : new Date();
+    const ends = new Date(start);
+    ends.setMonth(ends.getMonth() + months);
+    return { active: new Date() <= ends, endsAt: ends, indefinite: false };
+  })();
+
   const mrr = activeContract
     ? Number(activeContract.monthly_fee) *
-      (1 - Number(activeContract.monthly_fee_discount_percent || 0) / 100)
+      (discountInfo.active
+        ? 1 - Number(activeContract.monthly_fee_discount_percent || 0) / 100
+        : 1)
     : 0;
   const installmentValue =
     project?.contract_value && project?.installments_count
