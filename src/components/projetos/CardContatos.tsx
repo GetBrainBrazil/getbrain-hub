@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
-import { Mail, Phone, Plus, Star, StarOff, Trash2, Pencil, Save, X, User, Briefcase, UserPlus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Mail, Phone, Plus, Star, StarOff, Trash2, Pencil, Save, X, User, Briefcase, UserPlus, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatPhoneBR } from "@/lib/formatters";
@@ -39,6 +43,98 @@ function PhoneInput({ value, onChange, placeholder }: { value: string; onChange:
       onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
       placeholder={placeholder ?? "(11) 99999-9999"}
     />
+  );
+}
+
+function useExistingRoles() {
+  return useQuery({
+    queryKey: ["people-roles-distinct"],
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await (supabase as any)
+        .from("people")
+        .select("role_in_company")
+        .not("role_in_company", "is", null)
+        .is("deleted_at", null);
+      if (error) throw error;
+      return Array.from(
+        new Set<string>((data ?? []).map((r: any) => String(r.role_in_company).trim()).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    },
+    staleTime: 60_000,
+  });
+}
+
+function RoleCombobox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data: roles = [] } = useExistingRoles();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const normalized = search.trim();
+  const filtered = useMemo(
+    () => roles.filter((r) => r.toLowerCase().includes(normalized.toLowerCase())),
+    [roles, normalized],
+  );
+  const exactMatch = filtered.some((r) => r.toLowerCase() === normalized.toLowerCase());
+
+  const select = (v: string) => {
+    onChange(v);
+    setOpen(false);
+    setSearch("");
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {value || "Selecionar ou criar cargo…"}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Buscar ou digitar novo cargo…" value={search} onValueChange={setSearch} />
+          <CommandList>
+            {filtered.length === 0 && !normalized && (
+              <CommandEmpty>Nenhum cargo cadastrado ainda.</CommandEmpty>
+            )}
+            {filtered.length > 0 && (
+              <CommandGroup heading="Cargos existentes">
+                {filtered.map((r) => (
+                  <CommandItem key={r} value={r} onSelect={() => select(r)}>
+                    <Check className={cn("mr-2 h-4 w-4", value === r ? "opacity-100" : "opacity-0")} />
+                    {r}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {normalized && !exactMatch && (
+              <CommandGroup heading="Criar novo">
+                <CommandItem value={`__new__${normalized}`} onSelect={() => select(normalized)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar "{normalized}"
+                </CommandItem>
+              </CommandGroup>
+            )}
+            {value && (
+              <CommandGroup>
+                <CommandItem value="__clear__" onSelect={() => select("")}>
+                  <X className="mr-2 h-4 w-4" />
+                  Limpar cargo
+                </CommandItem>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -184,7 +280,7 @@ function ContactForm({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Cargo</Label>
-          <Input value={form.role_in_company} onChange={(e) => setForm((f) => ({ ...f, role_in_company: e.target.value }))} placeholder="Ex: Diretor de TI" />
+          <RoleCombobox value={form.role_in_company} onChange={(v) => setForm((f) => ({ ...f, role_in_company: v }))} />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Email</Label>
