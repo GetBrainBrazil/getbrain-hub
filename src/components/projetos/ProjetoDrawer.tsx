@@ -26,6 +26,7 @@ import { AlocarAtorDialog } from "./AlocarAtorDialog";
 import { NovoContratoDialog } from "./NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface Props {
   projectId: string | null;
