@@ -39,6 +39,10 @@ import {
   type ProjectMovimentacao,
 } from "@/hooks/projetos/useProjectFinanceDetail";
 import {
+  CATEGORIA_IMPLEMENTACAO_ID,
+  CATEGORIA_MANUTENCAO_ID,
+} from "@/lib/financeCategories";
+import {
   ProjetoDetalheHeader,
   type MiniKpi,
 } from "@/components/projetos/detalhe/ProjetoDetalheHeader";
