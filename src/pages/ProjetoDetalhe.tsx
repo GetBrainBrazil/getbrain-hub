@@ -422,6 +422,30 @@ export default function ProjetoDetalhe() {
   const [draftCriteria, setDraftCriteria] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
 
+  function syncDrafts(source: Partial<Project>) {
+    setNameDraft(source.name ?? "");
+    setDraftType((source.project_type as ProjectType) ?? "sistema_personalizado");
+    setDraftContractValue(source.contract_value != null ? String(source.contract_value) : "");
+    setDraftInstallments(source.installments_count != null ? String(source.installments_count) : "");
+    setDraftTokenBudget(source.token_budget_brl != null ? String(source.token_budget_brl) : "");
+    setDraftStartDate(source.start_date ?? "");
+    setDraftEstimated(source.estimated_delivery_date ?? "");
+    setDraftActual(source.actual_delivery_date ?? "");
+    setDraftDescription(source.description ?? "");
+    setDraftCriteria(source.acceptance_criteria ?? "");
+    setDraftNotes(source.notes ?? "");
+  }
+
+  function openEditor(section: NonNullable<typeof editing>) {
+    if (project) syncDrafts(project);
+    setEditing(section);
+  }
+
+  function closeEditor() {
+    if (project) syncDrafts(project);
+    setEditing(null);
+  }
+
   useEffect(() => {
     if (projectId) load();
   }, [projectId]);
@@ -439,17 +463,7 @@ export default function ProjetoDetalhe() {
       return;
     }
     setProject(p as Project);
-    setNameDraft(p.name);
-    setDraftType(p.project_type as ProjectType);
-    setDraftContractValue(p.contract_value?.toString() ?? "");
-    setDraftInstallments(p.installments_count?.toString() ?? "");
-    setDraftTokenBudget(p.token_budget_brl?.toString() ?? "");
-    setDraftStartDate(p.start_date ?? "");
-    setDraftEstimated(p.estimated_delivery_date ?? "");
-    setDraftActual(p.actual_delivery_date ?? "");
-    setDraftDescription(p.description ?? "");
-    setDraftCriteria(p.acceptance_criteria ?? "");
-    setDraftNotes(p.notes ?? "");
+    syncDrafts(p as Project);
 
     const { data: c } = await supabase
       .from("companies")
@@ -596,7 +610,9 @@ export default function ProjetoDetalhe() {
       return;
     }
     // Atualização otimista — sem recarregar a página inteira
-    setProject((prev) => (prev ? { ...prev, ...(updates as any) } : prev));
+    const nextProject = { ...project, ...(updates as any) } as Project;
+    setProject(nextProject);
+    syncDrafts(nextProject);
     if (Object.keys(changes).length > 0) {
       await logChange("update", changes);
       reloadLogs();
