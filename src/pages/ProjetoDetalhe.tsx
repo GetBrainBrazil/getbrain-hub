@@ -2034,7 +2034,9 @@ export default function ProjetoDetalhe() {
                     identified_risks: project.identified_risks,
                     acceptance_criteria: project.acceptance_criteria,
                   }}
-                  onSaved={load}
+                  onFieldSaved={(field, value) =>
+                    setProject((prev) => (prev ? ({ ...prev, [field]: value } as Project) : prev))
+                  }
                 />
               </TabsContent>
 
