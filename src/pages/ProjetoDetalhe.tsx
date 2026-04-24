@@ -1471,6 +1471,11 @@ export default function ProjetoDetalhe() {
                   </div>
                 </CardBlock>
 
+                {/* Pessoas de contato */}
+                <CardBlock title="Pessoas de contato" icon={Users}>
+                  <CardContatos companyId={project.company_id} companyLabel={companyLabel} />
+                </CardBlock>
+
                 {/* Financeiro */}
                 <CardBlock
                   title="Financeiro"
