@@ -1043,6 +1043,16 @@ export default function Movimentacoes() {
           <MultiSelectFilter title="Meio de pagamento" selected={meioFilter} onChange={setMeioFilter} options={meioOptions} placeholder="Buscar meio de pagamento..." />
           <MultiSelectFilter title="Recorrência" selected={recorrenciaFilter} onChange={setRecorrenciaFilter} options={recorrenciaOptions} placeholder="Buscar recorrência..." />
           <MultiSelectFilter title="Conciliação" selected={conciliacaoFilter} onChange={setConciliacaoFilter} options={conciliacaoOptions} placeholder="Buscar conciliação..." />
+          <Select value={lancamentoOrder} onValueChange={(v) => setLancamentoOrder(v as "none" | "recent" | "old")}>
+            <SelectTrigger className="h-8 w-auto gap-1.5 px-2.5 text-xs font-normal">
+              <SelectValue placeholder="Lançamentos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Lançamentos: padrão</SelectItem>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="old">Mais antigos</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
