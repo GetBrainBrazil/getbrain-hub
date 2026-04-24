@@ -1035,6 +1035,23 @@ export default function Movimentacoes() {
 
       {/* Filters */}
       <div className="flex flex-col gap-3">
+        {projectIdFromUrl && (() => {
+          const proj: any = projetos.find((p: any) => p.id === projectIdFromUrl);
+          const label = proj ? [proj.code, proj.name].filter(Boolean).join(" — ") : "projeto";
+          return (
+            <div className="flex items-center gap-2 self-start rounded-md border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs">
+              <span className="font-medium text-accent">Filtrado por projeto:</span>
+              <span className="font-mono text-foreground">{label}</span>
+              <button
+                type="button"
+                onClick={clearProjectIdFilter}
+                className="ml-1 inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" /> limpar
+              </button>
+            </div>
+          );
+        })()}
         <div className="flex gap-3 flex-wrap items-center">
           <div className="relative flex-1 min-w-[240px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
