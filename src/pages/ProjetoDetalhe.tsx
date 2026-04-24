@@ -537,6 +537,7 @@ export default function ProjetoDetalhe() {
       .eq("id", p.company_id)
       .maybeSingle();
     setCompany(c as any);
+    loadCompanies();
 
     const { data: pa } = await supabase
       .from("project_actors")
