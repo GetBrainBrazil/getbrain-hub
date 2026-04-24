@@ -728,6 +728,122 @@ export default function ProjetoDetalhe() {
     toast.success("Salvo", { duration: 1500 });
   }
 
+  /**
+   * Persiste a manutenção mensal do card Financeiro (sem modal).
+   * - Cria o contrato se não existir e a mensalidade for > 0.
+   * - Atualiza o contrato ativo existente.
+   * - Não faz nada se não há contrato e mensalidade está vazia/zero.
+   */
+  async function saveContract() {
+    if (!projectId || !project) return;
+    const fee = draftMonthlyFee ? Number(draftMonthlyFee) : 0;
+    const pct = draftDiscountPct ? Number(draftDiscountPct) : 0;
+    if (Number.isNaN(fee) || fee < 0) {
+      toast.error("Mensalidade inválida");
+      return;
+    }
+    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+      toast.error("Desconto deve estar entre 0 e 100%");
+      return;
+    }
+    const months =
+      pct > 0 && !draftDiscountIndefinite && draftDiscountMonths
+        ? Math.max(1, Math.floor(Number(draftDiscountMonths)))
+        : null;
+    if (pct > 0 && !draftDiscountIndefinite && (!months || months < 1)) {
+      toast.error("Informe a duração do desconto em meses");
+      return;
+    }
+
+    const existing = contracts.find((c) => c.status === "active") ?? null;
+    if (!existing && fee <= 0) return; // nada a criar
+
+    setSavingContract(true);
+    try {
+      const orgId = (project as any).organization_id ?? GETBRAIN_ORG_ID;
+      const payload: any = {
+        monthly_fee: fee,
+        monthly_fee_discount_percent: pct,
+        discount_duration_months: months,
+        token_budget_brl: draftContractTokenBudget ? Number(draftContractTokenBudget) : null,
+        start_date: draftContractStartDate || new Date().toISOString().slice(0, 10),
+      };
+
+      if (existing) {
+        payload.status = draftContractStatus;
+        const { error } = await supabase
+          .from("maintenance_contracts")
+          .update(payload)
+          .eq("id", existing.id);
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        // diff p/ audit log
+        const changes: Record<string, { before: any; after: any }> = {};
+        const cmp = (k: string, before: any, after: any) => {
+          if (before !== after) changes[k] = { before, after };
+        };
+        cmp("monthly_fee", Number(existing.monthly_fee), fee);
+        cmp("monthly_fee_discount_percent", Number(existing.monthly_fee_discount_percent || 0), pct);
+        cmp("discount_duration_months", existing.discount_duration_months ?? null, months);
+        cmp(
+          "token_budget_brl",
+          existing.token_budget_brl != null ? Number(existing.token_budget_brl) : null,
+          payload.token_budget_brl,
+        );
+        cmp("start_date", existing.start_date, payload.start_date);
+        cmp("status", existing.status, draftContractStatus);
+        if (Object.keys(changes).length > 0) {
+          const actorId = await getActorId();
+          await supabase.from("audit_logs").insert({
+            organization_id: orgId,
+            actor_id: actorId,
+            entity_type: "maintenance_contract",
+            entity_id: existing.id,
+            action: "update",
+            changes,
+          } as any);
+        }
+      } else {
+        payload.status = "active";
+        payload.project_id = projectId;
+        payload.organization_id = orgId;
+        const { data: inserted, error } = await supabase
+          .from("maintenance_contracts")
+          .insert(payload)
+          .select("id")
+          .single();
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        const actorId = await getActorId();
+        await supabase.from("audit_logs").insert({
+          organization_id: orgId,
+          actor_id: actorId,
+          entity_type: "maintenance_contract",
+          entity_id: inserted?.id,
+          action: "create",
+          changes: { contract: { before: null, after: payload } },
+        } as any);
+      }
+
+      // recarrega contratos + logs
+      const { data: mc } = await supabase
+        .from("maintenance_contracts")
+        .select("*")
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .order("start_date", { ascending: false });
+      setContracts(mc || []);
+      reloadLogs();
+      toast.success("Manutenção salva", { duration: 1500 });
+    } finally {
+      setSavingContract(false);
+    }
+  }
+
   async function handleStatusChange(newStatus: ProjectStatus) {
     if (!project || !projectId || newStatus === project.status) return;
     const ok = await confirmDialog({
