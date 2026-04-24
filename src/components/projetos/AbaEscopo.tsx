@@ -277,13 +277,13 @@ function ScopeCardBlock({
           </div>
         ) : isEmpty ? (
           <p className="text-sm italic text-muted-foreground">{card.placeholder}</p>
-        ) : card.isCriteria ? (
+        ) : (
           <CriteriaList
             text={value!}
             onToggle={async (newText) => {
               const { error } = await supabase
                 .from("projects")
-                .update({ acceptance_criteria: newText } as any)
+                .update({ [card.field]: newText } as any)
                 .eq("id", projectId);
               if (error) {
                 toast.error(error.message);
@@ -291,11 +291,9 @@ function ScopeCardBlock({
               }
               setValue(newText);
               setDraft(newText);
-              onFieldSaved("acceptance_criteria", newText);
+              onFieldSaved(card.field, newText);
             }}
           />
-        ) : (
-          <MarkdownView text={value!} />
         )}
       </div>
     </section>
@@ -412,14 +410,12 @@ function MarkdownToolbar({
       >
         <ListOrdered className="h-3.5 w-3.5" />
       </ToolbarButton>
-      {showChecklist && (
-        <ToolbarButton
-          title="Checklist"
-          onMouseDown={act((ta) => prefixLines(ta, "- [ ] ", setDraft))}
-        >
-          <CheckSquare className="h-3.5 w-3.5" />
-        </ToolbarButton>
-      )}
+      <ToolbarButton
+        title="Checklist"
+        onMouseDown={act((ta) => prefixLines(ta, "- [ ] ", setDraft))}
+      >
+        <CheckSquare className="h-3.5 w-3.5" />
+      </ToolbarButton>
     </div>
   );
 }
@@ -458,9 +454,9 @@ function MarkdownView({ text }: { text: string }) {
   let key = 0;
   while (i < lines.length) {
     const line = lines[i];
-    if (/^\s*[-*]\s/.test(line) && !/^\s*[-*]\s\[[ xX]\]\s/.test(line)) {
+    if (/^\s*[-*]\s/.test(line) && !/^\s*[-*]\s\[[ xX]?\]/.test(line)) {
       const items: string[] = [];
-      while (i < lines.length && /^\s*[-*]\s/.test(lines[i]) && !/^\s*[-*]\s\[[ xX]\]\s/.test(lines[i])) {
+      while (i < lines.length && /^\s*[-*]\s/.test(lines[i]) && !/^\s*[-*]\s\[[ xX]?\]/.test(lines[i])) {
         items.push(lines[i].replace(/^\s*[-*]\s/, ""));
         i++;
       }
@@ -542,7 +538,7 @@ function CriteriaList({
 }) {
   const lines = text.split("\n");
   const items = lines.map((l, i) => {
-    const m = l.match(/^\s*-\s+\[( |x|X)\]\s+(.*)$/);
+    const m = l.match(/^\s*-\s+\[( |x|X|)\]\s*(.*)$/);
     if (m) {
       return {
         idx: i,
@@ -562,10 +558,11 @@ function CriteriaList({
 
   function toggle(idx: number) {
     const newLines = [...lines];
-    const m = newLines[idx].match(/^(\s*-\s+\[)( |x|X)(\]\s+.*)$/);
+    const m = newLines[idx].match(/^(\s*-\s+\[)( |x|X|)(\]\s*)(.*)$/);
     if (!m) return;
     const next = m[2].toLowerCase() === "x" ? " " : "x";
-    newLines[idx] = `${m[1]}${next}${m[3]}`;
+    const tail = m[3].endsWith(" ") ? m[3] : m[3] + " ";
+    newLines[idx] = `${m[1]}${next}${tail}${m[4]}`;
     onToggle(newLines.join("\n"));
   }
 
