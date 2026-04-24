@@ -10,12 +10,14 @@ import { formatCurrency, formatDate } from "@/lib/formatters";
 import { MaintenanceStatusBadge } from "@/components/projetos/ProjetoBadges";
 import { NovoContratoDialog } from "@/components/projetos/NovoContratoDialog";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { getDiscountInfo, getEffectiveMrr } from "@/lib/maintenance";
 
 type ContractRow = {
   id: string;
   project_id: string;
   monthly_fee: number;
   monthly_fee_discount_percent: number | null;
+  discount_duration_months: number | null;
   start_date: string;
   end_date: string | null;
   status: "active" | "paused" | "ended" | "cancelled";
@@ -28,10 +30,6 @@ type ContractRow = {
   };
   client_name?: string | null;
 };
-
-function netFee(c: ContractRow) {
-  return Number(c.monthly_fee) * (1 - Number(c.monthly_fee_discount_percent || 0) / 100);
-}
 
 export default function ContratosManutencao() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -116,7 +114,7 @@ export default function ContratosManutencao() {
   }, [rows, projectFilter, statusFilter, search]);
 
   const mrrAtivo = useMemo(
-    () => rows.filter((r) => r.status === "active").reduce((acc, r) => acc + netFee(r), 0),
+    () => rows.filter((r) => r.status === "active").reduce((acc, r) => acc + getEffectiveMrr(r), 0),
     [rows],
   );
   const activeCount = useMemo(() => rows.filter((r) => r.status === "active").length, [rows]);
@@ -260,13 +258,29 @@ export default function ContratosManutencao() {
                 <div className="truncate text-foreground">{r.client_name || "—"}</div>
                 <div className="text-right">
                   <div className="font-mono text-base font-bold tabular-nums text-foreground">
-                    {formatCurrency(netFee(r))}
+                    {formatCurrency(getEffectiveMrr(r))}
                   </div>
-                  {Number(r.monthly_fee_discount_percent) > 0 && (
-                    <div className="text-[10px] text-success">
-                      −{r.monthly_fee_discount_percent}%
-                    </div>
-                  )}
+                  {(() => {
+                    const info = getDiscountInfo(r);
+                    if (!info.hasDiscount) return null;
+                    return (
+                      <div
+                        className={
+                          "text-[10px] " +
+                          (info.expired ? "text-destructive" : "text-success")
+                        }
+                      >
+                        −{r.monthly_fee_discount_percent}%
+                        {info.indefinite
+                          ? " indef."
+                          : info.endsAt
+                          ? ` ${info.expired ? "exp." : "até"} ${formatDate(
+                              info.endsAt.toISOString().slice(0, 10),
+                            )}`
+                          : ""}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="font-mono text-xs tabular-nums text-muted-foreground">
                   {formatDate(r.start_date)}

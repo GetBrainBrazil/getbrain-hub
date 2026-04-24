@@ -31,6 +31,7 @@ import { useProjectMetrics } from "@/hooks/useProjectMetrics";
 import type { ProjectMetrics } from "@/types/database";
 import { ActorAvatar } from "@/components/projetos/ActorAvatar";
 import { getRoleLabel } from "@/lib/projetos-helpers";
+import { getEffectiveMrr } from "@/lib/maintenance";
 
 export type AbaOperacionalAlloc = {
   id: string;
@@ -46,6 +47,8 @@ export type AbaOperacionalContract = {
   status: string;
   monthly_fee: number;
   monthly_fee_discount_percent: number | null;
+  discount_duration_months?: number | null;
+  start_date?: string | null;
   end_date: string | null;
 };
 
@@ -331,10 +334,7 @@ export function AbaOperacional({
 
   // ── Contrato ativo (para linha resumo no painel Financeiro) ──
   const activeContract = contracts.find((c) => c.status === "active");
-  const activeContractNet = activeContract
-    ? Number(activeContract.monthly_fee) *
-      (1 - Number(activeContract.monthly_fee_discount_percent || 0) / 100)
-    : 0;
+  const activeContractNet = activeContract ? getEffectiveMrr(activeContract) : 0;
 
   return (
     <div className="space-y-6">
