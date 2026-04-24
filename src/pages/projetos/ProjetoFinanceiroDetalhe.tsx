@@ -87,78 +87,136 @@ function Donut({
   atrasado: number;
 }) {
   const total = recebido + previsto + atrasado;
-  if (total === 0) {
-    return (
-      <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">
-        Sem dados
-      </div>
-    );
-  }
-  const r = 60;
+  const r = 56;
   const c = 2 * Math.PI * r;
-  const pR = recebido / total;
-  const pP = previsto / total;
-  const pA = atrasado / total;
+  const pR = total ? recebido / total : 0;
+  const pP = total ? previsto / total : 0;
+  const pA = total ? atrasado / total : 0;
+  const pctRecebido = total ? (recebido / total) * 100 : 0;
 
-  const seg = (frac: number, offset: number, color: string) => (
-    <circle
-      cx="80"
-      cy="80"
-      r={r}
-      fill="transparent"
-      stroke={color}
-      strokeWidth="20"
-      strokeDasharray={`${frac * c} ${c}`}
-      strokeDashoffset={-offset * c}
-      transform="rotate(-90 80 80)"
-    />
-  );
+  const seg = (frac: number, offset: number, color: string) =>
+    frac > 0 ? (
+      <circle
+        cx="80"
+        cy="80"
+        r={r}
+        fill="transparent"
+        stroke={color}
+        strokeWidth="16"
+        strokeLinecap="round"
+        strokeDasharray={`${frac * c} ${c}`}
+        strokeDashoffset={-offset * c}
+        transform="rotate(-90 80 80)"
+        className="transition-all"
+      />
+    ) : null;
+
   return (
-    <div className="flex items-center gap-6">
-      <svg width="160" height="160" viewBox="0 0 160 160" className="flex-shrink-0">
-        {seg(pR, 0, "hsl(var(--success))")}
-        {seg(pP, pR, "hsl(var(--accent))")}
-        {seg(pA, pR + pP, "hsl(var(--destructive))")}
-        <text
-          x="80"
-          y="76"
-          textAnchor="middle"
-          className="fill-foreground font-mono text-lg font-bold"
-        >
-          {((recebido / total) * 100).toFixed(0)}%
-        </text>
-        <text
-          x="80"
-          y="92"
-          textAnchor="middle"
-          className="fill-muted-foreground text-[10px]"
-        >
-          recebido
-        </text>
-      </svg>
-      <ul className="space-y-1.5 text-xs">
-        <li className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-sm bg-success" />
-          <span className="text-muted-foreground">Recebido</span>
-          <span className="ml-auto font-mono font-semibold text-foreground">
-            {formatCurrency(recebido)}
+    <div className="flex h-full flex-col items-center justify-center">
+      <div className="relative">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle
+            cx="80"
+            cy="80"
+            r={r}
+            fill="transparent"
+            stroke="hsl(var(--muted))"
+            strokeWidth="16"
+            opacity="0.4"
+          />
+          {total > 0 && (
+            <>
+              {seg(pR, 0, "hsl(var(--success))")}
+              {seg(pP, pR, "hsl(var(--accent))")}
+              {seg(pA, pR + pP, "hsl(var(--destructive))")}
+            </>
+          )}
+        </svg>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-mono text-3xl font-bold leading-none text-foreground">
+            {pctRecebido.toFixed(0)}
+            <span className="text-lg text-muted-foreground">%</span>
           </span>
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-sm bg-accent" />
-          <span className="text-muted-foreground">Previsto</span>
-          <span className="ml-auto font-mono font-semibold text-foreground">
-            {formatCurrency(previsto)}
+          <span className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            recebido
           </span>
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-sm bg-destructive" />
-          <span className="text-muted-foreground">Atrasado</span>
-          <span className="ml-auto font-mono font-semibold text-foreground">
-            {formatCurrency(atrasado)}
-          </span>
-        </li>
-      </ul>
+        </div>
+      </div>
+      {total > 0 && (
+        <p className="mt-3 font-mono text-xs text-muted-foreground">
+          Total:{" "}
+          <span className="font-semibold text-foreground">{formatCurrency(total)}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DonutLegend({
+  recebido,
+  previsto,
+  atrasado,
+}: {
+  recebido: number;
+  previsto: number;
+  atrasado: number;
+}) {
+  const total = recebido + previsto + atrasado;
+  const items = [
+    {
+      label: "Recebido",
+      value: recebido,
+      color: "bg-success",
+      text: "text-success",
+      ring: "ring-success/30",
+    },
+    {
+      label: "Previsto",
+      value: previsto,
+      color: "bg-accent",
+      text: "text-accent",
+      ring: "ring-accent/30",
+    },
+    {
+      label: "Atrasado",
+      value: atrasado,
+      color: "bg-destructive",
+      text: "text-destructive",
+      ring: "ring-destructive/30",
+    },
+  ];
+  return (
+    <div className="grid grid-cols-1 gap-2">
+      {items.map((it) => {
+        const pct = total ? (it.value / total) * 100 : 0;
+        return (
+          <div
+            key={it.label}
+            className={cn(
+              "flex items-center gap-3 rounded-md border border-border/60 bg-card/40 px-3 py-2 ring-1 ring-transparent transition-colors",
+              it.value > 0 && it.ring,
+            )}
+          >
+            <span className={cn("h-2.5 w-2.5 flex-shrink-0 rounded-full", it.color)} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                {it.label}
+              </p>
+              <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-foreground">
+                {formatCurrency(it.value)}
+              </p>
+            </div>
+            <span
+              className={cn(
+                "font-mono text-xs font-semibold tabular-nums",
+                it.value > 0 ? it.text : "text-muted-foreground/60",
+              )}
+            >
+              {pct.toFixed(0)}%
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -167,7 +225,7 @@ function Donut({
 function Timeline({ items }: { items: ProjectMovimentacao[] }) {
   if (items.length === 0) {
     return (
-      <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
+      <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-border/60 text-xs text-muted-foreground">
         Sem parcelas para exibir
       </div>
     );
@@ -176,10 +234,70 @@ function Timeline({ items }: { items: ProjectMovimentacao[] }) {
   const min = Math.min(...dates);
   const max = Math.max(...dates);
   const span = Math.max(1, max - min);
+
+  const now = Date.now();
+  const todayPct =
+    now >= min && now <= max ? ((now - min) / span) * 100 : null;
+
+  const counts = items.reduce(
+    (acc, m) => {
+      const s = parcelStatus(m);
+      acc[s]++;
+      return acc;
+    },
+    { recebido: 0, previsto: 0, atrasado: 0 } as Record<ParcelStatus, number>,
+  );
+
   return (
-    <div className="space-y-2">
-      <div className="relative h-12 rounded-md border border-border/60 bg-muted/20 px-2">
-        <div className="absolute inset-x-2 top-1/2 h-px bg-border" />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-success" />
+          <span className="text-muted-foreground">
+            Recebido{" "}
+            <span className="font-mono font-semibold text-foreground">
+              {counts.recebido}
+            </span>
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-accent" />
+          <span className="text-muted-foreground">
+            Previsto{" "}
+            <span className="font-mono font-semibold text-foreground">
+              {counts.previsto}
+            </span>
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-destructive" />
+          <span className="text-muted-foreground">
+            Atrasado{" "}
+            <span className="font-mono font-semibold text-foreground">
+              {counts.atrasado}
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <div className="relative h-16 rounded-md border border-border/60 bg-gradient-to-b from-muted/10 to-muted/30">
+        <div className="absolute inset-x-3 top-1/2 h-px bg-border" />
+
+        {todayPct !== null && (
+          <>
+            <div
+              className="absolute top-1 bottom-1 w-px bg-foreground/30"
+              style={{ left: `calc(12px + ${todayPct}% - ${todayPct * 0.24}px)` }}
+            />
+            <span
+              className="absolute top-0.5 -translate-x-1/2 rounded-sm bg-foreground/80 px-1 font-mono text-[9px] font-medium uppercase tracking-wider text-background"
+              style={{ left: `calc(12px + ${todayPct}% - ${todayPct * 0.24}px)` }}
+            >
+              hoje
+            </span>
+          </>
+        )}
+
         {items.map((m) => {
           const t = new Date(m.data_vencimento).getTime();
           const left = ((t - min) / span) * 100;
@@ -187,18 +305,22 @@ function Timeline({ items }: { items: ProjectMovimentacao[] }) {
           return (
             <div
               key={m.id}
-              title={`${m.descricao} · ${formatCurrency(m.valor_previsto)} · ${formatDate(m.data_vencimento)}`}
+              title={`${m.descricao} · ${formatCurrency(m.valor_previsto)} · ${formatDate(m.data_vencimento)} · ${statusLabel(s)}`}
               className={cn(
-                "absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card",
+                "absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card shadow-sm transition-transform hover:scale-150",
                 statusColor(s),
               )}
-              style={{ left: `${left}%` }}
+              style={{ left: `calc(12px + ${left}% - ${left * 0.24}px)` }}
             />
           );
         })}
       </div>
-      <div className="flex justify-between text-[10px] text-muted-foreground">
+
+      <div className="flex items-center justify-between px-1 font-mono text-[10px] text-muted-foreground">
         <span>{formatDate(new Date(min).toISOString())}</span>
+        <span className="text-muted-foreground/60">
+          {items.length} {items.length === 1 ? "parcela" : "parcelas"}
+        </span>
         <span>{formatDate(new Date(max).toISOString())}</span>
       </div>
     </div>
