@@ -7,7 +7,7 @@
  * plugado mostram banner "em breve" e valores zerados — nunca dados
  * mockados (princípio 2.15 do ARCHITECTURE.md).
  */
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DollarSign,
   ListChecks,
@@ -181,17 +181,47 @@ function PanelFooter({
   );
 }
 
-function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <section
-      className={cn(
-        "flex flex-col rounded-lg border border-border bg-card p-6 transition-colors hover:border-border/80",
-        className,
-      )}
-    >
-      {children}
-    </section>
+function Panel({
+  children,
+  className,
+  href,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  href?: string;
+}) {
+  const navigate = useNavigate();
+  const baseClasses = cn(
+    "flex flex-col rounded-lg border border-border bg-card p-6 transition-all",
+    href
+      ? "cursor-pointer hover:border-accent/50 hover:shadow-[0_4px_24px_-12px_hsl(var(--accent)/0.35)]"
+      : "hover:border-border/80",
+    className,
   );
+  if (href) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={(e) => {
+          // Não navega se o clique veio de um link/botão interno
+          const target = e.target as HTMLElement;
+          if (target.closest("a, button")) return;
+          navigate(href);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            navigate(href);
+          }
+        }}
+        className={baseClasses}
+      >
+        {children}
+      </div>
+    );
+  }
+  return <section className={baseClasses}>{children}</section>;
 }
 
 function ComingSoonBanner({ children }: { children: React.ReactNode }) {
@@ -376,7 +406,7 @@ export function AbaOperacional({
       {/* ───── 4 painéis ───── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* ─── FINANCEIRO ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/financeiro`}>
           <PanelHeader
             icon={DollarSign}
             title="Financeiro"
@@ -455,11 +485,11 @@ export function AbaOperacional({
             ) : null}
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/financeiro/movimentacoes" label="Ver no Financeiro" />
+          <PanelFooter href={`/projetos/${projectId}/financeiro`} label="Abrir detalhes" />
         </Panel>
 
         {/* ─── TAREFAS ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/tarefas`}>
           <PanelHeader
             icon={ListChecks}
             title="Tarefas"
@@ -510,11 +540,11 @@ export function AbaOperacional({
             )}
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/area-dev" label="Ver na Área Dev" />
+          <PanelFooter href={`/projetos/${projectId}/tarefas`} label="Abrir detalhes" />
         </Panel>
 
         {/* ─── SUPORTE ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/suporte`}>
           <PanelHeader
             icon={Headphones}
             title="Suporte"
@@ -552,11 +582,11 @@ export function AbaOperacional({
             )}
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/suporte" label="Ver no Suporte" />
+          <PanelFooter href={`/projetos/${projectId}/suporte`} label="Abrir detalhes" />
         </Panel>
 
         {/* ─── TOKENS DE IA ─── */}
-        <Panel>
+        <Panel href={`/projetos/${projectId}/tokens`}>
           <PanelHeader
             icon={Brain}
             title="Tokens de IA"
@@ -611,7 +641,7 @@ export function AbaOperacional({
             <ComingSoonBanner>Módulo Tokens em breve.</ComingSoonBanner>
           </div>
           <div className="flex-1" />
-          <PanelFooter href="/tokens" label="Ver em Tokens" />
+          <PanelFooter href={`/projetos/${projectId}/tokens`} label="Abrir detalhes" />
         </Panel>
       </div>
 

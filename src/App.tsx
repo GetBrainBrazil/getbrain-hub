@@ -19,6 +19,10 @@ import ExtratoMovimentacaoDetalhe from "./pages/ExtratoMovimentacaoDetalhe";
 import ConfiguracoesFinanceiras from "./pages/ConfiguracoesFinanceiras";
 import Projetos from "./pages/Projetos";
 import ProjetoDetalhe from "./pages/ProjetoDetalhe";
+import ProjetoFinanceiroDetalhe from "./pages/projetos/ProjetoFinanceiroDetalhe";
+import ProjetoTarefasDetalhe from "./pages/projetos/ProjetoTarefasDetalhe";
+import ProjetoSuporteDetalhe from "./pages/projetos/ProjetoSuporteDetalhe";
+import ProjetoTokensDetalhe from "./pages/projetos/ProjetoTokensDetalhe";
 import DevLayout from "./components/dev/DevLayout";
 import DevDashboard from "./pages/dev/DevDashboard";
 import DevKanban from "./pages/dev/DevKanban";
@@ -92,6 +96,10 @@ const App = () => (
             <Route path="/financeiro/contratos" element={<ProtectedRoute><ContratosManutencao /></ProtectedRoute>} />
             <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
             <Route path="/projetos/:id" element={<ProtectedRoute><ProjetoDetalhe /></ProtectedRoute>} />
+            <Route path="/projetos/:id/financeiro" element={<ProtectedRoute><ProjetoFinanceiroDetalhe /></ProtectedRoute>} />
+            <Route path="/projetos/:id/tarefas" element={<ProtectedRoute><ProjetoTarefasDetalhe /></ProtectedRoute>} />
+            <Route path="/projetos/:id/suporte" element={<ProtectedRoute><ProjetoSuporteDetalhe /></ProtectedRoute>} />
+            <Route path="/projetos/:id/tokens" element={<ProtectedRoute><ProjetoTokensDetalhe /></ProtectedRoute>} />
             <Route path="/area-dev" element={<Navigate to="/dev/kanban" replace />} />
             <Route path="/dev" element={<ProtectedRoute><DevLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="dashboard" replace />} />
