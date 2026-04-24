@@ -1,72 +1,52 @@
-## Objetivo
+## Pessoas de Contato no Projeto
 
-Permitir editar **toda** a manutenção mensal direto no card "Financeiro" do projeto (sem abrir modal), incluindo: mensalidade, % desconto, duração do desconto (indefinido ou Nº meses), bolsão de tokens e data de início. Garantir que outros módulos que consomem essa informação (Vendas, Contratos de Manutenção, Aba Operacional, sidebar/MRR) reflitam imediatamente as mudanças e respeitem a expiração do desconto.
+Adicionar gestão de pessoas de contato do cliente direto na Visão Geral do projeto, reaproveitando o modelo já existente do CRM (`people` + `company_people`).
 
-## O que muda na tela (Projeto → card Financeiro)
+### Onde colocar
 
-A seção "Manutenção" passa a fazer parte do mesmo modo de edição do card Financeiro (botão **Editar** que já existe no topo do card). Quando `editing === "financial"`:
+Novo **card "Pessoas de contato"** na Visão Geral do projeto, posicionado na coluna principal logo abaixo do card "Cliente" / "Informações", acima de "Financeiro". É o local mais natural porque os contatos pertencem à empresa-cliente vinculada ao projeto.
 
-- **Mensalidade**: input numérico (valor inteiro em R$).
-- **Desconto (%)**: input numérico (0–100).
-- **Duração do desconto**: aparece somente se desconto > 0. Toggle entre:
-  - "Indefinido" (salva `discount_duration_months = null`)
-  - "Por X meses" (input numérico ao lado).
-- **Bolsão de tokens (R$)**: input numérico, opcional.
-- **Início**: date input.
-- **Status**: select (active / paused / cancelled) — apenas quando já existe contrato.
+Adicionalmente, na **sidebar direita** (Propriedades), abaixo da linha "Cliente", mostrar o contato principal de forma compacta (nome + cargo, com tooltip exibindo email/telefone) para acesso rápido.
 
-Quando **não há contrato** e o usuário clica Editar no card Financeiro, mostramos os mesmos campos com defaults (Status = active, Início = hoje). Ao clicar **Salvar**:
-- Se não existia → `INSERT` em `maintenance_contracts`.
-- Se existia → `UPDATE` no contrato ativo.
-- Se mensalidade for 0/vazia e não havia contrato → não cria nada.
+### Como vai funcionar
 
-Em modo de leitura, mantemos o resumo atual (Mensalidade, Desconto com "indefinido / por N meses até dd/mm/aaaa / expirado", MRR efetivo, Bolsão, Início).
+O card lista as pessoas vinculadas à `company_id` do projeto via `company_people`. Cada linha mostra avatar/inicial, nome, cargo, email e telefone, com badge "Principal" para o `is_primary_contact`.
 
-O modal `NovoContratoDialog` deixa de ser usado a partir do card Financeiro do projeto (continua disponível na página de Contratos para criar contratos avulsos). Removemos o botão "Adicionar/Editar" da seção Manutenção e o `<NovoContratoDialog>` montado no detalhe do projeto.
+Ações no card:
+- **Adicionar contato**: formulário inline (sem modal) com Nome, Cargo, Email, Telefone — cria em `people` + vincula em `company_people` para a empresa do projeto.
+- **Editar**: clicar em qualquer campo da linha entra em modo edição inline (mesmo padrão dos outros cards da página).
+- **Marcar como principal**: estrela/toggle que atualiza `is_primary_contact` (desmarca os demais da mesma empresa).
+- **Remover do projeto/empresa**: remove o vínculo `company_people` (soft via `ended_at`); a pessoa continua existindo no CRM.
 
-## Integrações com outros módulos (consistência)
+Máscaras automáticas: telefone BR `(11) 99999-9999` e validação de email com zod.
 
-A regra de **MRR efetivo respeitando expiração do desconto** precisa ser uniforme. Hoje só `ProjetoDetalhe` aplica isso. Vamos:
+### Integração cross-módulo
 
-1. **Criar helper compartilhado** `src/lib/maintenance.ts` exportando:
-   - `getDiscountInfo(contract)` → `{ active, indefinite, endsAt }`
-   - `getEffectiveMrr(contract, atDate?)` → number (aplica desconto só se vigente)
-   - `getAnnualMrr(contracts)` etc.
-2. **Substituir cálculos duplicados** em:
-   - `src/pages/ProjetoDetalhe.tsx` (sidebar, mini-KPI, card Financeiro).
-   - `src/pages/ContratosManutencao.tsx` (linhas 33, 82–118: `mrrAtivo` passa a usar `getEffectiveMrr`; tabela mostra "−10% até dd/mm" ou "−10% indef." e "expirado" quando aplicável).
-   - `src/components/projetos/AbaOperacional.tsx` (linhas 333–336: `activeContractMrr` usa `getEffectiveMrr`).
-   - `src/components/projetos/ProjetoDrawer.tsx` (linha 410: cálculo do MRR no resumo do contrato).
-3. **Vendas (`NovaVendaDialog`)**: ao listar contratos no select, exibir mensalidade efetiva (com `getEffectiveMrr`) e marcar visualmente "desconto expirado" para o usuário entender o valor real cobrado. Sem mudança de schema.
-4. Todas as queries de `maintenance_contracts` passam a selecionar também `discount_duration_months` (já existe na tabela).
+Como `people` e `company_people` são as MESMAS tabelas usadas pelo CRM (Leads, Deals), qualquer contato cadastrado aqui:
+- Aparece automaticamente nos seletores de contato do CRM (`NewLeadDialog`, `NewDealDialog`, `usePeopleByCompany`).
+- Aparece na página de detalhe da empresa (`CrmCompanyDetail`).
+- Reciprocamente, contatos cadastrados pelo CRM já aparecem aqui.
 
-## Detalhes técnicos
+Não há duplicação de dados — é uma única fonte de verdade por empresa.
 
-- Estados novos no `ProjetoDetalhe.tsx` (junto aos demais drafts):
-  - `draftMonthlyFee`, `draftDiscountPct`, `draftDiscountIndefinite` (boolean), `draftDiscountMonths`, `draftContractTokenBudget`, `draftContractStartDate`, `draftContractStatus`.
-- `openEditor("financial")` popula esses drafts a partir de `activeContract` (ou defaults).
-- `Salvar` do card Financeiro faz, em sequência:
-  1. `patchProject(updates, changes)` (campos do projeto, como já faz hoje).
-  2. Upsert do contrato:
-     - Payload: `{ project_id, organization_id: project.organization_id, monthly_fee, monthly_fee_discount_percent, discount_duration_months: indefinite ? null : Number(months), token_budget_brl, start_date, status }`.
-     - Se `activeContract`: `update().eq('id', activeContract.id)`.
-     - Caso contrário e `monthly_fee > 0`: `insert`.
-  3. Registra em `audit_logs` (entity_type = `maintenance_contract`, action `update`/`create`) com diff dos campos relevantes — segue o padrão de `patchProject`.
-  4. Recarrega `loadProjeto()` para atualizar `contracts`.
-- Validação simples: desconto entre 0 e 100; se duração não-indefinida, meses ≥ 1.
-- O helper `getDiscountInfo` move a função inline atual (linhas 790–800 do `ProjetoDetalhe.tsx`) para o módulo compartilhado.
+### Detalhes técnicos
 
-## Fora de escopo
+**Sem migração de banco** — tabelas `people` e `company_people` já existem com RLS adequada.
 
-- Histórico de versões de contrato (manter "1 contrato ativo por projeto").
-- Mudanças no schema do banco (a coluna `discount_duration_months` já existe).
-- Reescrever o modal `NovoContratoDialog` (continua para criação avulsa em `/contratos`).
+**Novo hook** `src/hooks/projetos/useProjectContacts.ts`:
+- `useProjectContacts(companyId)`: lista pessoas via join `company_people` → `people` (reusa lógica de `useCrmReference.usePeopleByCompany` mas retorna também `is_primary_contact` e `role`).
+- `useUpsertContact()`: cria/atualiza pessoa + vínculo.
+- `useSetPrimaryContact()`: transação que zera primários da empresa e marca o escolhido.
+- `useUnlinkContact()`: seta `ended_at = today` em `company_people`.
 
-## Arquivos afetados
+**Novo componente** `src/components/projetos/CardContatos.tsx` consumido por `ProjetoDetalhe.tsx`. Segue o padrão visual dos cards existentes (`CardBlock`, `PropRow`).
 
-- `src/lib/maintenance.ts` (novo)
-- `src/pages/ProjetoDetalhe.tsx` (edição inline + remover dialog do card)
-- `src/pages/ContratosManutencao.tsx` (usar helper, mostrar vigência)
-- `src/components/projetos/AbaOperacional.tsx` (usar helper)
-- `src/components/projetos/ProjetoDrawer.tsx` (usar helper)
-- `src/components/vendas/NovaVendaDialog.tsx` (mostrar mensalidade efetiva)
+**Sidebar**: adicionar `SidebarRow label="Contato principal"` em `ProjetoDetalhe.tsx` linha ~2145, consumindo o mesmo hook.
+
+**Arquivos alterados**:
+- novo `src/hooks/projetos/useProjectContacts.ts`
+- novo `src/components/projetos/CardContatos.tsx`
+- editar `src/pages/ProjetoDetalhe.tsx` (inserir card + linha sidebar)
+- editar `src/lib/formatters.ts` (helper `formatPhoneBR` se ainda não existir)
+
+**Auditoria**: cada criação/edição/remoção registra em `audit_logs` com `entity_type = 'person'` ou `'company_people'`, seguindo o padrão já usado para contratos.
