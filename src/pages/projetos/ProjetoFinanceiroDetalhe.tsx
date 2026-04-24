@@ -505,14 +505,21 @@ export default function ProjetoFinanceiroDetalhe() {
 
       {/* ─── Bloco 1: Saúde financeira ─── */}
       <DetalheBloco icon={Activity} title="Saúde financeira">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <Donut
-            recebido={totals.recebido}
-            previsto={totals.previsto}
-            atrasado={totals.atrasado}
-          />
-          <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[280px_1fr]">
+          <div className="flex flex-col gap-4">
+            <Donut
+              recebido={totals.recebido}
+              previsto={totals.previsto}
+              atrasado={totals.atrasado}
+            />
+            <DonutLegend
+              recebido={totals.recebido}
+              previsto={totals.previsto}
+              atrasado={totals.atrasado}
+            />
+          </div>
+          <div className="md:border-l md:border-border/60 md:pl-6">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               Linha do tempo de parcelas
             </p>
             <Timeline items={allReceitas} />
