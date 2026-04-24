@@ -971,12 +971,16 @@ export default function ProjetoFinanceiroDetalhe() {
           </div>
         </div>
 
-        {/* Calendário geral em baixo */}
+        {/* Calendário financeiro completo */}
         <div className="mt-6 border-t border-border/60 pt-4">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Calendário de parcelas (todas)
+            Calendário financeiro
           </p>
-          <ParcelasCalendar items={allReceitas} />
+          <ParcelasCalendar
+            receitas={allReceitas}
+            despesas={detail?.despesas ?? []}
+            categoriasMap={detail?.categoriasMap ?? {}}
+          />
         </div>
       </DetalheBloco>
 
