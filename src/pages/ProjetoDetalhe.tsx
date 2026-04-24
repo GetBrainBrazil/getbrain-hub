@@ -406,6 +406,10 @@ export default function ProjetoDetalhe() {
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
 
+  const [activeTab, setActiveTab] = usePersistedState<string>(
+    `projeto:${projectId}:tab`,
+    "overview",
+  );
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [company, setCompany] = useState<{ id: string; legal_name: string; trade_name: string | null } | null>(null);
