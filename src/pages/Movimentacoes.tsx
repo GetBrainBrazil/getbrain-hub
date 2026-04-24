@@ -121,7 +121,7 @@ function MultiSelectFilter({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 min-w-[180px] justify-between gap-2 text-xs">
+        <Button variant="outline" size="sm" className="h-8 w-auto justify-between gap-1.5 px-2.5 text-xs font-normal">
           <span className="truncate">
             {title}
             {selected.length > 0 ? ` (${selected.length})` : ""}
