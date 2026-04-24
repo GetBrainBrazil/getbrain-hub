@@ -11,7 +11,7 @@ export interface Lead {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null;
   status: LeadStatus; source: string | null; estimated_value: number | null; pain_description: string | null; notes: string | null;
   triagem_scheduled_at: string | null; triagem_happened_at: string | null; lost_reason: string | null; converted_to_deal_id: string | null; converted_at: string | null;
-  company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; converted_deal_code?: string | null;
+  created_at?: string; company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; converted_deal_code?: string | null;
 }
 
 export interface Deal {
