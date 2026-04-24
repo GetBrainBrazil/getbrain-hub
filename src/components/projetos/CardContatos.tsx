@@ -142,6 +142,7 @@ function ContactRow({
         </Tooltip>
       </div>
     </div>
+    </>
   );
 }
 
