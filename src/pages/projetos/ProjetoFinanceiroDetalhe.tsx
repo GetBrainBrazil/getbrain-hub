@@ -226,8 +226,13 @@ function DonutLegend({
   );
 }
 
-/* ─────────────────────────────────────────────── timeline ─── */
-function Timeline({ items }: { items: ProjectMovimentacao[] }) {
+/* ─────────────────────────────────────────────── calendar ─── */
+const MES_LABEL = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+
+function ParcelasCalendar({ items }: { items: ProjectMovimentacao[] }) {
   if (items.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-border/60 text-xs text-muted-foreground">
@@ -235,14 +240,6 @@ function Timeline({ items }: { items: ProjectMovimentacao[] }) {
       </div>
     );
   }
-  const dates = items.map((m) => new Date(m.data_vencimento).getTime());
-  const min = Math.min(...dates);
-  const max = Math.max(...dates);
-  const span = Math.max(1, max - min);
-
-  const now = Date.now();
-  const todayPct =
-    now >= min && now <= max ? ((now - min) / span) * 100 : null;
 
   const counts = items.reduce(
     (acc, m) => {
@@ -251,6 +248,48 @@ function Timeline({ items }: { items: ProjectMovimentacao[] }) {
       return acc;
     },
     { recebido: 0, previsto: 0, atrasado: 0 } as Record<ParcelStatus, number>,
+  );
+
+  // Agrupa parcelas por YYYY-MM
+  const byMonth = new Map<string, ProjectMovimentacao[]>();
+  for (const m of items) {
+    const d = new Date(m.data_vencimento);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()).padStart(2, "0")}`;
+    if (!byMonth.has(key)) byMonth.set(key, []);
+    byMonth.get(key)!.push(m);
+  }
+
+  // Determina range completo (min..max) para incluir meses vazios
+  const dates = items.map((m) => new Date(m.data_vencimento));
+  const minDate = new Date(
+    Math.min(...dates.map((d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))),
+  );
+  const maxDate = new Date(
+    Math.max(...dates.map((d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))),
+  );
+
+  const months: { key: string; year: number; month: number }[] = [];
+  const cursor = new Date(Date.UTC(minDate.getUTCFullYear(), minDate.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(maxDate.getUTCFullYear(), maxDate.getUTCMonth(), 1));
+  while (cursor.getTime() <= end.getTime()) {
+    const y = cursor.getUTCFullYear();
+    const m = cursor.getUTCMonth();
+    months.push({ key: `${y}-${String(m).padStart(2, "0")}`, year: y, month: m });
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+
+  const today = new Date();
+  const todayKey = `${today.getUTCFullYear()}-${String(today.getUTCMonth()).padStart(2, "0")}`;
+
+  // Agrupa por ano para exibir cabeçalho de ano
+  const yearGroups = months.reduce<{ year: number; months: typeof months }[]>(
+    (acc, m) => {
+      const last = acc[acc.length - 1];
+      if (last && last.year === m.year) last.months.push(m);
+      else acc.push({ year: m.year, months: [m] });
+      return acc;
+    },
+    [],
   );
 
   return (
@@ -283,50 +322,85 @@ function Timeline({ items }: { items: ProjectMovimentacao[] }) {
             </span>
           </span>
         </div>
-      </div>
-
-      <div className="relative h-16 rounded-md border border-border/60 bg-gradient-to-b from-muted/10 to-muted/30">
-        <div className="absolute inset-x-3 top-1/2 h-px bg-border" />
-
-        {todayPct !== null && (
-          <>
-            <div
-              className="absolute top-1 bottom-1 w-px bg-foreground/30"
-              style={{ left: `calc(12px + ${todayPct}% - ${todayPct * 0.24}px)` }}
-            />
-            <span
-              className="absolute top-0.5 -translate-x-1/2 rounded-sm bg-foreground/80 px-1 font-mono text-[9px] font-medium uppercase tracking-wider text-background"
-              style={{ left: `calc(12px + ${todayPct}% - ${todayPct * 0.24}px)` }}
-            >
-              hoje
-            </span>
-          </>
-        )}
-
-        {items.map((m) => {
-          const t = new Date(m.data_vencimento).getTime();
-          const left = ((t - min) / span) * 100;
-          const s = parcelStatus(m);
-          return (
-            <div
-              key={m.id}
-              title={`${m.descricao} · ${formatCurrency(m.valor_previsto)} · ${formatDate(m.data_vencimento)} · ${statusLabel(s)}`}
-              className={cn(
-                "absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card shadow-sm transition-transform hover:scale-150",
-                statusColor(s),
-              )}
-              style={{ left: `calc(12px + ${left}% - ${left * 0.24}px)` }}
-            />
-          );
-        })}
-      </div>
-
-      <div className="flex items-center justify-between px-1 font-mono text-[10px] text-muted-foreground">
-        <span>{formatDate(new Date(min).toISOString())}</span>
-        <span className="text-muted-foreground/60">
+        <span className="ml-auto font-mono text-[10px] text-muted-foreground/60">
           {items.length} {items.length === 1 ? "parcela" : "parcelas"}
         </span>
-        <span>{formatDate(new Date(max).toISOString())}</span>
+      </div>
+
+      <div className="space-y-3">
+        {yearGroups.map((yg) => (
+          <div key={yg.year} className="space-y-1.5">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+              {yg.year}
+            </p>
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-6">
+              {yg.months.map((mo) => {
+                const parcelas = byMonth.get(mo.key) ?? [];
+                const total = parcelas.reduce(
+                  (sum, p) => sum + (p.valor_previsto ?? 0),
+                  0,
+                );
+                const isToday = mo.key === todayKey;
+                const isEmpty = parcelas.length === 0;
+                return (
+                  <div
+                    key={mo.key}
+                    className={cn(
+                      "group relative flex min-h-[68px] flex-col gap-1 rounded-md border bg-card/40 px-2 py-1.5 transition-colors",
+                      isEmpty
+                        ? "border-border/30 bg-transparent"
+                        : "border-border/60 hover:border-accent/40",
+                      isToday && "ring-2 ring-accent/60",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={cn(
+                          "font-mono text-[10px] font-semibold uppercase tracking-wider",
+                          isToday ? "text-accent" : "text-muted-foreground",
+                        )}
+                      >
+                        {MES_LABEL[mo.month]}
+                      </span>
+                      {parcelas.length > 0 && (
+                        <span className="font-mono text-[9px] text-muted-foreground/60">
+                          {parcelas.length}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {parcelas.slice(0, 8).map((p) => {
+                        const s = parcelStatus(p);
+                        return (
+                          <span
+                            key={p.id}
+                            title={`${p.descricao} · ${formatCurrency(p.valor_previsto)} · ${formatDate(p.data_vencimento)} · ${statusLabel(s)}`}
+                            className={cn(
+                              "h-2 w-2 rounded-full border border-card transition-transform hover:scale-150",
+                              statusColor(s),
+                            )}
+                          />
+                        );
+                      })}
+                      {parcelas.length > 8 && (
+                        <span className="font-mono text-[9px] text-muted-foreground/60">
+                          +{parcelas.length - 8}
+                        </span>
+                      )}
+                    </div>
+
+                    {parcelas.length > 0 && (
+                      <span className="mt-auto font-mono text-[10px] font-semibold tabular-nums text-foreground/80">
+                        {formatCurrency(total)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
