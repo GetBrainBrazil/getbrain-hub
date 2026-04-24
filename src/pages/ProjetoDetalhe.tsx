@@ -119,6 +119,7 @@ import { AbaOperacional } from "@/components/projetos/AbaOperacional";
 import { AbaTarefas } from "@/components/projetos/AbaTarefas";
 import { CardContatos } from "@/components/projetos/CardContatos";
 import { useProjectContacts } from "@/hooks/projetos/useProjectContacts";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import {
   dependencyStatusLabel,
   milestoneStatusLabel,
