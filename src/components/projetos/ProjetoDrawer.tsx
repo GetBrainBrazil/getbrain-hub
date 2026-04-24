@@ -25,6 +25,7 @@ import { Plus } from "lucide-react";
 import { AlocarAtorDialog } from "./AlocarAtorDialog";
 import { NovoContratoDialog } from "./NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 
 interface Props {
   projectId: string | null;
@@ -35,6 +36,10 @@ interface Props {
 
 export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Props) {
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+  const [drawerTab, setDrawerTab] = usePersistedState<string>(
+    `projeto-drawer:${projectId ?? "none"}:tab`,
+    "overview",
+  );
   const [project, setProject] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
   const [allocs, setAllocs] = useState<any[]>([]);
@@ -287,7 +292,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
           <StatusBadge status={project.status as ProjectStatus} />
         </SheetHeader>
 
-        <Tabs defaultValue="overview" className="mt-4">
+        <Tabs value={drawerTab} onValueChange={setDrawerTab} className="mt-4">
           <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="actors">Atores</TabsTrigger>

@@ -119,6 +119,7 @@ import { AbaOperacional } from "@/components/projetos/AbaOperacional";
 import { AbaTarefas } from "@/components/projetos/AbaTarefas";
 import { CardContatos } from "@/components/projetos/CardContatos";
 import { useProjectContacts } from "@/hooks/projetos/useProjectContacts";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import {
   dependencyStatusLabel,
   milestoneStatusLabel,
@@ -406,6 +407,10 @@ export default function ProjetoDetalhe() {
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
 
+  const [activeTab, setActiveTab] = usePersistedState<string>(
+    `projeto:${projectId}:tab`,
+    "overview",
+  );
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [company, setCompany] = useState<{ id: string; legal_name: string; trade_name: string | null } | null>(null);
@@ -1232,7 +1237,7 @@ export default function ProjetoDetalhe() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* COLUNA ESQUERDA */}
           <div className="min-w-0">
-            <Tabs defaultValue="overview" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
                 {[
                   ["overview", "Visão Geral", null],
