@@ -374,17 +374,30 @@ export default function ProjetoFinanceiroDetalhe() {
 
   const isLoading = metricsLoading || detailLoading;
 
-  // Derivações dos blocos
+  // Classificação implementação x manutenção
+  const isMaintenance = (r: ProjectMovimentacao) =>
+    r.recorrente === true ||
+    (r as any).source_entity_type === "maintenance_contract";
+
   const allReceitas = useMemo(
     () => [...(detail?.receitas ?? []), ...(detail?.recurring_receitas ?? [])],
     [detail],
   );
 
-  const totals = useMemo(() => {
+  const receitasImplementacao = useMemo(
+    () => allReceitas.filter((r) => !isMaintenance(r)),
+    [allReceitas],
+  );
+  const receitasManutencao = useMemo(
+    () => allReceitas.filter((r) => isMaintenance(r)),
+    [allReceitas],
+  );
+
+  const sumByStatus = (items: ProjectMovimentacao[]) => {
     let recebido = 0;
     let previsto = 0;
     let atrasado = 0;
-    for (const r of allReceitas) {
+    for (const r of items) {
       const valor = r.valor_realizado || r.valor_previsto;
       const s = parcelStatus(r);
       if (s === "recebido") recebido += r.valor_realizado || valor;
@@ -392,7 +405,11 @@ export default function ProjetoFinanceiroDetalhe() {
       else previsto += valor;
     }
     return { recebido, previsto, atrasado };
-  }, [allReceitas]);
+  };
+
+  const totalsImpl = useMemo(() => sumByStatus(receitasImplementacao), [receitasImplementacao]);
+  const totalsMan = useMemo(() => sumByStatus(receitasManutencao), [receitasManutencao]);
+  const totals = useMemo(() => sumByStatus(allReceitas), [allReceitas]);
 
   const despesaRealizada = useMemo(() => {
     return (detail?.despesas ?? []).reduce(
@@ -420,6 +437,15 @@ export default function ProjetoFinanceiroDetalhe() {
 
   const contratado = m?.revenue_contracted ?? 0;
   const margemPctReal = contratado ? (margemSimples / contratado) * 100 : 0;
+
+  // Implementação: pago vs contratado
+  const implPago = totalsImpl.recebido;
+  const implRestante = Math.max(0, contratado - implPago);
+  const implPct = contratado ? Math.min(100, (implPago / contratado) * 100) : 0;
+  // MRR ativo (a partir dos contratos)
+  const mrrAtivo = (detail?.contracts ?? [])
+    .filter((c) => c.status === "active")
+    .reduce((s, c) => s + getEffectiveMrr(c as any), 0);
 
   let semaforo: { tone: "success" | "warning" | "danger" | "muted"; label: string; explanation: string };
   if (contratado === 0) {
@@ -449,19 +475,18 @@ export default function ProjetoFinanceiroDetalhe() {
   }
 
   const kpis: MiniKpi[] = [
-    { label: "Contratado", value: formatCurrency(contratado) },
+    { label: "Contratado (impl.)", value: formatCurrency(contratado) },
     {
-      label: "Recebido",
-      value: formatCurrency(m?.revenue_received ?? 0),
-      hint: contratado
-        ? `${(((m?.revenue_received ?? 0) / contratado) * 100).toFixed(0)}% do contrato`
-        : undefined,
-      tone: "success",
+      label: "Implementação paga",
+      value: formatCurrency(implPago),
+      hint: contratado ? `${implPct.toFixed(0)}% · falta ${formatCurrency(implRestante)}` : undefined,
+      tone: implPct >= 100 ? "success" : implPct > 0 ? "warning" : "default",
     },
     {
-      label: "Pendente",
-      value: formatCurrency(m?.revenue_pending ?? 0),
-      tone: totals.atrasado > 0 ? "warning" : "default",
+      label: "Manutenção (MRR)",
+      value: formatCurrency(mrrAtivo),
+      hint: totalsMan.atrasado > 0 ? `${formatCurrency(totalsMan.atrasado)} atrasado` : "/mês ativo",
+      tone: totalsMan.atrasado > 0 ? "warning" : "success",
     },
     {
       label: "Margem real",
