@@ -7,7 +7,7 @@
  * plugado mostram banner "em breve" e valores zerados — nunca dados
  * mockados (princípio 2.15 do ARCHITECTURE.md).
  */
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DollarSign,
   ListChecks,
