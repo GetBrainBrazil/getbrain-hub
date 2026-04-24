@@ -150,9 +150,14 @@ function ScopeCardBlock({
     setDraft(initialValue ?? "");
   }, [initialValue]);
 
-  async function save() {
-    setSaving(true);
+  async function save(opts?: { silent?: boolean }) {
     const next = draft.trim() || null;
+    // Sem alterações? Apenas sai do modo de edição.
+    if (next === (value ?? null)) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
     const { error } = await supabase
       .from("projects")
       .update({ [card.field]: next } as any)
@@ -164,7 +169,7 @@ function ScopeCardBlock({
     }
     setValue(next);
     setEditing(false);
-    toast.success("Salvo", { duration: 1500 });
+    if (!opts?.silent) toast.success("Salvo", { duration: 1500 });
     onSaved();
   }
 
