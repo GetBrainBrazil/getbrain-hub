@@ -109,6 +109,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { getDiscountInfo, getEffectiveMrr } from "@/lib/maintenance";
 import { CurrencyInput, IntegerInput, PercentInput } from "@/components/ui/currency-input";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { AbaEscopo } from "@/components/projetos/AbaEscopo";
 import { AbaMarcos } from "@/components/projetos/AbaMarcos";
 import { AbaRiscos } from "@/components/projetos/AbaRiscos";
