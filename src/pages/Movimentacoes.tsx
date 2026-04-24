@@ -1089,13 +1089,13 @@ export default function Movimentacoes() {
                       ))}
                     </TableRow>
                   ))
-                ) : filtered.length === 0 ? (
+                ) : ordered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-10 text-muted-foreground text-sm">
                       Nenhuma movimentação encontrada com os filtros atuais.
                     </TableCell>
                   </TableRow>
-                ) : filtered.map(m => {
+                ) : ordered.map(m => {
                   const valueColor = isPagar ? "text-destructive" : "text-success";
                   const valorPrevisto = Number(m.valor_previsto) || 0;
                   const valorPago = Number(m.valor_realizado) || 0;
