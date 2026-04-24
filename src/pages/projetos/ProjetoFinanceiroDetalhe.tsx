@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
