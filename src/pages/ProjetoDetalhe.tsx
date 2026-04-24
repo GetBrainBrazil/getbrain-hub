@@ -422,6 +422,30 @@ export default function ProjetoDetalhe() {
   const [draftCriteria, setDraftCriteria] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
 
+  function syncDrafts(source: Partial<Project>) {
+    setNameDraft(source.name ?? "");
+    setDraftType((source.project_type as ProjectType) ?? "sistema_personalizado");
+    setDraftContractValue(source.contract_value != null ? String(source.contract_value) : "");
+    setDraftInstallments(source.installments_count != null ? String(source.installments_count) : "");
+    setDraftTokenBudget(source.token_budget_brl != null ? String(source.token_budget_brl) : "");
+    setDraftStartDate(source.start_date ?? "");
+    setDraftEstimated(source.estimated_delivery_date ?? "");
+    setDraftActual(source.actual_delivery_date ?? "");
+    setDraftDescription(source.description ?? "");
+    setDraftCriteria(source.acceptance_criteria ?? "");
+    setDraftNotes(source.notes ?? "");
+  }
+
+  function openEditor(section: NonNullable<typeof editing>) {
+    if (project) syncDrafts(project);
+    setEditing(section);
+  }
+
+  function closeEditor() {
+    if (project) syncDrafts(project);
+    setEditing(null);
+  }
+
   useEffect(() => {
     if (projectId) load();
   }, [projectId]);
@@ -439,17 +463,7 @@ export default function ProjetoDetalhe() {
       return;
     }
     setProject(p as Project);
-    setNameDraft(p.name);
-    setDraftType(p.project_type as ProjectType);
-    setDraftContractValue(p.contract_value?.toString() ?? "");
-    setDraftInstallments(p.installments_count?.toString() ?? "");
-    setDraftTokenBudget(p.token_budget_brl?.toString() ?? "");
-    setDraftStartDate(p.start_date ?? "");
-    setDraftEstimated(p.estimated_delivery_date ?? "");
-    setDraftActual(p.actual_delivery_date ?? "");
-    setDraftDescription(p.description ?? "");
-    setDraftCriteria(p.acceptance_criteria ?? "");
-    setDraftNotes(p.notes ?? "");
+    syncDrafts(p as Project);
 
     const { data: c } = await supabase
       .from("companies")
@@ -596,7 +610,9 @@ export default function ProjetoDetalhe() {
       return;
     }
     // Atualização otimista — sem recarregar a página inteira
-    setProject((prev) => (prev ? { ...prev, ...(updates as any) } : prev));
+    const nextProject = { ...project, ...(updates as any) } as Project;
+    setProject(nextProject);
+    syncDrafts(nextProject);
     if (Object.keys(changes).length > 0) {
       await logChange("update", changes);
       reloadLogs();
@@ -1033,29 +1049,44 @@ export default function ProjetoDetalhe() {
                           onClick={async () => {
                             const changes: Record<string, { before: any; after: any }> = {};
                             const updates: any = {};
+                            const nextName = nameDraft.trim();
+                            if (nextName && nextName !== project.name) {
+                              updates.name = nextName;
+                              changes.name = { before: project.name, after: nextName };
+                            }
                             if (draftType !== project.project_type) {
                               updates.project_type = draftType;
                               changes.project_type = { before: project.project_type, after: draftType };
                             }
                             await patchProject(updates, changes);
-                            setEditing(null);
+                            closeEditor();
                           }}
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("info")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("info")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
                   }
                 >
                   <div className="divide-y divide-border/40">
-                    <PropRow label="Nome">{project.name}</PropRow>
+                    <PropRow label="Nome">
+                      {editing === "info" ? (
+                        <Input
+                          value={nameDraft}
+                          onChange={(e) => setNameDraft(e.target.value)}
+                          className="ml-auto h-8 w-[320px]"
+                        />
+                      ) : (
+                        project.name
+                      )}
+                    </PropRow>
                     <PropRow label="Código">
                       <span className="font-mono text-accent">{project.code}</span>
                     </PropRow>
@@ -1123,12 +1154,12 @@ export default function ProjetoDetalhe() {
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("financial")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("financial")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1229,12 +1260,12 @@ export default function ProjetoDetalhe() {
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("schedule")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("schedule")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1334,12 +1365,12 @@ export default function ProjetoDetalhe() {
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("description")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("description")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1389,12 +1420,12 @@ export default function ProjetoDetalhe() {
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("criteria")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("criteria")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1451,12 +1482,12 @@ export default function ProjetoDetalhe() {
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        <Button size="sm" variant="ghost" onClick={closeEditor}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("notes")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("notes")}>
                         {project.notes ? (
                           <>
                             <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
