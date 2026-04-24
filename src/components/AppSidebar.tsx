@@ -6,6 +6,7 @@ import {
   Users,
   Settings,
   Code2,
+  Handshake,
   ChevronDown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -46,6 +47,18 @@ const navItems: NavItem[] = [
     ],
   },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
+  {
+    title: "CRM",
+    url: "/crm",
+    icon: Handshake,
+    children: [
+      { title: "Dashboard", url: "/crm/dashboard" },
+      { title: "Pipeline", url: "/crm/pipeline" },
+      { title: "Leads", url: "/crm/leads" },
+      { title: "Empresas", url: "/crm/empresas" },
+      { title: "Calendário", url: "/crm/calendario" },
+    ],
+  },
   {
     title: "Área Dev",
     url: "/dev",
