@@ -1129,6 +1129,13 @@ export default function ProjetoDetalhe() {
                               updates.project_type = draftType;
                               changes.project_type = { before: project.project_type, after: draftType };
                             }
+                            if (draftCompanyId && draftCompanyId !== project.company_id) {
+                              const beforeName = company?.trade_name || company?.legal_name || project.company_id;
+                              const afterCompany = companies.find((c) => c.id === draftCompanyId);
+                              const afterName = afterCompany ? (afterCompany.trade_name || afterCompany.legal_name) : draftCompanyId;
+                              updates.company_id = draftCompanyId;
+                              changes.company_id = { before: beforeName, after: afterName };
+                            }
                             await patchProject(updates, changes);
                             closeEditor();
                           }}
