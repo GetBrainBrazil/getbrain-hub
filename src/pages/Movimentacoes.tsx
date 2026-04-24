@@ -1057,10 +1057,10 @@ export default function Movimentacoes() {
                     <input
                       type="checkbox"
                       aria-label="Selecionar todas as movimentações"
-                      checked={filtered.length > 0 && filtered.every((m: any) => selectedIds.has(m.id))}
+                      checked={ordered.length > 0 && ordered.every((m: any) => selectedIds.has(m.id))}
                       ref={el => {
                         if (el) {
-                          const allIds = filtered.map((m: any) => m.id);
+                          const allIds = ordered.map((m: any) => m.id);
                           const someSelected = allIds.some(id => selectedIds.has(id));
                           const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
                           el.indeterminate = someSelected && !allSelected;
