@@ -34,6 +34,7 @@ export default function ContasReceber() {
   const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("contas_receber_period", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("contas_receber_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("contas_receber_sort", { key: null, direction: null });
+  const [lancamentoOrder, setLancamentoOrder] = usePersistedState<"none" | "recent" | "old">("contas_receber_lancamento_order", "none");
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
@@ -77,11 +78,24 @@ export default function ContasReceber() {
     });
   }, [movs, periodRange]);
 
-  const filtered = applySorting(periodFiltered.filter(m => {
+  const baseFiltered = periodFiltered.filter(m => {
     if (statusFilter !== "todos" && m.status !== statusFilter) return false;
     if (search && !m.descricao.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
-  }), sortConfig);
+  });
+
+  const filtered = useMemo(() => {
+    if (lancamentoOrder !== "none") {
+      const arr = [...baseFiltered];
+      arr.sort((a, b) => {
+        const da = new Date(a.created_at ?? 0).getTime();
+        const db = new Date(b.created_at ?? 0).getTime();
+        return lancamentoOrder === "recent" ? db - da : da - db;
+      });
+      return arr;
+    }
+    return applySorting(baseFiltered, sortConfig);
+  }, [baseFiltered, sortConfig, lancamentoOrder]);
 
   const totalPendente = periodFiltered.filter(m => m.status === "pendente").reduce((s, m) => s + Number(m.valor_previsto), 0);
   const recebidoMes = periodFiltered.filter(m => m.status === "pago").reduce((s, m) => s + Number(m.valor_realizado), 0);
@@ -245,6 +259,14 @@ export default function ContasReceber() {
               <Input placeholder="Buscar por descrição..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
             </div>
             <PeriodFilter preset={periodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
+            <Select value={lancamentoOrder} onValueChange={(v) => setLancamentoOrder(v as "none" | "recent" | "old")}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Lançamentos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Lançamentos: padrão</SelectItem>
+                <SelectItem value="recent">Mais recentes</SelectItem>
+                <SelectItem value="old">Mais antigos</SelectItem>
+              </SelectContent>
+            </Select>
             {["todos", "pendente", "pago", "atrasado", "cancelado"].map(s => (
               <Button key={s} size="sm" variant={statusFilter === s ? "default" : "outline"} onClick={() => setStatusFilter(s)} className="capitalize">
                 {s === "todos" ? "Todos" : s.charAt(0).toUpperCase() + s.slice(1)}
