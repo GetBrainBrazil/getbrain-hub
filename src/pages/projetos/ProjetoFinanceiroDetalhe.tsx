@@ -378,10 +378,14 @@ export default function ProjetoFinanceiroDetalhe() {
 
   const isLoading = metricsLoading || detailLoading;
 
-  // Classificação implementação x manutenção
+  // Classificação implementação x manutenção pela CATEGORIA do lançamento.
+  // Lançamentos auto-gerados pelo contrato (sem categoria) entram em manutenção como fallback.
   const isMaintenance = (r: ProjectMovimentacao) =>
-    r.recorrente === true ||
-    (r as any).source_entity_type === "maintenance_contract";
+    r.categoria_id === CATEGORIA_MANUTENCAO_ID ||
+    (r.categoria_id == null && r.source_entity_type === "maintenance_contract");
+
+  const isImplementation = (r: ProjectMovimentacao) =>
+    r.categoria_id === CATEGORIA_IMPLEMENTACAO_ID;
 
   const allReceitas = useMemo(
     () => [...(detail?.receitas ?? []), ...(detail?.recurring_receitas ?? [])],
@@ -389,11 +393,15 @@ export default function ProjetoFinanceiroDetalhe() {
   );
 
   const receitasImplementacao = useMemo(
-    () => allReceitas.filter((r) => !isMaintenance(r)),
+    () => allReceitas.filter(isImplementation),
     [allReceitas],
   );
   const receitasManutencao = useMemo(
-    () => allReceitas.filter((r) => isMaintenance(r)),
+    () => allReceitas.filter(isMaintenance),
+    [allReceitas],
+  );
+  const receitasOutras = useMemo(
+    () => allReceitas.filter((r) => !isImplementation(r) && !isMaintenance(r)),
     [allReceitas],
   );
 
