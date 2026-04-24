@@ -10,6 +10,15 @@ export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat("pt-BR").format(d);
 }
 
+export function formatPhoneBR(value: string | null | undefined): string {
+  if (!value) return "";
+  const digits = String(value).replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits.length ? `(${digits}` : "";
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
 export function formatPercent(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "percent",
