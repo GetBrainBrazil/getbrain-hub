@@ -732,12 +732,12 @@ export default function ProjetoFinanceiroDetalhe() {
           </div>
         </div>
 
-        {/* Timeline geral em baixo */}
+        {/* Calendário geral em baixo */}
         <div className="mt-6 border-t border-border/60 pt-4">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Linha do tempo de parcelas (todas)
+            Calendário de parcelas (todas)
           </p>
-          <Timeline items={allReceitas} />
+          <ParcelasCalendar items={allReceitas} />
         </div>
       </DetalheBloco>
 
