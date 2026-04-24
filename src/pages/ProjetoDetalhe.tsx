@@ -2397,7 +2397,9 @@ export default function ProjetoDetalhe() {
           onOpenChange={setAllocOpen}
           projectId={projectId!}
           excludeActorIds={allocs.map((a) => a.actor_id)}
-          onAllocated={load}
+          onAllocated={(allocation) => {
+            setAllocs((prev) => [...prev, allocation]);
+          }}
         />
         {/* contrato de manutenção agora é editado inline no card Financeiro */}
         {confirmDialogEl}

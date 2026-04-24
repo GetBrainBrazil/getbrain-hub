@@ -485,7 +485,9 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
           onOpenChange={setAllocOpen}
           projectId={projectId!}
           excludeActorIds={allocs.map((a) => a.actor_id)}
-          onAllocated={load}
+          onAllocated={(allocation) => {
+            setAllocs((prev) => [...prev, allocation]);
+          }}
         />
         <NovoContratoDialog
           open={contractOpen}
