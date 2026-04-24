@@ -442,6 +442,14 @@ export default function ContasPagar() {
               <Input placeholder="Buscar por descrição..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
             </div>
             <PeriodFilter preset={periodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
+            <Select value={lancamentoOrder} onValueChange={(v) => setLancamentoOrder(v as "none" | "recent" | "old")}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Lançamentos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Lançamentos: padrão</SelectItem>
+                <SelectItem value="recent">Mais recentes</SelectItem>
+                <SelectItem value="old">Mais antigos</SelectItem>
+              </SelectContent>
+            </Select>
             {["todos", "pendente", "pago", "atrasado", "cancelado"].map(s => (
               <Button key={s} size="sm" variant={statusFilter === s ? "default" : "outline"} onClick={() => setStatusFilter(s)} className="capitalize">
                 {s === "todos" ? "Todos" : s.charAt(0).toUpperCase() + s.slice(1)}
