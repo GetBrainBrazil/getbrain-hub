@@ -735,7 +735,7 @@ export default function Movimentacoes() {
   }
 
   function resetForm() {
-    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "", recorrente: false, frequencia_recorrencia: "mensal", quantidade_recorrencia: "12" });
+    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: projectIdFromUrl, categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "", recorrente: false, frequencia_recorrencia: "mensal", quantidade_recorrencia: "12" });
     setFornecedorSearch("");
     setClienteSearch("");
   }
