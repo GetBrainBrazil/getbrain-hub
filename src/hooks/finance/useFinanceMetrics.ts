@@ -66,7 +66,8 @@ async function fetchSummary(
     p_category_ids: filters.category_ids,
   } as never);
   if (error) throw error;
-  const r = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  const arr = (data ?? []) as Record<string, unknown>[];
+  const r = arr[0] ?? null;
   return {
     receita_bruta: num(r?.receita_bruta),
     despesa_total: num(r?.despesa_total),
@@ -522,15 +523,15 @@ export function useBalanceSparkline() {
         d.setDate(d.getDate() - i);
         const iso = toISODate(d);
         const results = await Promise.all(
-          ids.map(
-            (aid) =>
-              supabase.rpc("calculate_account_balance" as never, {
-                p_conta_id: aid,
-                p_ate_data: iso,
-              } as never) as Promise<{ data: number | null; error: unknown }>,
-          ),
+          ids.map(async (aid) => {
+            const { data } = await supabase.rpc("calculate_account_balance" as never, {
+              p_conta_id: aid,
+              p_ate_data: iso,
+            } as never);
+            return data as number | null;
+          }),
         );
-        const total = results.reduce((s, r) => s + num(r.data), 0);
+        const total = results.reduce((s, r) => s + num(r), 0);
         points.push(total);
       }
       return points;
