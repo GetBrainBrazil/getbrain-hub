@@ -728,9 +728,10 @@ export default function FinanceiroVisaoGeral() {
                     <Bar
                       dataKey="valor_total"
                       fill="hsl(var(--accent))"
-                      onClick={(d: { category_id?: string }) =>
-                        d.category_id && goCategoria(d.category_id)
-                      }
+                      onClick={(d: unknown) => {
+                        const id = (d as { payload?: { category_id?: string } })?.payload?.category_id;
+                        if (id) goCategoria(id);
+                      }}
                       style={{ cursor: "pointer" }}
                     />
                   </BarChart>
@@ -898,9 +899,10 @@ export default function FinanceiroVisaoGeral() {
                     <Bar
                       dataKey="valor_total"
                       fill="hsl(var(--destructive))"
-                      onClick={(d: { category_id?: string }) =>
-                        d.category_id && goCategoria(d.category_id)
-                      }
+                      onClick={(d: unknown) => {
+                        const id = (d as { payload?: { category_id?: string } })?.payload?.category_id;
+                        if (id) goCategoria(id);
+                      }}
                       style={{ cursor: "pointer" }}
                     />
                   </BarChart>
