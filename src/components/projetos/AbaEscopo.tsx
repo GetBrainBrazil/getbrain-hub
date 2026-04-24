@@ -277,13 +277,13 @@ function ScopeCardBlock({
           </div>
         ) : isEmpty ? (
           <p className="text-sm italic text-muted-foreground">{card.placeholder}</p>
-        ) : card.isCriteria ? (
+        ) : (
           <CriteriaList
             text={value!}
             onToggle={async (newText) => {
               const { error } = await supabase
                 .from("projects")
-                .update({ acceptance_criteria: newText } as any)
+                .update({ [card.field]: newText } as any)
                 .eq("id", projectId);
               if (error) {
                 toast.error(error.message);
@@ -291,11 +291,9 @@ function ScopeCardBlock({
               }
               setValue(newText);
               setDraft(newText);
-              onFieldSaved("acceptance_criteria", newText);
+              onFieldSaved(card.field, newText);
             }}
           />
-        ) : (
-          <MarkdownView text={value!} />
         )}
       </div>
     </section>
