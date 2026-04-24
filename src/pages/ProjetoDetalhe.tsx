@@ -25,6 +25,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AutoWidthInput } from "@/components/ui/auto-width-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -907,7 +908,7 @@ export default function ProjetoDetalhe() {
                 </span>
                 {editName ? (
                   <div className="flex items-center gap-2">
-                    <Input
+                    <AutoWidthInput
                       autoFocus
                       value={nameDraft}
                       onChange={(e) => setNameDraft(e.target.value)}
@@ -919,7 +920,8 @@ export default function ProjetoDetalhe() {
                         }
                       }}
                       onBlur={saveName}
-                      className="h-9 min-w-[320px] text-2xl font-bold"
+                      minWidth={320}
+                      className="h-9 text-2xl font-bold"
                     />
                   </div>
                 ) : (
@@ -1156,10 +1158,11 @@ export default function ProjetoDetalhe() {
                   <div className="divide-y divide-border/40">
                     <PropRow label="Nome">
                       {editing === "info" ? (
-                        <Input
+                        <AutoWidthInput
                           value={nameDraft}
                           onChange={(e) => setNameDraft(e.target.value)}
-                          className="ml-auto h-8 w-[320px]"
+                          minWidth={320}
+                          className="ml-auto h-8"
                         />
                       ) : (
                         project.name
