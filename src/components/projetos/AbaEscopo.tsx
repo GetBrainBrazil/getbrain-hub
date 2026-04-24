@@ -456,9 +456,9 @@ function MarkdownView({ text }: { text: string }) {
   let key = 0;
   while (i < lines.length) {
     const line = lines[i];
-    if (/^\s*[-*]\s/.test(line) && !/^\s*[-*]\s\[[ xX]\]\s/.test(line)) {
+    if (/^\s*[-*]\s/.test(line) && !/^\s*[-*]\s\[[ xX]?\]/.test(line)) {
       const items: string[] = [];
-      while (i < lines.length && /^\s*[-*]\s/.test(lines[i]) && !/^\s*[-*]\s\[[ xX]\]\s/.test(lines[i])) {
+      while (i < lines.length && /^\s*[-*]\s/.test(lines[i]) && !/^\s*[-*]\s\[[ xX]?\]/.test(lines[i])) {
         items.push(lines[i].replace(/^\s*[-*]\s/, ""));
         i++;
       }
