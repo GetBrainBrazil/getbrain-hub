@@ -34,6 +34,7 @@ export default function ContasReceber() {
   const [periodPreset, setPeriodPreset] = usePersistedState<PeriodPreset>("contas_receber_period", "month");
   const [periodCustom, setPeriodCustom] = usePersistedState<{ start: string | null; end: string | null }>("contas_receber_period_custom", { start: null, end: null });
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>("contas_receber_sort", { key: null, direction: null });
+  const [lancamentoOrder, setLancamentoOrder] = usePersistedState<"none" | "recent" | "old">("contas_receber_lancamento_order", "none");
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
   const [selectedMov, setSelectedMov] = useState<any>(null);
