@@ -410,14 +410,12 @@ function MarkdownToolbar({
       >
         <ListOrdered className="h-3.5 w-3.5" />
       </ToolbarButton>
-      {showChecklist && (
-        <ToolbarButton
-          title="Checklist"
-          onMouseDown={act((ta) => prefixLines(ta, "- [ ] ", setDraft))}
-        >
-          <CheckSquare className="h-3.5 w-3.5" />
-        </ToolbarButton>
-      )}
+      <ToolbarButton
+        title="Checklist"
+        onMouseDown={act((ta) => prefixLines(ta, "- [ ] ", setDraft))}
+      >
+        <CheckSquare className="h-3.5 w-3.5" />
+      </ToolbarButton>
     </div>
   );
 }
