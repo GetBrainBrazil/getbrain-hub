@@ -1236,6 +1236,7 @@ export type Database = {
           created_at: string
           created_by_actor_id: string | null
           deleted_at: string | null
+          discount_duration_months: number | null
           end_date: string | null
           hours_budget: number | null
           id: string
@@ -1254,6 +1255,7 @@ export type Database = {
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          discount_duration_months?: number | null
           end_date?: string | null
           hours_budget?: number | null
           id?: string
@@ -1272,6 +1274,7 @@ export type Database = {
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          discount_duration_months?: number | null
           end_date?: string | null
           hours_budget?: number | null
           id?: string
