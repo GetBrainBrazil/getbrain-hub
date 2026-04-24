@@ -1064,14 +1064,24 @@ export default function ProjetoDetalhe() {
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("info")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("info")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
                   }
                 >
                   <div className="divide-y divide-border/40">
-                    <PropRow label="Nome">{project.name}</PropRow>
+                    <PropRow label="Nome">
+                      {editing === "info" ? (
+                        <Input
+                          value={nameDraft}
+                          onChange={(e) => setNameDraft(e.target.value)}
+                          className="ml-auto h-8 w-[320px]"
+                        />
+                      ) : (
+                        project.name
+                      )}
+                    </PropRow>
                     <PropRow label="Código">
                       <span className="font-mono text-accent">{project.code}</span>
                     </PropRow>
@@ -1144,7 +1154,7 @@ export default function ProjetoDetalhe() {
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("financial")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("financial")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1250,7 +1260,7 @@ export default function ProjetoDetalhe() {
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("schedule")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("schedule")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1355,7 +1365,7 @@ export default function ProjetoDetalhe() {
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("description")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("description")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1410,7 +1420,7 @@ export default function ProjetoDetalhe() {
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("criteria")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("criteria")}>
                         <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
                       </Button>
                     )
@@ -1472,7 +1482,7 @@ export default function ProjetoDetalhe() {
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setEditing("notes")}>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor("notes")}>
                         {project.notes ? (
                           <>
                             <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
