@@ -53,6 +53,7 @@ export interface ProjectFinanceDetail {
   recurring_receitas: ProjectMovimentacao[];
   contracts: ProjectMaintenanceContract[];
   integrations: ProjectIntegration[];
+  categoriasMap: Record<string, string>;
 }
 
 export function useProjectFinanceDetail(projectId: string | undefined) {
