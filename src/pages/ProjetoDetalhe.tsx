@@ -1237,7 +1237,7 @@ export default function ProjetoDetalhe() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* COLUNA ESQUERDA */}
           <div className="min-w-0">
-            <Tabs defaultValue="overview" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
                 {[
                   ["overview", "Visão Geral", null],
