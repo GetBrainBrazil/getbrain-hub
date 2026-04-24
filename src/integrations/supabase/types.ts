@@ -447,11 +447,14 @@ export type Database = {
           created_at: string
           created_by_actor_id: string | null
           deleted_at: string | null
+          employee_count_range: string | null
           id: string
           industry: string | null
           legal_name: string
+          linkedin_url: string | null
           notes: string | null
           organization_id: string
+          relationship_status: Database["public"]["Enums"]["company_relationship_status"]
           size: Database["public"]["Enums"]["company_size"] | null
           status: Database["public"]["Enums"]["company_status"]
           trade_name: string | null
@@ -464,11 +467,14 @@ export type Database = {
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          employee_count_range?: string | null
           id?: string
           industry?: string | null
           legal_name: string
+          linkedin_url?: string | null
           notes?: string | null
           organization_id: string
+          relationship_status?: Database["public"]["Enums"]["company_relationship_status"]
           size?: Database["public"]["Enums"]["company_size"] | null
           status?: Database["public"]["Enums"]["company_status"]
           trade_name?: string | null
@@ -481,11 +487,14 @@ export type Database = {
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          employee_count_range?: string | null
           id?: string
           industry?: string | null
           legal_name?: string
+          linkedin_url?: string | null
           notes?: string | null
           organization_id?: string
+          relationship_status?: Database["public"]["Enums"]["company_relationship_status"]
           size?: Database["public"]["Enums"]["company_size"] | null
           status?: Database["public"]["Enums"]["company_status"]
           trade_name?: string | null
@@ -604,6 +613,250 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      deal_activities: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          deleted_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          happened_at: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          outcome: string | null
+          owner_actor_id: string | null
+          participants: string[] | null
+          scheduled_at: string | null
+          title: string
+          type: Database["public"]["Enums"]["activity_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          happened_at?: string | null
+          id?: string
+          lead_id?: string | null
+          organization_id: string
+          outcome?: string | null
+          owner_actor_id?: string | null
+          participants?: string[] | null
+          scheduled_at?: string | null
+          title: string
+          type: Database["public"]["Enums"]["activity_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          happened_at?: string | null
+          id?: string
+          lead_id?: string | null
+          organization_id?: string
+          outcome?: string | null
+          owner_actor_id?: string | null
+          participants?: string[] | null
+          scheduled_at?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["activity_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_activities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_activities_owner_actor_id_fkey"
+            columns: ["owner_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          closed_at: string | null
+          code: string
+          company_id: string
+          contact_person_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          estimated_value: number | null
+          expected_close_date: string | null
+          generated_project_id: string | null
+          id: string
+          lost_reason: string | null
+          notes: string | null
+          organization_id: string
+          origin_lead_id: string | null
+          owner_actor_id: string | null
+          probability_pct: number
+          project_type: Database["public"]["Enums"]["project_type"] | null
+          proposal_url: string | null
+          scope_summary: string | null
+          stage: Database["public"]["Enums"]["deal_stage"]
+          stage_changed_at: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          code?: string
+          company_id: string
+          contact_person_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          generated_project_id?: string | null
+          id?: string
+          lost_reason?: string | null
+          notes?: string | null
+          organization_id: string
+          origin_lead_id?: string | null
+          owner_actor_id?: string | null
+          probability_pct?: number
+          project_type?: Database["public"]["Enums"]["project_type"] | null
+          proposal_url?: string | null
+          scope_summary?: string | null
+          stage?: Database["public"]["Enums"]["deal_stage"]
+          stage_changed_at?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          code?: string
+          company_id?: string
+          contact_person_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          generated_project_id?: string | null
+          id?: string
+          lost_reason?: string | null
+          notes?: string | null
+          organization_id?: string
+          origin_lead_id?: string | null
+          owner_actor_id?: string | null
+          probability_pct?: number
+          project_type?: Database["public"]["Enums"]["project_type"] | null
+          proposal_url?: string | null
+          scope_summary?: string | null
+          stage?: Database["public"]["Enums"]["deal_stage"]
+          stage_changed_at?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_contact_person_id_fkey"
+            columns: ["contact_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_generated_project_id_fkey"
+            columns: ["generated_project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "deals_generated_project_id_fkey"
+            columns: ["generated_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_origin_lead_id_fkey"
+            columns: ["origin_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_owner_actor_id_fkey"
+            columns: ["owner_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       extrato_importacoes: {
         Row: {
@@ -848,6 +1101,131 @@ export type Database = {
             foreignKeyName: "humans_actor_id_fkey"
             columns: ["actor_id"]
             isOneToOne: true
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          code: string
+          company_id: string
+          contact_person_id: string | null
+          converted_at: string | null
+          converted_to_deal_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          estimated_value: number | null
+          id: string
+          lost_reason: string | null
+          notes: string | null
+          organization_id: string
+          owner_actor_id: string | null
+          pain_description: string | null
+          source: string | null
+          status: Database["public"]["Enums"]["lead_status"]
+          title: string
+          triagem_happened_at: string | null
+          triagem_scheduled_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code?: string
+          company_id: string
+          contact_person_id?: string | null
+          converted_at?: string | null
+          converted_to_deal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          estimated_value?: number | null
+          id?: string
+          lost_reason?: string | null
+          notes?: string | null
+          organization_id: string
+          owner_actor_id?: string | null
+          pain_description?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          title: string
+          triagem_happened_at?: string | null
+          triagem_scheduled_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          contact_person_id?: string | null
+          converted_at?: string | null
+          converted_to_deal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          estimated_value?: number | null
+          id?: string
+          lost_reason?: string | null
+          notes?: string | null
+          organization_id?: string
+          owner_actor_id?: string | null
+          pain_description?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          title?: string
+          triagem_happened_at?: string | null
+          triagem_scheduled_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_contact_person_id_fkey"
+            columns: ["contact_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_to_deal_id_fkey"
+            columns: ["converted_to_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_owner_actor_id_fkey"
+            columns: ["owner_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
             referencedRelation: "actors"
             referencedColumns: ["id"]
           },
@@ -2290,6 +2668,24 @@ export type Database = {
       }
     }
     Views: {
+      crm_pipeline_metrics: {
+        Row: {
+          conversion_rate_pct: number | null
+          deals_ativos: number | null
+          deals_ganhos_total: number | null
+          deals_perdidos_total: number | null
+          forecast_ponderado_brl: number | null
+          leads_convertidos: number | null
+          leads_descartados: number | null
+          leads_novos: number | null
+          leads_triagem_agendada: number | null
+          leads_triagem_feita: number | null
+          pipeline_total_brl: number | null
+          receita_ganha_total_brl: number | null
+          ticket_medio_brl: number | null
+        }
+        Relationships: []
+      }
       dev_dashboard_metrics: {
         Row: {
           actual_end_date: string | null
@@ -2367,6 +2763,10 @@ export type Database = {
       }
     }
     Functions: {
+      convert_lead_to_deal: {
+        Args: { p_deal_data?: Json; p_lead_id: string }
+        Returns: string
+      }
       financeiro_dashboard: {
         Args: { p_fim?: string; p_inicio?: string }
         Returns: {
@@ -2497,6 +2897,13 @@ export type Database = {
       vendas_importar_existentes: { Args: never; Returns: number }
     }
     Enums: {
+      activity_type:
+        | "reuniao_presencial"
+        | "reuniao_virtual"
+        | "ligacao"
+        | "email"
+        | "whatsapp"
+        | "outro"
       actor_status: "active" | "inactive" | "archived"
       actor_type: "human" | "ai_agent"
       ai_provider: "anthropic" | "openai" | "google" | "custom"
@@ -2508,9 +2915,22 @@ export type Database = {
         | "restore"
         | "status_change"
         | "custom"
+      company_relationship_status:
+        | "prospect"
+        | "lead"
+        | "active_client"
+        | "former_client"
+        | "lost"
       company_size: "micro" | "small" | "medium" | "large" | "enterprise"
       company_status: "active" | "inactive" | "churned" | "lost"
       company_type: "client" | "prospect" | "supplier" | "partner" | "other"
+      deal_stage:
+        | "presencial_agendada"
+        | "presencial_feita"
+        | "orcamento_enviado"
+        | "em_negociacao"
+        | "fechado_ganho"
+        | "fechado_perdido"
       employment_type: "founder" | "pj" | "clt" | "intern" | "freelancer"
       human_role:
         | "owner"
@@ -2519,6 +2939,12 @@ export type Database = {
         | "commercial"
         | "support"
         | "manager"
+      lead_status:
+        | "novo"
+        | "triagem_agendada"
+        | "triagem_feita"
+        | "descartado"
+        | "convertido"
       maintenance_contract_status: "active" | "paused" | "ended" | "cancelled"
       person_status: "active" | "inactive"
       project_actor_role:
@@ -2719,6 +3145,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_type: [
+        "reuniao_presencial",
+        "reuniao_virtual",
+        "ligacao",
+        "email",
+        "whatsapp",
+        "outro",
+      ],
       actor_status: ["active", "inactive", "archived"],
       actor_type: ["human", "ai_agent"],
       ai_provider: ["anthropic", "openai", "google", "custom"],
@@ -2731,9 +3165,24 @@ export const Constants = {
         "status_change",
         "custom",
       ],
+      company_relationship_status: [
+        "prospect",
+        "lead",
+        "active_client",
+        "former_client",
+        "lost",
+      ],
       company_size: ["micro", "small", "medium", "large", "enterprise"],
       company_status: ["active", "inactive", "churned", "lost"],
       company_type: ["client", "prospect", "supplier", "partner", "other"],
+      deal_stage: [
+        "presencial_agendada",
+        "presencial_feita",
+        "orcamento_enviado",
+        "em_negociacao",
+        "fechado_ganho",
+        "fechado_perdido",
+      ],
       employment_type: ["founder", "pj", "clt", "intern", "freelancer"],
       human_role: [
         "owner",
@@ -2742,6 +3191,13 @@ export const Constants = {
         "commercial",
         "support",
         "manager",
+      ],
+      lead_status: [
+        "novo",
+        "triagem_agendada",
+        "triagem_feita",
+        "descartado",
+        "convertido",
       ],
       maintenance_contract_status: ["active", "paused", "ended", "cancelled"],
       person_status: ["active", "inactive"],
