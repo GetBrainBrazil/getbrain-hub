@@ -1034,7 +1034,7 @@ export default function ProjetoDetalhe() {
             tone={mrr > 0 ? "success" : "default"}
             icon={TrendingUp}
             hint={
-              activeContract && Number(activeContract.monthly_fee_discount_percent) > 0
+              activeContract && discountInfo.active
                 ? `-${activeContract.monthly_fee_discount_percent}% desc.`
                 : activeContract
                 ? "Sem desconto"
