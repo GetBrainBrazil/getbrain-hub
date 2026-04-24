@@ -181,17 +181,30 @@ function PanelFooter({
   );
 }
 
-function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <section
-      className={cn(
-        "flex flex-col rounded-lg border border-border bg-card p-6 transition-colors hover:border-border/80",
-        className,
-      )}
-    >
-      {children}
-    </section>
+function Panel({
+  children,
+  className,
+  href,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  href?: string;
+}) {
+  const baseClasses = cn(
+    "flex flex-col rounded-lg border border-border bg-card p-6 transition-all",
+    href
+      ? "cursor-pointer hover:border-accent/50 hover:shadow-[0_4px_24px_-12px_hsl(var(--accent)/0.35)]"
+      : "hover:border-border/80",
+    className,
   );
+  if (href) {
+    return (
+      <Link to={href} className={baseClasses}>
+        {children}
+      </Link>
+    );
+  }
+  return <section className={baseClasses}>{children}</section>;
 }
 
 function ComingSoonBanner({ children }: { children: React.ReactNode }) {
