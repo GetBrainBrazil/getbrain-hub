@@ -413,8 +413,7 @@ export default function ProjetoDetalhe() {
   const [milestones, setMilestones] = useState<any[]>([]);
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [allocOpen, setAllocOpen] = useState(false);
-  const [contractOpen, setContractOpen] = useState(false);
-  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  // (modal de contrato removido — agora editamos inline no card Financeiro)
 
   // Edição inline do título do projeto
   const [editName, setEditName] = useState(false);
