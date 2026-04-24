@@ -2089,8 +2089,12 @@ export default function ProjetoDetalhe() {
         />
         <NovoContratoDialog
           open={contractOpen}
-          onOpenChange={setContractOpen}
+          onOpenChange={(v) => {
+            setContractOpen(v);
+            if (!v) setEditingContractId(null);
+          }}
           projectId={projectId!}
+          contractId={editingContractId ?? undefined}
           onCreated={load}
         />
         {confirmDialogEl}
