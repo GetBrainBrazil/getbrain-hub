@@ -1732,13 +1732,13 @@ export default function ProjetoDetalhe() {
                             const sd = draftStartDate || null;
                             if (sd !== (project.start_date ?? null)) {
                               updates.start_date = sd;
-                              changes.start_date = { before: project.start_date, after: sd };
+                              changes.start_date = { before: project.start_date ?? null, after: sd };
                             }
                             const ed = draftEstimated || null;
                             if (ed !== (project.estimated_delivery_date ?? null)) {
                               updates.estimated_delivery_date = ed;
                               changes.estimated_delivery_date = {
-                                before: project.estimated_delivery_date,
+                                before: project.estimated_delivery_date ?? null,
                                 after: ed,
                               };
                             }
@@ -1746,7 +1746,7 @@ export default function ProjetoDetalhe() {
                             if (ad !== (project.actual_delivery_date ?? null)) {
                               updates.actual_delivery_date = ad;
                               changes.actual_delivery_date = {
-                                before: project.actual_delivery_date,
+                                before: project.actual_delivery_date ?? null,
                                 after: ad,
                               };
                             }
