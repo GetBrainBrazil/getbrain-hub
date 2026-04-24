@@ -121,6 +121,8 @@ const emptyForm = {
 
 export default function MovimentacaoDetalhe() {
   const { id, tipo: tipoParam } = useParams<{ id?: string; tipo?: string }>();
+  const [searchParams] = useSearchParams();
+  const initialProjectId = searchParams.get("projectId") || "";
   const navigate = useNavigate();
   const { user } = useAuth();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
