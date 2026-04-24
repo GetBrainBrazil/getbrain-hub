@@ -292,7 +292,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
           <StatusBadge status={project.status as ProjectStatus} />
         </SheetHeader>
 
-        <Tabs defaultValue="overview" className="mt-4">
+        <Tabs value={drawerTab} onValueChange={setDrawerTab} className="mt-4">
           <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="actors">Atores</TabsTrigger>
