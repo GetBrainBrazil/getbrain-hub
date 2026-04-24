@@ -467,8 +467,34 @@ export default function ProjetoDetalhe() {
     setDraftCompanyId((source as any).company_id ?? "");
   }
 
+  function syncContractDrafts(c: any | null | undefined) {
+    if (c) {
+      setDraftMonthlyFee(c.monthly_fee != null ? String(c.monthly_fee) : "");
+      setDraftDiscountPct(
+        c.monthly_fee_discount_percent != null ? String(c.monthly_fee_discount_percent) : "",
+      );
+      const months = c.discount_duration_months;
+      setDraftDiscountIndefinite(!months);
+      setDraftDiscountMonths(months ? String(months) : "");
+      setDraftContractTokenBudget(c.token_budget_brl != null ? String(c.token_budget_brl) : "");
+      setDraftContractStartDate(c.start_date ?? "");
+      setDraftContractStatus((c.status as any) ?? "active");
+    } else {
+      setDraftMonthlyFee("");
+      setDraftDiscountPct("");
+      setDraftDiscountIndefinite(true);
+      setDraftDiscountMonths("");
+      setDraftContractTokenBudget("");
+      setDraftContractStartDate(new Date().toISOString().slice(0, 10));
+      setDraftContractStatus("active");
+    }
+  }
+
   function openEditor(section: NonNullable<typeof editing>) {
     if (project) syncDrafts(project);
+    if (section === "financial") {
+      syncContractDrafts(contracts.find((c) => c.status === "active") ?? null);
+    }
     setEditing(section);
   }
 
