@@ -1051,3 +1051,10 @@ Para evitar escopo inflado, o adendo não inclui:
 1. Daniel aplica o adendo no ARCHITECTURE.md do repo, commita.
 2. Claude gera Prompt 03A — dados reais + kanban denso. O prompt já assumirá a estrutura de sub-abas desta v1.5, então vai incluir o esqueleto do macro hub (rota /dev com Tabs) além do kanban em si.
 3. Em seguida, Prompt 03B (tela cheia task) e 03C (dashboard).
+
+## 16. Dívidas técnicas — Financeiro (registradas em 09A)
+
+1. **Tabela `movimentacoes` sem `deleted_at`**: não há soft-delete. Funções novas (`get_financial_summary`, `get_cash_projection`, `get_revenue_by_category`, `get_expense_by_category`, etc.) ignoram esse filtro por coerência com o código existente. Resolver em prompt futuro de normalização do schema financeiro.
+2. **Tabela `projetos` (PT) órfã**: existe mas está vazia (0 linhas). Toda integração de `movimentacoes.projeto_id` aponta para `projects` (EN). Limpar/dropar `projetos` em prompt futuro de limpeza.
+3. **Sem FK declarada em `movimentacoes.projeto_id`**: 100% das linhas populadas hoje apontam para `projects.id`, mas falta constraint formal. Adicionar `FOREIGN KEY` em prompt futuro.
+4. **Categoria oficial de "Tokens IA"**: não existe ainda. Destaque condicional adiado para quando o módulo Tokens (08) criar a categoria.
