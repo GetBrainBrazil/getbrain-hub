@@ -346,7 +346,7 @@ function prefixLines(
   const start = ta.selectionStart;
   const end = ta.selectionEnd;
   const before = ta.value.slice(0, start);
-  const sel = ta.value.slice(start, end) || "item";
+  const sel = ta.value.slice(start, end) || "";
   const after = ta.value.slice(end);
   const lineStart = before.lastIndexOf("\n") + 1;
   const head = ta.value.slice(lineStart, start);
