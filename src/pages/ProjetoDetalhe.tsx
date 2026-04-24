@@ -453,6 +453,7 @@ export default function ProjetoDetalhe() {
     setDraftDescription(source.description ?? "");
     setDraftCriteria(source.acceptance_criteria ?? "");
     setDraftNotes(source.notes ?? "");
+    setDraftCompanyId((source as any).company_id ?? "");
   }
 
   function openEditor(section: NonNullable<typeof editing>) {
@@ -463,6 +464,52 @@ export default function ProjetoDetalhe() {
   function closeEditor() {
     if (project) syncDrafts(project);
     setEditing(null);
+    setNewCompanyOpen(false);
+    setNewCompanyForm({ legal_name: "", cnpj: "", industry: "", website: "" });
+    setCompanyPickerOpen(false);
+  }
+
+  async function loadCompanies() {
+    const { data } = await supabase
+      .from("companies")
+      .select("id, legal_name, trade_name")
+      .is("deleted_at", null)
+      .order("legal_name");
+    setCompanies((data as any[]) || []);
+  }
+
+  async function createCompanyInline() {
+    const name = newCompanyForm.legal_name.trim();
+    if (!name) {
+      toast.error("Informe o nome da empresa");
+      return;
+    }
+    setCreatingCompany(true);
+    const { data, error } = await supabase
+      .from("companies")
+      .insert({
+        organization_id: GETBRAIN_ORG_ID,
+        legal_name: name,
+        trade_name: name,
+        cnpj: newCompanyForm.cnpj.trim() || null,
+        industry: newCompanyForm.industry.trim() || null,
+        website: newCompanyForm.website.trim() || null,
+        company_type: "client",
+        relationship_status: "cliente" as any,
+        status: "active" as any,
+      } as any)
+      .select("id, legal_name, trade_name")
+      .single();
+    setCreatingCompany(false);
+    if (error || !data) {
+      toast.error(error?.message || "Erro ao criar empresa");
+      return;
+    }
+    setCompanies((prev) => [...prev, data as any].sort((a, b) => a.legal_name.localeCompare(b.legal_name)));
+    setDraftCompanyId((data as any).id);
+    setNewCompanyOpen(false);
+    setNewCompanyForm({ legal_name: "", cnpj: "", industry: "", website: "" });
+    toast.success("Empresa criada");
   }
 
   useEffect(() => {
