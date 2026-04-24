@@ -1770,12 +1770,13 @@ export default function ProjetoDetalhe() {
                   <div className="divide-y divide-border/40">
                     <PropRow label="Início">
                       {editing === "schedule" ? (
-                        <Input
-                          type="date"
-                          value={draftStartDate}
-                          onChange={(e) => setDraftStartDate(e.target.value)}
-                          className="ml-auto h-8 w-[180px]"
-                        />
+                        <div className="ml-auto">
+                          <DatePickerField
+                            value={draftStartDate}
+                            onChange={setDraftStartDate}
+                            placeholder="—"
+                          />
+                        </div>
                       ) : project.start_date ? (
                         formatDate(project.start_date)
                       ) : (
@@ -1784,12 +1785,13 @@ export default function ProjetoDetalhe() {
                     </PropRow>
                     <PropRow label="Entrega Estimada">
                       {editing === "schedule" ? (
-                        <Input
-                          type="date"
-                          value={draftEstimated}
-                          onChange={(e) => setDraftEstimated(e.target.value)}
-                          className="ml-auto h-8 w-[180px]"
-                        />
+                        <div className="ml-auto">
+                          <DatePickerField
+                            value={draftEstimated}
+                            onChange={setDraftEstimated}
+                            placeholder="—"
+                          />
+                        </div>
                       ) : project.estimated_delivery_date ? (
                         formatDate(project.estimated_delivery_date)
                       ) : (
@@ -1798,12 +1800,13 @@ export default function ProjetoDetalhe() {
                     </PropRow>
                     <PropRow label="Entrega Real">
                       {editing === "schedule" ? (
-                        <Input
-                          type="date"
-                          value={draftActual}
-                          onChange={(e) => setDraftActual(e.target.value)}
-                          className="ml-auto h-8 w-[180px]"
-                        />
+                        <div className="ml-auto">
+                          <DatePickerField
+                            value={draftActual}
+                            onChange={setDraftActual}
+                            placeholder="—"
+                          />
+                        </div>
                       ) : project.actual_delivery_date ? (
                         formatDate(project.actual_delivery_date)
                       ) : (
