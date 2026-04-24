@@ -2887,6 +2887,23 @@ export type Database = {
           saldo_projetado: number
         }[]
       }
+      get_client_financial_summary: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          a_receber_futuro: number
+          atrasado: number
+          atrasado_mais_30d: number
+          company_id: string
+          company_name: string
+          count_projetos: number
+          count_projetos_ativos: number
+          dias_atraso_max: number
+          ltv_total: number
+          recebido_periodo: number
+          relationship_status: string
+          ultimo_pagamento: string
+        }[]
+      }
       get_crm_owner_performance: {
         Args: { p_days_back?: number }
         Returns: {
@@ -3002,6 +3019,18 @@ export type Database = {
           resultado: number
         }[]
       }
+      get_monthly_evolution: {
+        Args: { p_months?: number; p_regime?: string }
+        Returns: {
+          despesa: number
+          margem_pct: number
+          mes: string
+          mes_label: string
+          receita: number
+          resultado: number
+          saldo_fim_mes: number
+        }[]
+      }
       get_project_health_summary: {
         Args: { p_sprint_ids: string[] }
         Returns: {
@@ -3017,6 +3046,27 @@ export type Database = {
           tasks_done: number
           tasks_rework: number
           tasks_total: number
+        }[]
+      }
+      get_project_profitability: {
+        Args: { p_end_date?: string; p_regime?: string; p_start_date?: string }
+        Returns: {
+          company_name: string
+          count_despesas: number
+          count_receitas: number
+          despesa_realizada: number
+          despesa_total: number
+          margem_pct: number
+          pct_recebido: number
+          project_code: string
+          project_id: string
+          project_name: string
+          project_status: string
+          receita_pendente: number
+          receita_realizada: number
+          receita_total: number
+          resultado: number
+          tasks_hours_actual: number
         }[]
       }
       get_revenue_by_category: {
@@ -3057,6 +3107,22 @@ export type Database = {
           ideal_remaining: number
           remaining_tasks: number
           total_tasks: number
+        }[]
+      }
+      get_upcoming_movements: {
+        Args: { p_days_ahead?: number; p_include_overdue?: boolean }
+        Returns: {
+          categoria_nome: string
+          company_name: string
+          data_vencimento: string
+          descricao: string
+          dias_ate_vencimento: number
+          id: string
+          is_overdue: boolean
+          project_code: string
+          status: string
+          tipo: string
+          valor: number
         }[]
       }
       getbrain_org_id: { Args: never; Returns: string }
