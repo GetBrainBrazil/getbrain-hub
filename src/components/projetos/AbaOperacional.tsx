@@ -412,7 +412,7 @@ export function AbaOperacional({
             title="Financeiro"
             badge={<StatusBadge tone={financeTone}>{financeLabel}</StatusBadge>}
           />
-          {m.revenue_contracted === 0 ? (
+          {m.revenue_contracted === 0 && m.revenue_received === 0 && m.revenue_pending === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
               <DollarSign className="h-6 w-6 text-muted-foreground/50" />
               <p className="text-sm text-muted-foreground">
@@ -421,25 +421,96 @@ export function AbaOperacional({
             </div>
           ) : (
             <div className="mt-4 space-y-3">
-              <div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-muted-foreground">Contratado</span>
-                  <span className="font-mono text-2xl font-bold tabular-nums text-foreground">
-                    {formatCurrency(m.revenue_contracted)}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-muted-foreground">Recebido</span>
-                  <span className="font-mono tabular-nums text-success">
-                    {formatCurrency(m.revenue_received)} · {revenueProgress.toFixed(0)}%
-                  </span>
-                </div>
-                <ProgressBar value={revenueProgress} tone="success" />
-              </div>
+              {/* IMPLEMENTAÇÃO — one-shot vs contrato */}
+              {(() => {
+                const impRecebido = m.revenue_received_implementation ?? 0;
+                const impPendente = m.revenue_pending_implementation ?? 0;
+                const impPct = m.revenue_contracted
+                  ? Math.min(100, (impRecebido / m.revenue_contracted) * 100)
+                  : 0;
+                const impRestante = Math.max(0, (m.revenue_contracted ?? 0) - impRecebido);
+                return (
+                  <div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Implementação
+                      </span>
+                      <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                        contrato {formatCurrency(m.revenue_contracted)}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex items-baseline justify-between">
+                      <span className="font-mono text-lg font-bold tabular-nums text-success">
+                        {formatCurrency(impRecebido)}
+                      </span>
+                      <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                        {impPct.toFixed(0)}% pago
+                      </span>
+                    </div>
+                    <div className="mt-1.5">
+                      <ProgressBar value={impPct} tone="success" />
+                    </div>
+                    <div className="mt-1.5 flex items-baseline justify-between text-[11px]">
+                      <span className="text-muted-foreground">
+                        Restante:{" "}
+                        <span className={cn("font-mono tabular-nums", impRestante > 0 ? "text-warning" : "text-muted-foreground")}>
+                          {formatCurrency(impRestante)}
+                        </span>
+                      </span>
+                      {impPendente > 0 && (
+                        <span className="text-muted-foreground">
+                          A vencer:{" "}
+                          <span className="font-mono tabular-nums text-warning">
+                            {formatCurrency(impPendente)}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* MANUTENÇÃO — recorrente */}
+              {(() => {
+                const manRecebido = m.revenue_received_maintenance ?? 0;
+                const manPendente = m.revenue_pending_maintenance ?? 0;
+                if (manRecebido === 0 && manPendente === 0 && !activeContract) return null;
+                return (
+                  <div className="border-t border-border/60 pt-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Manutenção
+                      </span>
+                      {activeContract && (
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                          {formatCurrency(activeContractNet)}/mês
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1.5 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-md bg-success/5 px-2 py-1.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Recebido
+                        </div>
+                        <div className="font-mono text-sm font-semibold tabular-nums text-success">
+                          {formatCurrency(manRecebido)}
+                        </div>
+                      </div>
+                      <div className={cn("rounded-md px-2 py-1.5", manPendente > 0 ? "bg-warning/5" : "bg-muted/20")}>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Em aberto
+                        </div>
+                        <div className={cn("font-mono text-sm font-semibold tabular-nums", manPendente > 0 ? "text-warning" : "text-muted-foreground")}>
+                          {formatCurrency(manPendente)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Custo / Margem */}
               <div className="space-y-0 border-t border-border/60 pt-2">
-                <Row label="Pendente" value={formatCurrency(m.revenue_pending)} tone="warning" />
                 <Row label="Custo estimado" value={formatCurrency(m.cost_total_estimated)} />
                 <div className="mt-1 flex items-baseline justify-between border-t border-border/60 pt-2">
                   <span className="text-xs font-medium text-muted-foreground">Margem real</span>
@@ -450,17 +521,13 @@ export function AbaOperacional({
               </div>
             </div>
           )}
-          {/* Contrato de manutenção (resumo) */}
+          {/* Linha de gerir / criar contrato de manutenção */}
           <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
             <div className="flex min-w-0 items-center gap-2">
               <Wrench className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
               {activeContract ? (
                 <span className="truncate text-muted-foreground">
-                  Manutenção:{" "}
-                  <span className="font-mono font-semibold text-foreground">
-                    {formatCurrency(activeContractNet)}
-                  </span>
-                  /mês ativo
+                  Contrato ativo desde {formatDate(activeContract.start_date)}
                   {activeContract.end_date ? ` · até ${formatDate(activeContract.end_date)}` : ""}
                 </span>
               ) : (
