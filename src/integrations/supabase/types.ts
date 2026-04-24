@@ -2776,7 +2776,11 @@ export type Database = {
           project_status: Database["public"]["Enums"]["project_status"] | null
           revenue_contracted: number | null
           revenue_pending: number | null
+          revenue_pending_implementation: number | null
+          revenue_pending_maintenance: number | null
           revenue_received: number | null
+          revenue_received_implementation: number | null
+          revenue_received_maintenance: number | null
           start_date: string | null
           tasks_backlog: number | null
           tasks_blocked: number | null
