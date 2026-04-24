@@ -116,6 +116,8 @@ import { AbaDependencias } from "@/components/projetos/AbaDependencias";
 import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
 import { AbaOperacional } from "@/components/projetos/AbaOperacional";
 import { AbaTarefas } from "@/components/projetos/AbaTarefas";
+import { CardContatos } from "@/components/projetos/CardContatos";
+import { useProjectContacts } from "@/hooks/projetos/useProjectContacts";
 import {
   dependencyStatusLabel,
   milestoneStatusLabel,
@@ -406,6 +408,8 @@ export default function ProjetoDetalhe() {
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [company, setCompany] = useState<{ id: string; legal_name: string; trade_name: string | null } | null>(null);
+  const { data: projectContactsList = [] } = useProjectContacts(company?.id ?? null);
+  const primaryContact = projectContactsList.find((c) => c.is_primary_contact) ?? projectContactsList[0] ?? null;
   const [allocs, setAllocs] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
@@ -1471,6 +1475,11 @@ export default function ProjetoDetalhe() {
                   </div>
                 </CardBlock>
 
+                {/* Pessoas de contato */}
+                <CardBlock title="Pessoas de contato" icon={Users}>
+                  <CardContatos companyId={project.company_id} companyLabel={companyLabel} />
+                </CardBlock>
+
                 {/* Financeiro */}
                 <CardBlock
                   title="Financeiro"
@@ -2142,6 +2151,27 @@ export default function ProjetoDetalhe() {
                     <Building2 className="h-3 w-3 text-muted-foreground" />
                     {companyLabel}
                   </span>
+                </SidebarRow>
+                <SidebarRow label="Contato principal">
+                  {primaryContact ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex max-w-full cursor-help flex-col items-end leading-tight">
+                          <span className="truncate text-foreground">{primaryContact.full_name}</span>
+                          {primaryContact.role_in_company && (
+                            <span className="truncate text-[11px] text-muted-foreground">{primaryContact.role_in_company}</span>
+                          )}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="space-y-0.5 text-xs">
+                        {primaryContact.email && <div>{primaryContact.email}</div>}
+                        {primaryContact.phone && <div>{primaryContact.phone}</div>}
+                        {!primaryContact.email && !primaryContact.phone && <div>Sem contato cadastrado</div>}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </SidebarRow>
                 <SidebarRow label="Criado">{relativeTime(project.created_at)}</SidebarRow>
                 <SidebarRow label="Atualizado">{relativeTime(project.updated_at)}</SidebarRow>
