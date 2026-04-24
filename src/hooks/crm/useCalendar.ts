@@ -10,7 +10,16 @@ export function useCalendarEvents(filters: CalendarFilters) {
   return useQuery({
     queryKey: ['crm-calendar-events', filters.start.toISOString(), filters.end.toISOString(), filters.types, filters.owners, filters.statuses],
     queryFn: async (): Promise<DealActivity[]> => {
-      let query = sb.from('deal_activities').select('*').is('deleted_at', null).or(`scheduled_at.gte.${filters.start.toISOString()},happened_at.gte.${filters.start.toISOString()}`).or(`scheduled_at.lte.${filters.end.toISOString()},happened_at.lte.${filters.end.toISOString()}`).order('scheduled_at', { ascending: true });
+      const startIso = filters.start.toISOString();
+      const endIso = filters.end.toISOString();
+      let query = sb
+        .from('deal_activities')
+        .select('*')
+        .is('deleted_at', null)
+        .or(
+          `and(scheduled_at.gte.${startIso},scheduled_at.lt.${endIso}),and(happened_at.gte.${startIso},happened_at.lt.${endIso})`,
+        )
+        .order('scheduled_at', { ascending: true, nullsFirst: false });
       if (filters.types?.length) query = query.in('type', filters.types);
       if (filters.owners?.length) query = query.in('owner_actor_id', filters.owners);
       const { data, error } = await query;
