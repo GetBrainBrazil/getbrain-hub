@@ -22,7 +22,7 @@ function relativeActivity(iso?: string | null) {
   return `há ${days} dias`;
 }
 
-export function DealCard({ deal, dragging, onClick }: { deal: Deal; dragging?: boolean; onClick?: () => void }) {
+export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: Deal; dragging?: boolean; onClick?: () => void; onCompanyClick?: () => void }) {
   const activityDate = deal.last_activity?.happened_at ?? deal.last_activity?.scheduled_at;
   const initials = deal.owner?.display_name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'GB';
   const isUrgent = deal.expected_close_date && Math.ceil((new Date(`${deal.expected_close_date}T12:00:00`).getTime() - Date.now()) / 86400000) <= 7;
@@ -35,7 +35,7 @@ export function DealCard({ deal, dragging, onClick }: { deal: Deal; dragging?: b
       </div>
       <h3 className="mt-2 line-clamp-2 text-sm font-medium leading-snug text-foreground">{deal.title}</h3>
       <div className="mt-2 flex items-center gap-1.5 text-xs">
-        <span className="max-w-[150px] truncate rounded bg-accent/10 px-1.5 py-0.5 text-accent">{deal.company?.trade_name || deal.company?.legal_name}</span>
+        <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onCompanyClick?.(); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onCompanyClick?.(); } }} className="max-w-[150px] truncate rounded bg-accent/10 px-1.5 py-0.5 text-accent hover:bg-accent/20">{deal.company?.trade_name || deal.company?.legal_name}</span>
         {deal.contact && <span className="truncate text-muted-foreground">{deal.contact.full_name}</span>}
       </div>
       <p className="mt-3 text-lg font-semibold text-foreground">{formatCurrency(Number(deal.estimated_value ?? 0))}</p>

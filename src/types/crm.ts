@@ -11,14 +11,14 @@ export interface Lead {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null;
   status: LeadStatus; source: string | null; estimated_value: number | null; pain_description: string | null; notes: string | null;
   triagem_scheduled_at: string | null; triagem_happened_at: string | null; lost_reason: string | null; converted_to_deal_id: string | null; converted_at: string | null;
-  company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null;
+  created_at?: string; company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; converted_deal_code?: string | null;
 }
 
 export interface Deal {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null; origin_lead_id: string | null;
   stage: DealStage; estimated_value: number | null; probability_pct: number; expected_close_date: string | null; project_type: string | null;
   scope_summary: string | null; proposal_url: string | null; notes: string | null; stage_changed_at: string; closed_at: string | null; lost_reason: string | null; generated_project_id: string | null;
-  company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; origin_source?: string | null; last_activity?: DealActivity | null;
+  company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; origin_source?: string | null; origin_code?: string | null; last_activity?: DealActivity | null;
 }
 
 export interface DealActivity {

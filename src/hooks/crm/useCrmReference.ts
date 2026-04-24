@@ -48,22 +48,24 @@ export function useCompanyAutocomplete(search: string) {
 export function useCreateCompany() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { legal_name: string; cnpj?: string | null; industry?: string | null; website?: string | null }) => {
+    mutationFn: async (payload: { legal_name: string; trade_name?: string | null; cnpj?: string | null; industry?: string | null; website?: string | null; employee_count_range?: string | null; linkedin_url?: string | null; relationship_status?: CompanyRelationshipStatus }) => {
       const { data, error } = await sb.from('companies').insert({
         organization_id: ORG_ID,
         legal_name: payload.legal_name,
-        trade_name: payload.legal_name,
+        trade_name: payload.trade_name || payload.legal_name,
         cnpj: payload.cnpj || null,
         company_type: 'client',
-        relationship_status: 'prospect',
+        relationship_status: payload.relationship_status || 'prospect',
         industry: payload.industry || null,
         website: payload.website || null,
+        employee_count_range: payload.employee_count_range || null,
+        linkedin_url: payload.linkedin_url || null,
         status: 'active',
       }).select('id, legal_name, trade_name, relationship_status').single();
       if (error) throw error;
       return data as CrmCompany;
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['crm-companies'] }),
+    onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-companies'] }); qc.invalidateQueries({ queryKey: ['crm-companies-full'] }); },
   });
 }
 
