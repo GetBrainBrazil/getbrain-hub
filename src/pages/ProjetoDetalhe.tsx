@@ -108,6 +108,7 @@ import { AlocarAtorDialog } from "@/components/projetos/AlocarAtorDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { getDiscountInfo, getEffectiveMrr } from "@/lib/maintenance";
+import { CurrencyInput, IntegerInput, PercentInput } from "@/components/ui/currency-input";
 import { AbaEscopo } from "@/components/projetos/AbaEscopo";
 import { AbaMarcos } from "@/components/projetos/AbaMarcos";
 import { AbaRiscos } from "@/components/projetos/AbaRiscos";
@@ -1520,12 +1521,10 @@ export default function ProjetoDetalhe() {
                   <div className="divide-y divide-border/40">
                     <PropRow label="Valor Contratado">
                       {editing === "financial" ? (
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput
                           value={draftContractValue}
-                          onChange={(e) => setDraftContractValue(e.target.value)}
-                          className="ml-auto h-8 w-[180px] text-right font-mono"
+                          onValueChange={setDraftContractValue}
+                          className="ml-auto h-8 w-[180px]"
                         />
                       ) : project.contract_value ? (
                         <span className="font-mono">{formatCurrency(Number(project.contract_value))}</span>
@@ -1535,11 +1534,11 @@ export default function ProjetoDetalhe() {
                     </PropRow>
                     <PropRow label="Nº de Parcelas">
                       {editing === "financial" ? (
-                        <Input
-                          type="number"
+                        <IntegerInput
                           value={draftInstallments}
-                          onChange={(e) => setDraftInstallments(e.target.value)}
-                          className="ml-auto h-8 w-[120px] text-right font-mono"
+                          onValueChange={setDraftInstallments}
+                          withSeparator={false}
+                          className="ml-auto h-8 w-[120px]"
                         />
                       ) : project.installments_count ? (
                         `${project.installments_count}x`
@@ -1556,12 +1555,10 @@ export default function ProjetoDetalhe() {
                     </PropRow>
                     <PropRow label="Token Budget">
                       {editing === "financial" ? (
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput
                           value={draftTokenBudget}
-                          onChange={(e) => setDraftTokenBudget(e.target.value)}
-                          className="ml-auto h-8 w-[180px] text-right font-mono"
+                          onValueChange={setDraftTokenBudget}
+                          className="ml-auto h-8 w-[180px]"
                         />
                       ) : project.token_budget_brl ? (
                         <span className="font-mono">{formatCurrency(Number(project.token_budget_brl))}</span>
@@ -1585,26 +1582,19 @@ export default function ProjetoDetalhe() {
                     {editing === "financial" ? (
                       <>
                         <PropRow label="Mensalidade">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                          <CurrencyInput
                             value={draftMonthlyFee}
-                            onChange={(e) => setDraftMonthlyFee(e.target.value)}
-                            placeholder="0,00"
-                            className="ml-auto h-8 w-[180px] text-right font-mono"
+                            onValueChange={setDraftMonthlyFee}
+                            placeholder="R$ 0,00"
+                            className="ml-auto h-8 w-[180px]"
                           />
                         </PropRow>
-                        <PropRow label="Desconto (%)">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="100"
+                        <PropRow label="Desconto">
+                          <PercentInput
                             value={draftDiscountPct}
-                            onChange={(e) => setDraftDiscountPct(e.target.value)}
-                            placeholder="0"
-                            className="ml-auto h-8 w-[120px] text-right font-mono"
+                            onValueChange={setDraftDiscountPct}
+                            placeholder="0 %"
+                            className="ml-auto h-8 w-[120px]"
                           />
                         </PropRow>
                         {Number(draftDiscountPct) > 0 && (
@@ -1622,13 +1612,12 @@ export default function ProjetoDetalhe() {
                               </select>
                               {!draftDiscountIndefinite && (
                                 <>
-                                  <Input
-                                    type="number"
-                                    min="1"
+                                  <IntegerInput
                                     value={draftDiscountMonths}
-                                    onChange={(e) => setDraftDiscountMonths(e.target.value)}
-                                    placeholder="meses"
-                                    className="h-8 w-[80px] text-right font-mono"
+                                    onValueChange={setDraftDiscountMonths}
+                                    withSeparator={false}
+                                    placeholder="0"
+                                    className="h-8 w-[80px]"
                                   />
                                   <span className="text-xs text-muted-foreground">meses</span>
                                 </>
@@ -1637,14 +1626,11 @@ export default function ProjetoDetalhe() {
                           </PropRow>
                         )}
                         <PropRow label="Bolsão tokens">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                          <CurrencyInput
                             value={draftContractTokenBudget}
-                            onChange={(e) => setDraftContractTokenBudget(e.target.value)}
+                            onValueChange={setDraftContractTokenBudget}
                             placeholder="opcional"
-                            className="ml-auto h-8 w-[180px] text-right font-mono"
+                            className="ml-auto h-8 w-[180px]"
                           />
                         </PropRow>
                         <PropRow label="Início">
