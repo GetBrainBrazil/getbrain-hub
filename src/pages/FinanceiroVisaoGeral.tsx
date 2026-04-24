@@ -2,7 +2,7 @@
  * /financeiro — Dashboard Financeiro denso (cockpit).
  * Substitui o dashboard antigo. Segue padrão 6.Z do ARCHITECTURE v1.6.
  *
- * Estrutura:
+ * Estrutura (09A + 09B):
  *  1. Cabeçalho (período, comparar, regime, filtros)
  *  2. Linha de alertas acionáveis (condicional)
  *  3. 6 KPIs macro com delta + sparkline
@@ -10,6 +10,10 @@
  *  5. Bloco 4 — Fluxo de Caixa Projetado (gráfico + 4 mini-cards)
  *  6. Bloco 2 — Receita (categoria + projeto + recebido vs a receber)
  *  7. Bloco 3 — Despesa (categoria + projeto + top fornecedores + comparativo)
+ *  8. Bloco 5 — Por Projeto (margem real, %recebido, saúde) [09B]
+ *  9. Bloco 6 — Por Cliente (LTV, inadimplência, dias de atraso) [09B]
+ * 10. Bloco 7 — Comparativo Histórico (12 meses + saldo + crescimento) [09B]
+ * 11. Bloco 8 — Próximas Movimentações (toggle horizonte) [09B]
  */
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
