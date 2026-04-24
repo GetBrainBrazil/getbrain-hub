@@ -414,6 +414,7 @@ export default function ProjetoDetalhe() {
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [allocOpen, setAllocOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
 
   // Edição inline do título do projeto
   const [editName, setEditName] = useState(false);
