@@ -312,15 +312,22 @@ function ParcelasCalendar({
   const today = new Date();
   const todayKey = `${today.getUTCFullYear()}-${String(today.getUTCMonth()).padStart(2, "0")}`;
 
-  // Para heatmap: maior |saldo| do range
-  const monthSaldos = months.map((mo) => {
+  // Heatmap usa apenas saldo REALIZADO (caixa de fato) para não confundir
+  // o usuário pintando de verde meses cujas receitas ainda não foram recebidas.
+  const isRealizado = (m: ProjectMovimentacao) =>
+    m.status === "pago" || !!m.data_pagamento;
+  const monthSaldosRealizados = months.map((mo) => {
     const b = byMonth.get(mo.key);
     if (!b) return 0;
-    const ent = b.receitas.reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
-    const sai = b.despesas.reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
+    const ent = b.receitas
+      .filter(isRealizado)
+      .reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
+    const sai = b.despesas
+      .filter(isRealizado)
+      .reduce((s, p) => s + (p.valor_realizado || p.valor_previsto || 0), 0);
     return ent - sai;
   });
-  const maxAbs = Math.max(1, ...monthSaldos.map((v) => Math.abs(v)));
+  const maxAbs = Math.max(1, ...monthSaldosRealizados.map((v) => Math.abs(v)));
 
   // Totais do range
   const totalEntradas = receitas.reduce(
