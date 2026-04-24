@@ -26,10 +26,10 @@ async function hydrateDeals(rows: unknown[]): Promise<Deal[]> {
     leadIds.length ? sb.from('leads').select('id, code, source').in('id', leadIds) : { data: [] },
     dealIds.length ? sb.from('deal_activities').select('*').in('deal_id', dealIds).is('deleted_at', null).order('scheduled_at', { ascending: false }) : { data: [] },
   ]);
-  const companyMap = new Map((companies ?? []).map((x: CrmCompany) => [x.id, x]));
-  const personMap = new Map((people ?? []).map((x: CrmPerson) => [x.id, x]));
-  const actorMap = new Map((actors ?? []).map((x: CrmActor) => [x.id, x]));
-  const leadMap = new Map((leads ?? []).map((x: { id: string; code: string; source: string | null }) => [x.id, x]));
+  const companyMap = new Map<string, CrmCompany>((companies ?? []).map((x: CrmCompany) => [x.id, x]));
+  const personMap = new Map<string, CrmPerson>((people ?? []).map((x: CrmPerson) => [x.id, x]));
+  const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x]));
+  const leadMap = new Map<string, { id: string; code: string; source: string | null }>((leads ?? []).map((x: { id: string; code: string; source: string | null }) => [x.id, x]));
   const activityMap = new Map<string, DealActivity>();
   for (const a of (activities ?? []) as DealActivity[]) if (a.deal_id && !activityMap.has(a.deal_id)) activityMap.set(a.deal_id, a);
   return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null, origin_source: d.origin_lead_id ? leadMap.get(d.origin_lead_id)?.source ?? null : 'direto', last_activity: activityMap.get(d.id) ?? null }));
@@ -46,9 +46,9 @@ async function hydrateLeads(rows: unknown[]): Promise<Lead[]> {
     personIds.length ? sb.from('people').select('id, full_name, email, phone, role_in_company').in('id', personIds) : { data: [] },
     actorIds.length ? sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] },
   ]);
-  const companyMap = new Map((companies ?? []).map((x: CrmCompany) => [x.id, x]));
-  const personMap = new Map((people ?? []).map((x: CrmPerson) => [x.id, x]));
-  const actorMap = new Map((actors ?? []).map((x: CrmActor) => [x.id, x]));
+  const companyMap = new Map<string, CrmCompany>((companies ?? []).map((x: CrmCompany) => [x.id, x]));
+  const personMap = new Map<string, CrmPerson>((people ?? []).map((x: CrmPerson) => [x.id, x]));
+  const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x]));
   return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null }));
 }
 
@@ -81,7 +81,7 @@ export function useCompanyDeals(id?: string) {
 }
 
 export function useCompanyProjects(id?: string) {
-  return useQuery({ queryKey: ['crm-company-projects', id], enabled: !!id, queryFn: async (): Promise<ProjectRow[]> => { const { data, error } = await sb.from('projects').select('id, code, name, status, project_type, contract_value, start_date, owner_actor_id').eq('company_id', id).is('deleted_at', null).order('created_at', { ascending: false }); if (error) throw error; const rows = (data ?? []) as ProjectRow[]; const actorIds = Array.from(new Set(rows.map((r) => r.owner_actor_id).filter(Boolean))); const { data: actors } = actorIds.length ? await sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] }; const actorMap = new Map((actors ?? []).map((x: CrmActor) => [x.id, x])); return rows.map((r) => ({ ...r, contract_value: r.contract_value === null ? null : Number(r.contract_value), owner: r.owner_actor_id ? actorMap.get(r.owner_actor_id) ?? null : null })); } });
+  return useQuery({ queryKey: ['crm-company-projects', id], enabled: !!id, queryFn: async (): Promise<ProjectRow[]> => { const { data, error } = await sb.from('projects').select('id, code, name, status, project_type, contract_value, start_date, owner_actor_id').eq('company_id', id).is('deleted_at', null).order('created_at', { ascending: false }); if (error) throw error; const rows = (data ?? []) as ProjectRow[]; const actorIds = Array.from(new Set(rows.map((r) => r.owner_actor_id).filter(Boolean))); const { data: actors } = actorIds.length ? await sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] }; const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x])); return rows.map((r) => ({ ...r, contract_value: r.contract_value === null ? null : Number(r.contract_value), owner: r.owner_actor_id ? actorMap.get(r.owner_actor_id) ?? null : null })); } });
 }
 
 export function useCompanyStats(id?: string) {
@@ -97,7 +97,7 @@ export function useActivitiesForEntity(type: 'deal' | 'lead' | 'company', id?: s
 }
 
 export function useEntityAudit(type: 'deal' | 'lead' | 'company', id?: string) {
-  return useQuery({ queryKey: ['crm-audit', type, id], enabled: !!id, queryFn: async (): Promise<AuditRow[]> => { const entityType = type === 'company' ? 'companies' : type === 'deal' ? 'deals' : 'leads'; const { data, error } = await sb.from('audit_logs').select('id, created_at, action, entity_type, changes, metadata, actor_id').eq('entity_type', entityType).eq('entity_id', id).order('created_at', { ascending: false }); if (error) throw error; const rows = (data ?? []) as (AuditRow & { actor_id: string | null })[]; const actorIds = Array.from(new Set(rows.map((r) => r.actor_id).filter(Boolean))); const { data: actors } = actorIds.length ? await sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] }; const actorMap = new Map((actors ?? []).map((x: CrmActor) => [x.id, x])); return rows.map((r) => ({ ...r, actor: r.actor_id ? actorMap.get(r.actor_id) ?? null : null })); } });
+  return useQuery({ queryKey: ['crm-audit', type, id], enabled: !!id, queryFn: async (): Promise<AuditRow[]> => { const entityType = type === 'company' ? 'companies' : type === 'deal' ? 'deals' : 'leads'; const { data, error } = await sb.from('audit_logs').select('id, created_at, action, entity_type, changes, metadata, actor_id').eq('entity_type', entityType).eq('entity_id', id).order('created_at', { ascending: false }); if (error) throw error; const rows = (data ?? []) as (AuditRow & { actor_id: string | null })[]; const actorIds = Array.from(new Set(rows.map((r) => r.actor_id).filter(Boolean))); const { data: actors } = actorIds.length ? await sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] }; const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x])); return rows.map((r) => ({ ...r, actor: r.actor_id ? actorMap.get(r.actor_id) ?? null : null })); } });
 }
 
 export function useUpdateDealField(code?: string) {
@@ -122,7 +122,7 @@ export function useCloseDealAsWon() {
 
 export function useConvertLeadToDealFull() {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: async ({ leadId, dealData }: { leadId: string; dealData: Record<string, unknown> }) => { const { data, error } = await sb.rpc('convert_lead_to_deal', { p_lead_id: leadId, p_deal_data: dealData }); if (error) throw error; return data as string; }, onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-leads-full'] }); qc.invalidateQueries({ queryKey: ['crm-deals'] }); qc.invalidateQueries({ queryKey: ['crm-metrics'] }); } });
+  return useMutation({ mutationFn: async ({ leadId, dealData }: { leadId: string; dealData: Record<string, unknown> }) => { const { data, error } = await sb.rpc('convert_lead_to_deal', { p_lead_id: leadId, p_deal_data: dealData }); if (error) throw error; const { data: deal, error: dealError } = await sb.from('deals').select('code').eq('id', data).single(); if (dealError) throw dealError; return deal.code as string; }, onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-leads-full'] }); qc.invalidateQueries({ queryKey: ['crm-deals'] }); qc.invalidateQueries({ queryKey: ['crm-metrics'] }); } });
 }
 
 export function useCreateActivityFull(entity: { type: 'deal' | 'lead'; id: string }) {

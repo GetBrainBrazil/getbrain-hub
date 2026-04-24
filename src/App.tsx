@@ -27,6 +27,9 @@ import DevBacklog from "./pages/dev/DevBacklog";
 import TaskDetail from "./pages/dev/TaskDetail";
 import CrmLayout from "./pages/crm/CrmLayout";
 import CrmPipeline from "./pages/crm/CrmPipeline";
+import CrmCompanyDetail from "./pages/crm/CrmCompanyDetail";
+import CrmDealDetail from "./pages/crm/CrmDealDetail";
+import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
 import {
   CrmCalendarioPlaceholder,
   CrmDashboardPlaceholder,
@@ -102,6 +105,9 @@ const App = () => (
             </Route>
             {/* Tela cheia da task — fora do DevLayout (sem sub-tabs do hub) */}
             <Route path="/dev/tasks/:code" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
+            <Route path="/crm/deals/:code" element={<ProtectedRoute><CrmDealDetail /></ProtectedRoute>} />
+            <Route path="/crm/leads/:code" element={<ProtectedRoute><CrmLeadDetail /></ProtectedRoute>} />
+            <Route path="/crm/empresas/:id" element={<ProtectedRoute><CrmCompanyDetail /></ProtectedRoute>} />
             <Route path="/crm" element={<ProtectedRoute><CrmLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="pipeline" replace />} />
               <Route path="dashboard" element={<CrmDashboardPlaceholder />} />
