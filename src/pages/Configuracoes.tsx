@@ -11,12 +11,14 @@ import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 
 export default function Configuracoes() {
+  const [tab, setTab] = usePersistedState<string>("configuracoes:tab", "conta");
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
-      <Tabs defaultValue="conta">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="conta">Minha Conta</TabsTrigger>
           <TabsTrigger value="meios">Meios de Pagamento</TabsTrigger>
