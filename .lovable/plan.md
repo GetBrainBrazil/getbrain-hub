@@ -1,52 +1,38 @@
-## Pessoas de Contato no Projeto
+## Problema
 
-Adicionar gestão de pessoas de contato do cliente direto na Visão Geral do projeto, reaproveitando o modelo já existente do CRM (`people` + `company_people`).
+No card **Cronograma** (Visão Geral do projeto), depois de preencher uma data não é possível voltar ao estado vazio ("—"). O `<input type="date">` nativo dificulta limpar o campo: o botão "x" do Chrome em alguns sistemas não dispara `onChange` com `""` corretamente, e ao salvar o valor antigo permanece (ou é convertido em uma data inválida como `0001-01-01`, comportamento visto na sessão atual).
 
-### Onde colocar
+## Solução
 
-Novo **card "Pessoas de contato"** na Visão Geral do projeto, posicionado na coluna principal logo abaixo do card "Cliente" / "Informações", acima de "Financeiro". É o local mais natural porque os contatos pertencem à empresa-cliente vinculada ao projeto.
+Substituir os três `<input type="date">` do card **Cronograma** por um componente `DatePicker` (Popover + Calendar do shadcn) com um botão explícito **"Limpar"** dentro do popover. Assim o usuário sempre consegue voltar para "sem data".
 
-Adicionalmente, na **sidebar direita** (Propriedades), abaixo da linha "Cliente", mostrar o contato principal de forma compacta (nome + cargo, com tooltip exibindo email/telefone) para acesso rápido.
+A lógica de salvar já trata `null` corretamente (`patchProject` envia `null` para o Supabase e a coluna aceita `NULL`). O problema é puramente de UI ao limpar o campo.
 
-### Como vai funcionar
+### Mudanças
 
-O card lista as pessoas vinculadas à `company_id` do projeto via `company_people`. Cada linha mostra avatar/inicial, nome, cargo, email e telefone, com badge "Principal" para o `is_primary_contact`.
+**1. Novo componente reutilizável** `src/components/ui/date-picker-field.tsx`
+- Props: `value: string | null` (formato `YYYY-MM-DD`), `onChange: (v: string | null) => void`, `placeholder?`, `className?`.
+- Estrutura: `Popover` + `Button` trigger (mostra data formatada em pt-BR ou placeholder "—") + `PopoverContent` com:
+  - `Calendar` (mode="single", locale ptBR) com `pointer-events-auto`.
+  - Botão "Limpar" no rodapé que chama `onChange(null)` e fecha o popover.
+- Conversão interna entre `string` (`YYYY-MM-DD`) e `Date` (sem timezone shift — usar `parseISO` / `format(d, "yyyy-MM-dd")`).
 
-Ações no card:
-- **Adicionar contato**: formulário inline (sem modal) com Nome, Cargo, Email, Telefone — cria em `people` + vincula em `company_people` para a empresa do projeto.
-- **Editar**: clicar em qualquer campo da linha entra em modo edição inline (mesmo padrão dos outros cards da página).
-- **Marcar como principal**: estrela/toggle que atualiza `is_primary_contact` (desmarca os demais da mesma empresa).
-- **Remover do projeto/empresa**: remove o vínculo `company_people` (soft via `ended_at`); a pessoa continua existindo no CRM.
+**2. Em `src/pages/ProjetoDetalhe.tsx`** — card "Cronograma" (linhas ~1769-1811)
+- Trocar os três `<Input type="date">` por `<DatePickerField>` para Início, Entrega Estimada e Entrega Real.
+- Manter `draftStartDate`, `draftEstimated`, `draftActual` mas tipá-los como `string | null` (em vez de `string ""`). Ajustar `syncDrafts` para usar `null` em vez de `""`. Ajustar a checagem de salvar (`sd !== (project.start_date ?? null)`) — já está compatível.
 
-Máscaras automáticas: telefone BR `(11) 99999-9999` e validação de email com zod.
-
-### Integração cross-módulo
-
-Como `people` e `company_people` são as MESMAS tabelas usadas pelo CRM (Leads, Deals), qualquer contato cadastrado aqui:
-- Aparece automaticamente nos seletores de contato do CRM (`NewLeadDialog`, `NewDealDialog`, `usePeopleByCompany`).
-- Aparece na página de detalhe da empresa (`CrmCompanyDetail`).
-- Reciprocamente, contatos cadastrados pelo CRM já aparecem aqui.
-
-Não há duplicação de dados — é uma única fonte de verdade por empresa.
+**3. Reuso opcional** — usar o mesmo `DatePickerField` em outros campos de data do `ProjetoDetalhe.tsx` que sofrem do mesmo problema:
+- Data de início do contrato de manutenção (campo `draftContractStartDate`).
+- Esse reuso fica como melhoria de consistência, sem mudança comportamental além de permitir limpar.
 
 ### Detalhes técnicos
 
-**Sem migração de banco** — tabelas `people` e `company_people` já existem com RLS adequada.
+- Usar `date-fns` (`format`, `parseISO`) e `ptBR` de `date-fns/locale`, ambos já presentes no projeto.
+- Garantir `className="p-3 pointer-events-auto"` no `Calendar` (regra do projeto para popovers).
+- Trigger com `variant="outline"`, `size="sm"`, largura fixa de 180px para casar com o layout atual.
+- Sem mudanças no schema do banco. Sem mudanças em `patchProject`.
 
-**Novo hook** `src/hooks/projetos/useProjectContacts.ts`:
-- `useProjectContacts(companyId)`: lista pessoas via join `company_people` → `people` (reusa lógica de `useCrmReference.usePeopleByCompany` mas retorna também `is_primary_contact` e `role`).
-- `useUpsertContact()`: cria/atualiza pessoa + vínculo.
-- `useSetPrimaryContact()`: transação que zera primários da empresa e marca o escolhido.
-- `useUnlinkContact()`: seta `ended_at = today` em `company_people`.
+### Fora de escopo
 
-**Novo componente** `src/components/projetos/CardContatos.tsx` consumido por `ProjetoDetalhe.tsx`. Segue o padrão visual dos cards existentes (`CardBlock`, `PropRow`).
-
-**Sidebar**: adicionar `SidebarRow label="Contato principal"` em `ProjetoDetalhe.tsx` linha ~2145, consumindo o mesmo hook.
-
-**Arquivos alterados**:
-- novo `src/hooks/projetos/useProjectContacts.ts`
-- novo `src/components/projetos/CardContatos.tsx`
-- editar `src/pages/ProjetoDetalhe.tsx` (inserir card + linha sidebar)
-- editar `src/lib/formatters.ts` (helper `formatPhoneBR` se ainda não existir)
-
-**Auditoria**: cada criação/edição/remoção registra em `audit_logs` com `entity_type = 'person'` ou `'company_people'`, seguindo o padrão já usado para contratos.
+- Não mexer em outros cards (Financeiro, Descrição, etc.) além de, opcionalmente, reaproveitar o componente em datas de contrato.
+- Não alterar `audit_logs` — a transição "data → null" já é registrada pelo fluxo existente.
