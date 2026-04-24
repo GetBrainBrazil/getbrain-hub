@@ -23,6 +23,8 @@ export interface ProjectMovimentacao {
   recorrente: boolean;
   categoria_id: string | null;
   fornecedor_id: string | null;
+  source_entity_type: string | null;
+  source_entity_id: string | null;
 }
 
 export interface ProjectMaintenanceContract {

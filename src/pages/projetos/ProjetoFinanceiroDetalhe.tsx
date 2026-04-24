@@ -374,17 +374,30 @@ export default function ProjetoFinanceiroDetalhe() {
 
   const isLoading = metricsLoading || detailLoading;
 
-  // Derivações dos blocos
+  // Classificação implementação x manutenção
+  const isMaintenance = (r: ProjectMovimentacao) =>
+    r.recorrente === true ||
+    (r as any).source_entity_type === "maintenance_contract";
+
   const allReceitas = useMemo(
     () => [...(detail?.receitas ?? []), ...(detail?.recurring_receitas ?? [])],
     [detail],
   );
 
-  const totals = useMemo(() => {
+  const receitasImplementacao = useMemo(
+    () => allReceitas.filter((r) => !isMaintenance(r)),
+    [allReceitas],
+  );
+  const receitasManutencao = useMemo(
+    () => allReceitas.filter((r) => isMaintenance(r)),
+    [allReceitas],
+  );
+
+  const sumByStatus = (items: ProjectMovimentacao[]) => {
     let recebido = 0;
     let previsto = 0;
     let atrasado = 0;
-    for (const r of allReceitas) {
+    for (const r of items) {
       const valor = r.valor_realizado || r.valor_previsto;
       const s = parcelStatus(r);
       if (s === "recebido") recebido += r.valor_realizado || valor;
@@ -392,7 +405,11 @@ export default function ProjetoFinanceiroDetalhe() {
       else previsto += valor;
     }
     return { recebido, previsto, atrasado };
-  }, [allReceitas]);
+  };
+
+  const totalsImpl = useMemo(() => sumByStatus(receitasImplementacao), [receitasImplementacao]);
+  const totalsMan = useMemo(() => sumByStatus(receitasManutencao), [receitasManutencao]);
+  const totals = useMemo(() => sumByStatus(allReceitas), [allReceitas]);
 
   const despesaRealizada = useMemo(() => {
     return (detail?.despesas ?? []).reduce(
@@ -420,6 +437,15 @@ export default function ProjetoFinanceiroDetalhe() {
 
   const contratado = m?.revenue_contracted ?? 0;
   const margemPctReal = contratado ? (margemSimples / contratado) * 100 : 0;
+
+  // Implementação: pago vs contratado
+  const implPago = totalsImpl.recebido;
+  const implRestante = Math.max(0, contratado - implPago);
+  const implPct = contratado ? Math.min(100, (implPago / contratado) * 100) : 0;
+  // MRR ativo (a partir dos contratos)
+  const mrrAtivo = (detail?.contracts ?? [])
+    .filter((c) => c.status === "active")
+    .reduce((s, c) => s + getEffectiveMrr(c as any), 0);
 
   let semaforo: { tone: "success" | "warning" | "danger" | "muted"; label: string; explanation: string };
   if (contratado === 0) {
@@ -449,19 +475,18 @@ export default function ProjetoFinanceiroDetalhe() {
   }
 
   const kpis: MiniKpi[] = [
-    { label: "Contratado", value: formatCurrency(contratado) },
+    { label: "Contratado (impl.)", value: formatCurrency(contratado) },
     {
-      label: "Recebido",
-      value: formatCurrency(m?.revenue_received ?? 0),
-      hint: contratado
-        ? `${(((m?.revenue_received ?? 0) / contratado) * 100).toFixed(0)}% do contrato`
-        : undefined,
-      tone: "success",
+      label: "Implementação paga",
+      value: formatCurrency(implPago),
+      hint: contratado ? `${implPct.toFixed(0)}% · falta ${formatCurrency(implRestante)}` : undefined,
+      tone: implPct >= 100 ? "success" : implPct > 0 ? "warning" : "default",
     },
     {
-      label: "Pendente",
-      value: formatCurrency(m?.revenue_pending ?? 0),
-      tone: totals.atrasado > 0 ? "warning" : "default",
+      label: "Manutenção (MRR)",
+      value: formatCurrency(mrrAtivo),
+      hint: totalsMan.atrasado > 0 ? `${formatCurrency(totalsMan.atrasado)} atrasado` : "/mês ativo",
+      tone: totalsMan.atrasado > 0 ? "warning" : "success",
     },
     {
       label: "Margem real",
@@ -506,27 +531,127 @@ export default function ProjetoFinanceiroDetalhe() {
         kpis={kpis}
       />
 
-      {/* ─── Bloco 1: Saúde financeira ─── */}
+      {/* ─── Bloco 1: Saúde financeira (separada) ─── */}
       <DetalheBloco icon={Activity} title="Saúde financeira">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-[280px_1fr]">
-          <div className="flex flex-col gap-4">
-            <Donut
-              recebido={totals.recebido}
-              previsto={totals.previsto}
-              atrasado={totals.atrasado}
-            />
-            <DonutLegend
-              recebido={totals.recebido}
-              previsto={totals.previsto}
-              atrasado={totals.atrasado}
-            />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* IMPLEMENTAÇÃO */}
+          <div className="rounded-lg border border-border/60 bg-card/30 p-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Implementação</h3>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                contrato {formatCurrency(contratado)}
+              </span>
+            </div>
+            <div className="grid grid-cols-[140px_1fr] gap-4">
+              <Donut
+                recebido={totalsImpl.recebido}
+                previsto={totalsImpl.previsto}
+                atrasado={totalsImpl.atrasado}
+              />
+              <div className="space-y-2">
+                <div className="rounded-md bg-success/5 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Pago
+                  </p>
+                  <p className="font-mono text-base font-bold tabular-nums text-success">
+                    {formatCurrency(implPago)}{" "}
+                    <span className="text-[11px] font-normal text-muted-foreground">
+                      · {implPct.toFixed(0)}%
+                    </span>
+                  </p>
+                </div>
+                <div className={cn(
+                  "rounded-md px-3 py-2",
+                  implRestante > 0 ? "bg-warning/5" : "bg-muted/20",
+                )}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Restante do contrato
+                  </p>
+                  <p className={cn(
+                    "font-mono text-base font-bold tabular-nums",
+                    implRestante > 0 ? "text-warning" : "text-muted-foreground",
+                  )}>
+                    {formatCurrency(implRestante)}
+                  </p>
+                </div>
+                {totalsImpl.atrasado > 0 && (
+                  <div className="rounded-md bg-destructive/5 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Atrasado
+                    </p>
+                    <p className="font-mono text-sm font-bold tabular-nums text-destructive">
+                      {formatCurrency(totalsImpl.atrasado)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="md:border-l md:border-border/60 md:pl-6">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Linha do tempo de parcelas
-            </p>
-            <Timeline items={allReceitas} />
+
+          {/* MANUTENÇÃO */}
+          <div className="rounded-lg border border-border/60 bg-card/30 p-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Manutenção</h3>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {mrrAtivo > 0 ? `${formatCurrency(mrrAtivo)}/mês ativo` : "Sem MRR ativo"}
+              </span>
+            </div>
+            {receitasManutencao.length === 0 && mrrAtivo === 0 ? (
+              <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-border/60 text-xs text-muted-foreground">
+                Sem manutenção contratada
+              </div>
+            ) : (
+              <div className="grid grid-cols-[140px_1fr] gap-4">
+                <Donut
+                  recebido={totalsMan.recebido}
+                  previsto={totalsMan.previsto}
+                  atrasado={totalsMan.atrasado}
+                />
+                <div className="space-y-2">
+                  <div className="rounded-md bg-success/5 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Recebido
+                    </p>
+                    <p className="font-mono text-base font-bold tabular-nums text-success">
+                      {formatCurrency(totalsMan.recebido)}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "rounded-md px-3 py-2",
+                    totalsMan.previsto > 0 ? "bg-accent/5" : "bg-muted/20",
+                  )}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      A vencer
+                    </p>
+                    <p className={cn(
+                      "font-mono text-base font-bold tabular-nums",
+                      totalsMan.previsto > 0 ? "text-accent" : "text-muted-foreground",
+                    )}>
+                      {formatCurrency(totalsMan.previsto)}
+                    </p>
+                  </div>
+                  {totalsMan.atrasado > 0 && (
+                    <div className="rounded-md bg-destructive/5 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Atrasado
+                      </p>
+                      <p className="font-mono text-sm font-bold tabular-nums text-destructive">
+                        {formatCurrency(totalsMan.atrasado)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Timeline geral em baixo */}
+        <div className="mt-6 border-t border-border/60 pt-4">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Linha do tempo de parcelas (todas)
+          </p>
+          <Timeline items={allReceitas} />
         </div>
       </DetalheBloco>
 
@@ -555,14 +680,49 @@ export default function ProjetoFinanceiroDetalhe() {
         }
       >
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* Recorrências ativas */}
+          {/* Implementação — parcelas avulsas */}
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Recorrências ativas{" "}
-              {detail?.contracts.length ? `· ${detail.contracts.length}` : ""}
-            </p>
-            {detail?.contracts.length ? (
+            <div className="mb-2 flex items-baseline justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Implementação{" "}
+                {receitasImplementacao.length ? `· ${receitasImplementacao.length}` : ""}
+              </p>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {formatCurrency(implPago)} / {formatCurrency(contratado)}
+              </span>
+            </div>
+            {receitasImplementacao.length ? (
               <ul className="space-y-1.5">
+                {receitasImplementacao.map((mov) => (
+                  <li key={mov.id}>
+                    <ParcelaRow m={mov} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-md border border-dashed border-border/60 px-4 py-6 text-center text-xs text-muted-foreground">
+                Sem parcelas de implementação registradas.
+              </p>
+            )}
+          </div>
+
+          {/* Manutenção — contratos + parcelas recorrentes */}
+          <div>
+            <div className="mb-2 flex items-baseline justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Manutenção{" "}
+                {(detail?.contracts.length || receitasManutencao.length)
+                  ? `· ${detail?.contracts.length ?? 0} contrato${(detail?.contracts.length ?? 0) === 1 ? "" : "s"}`
+                  : ""}
+              </p>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {mrrAtivo > 0 ? `${formatCurrency(mrrAtivo)}/mês` : "—"}
+              </span>
+            </div>
+
+            {/* Contratos ativos */}
+            {detail?.contracts.length ? (
+              <ul className="mb-2 space-y-1.5">
                 {detail.contracts.map((c) => {
                   const mrr = getEffectiveMrr(c as any);
                   const isActive = c.status === "active";
@@ -579,7 +739,7 @@ export default function ProjetoFinanceiroDetalhe() {
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground">
-                          Manutenção mensal
+                          Contrato de manutenção
                           <span className="ml-2 text-[11px] font-normal text-muted-foreground">
                             {c.status}
                           </span>
@@ -597,37 +757,26 @@ export default function ProjetoFinanceiroDetalhe() {
                   );
                 })}
               </ul>
-            ) : (
-              <p className="rounded-md border border-dashed border-border/60 px-4 py-6 text-center text-xs text-muted-foreground">
-                Sem recorrências cadastradas neste projeto.
-              </p>
-            )}
-          </div>
+            ) : null}
 
-          {/* Parcelas individuais */}
-          <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Parcelas individuais{" "}
-              {detail?.receitas.length ? `· ${detail.receitas.length}` : ""}
-            </p>
-            {detail?.receitas.length ? (
+            {/* Mensalidades geradas */}
+            {receitasManutencao.length ? (
               <ul className="space-y-1.5">
-                {detail.receitas.map((m) => (
-                  <li key={m.id}>
-                    <ParcelaRow m={m} />
+                {receitasManutencao.map((mov) => (
+                  <li key={mov.id}>
+                    <ParcelaRow m={mov} />
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : !detail?.contracts.length ? (
               <p className="rounded-md border border-dashed border-border/60 px-4 py-6 text-center text-xs text-muted-foreground">
-                Sem parcelas avulsas registradas.
+                Sem manutenção cadastrada neste projeto.
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       </DetalheBloco>
 
-      {/* ─── Bloco 3: Custos ─── */}
       <DetalheBloco
         icon={Receipt}
         title="Custos do projeto"
