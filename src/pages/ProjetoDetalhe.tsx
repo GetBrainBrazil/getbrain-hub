@@ -105,9 +105,9 @@ import {
   Compass,
 } from "lucide-react";
 import { AlocarAtorDialog } from "@/components/projetos/AlocarAtorDialog";
-import { NovoContratoDialog } from "@/components/projetos/NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { getDiscountInfo, getEffectiveMrr } from "@/lib/maintenance";
 import { AbaEscopo } from "@/components/projetos/AbaEscopo";
 import { AbaMarcos } from "@/components/projetos/AbaMarcos";
 import { AbaRiscos } from "@/components/projetos/AbaRiscos";
