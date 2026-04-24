@@ -680,6 +680,10 @@ export default function ProjetoDetalhe() {
     const nextProject = { ...project, ...(updates as any) } as Project;
     setProject(nextProject);
     syncDrafts(nextProject);
+    if ((updates as any).company_id && (updates as any).company_id !== company?.id) {
+      const found = companies.find((c) => c.id === (updates as any).company_id);
+      if (found) setCompany(found);
+    }
     if (Object.keys(changes).length > 0) {
       await logChange("update", changes);
       reloadLogs();
