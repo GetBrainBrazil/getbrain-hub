@@ -256,7 +256,12 @@ export default function MovimentacaoDetalhe() {
 
       if (isCreate) {
         const today = new Date().toISOString().split("T")[0];
-        setForm({ ...emptyForm, data_competencia: today, data_vencimento: today });
+        setForm({
+          ...emptyForm,
+          data_competencia: today,
+          data_vencimento: today,
+          projeto_id: initialProjectId,
+        });
         setMov(null);
         setLoading(false);
         return;
