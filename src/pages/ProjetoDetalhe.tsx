@@ -433,9 +433,9 @@ export default function ProjetoDetalhe() {
   const [draftContractValue, setDraftContractValue] = useState("");
   const [draftInstallments, setDraftInstallments] = useState("");
   const [draftTokenBudget, setDraftTokenBudget] = useState("");
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEstimated, setDraftEstimated] = useState("");
-  const [draftActual, setDraftActual] = useState("");
+  const [draftStartDate, setDraftStartDate] = useState<string | null>(null);
+  const [draftEstimated, setDraftEstimated] = useState<string | null>(null);
+  const [draftActual, setDraftActual] = useState<string | null>(null);
   const [draftDescription, setDraftDescription] = useState("");
   const [draftCriteria, setDraftCriteria] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
