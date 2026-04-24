@@ -535,7 +535,12 @@ export default function ProjetoFinanceiroDetalhe() {
         icon={Repeat}
         title="Parcelas & Recorrências"
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
+              <Link to={verContasReceberHref}>
+                <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ver em Contas a Receber
+              </Link>
+            </Button>
             <Button asChild size="sm" variant="outline">
               <Link to={novaRecorrenciaHref}>
                 <Plus className="mr-1 h-3.5 w-3.5" /> Nova recorrência
