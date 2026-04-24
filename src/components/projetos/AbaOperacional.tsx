@@ -190,6 +190,7 @@ function Panel({
   className?: string;
   href?: string;
 }) {
+  const navigate = useNavigate();
   const baseClasses = cn(
     "flex flex-col rounded-lg border border-border bg-card p-6 transition-all",
     href
@@ -199,9 +200,25 @@ function Panel({
   );
   if (href) {
     return (
-      <Link to={href} className={baseClasses}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={(e) => {
+          // Não navega se o clique veio de um link/botão interno
+          const target = e.target as HTMLElement;
+          if (target.closest("a, button")) return;
+          navigate(href);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            navigate(href);
+          }
+        }}
+        className={baseClasses}
+      >
         {children}
-      </Link>
+      </div>
     );
   }
   return <section className={baseClasses}>{children}</section>;
