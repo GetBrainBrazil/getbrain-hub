@@ -1169,10 +1169,127 @@ export default function ProjetoDetalhe() {
                       <span className="font-mono text-accent">{project.code}</span>
                     </PropRow>
                     <PropRow label="Cliente">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        {companyLabel}
-                      </span>
+                      {editing === "info" ? (
+                        <div className="ml-auto flex w-full max-w-[420px] flex-col gap-2">
+                          <Popover open={companyPickerOpen} onOpenChange={setCompanyPickerOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={companyPickerOpen}
+                                className="h-8 w-full justify-between font-normal"
+                              >
+                                <span className="inline-flex items-center gap-1.5 truncate">
+                                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {(() => {
+                                    const sel = companies.find((c) => c.id === draftCompanyId);
+                                    return sel ? (sel.trade_name || sel.legal_name) : "Selecionar cliente…";
+                                  })()}
+                                </span>
+                                <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[380px] p-0" align="end">
+                              <Command>
+                                <CommandInput placeholder="Buscar empresa…" />
+                                <CommandList>
+                                  <CommandEmpty>Nenhuma empresa encontrada.</CommandEmpty>
+                                  <CommandGroup>
+                                    {companies.map((c) => {
+                                      const label = c.trade_name || c.legal_name;
+                                      return (
+                                        <CommandItem
+                                          key={c.id}
+                                          value={`${label} ${c.legal_name}`}
+                                          onSelect={() => {
+                                            setDraftCompanyId(c.id);
+                                            setCompanyPickerOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-3.5 w-3.5",
+                                              draftCompanyId === c.id ? "opacity-100" : "opacity-0",
+                                            )}
+                                          />
+                                          {label}
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          {!newCompanyOpen ? (
+                            <button
+                              type="button"
+                              onClick={() => setNewCompanyOpen(true)}
+                              className="self-start text-xs text-accent hover:underline"
+                            >
+                              + Nova empresa
+                            </button>
+                          ) : (
+                            <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-2.5">
+                              <div className="grid gap-1.5">
+                                <Label className="text-[11px] text-muted-foreground">Nome da empresa *</Label>
+                                <Input
+                                  value={newCompanyForm.legal_name}
+                                  onChange={(e) => setNewCompanyForm((f) => ({ ...f, legal_name: e.target.value }))}
+                                  placeholder="Ex.: Acme Ltda"
+                                  className="h-8"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={newCompanyForm.cnpj}
+                                  onChange={(e) => setNewCompanyForm((f) => ({ ...f, cnpj: e.target.value }))}
+                                  placeholder="CNPJ"
+                                  className="h-8"
+                                />
+                                <Input
+                                  value={newCompanyForm.industry}
+                                  onChange={(e) => setNewCompanyForm((f) => ({ ...f, industry: e.target.value }))}
+                                  placeholder="Indústria"
+                                  className="h-8"
+                                />
+                              </div>
+                              <Input
+                                value={newCompanyForm.website}
+                                onChange={(e) => setNewCompanyForm((f) => ({ ...f, website: e.target.value }))}
+                                placeholder="Website"
+                                className="h-8"
+                              />
+                              <div className="flex justify-end gap-1.5">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7"
+                                  onClick={() => {
+                                    setNewCompanyOpen(false);
+                                    setNewCompanyForm({ legal_name: "", cnpj: "", industry: "", website: "" });
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-7"
+                                  disabled={!newCompanyForm.legal_name.trim() || creatingCompany}
+                                  onClick={createCompanyInline}
+                                >
+                                  {creatingCompany ? "Criando…" : "Criar empresa"}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          {companyLabel}
+                        </span>
+                      )}
                     </PropRow>
                     <PropRow label="Tipo">
                       {editing === "info" ? (
