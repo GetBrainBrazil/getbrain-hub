@@ -66,6 +66,12 @@ import { KpiCard } from "@/components/dashboard/KpiCard";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { EmptyChart } from "@/components/dashboard/EmptyChart";
 import { SparklineMini } from "@/components/dashboard/SparklineMini";
+import {
+  BlocoPorProjeto,
+  BlocoPorCliente,
+  BlocoComparativoHistorico,
+  BlocoProximasMovimentacoes,
+} from "@/components/dashboard/FinanceBlocks09B";
 
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
