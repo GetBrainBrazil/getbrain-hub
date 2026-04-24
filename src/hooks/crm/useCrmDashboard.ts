@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { CrmActor, CrmCompany, Deal, DealActivity, DealStage, LeadStatus } from '@/types/crm';
+import type { ActivityType, CrmActor, CrmCompany, Deal, DealActivity, DealStage, LeadStatus } from '@/types/crm';
 
 const sb = supabase as never as {
   from: (table: string) => any;
