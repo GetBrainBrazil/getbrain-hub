@@ -86,10 +86,12 @@ function Donut({
   recebido,
   previsto,
   atrasado,
+  centerLabel = "recebido",
 }: {
   recebido: number;
   previsto: number;
   atrasado: number;
+  centerLabel?: string;
 }) {
   const total = recebido + previsto + atrasado;
   const r = 56;
@@ -143,7 +145,7 @@ function Donut({
             <span className="text-lg text-muted-foreground">%</span>
           </span>
           <span className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            recebido
+            {centerLabel}
           </span>
         </div>
       </div>
@@ -631,8 +633,9 @@ export default function ProjetoFinanceiroDetalhe() {
             <div className="grid grid-cols-[140px_1fr] gap-4">
               <Donut
                 recebido={totalsImpl.recebido}
-                previsto={totalsImpl.previsto}
-                atrasado={totalsImpl.atrasado}
+                previsto={implRestante}
+                atrasado={0}
+                centerLabel="recebido"
               />
               <div className="space-y-2">
                 <div className="rounded-md bg-success/5 px-3 py-2">
@@ -692,6 +695,7 @@ export default function ProjetoFinanceiroDetalhe() {
                   recebido={totalsMan.recebido}
                   previsto={totalsMan.previsto}
                   atrasado={totalsMan.atrasado}
+                  centerLabel="recebido"
                 />
                 <div className="space-y-2">
                   <div className="rounded-md bg-success/5 px-3 py-2">

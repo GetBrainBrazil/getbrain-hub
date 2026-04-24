@@ -61,17 +61,6 @@ export function useProjectFinanceDetail(projectId: string | undefined) {
     enabled: !!projectId,
     staleTime: 30_000,
     queryFn: async (): Promise<ProjectFinanceDetail> => {
-      // movimentações vinculadas: por projeto_id OU por source_entity (project)
-      const movimentacoesPromise = supabase
-        .from("movimentacoes")
-        .select(
-          "id, tipo, descricao, valor_previsto, valor_realizado, data_vencimento, data_pagamento, status, parcela_atual, total_parcelas, recorrente, categoria_id, fornecedor_id, source_entity_type, source_entity_id, projeto_id",
-        )
-        .or(
-          `projeto_id.eq.${projectId},and(source_entity_type.eq.project,source_entity_id.eq.${projectId})`,
-        )
-        .order("data_vencimento", { ascending: true });
-
       const contractsPromise = (supabase as any)
         .from("maintenance_contracts")
         .select(
@@ -87,15 +76,38 @@ export function useProjectFinanceDetail(projectId: string | undefined) {
         .eq("project_id", projectId!)
         .is("deleted_at", null);
 
-      const [movRes, contractsRes, integrationsRes] = await Promise.all([
-        movimentacoesPromise,
+      const [contractsRes, integrationsRes] = await Promise.all([
         contractsPromise,
         integrationsPromise,
       ]);
 
-      if (movRes.error) throw movRes.error;
       if (contractsRes.error) throw contractsRes.error;
       if (integrationsRes.error) throw integrationsRes.error;
+
+      const contractIds = ((contractsRes.data ?? []) as { id: string }[])
+        .map((contract) => contract.id)
+        .filter(Boolean);
+
+      const movementScopes = [
+        `projeto_id.eq.${projectId}`,
+        `and(source_entity_type.eq.project,source_entity_id.eq.${projectId})`,
+      ];
+
+      if (contractIds.length > 0) {
+        movementScopes.push(
+          `and(source_entity_type.eq.maintenance_contract,source_entity_id.in.(${contractIds.join(",")}))`,
+        );
+      }
+
+      const movRes = await supabase
+        .from("movimentacoes")
+        .select(
+          "id, tipo, descricao, valor_previsto, valor_realizado, data_vencimento, data_pagamento, status, parcela_atual, total_parcelas, recorrente, categoria_id, fornecedor_id, source_entity_type, source_entity_id, projeto_id",
+        )
+        .or(movementScopes.join(","))
+        .order("data_vencimento", { ascending: true });
+
+      if (movRes.error) throw movRes.error;
 
       const all = (movRes.data ?? []) as any[];
       const receitas = all.filter((m) => m.tipo === "receita" && !m.recorrente);
