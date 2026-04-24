@@ -414,6 +414,7 @@ export default function ProjetoDetalhe() {
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [allocOpen, setAllocOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
 
   // Edição inline do título do projeto
   const [editName, setEditName] = useState(false);
@@ -784,9 +785,25 @@ export default function ProjetoDetalhe() {
   );
   const hasActiveContract = contracts.some((c) => c.status === "active");
   const activeContract = contracts.find((c) => c.status === "active");
+
+  // Vigência do desconto: se duração definida em meses, expira após start_date + N meses.
+  const discountInfo = (() => {
+    if (!activeContract) return { active: false, endsAt: null as Date | null, indefinite: true };
+    const pct = Number(activeContract.monthly_fee_discount_percent || 0);
+    if (pct <= 0) return { active: false, endsAt: null, indefinite: true };
+    const months = (activeContract as any).discount_duration_months as number | null | undefined;
+    if (!months) return { active: true, endsAt: null, indefinite: true };
+    const start = activeContract.start_date ? new Date(activeContract.start_date) : new Date();
+    const ends = new Date(start);
+    ends.setMonth(ends.getMonth() + months);
+    return { active: new Date() <= ends, endsAt: ends, indefinite: false };
+  })();
+
   const mrr = activeContract
     ? Number(activeContract.monthly_fee) *
-      (1 - Number(activeContract.monthly_fee_discount_percent || 0) / 100)
+      (discountInfo.active
+        ? 1 - Number(activeContract.monthly_fee_discount_percent || 0) / 100
+        : 1)
     : 0;
   const installmentValue =
     project?.contract_value && project?.installments_count
@@ -1018,7 +1035,7 @@ export default function ProjetoDetalhe() {
             tone={mrr > 0 ? "success" : "default"}
             icon={TrendingUp}
             hint={
-              activeContract && Number(activeContract.monthly_fee_discount_percent) > 0
+              activeContract && discountInfo.active
                 ? `-${activeContract.monthly_fee_discount_percent}% desc.`
                 : activeContract
                 ? "Sem desconto"
@@ -1415,6 +1432,85 @@ export default function ProjetoDetalhe() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </PropRow>
+
+                    {/* --- Manutenção mensal --- */}
+                    <div className="flex items-center justify-between px-1 pt-3 pb-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Manutenção
+                      </span>
+                      {activeContract ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7"
+                          onClick={() => {
+                            setEditingContractId(activeContract.id);
+                            setContractOpen(true);
+                          }}
+                        >
+                          <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7"
+                          onClick={() => {
+                            setEditingContractId(null);
+                            setContractOpen(true);
+                          }}
+                        >
+                          <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
+                        </Button>
+                      )}
+                    </div>
+
+                    {activeContract ? (
+                      <>
+                        <PropRow label="Mensalidade">
+                          <span className="font-mono">
+                            {formatCurrency(Number(activeContract.monthly_fee))}
+                            <span className="ml-1 text-xs text-muted-foreground">/ mês</span>
+                          </span>
+                        </PropRow>
+                        {Number(activeContract.monthly_fee_discount_percent) > 0 && (
+                          <PropRow label="Desconto">
+                            <span className="font-mono">
+                              {Number(activeContract.monthly_fee_discount_percent)}%
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                {discountInfo.indefinite
+                                  ? "indefinido"
+                                  : discountInfo.endsAt
+                                  ? `por ${(activeContract as any).discount_duration_months} meses (até ${formatDate(
+                                      discountInfo.endsAt.toISOString().slice(0, 10),
+                                    )})`
+                                  : ""}
+                                {!discountInfo.active && !discountInfo.indefinite && (
+                                  <span className="ml-1 text-destructive">expirado</span>
+                                )}
+                              </span>
+                            </span>
+                          </PropRow>
+                        )}
+                        <PropRow label="MRR efetivo">
+                          <span className="font-mono">{formatCurrency(mrr)} / mês</span>
+                        </PropRow>
+                        {activeContract.token_budget_brl && (
+                          <PropRow label="Bolsão tokens">
+                            <span className="font-mono">
+                              {formatCurrency(Number(activeContract.token_budget_brl))}
+                            </span>
+                          </PropRow>
+                        )}
+                        <PropRow label="Início">
+                          <span>{formatDate(activeContract.start_date)}</span>
+                        </PropRow>
+                      </>
+                    ) : (
+                      <PropRow label="Status">
+                        <span className="text-muted-foreground">Sem contrato ativo</span>
+                      </PropRow>
+                    )}
                   </div>
                 </CardBlock>
 
@@ -1920,9 +2016,10 @@ export default function ProjetoDetalhe() {
                     <MaintenanceStatusBadge status={activeContract.status} />
                     <div className="font-mono text-sm font-bold text-foreground">
                       {formatCurrency(mrr)}
-                      {Number(activeContract.monthly_fee_discount_percent) > 0 && (
+                      {discountInfo.active && (
                         <span className="ml-1 text-[11px] font-normal text-success">
-                          (-{activeContract.monthly_fee_discount_percent}%)
+                          (-{activeContract.monthly_fee_discount_percent}%
+                          {discountInfo.endsAt && ` até ${formatDate(discountInfo.endsAt.toISOString().slice(0, 10))}`})
                         </span>
                       )}
                     </div>
@@ -2071,8 +2168,12 @@ export default function ProjetoDetalhe() {
         />
         <NovoContratoDialog
           open={contractOpen}
-          onOpenChange={setContractOpen}
+          onOpenChange={(v) => {
+            setContractOpen(v);
+            if (!v) setEditingContractId(null);
+          }}
           projectId={projectId!}
+          contractId={editingContractId ?? undefined}
           onCreated={load}
         />
         {confirmDialogEl}
