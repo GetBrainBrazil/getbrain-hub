@@ -1,70 +1,123 @@
 ## Objetivo
 
-No card "Informações do Projeto" da tela de detalhe (`/projetos/:id`), o campo **Cliente** hoje é apenas leitura. Vou torná-lo editável dentro do mesmo modo "Editar" do bloco, permitindo:
+Hoje os campos de edição inline (como o "Nome" do projeto na tela de detalhe) têm largura fixa em pixels (`w-[320px]`). Quando o texto digitado é maior que a caixa, o conteúdo fica oculto e o usuário só vê a parte final via cursor.
 
-1. Trocar o cliente por outra empresa já cadastrada (busca por nome).
-2. Criar uma nova empresa diretamente no formulário, sem sair da tela.
+Quero introduzir um padrão **reutilizável em todo o sistema**: inputs/textos editáveis que **expandem horizontalmente** conforme o usuário digita, até um limite máximo, mantendo a UI estável.
 
 ## Comportamento
 
-Ao clicar em **Editar** no bloco "Informações do Projeto":
-
-- O campo Cliente vira um **combobox com busca** (lista de `companies`, ordenadas, filtradas conforme o usuário digita).
-- Mostra `trade_name || legal_name`. Item atualmente selecionado fica destacado.
-- Logo abaixo do combobox aparece um botão pequeno **"+ Nova empresa"**.
-- Ao clicar em "+ Nova empresa", abre um mini-form inline (mesmo padrão do `NewLeadDialog`):
-  - Campos: **Nome da empresa** (obrigatório), CNPJ, Indústria, Website.
-  - Botão **Criar empresa** insere em `companies` com `company_type='cliente'`, `status='active'`, `relationship_status='cliente'`, `organization_id=getbrain_org_id()`.
-  - Após criar, a nova empresa é automaticamente selecionada no combobox e o mini-form fecha.
-- Ao clicar **Salvar** no bloco, o `patchProject` passa a incluir `company_id` quando alterado, e o estado local de `company` é atualizado para refletir o novo cliente sem reload de página (mantendo o padrão otimista já em vigor).
-- Ao clicar **Cancelar**, o draft do company_id e o mini-form de criação são resetados.
-
-Fora do modo edição, a exibição do Cliente continua igual (ícone Building2 + nome). Nada muda no header, sidebar ou demais blocos.
+- Largura inicial igual a um valor mínimo (ex.: 220–320px, configurável por uso).
+- À medida que o texto cresce, a largura do input cresce em conjunto, sempre cabendo o texto + um padding pequeno.
+- Limite máximo configurável (default: largura do container pai). Quando atinge o máximo, comportamento volta ao scroll horizontal nativo do `<input>`.
+- Funciona ao colar texto, ao usar `defaultValue`, ao mudar a fonte/tamanho — porque mede a partir das próprias estilizações do input.
+- Não muda a altura — continua single-line. Para multilinha existe `<Textarea>` (fora de escopo).
+- Acessibilidade preservada: continua sendo um `<input>` nativo, com todas as props (placeholder, aria-*, name, etc.).
 
 ## Implementação técnica
 
-Arquivo único: `src/pages/ProjetoDetalhe.tsx`.
+### 1. Novo componente `AutoWidthInput`
 
-1. **Estado novo**:
-   - `draftCompanyId: string` (sincronizado em `syncDrafts` a partir de `project.company_id`).
-   - `companies: Array<{id, legal_name, trade_name}>` carregado uma vez (no `load()` ou em `useEffect` separado, ordenado por nome).
-   - `companyQuery: string` para o filtro do combobox.
-   - `newCompanyOpen: boolean` e `newCompanyForm: { legal_name, cnpj, industry, website }`.
+Arquivo novo: `src/components/ui/auto-width-input.tsx`.
 
-2. **UI no `PropRow label="Cliente"`** (linhas 1093-1098): condicional em `editing === "info"`:
-   - Modo leitura: como hoje.
-   - Modo edição: usar `Popover` + `Command` (cmdk, já instalado via shadcn — verificar `src/components/ui/command.tsx`) ou um `Select` com `Input` de busca. Preferência por `Popover`+`Command` (padrão combobox shadcn) para suportar busca de muitas empresas. Botão "+ Nova empresa" abaixo, e mini-form colapsável.
+API:
 
-3. **`patchProject`**: incluir `company_id: draftCompanyId` no payload `update`. Após sucesso, atualizar `setCompany` localmente (buscando da lista `companies` em memória pelo id, evitando ida ao banco).
+```tsx
+<AutoWidthInput
+  value={nameDraft}
+  onChange={(e) => setNameDraft(e.target.value)}
+  minWidth={220}        // px, default 160
+  maxWidth="100%"       // px | string CSS, default "100%"
+  placeholder="..."
+  className="h-8 ..."   // mesmas classes do Input atual
+/>
+```
 
-4. **Criação de empresa**: função `async function createCompany()`:
-   ```ts
-   const { data, error } = await supabase
-     .from("companies")
-     .insert({
-       legal_name: form.legal_name.trim(),
-       trade_name: null,
-       cnpj: form.cnpj || null,
-       industry: form.industry || null,
-       website: form.website || null,
-       company_type: "cliente",
-       status: "active",
-       relationship_status: "cliente",
-       organization_id: <getbrain_org_id via RPC ou constante>,
-     })
-     .select("id, legal_name, trade_name")
-     .single();
-   ```
-   Em sucesso: `setCompanies(prev => [...prev, data])`, `setDraftCompanyId(data.id)`, fecha mini-form, toast.
+Implementação:
 
-   - Verificar como o resto do código obtém `organization_id`. O hook `useCompanies` (em `src/hooks/...`) já deve fazer isso; vou reutilizar a mesma lógica. Se houver função RPC `getbrain_org_id()`, usar `supabase.rpc('getbrain_org_id')`. Se outros componentes (NewLeadDialog) já têm `useCreateCompany`, reaproveitar esse hook em vez de SQL inline.
+- Wrapper `<span class="relative inline-block align-middle">` com:
+  - Um `<span aria-hidden>` invisível (`whitespace-pre`, `absolute opacity-0 pointer-events-none`, `top-0 left-0`, mesmas propriedades tipográficas do input via `font-inherit` / `text-base md:text-sm`) que renderiza `value || placeholder || ' '` + 1ch de folga.
+  - O `<input>` real com `width: <medida>` aplicado via `style`, clamp entre `minWidth` e `maxWidth` usando `min(maxWidth, max(minWidth, measuredWidth + paddingX))`.
+- Mede via `useLayoutEffect` lendo `spanRef.current.offsetWidth` sempre que `value` (ou placeholder) mudar.
+- Padding/border do input contabilizados: medir o conteúdo e somar `2*px-3 (24px) + 2*border (2px) = 26px`, mais 2px de folga para evitar que o caret empurre o caractere.
+- Classes base idênticas às do `<Input>` shadcn (`flex h-10 rounded-md border border-input bg-background px-3 py-2 …`) — reaproveitar via `cn()` para herdar a mesma estética.
+- Encaminhar `ref` com `forwardRef<HTMLInputElement>`.
 
-5. **Validação**: botão Salvar do bloco fica desabilitado se `draftCompanyId` for vazio (cliente é obrigatório no schema, `company_id NOT NULL`).
+Pseudo-código:
 
-6. **Sem mudanças no schema** — `company_type='cliente'` já existe no enum (usado por `NewLeadDialog`, etc.).
+```tsx
+export const AutoWidthInput = React.forwardRef<HTMLInputElement, Props>(
+  ({ value, placeholder, minWidth = 160, maxWidth = "100%", className, style, ...rest }, ref) => {
+    const mirrorRef = useRef<HTMLSpanElement>(null);
+    const [width, setWidth] = useState<number>(minWidth);
+
+    useLayoutEffect(() => {
+      if (!mirrorRef.current) return;
+      const measured = mirrorRef.current.offsetWidth;
+      // px-3 (12*2) + border (1*2) + caret folga (2)
+      setWidth(Math.max(minWidth, measured + 28));
+    }, [value, placeholder, minWidth]);
+
+    const widthStyle =
+      typeof maxWidth === "number"
+        ? { width: Math.min(maxWidth, width) }
+        : { width, maxWidth };
+
+    return (
+      <span className="relative inline-block max-w-full align-middle">
+        <span
+          ref={mirrorRef}
+          aria-hidden
+          className={cn(
+            "invisible absolute left-0 top-0 whitespace-pre",
+            // mesmas classes tipográficas do input
+            "text-base md:text-sm px-0",
+            className,
+          )}
+        >
+          {String(value ?? "") || placeholder || " "}
+        </span>
+        <input
+          ref={ref}
+          value={value}
+          placeholder={placeholder}
+          className={cn(
+            "flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+            className,
+          )}
+          style={{ ...widthStyle, ...style }}
+          {...rest}
+        />
+      </span>
+    );
+  },
+);
+```
+
+Observações:
+- Usa `whitespace-pre` para preservar espaços no medidor.
+- O mirror herda o mesmo `className` do input para garantir mesmo `font-size`/`font-weight`/`tracking` (importante quando o `nameDraft` está em `text-2xl font-bold`, por exemplo).
+- `max-w-full` no wrapper impede que o input "estoure" o container pai, ainda que `maxWidth="100%"`.
+
+### 2. Aplicação inicial — onde trocar `<Input>` por `<AutoWidthInput>`
+
+Critério: **somente em campos de edição inline** onde a largura fixa é arbitrária e o texto pode crescer (nomes, títulos, códigos curtos). **Não trocar** em formulários de Dialog/cards onde o input já ocupa a largura total do grid (lá `w-full` faz sentido).
+
+Locais a atualizar nesta primeira leva:
+
+- `src/pages/ProjetoDetalhe.tsx`:
+  - Campo "Nome" no card "Informações do Projeto" (linha ~1159): substituir.
+  - Edição inline do título grande no header (`saveName` / `<Input … h-9 min-w-[320px] text-2xl font-bold>`): substituir, com `minWidth={320}`.
+- `src/pages/ProjetoDetalhe.tsx`: campo "Tipo" continua `Select`, sem mudança.
+
+Para outros lugares do sistema com o mesmo problema (CRM, tarefas, etc.), o componente fica disponível e iremos migrando sob demanda — não vou varrer o sistema inteiro de uma vez para evitar regressões; aplico nesta tela como referência e o usuário decide quais próximos.
+
+### 3. Sem mudanças
+
+- Não muda `src/components/ui/input.tsx` (Input padrão continua igual, com largura controlada por classe).
+- Não muda schema, hooks ou rotas.
+- Não muda Textarea (fora de escopo).
 
 ## Fora de escopo
 
-- Editar dados da empresa existente (nome, CNPJ etc.) a partir desta tela — para isso o usuário continua indo em `/crm/empresas/:id`.
-- Mudança no header ou sidebar.
-- Migração de schema.
+- Auto-resize de **altura** (multilinha) — usar `<Textarea>` com componente próprio se necessário no futuro.
+- Migrar todos os formulários do sistema agora — só os pontos de edição inline da tela de detalhe do projeto. O componente fica pronto para uso global.
