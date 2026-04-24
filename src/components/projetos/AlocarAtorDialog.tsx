@@ -13,11 +13,18 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   projectId: string;
   excludeActorIds: string[];
-  onAllocated: () => void;
+  onAllocated: (allocation: {
+    id: string;
+    actor_id: string;
+    role_in_project: ProjectActorRole;
+    allocation_percent: number | null;
+    started_at: string | null;
+    actor?: { id: string; display_name: string; avatar_url: string | null };
+  }) => void;
 }
 
 export function AlocarAtorDialog({ open, onOpenChange, projectId, excludeActorIds, onAllocated }: Props) {
-  const [actors, setActors] = useState<{ id: string; display_name: string }[]>([]);
+  const [actors, setActors] = useState<{ id: string; display_name: string; avatar_url: string | null }[]>([]);
   const [actorId, setActorId] = useState("");
   const [role, setRole] = useState<ProjectActorRole>("developer");
   const [allocation, setAllocation] = useState("");
@@ -28,7 +35,7 @@ export function AlocarAtorDialog({ open, onOpenChange, projectId, excludeActorId
     (async () => {
       const { data } = await supabase
         .from("actors")
-        .select("id, display_name")
+        .select("id, display_name, avatar_url")
         .eq("type", "human")
         .eq("status", "active")
         .is("deleted_at", null)
@@ -43,12 +50,17 @@ export function AlocarAtorDialog({ open, onOpenChange, projectId, excludeActorId
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("project_actors").insert({
-      project_id: projectId,
-      actor_id: actorId,
-      role_in_project: role,
-      allocation_percent: allocation ? Number(allocation) : null,
-    } as any);
+    const selectedActor = actors.find((actor) => actor.id === actorId);
+    const { data, error } = await supabase
+      .from("project_actors")
+      .insert({
+        project_id: projectId,
+        actor_id: actorId,
+        role_in_project: role,
+        allocation_percent: allocation ? Number(allocation) : null,
+      } as any)
+      .select("id, role_in_project, allocation_percent, started_at, actor_id")
+      .single();
     setSaving(false);
     if (error) {
       toast.error(error.message);
@@ -58,7 +70,16 @@ export function AlocarAtorDialog({ open, onOpenChange, projectId, excludeActorId
     setActorId("");
     setAllocation("");
     onOpenChange(false);
-    onAllocated();
+    onAllocated({
+      ...(data as any),
+      actor: selectedActor
+        ? {
+            id: selectedActor.id,
+            display_name: selectedActor.display_name,
+            avatar_url: selectedActor.avatar_url,
+          }
+        : undefined,
+    });
   }
 
   return (
