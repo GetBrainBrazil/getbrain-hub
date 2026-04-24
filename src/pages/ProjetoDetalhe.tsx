@@ -2152,6 +2152,27 @@ export default function ProjetoDetalhe() {
                     {companyLabel}
                   </span>
                 </SidebarRow>
+                <SidebarRow label="Contato principal">
+                  {primaryContact ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex max-w-full cursor-help flex-col items-end leading-tight">
+                          <span className="truncate text-foreground">{primaryContact.full_name}</span>
+                          {primaryContact.role_in_company && (
+                            <span className="truncate text-[11px] text-muted-foreground">{primaryContact.role_in_company}</span>
+                          )}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="space-y-0.5 text-xs">
+                        {primaryContact.email && <div>{primaryContact.email}</div>}
+                        {primaryContact.phone && <div>{primaryContact.phone}</div>}
+                        {!primaryContact.email && !primaryContact.phone && <div>Sem contato cadastrado</div>}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </SidebarRow>
                 <SidebarRow label="Criado">{relativeTime(project.created_at)}</SidebarRow>
                 <SidebarRow label="Atualizado">{relativeTime(project.updated_at)}</SidebarRow>
               </SidebarSection>
