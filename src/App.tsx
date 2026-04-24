@@ -41,7 +41,6 @@ import Configuracoes from "./pages/Configuracoes";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
-import Vendas from "./pages/Vendas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -82,7 +81,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroVisaoGeral /></ProtectedRoute>} />
-            <Route path="/financeiro/vendas" element={<ProtectedRoute><Vendas /></ProtectedRoute>} />
+            <Route path="/financeiro/vendas" element={<Navigate to="/financeiro" replace />} />
             <Route path="/financeiro/movimentacoes" element={<ProtectedRoute><Movimentacoes /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes/novo/:tipo" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes/:id" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
