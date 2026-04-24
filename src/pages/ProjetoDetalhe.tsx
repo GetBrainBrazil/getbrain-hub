@@ -464,9 +464,9 @@ export default function ProjetoDetalhe() {
     setDraftContractValue(source.contract_value != null ? String(source.contract_value) : "");
     setDraftInstallments(source.installments_count != null ? String(source.installments_count) : "");
     setDraftTokenBudget(source.token_budget_brl != null ? String(source.token_budget_brl) : "");
-    setDraftStartDate(source.start_date ?? "");
-    setDraftEstimated(source.estimated_delivery_date ?? "");
-    setDraftActual(source.actual_delivery_date ?? "");
+    setDraftStartDate(source.start_date ?? null);
+    setDraftEstimated(source.estimated_delivery_date ?? null);
+    setDraftActual(source.actual_delivery_date ?? null);
     setDraftDescription(source.description ?? "");
     setDraftCriteria(source.acceptance_criteria ?? "");
     setDraftNotes(source.notes ?? "");
