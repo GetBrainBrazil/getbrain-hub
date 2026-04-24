@@ -342,7 +342,7 @@ function CardBlock({
           {Icon && <Icon className="h-4 w-4 text-accent" />}
           {title}
         </h3>
-        <div className="opacity-0 transition-opacity group-hover/card:opacity-100">{action}</div>
+        <div className="opacity-60 transition-opacity group-hover/card:opacity-100">{action}</div>
       </header>
       <div className="px-5 py-4">{children}</div>
     </section>
