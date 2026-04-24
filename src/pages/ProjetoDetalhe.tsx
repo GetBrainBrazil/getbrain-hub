@@ -2042,7 +2042,7 @@ export default function ProjetoDetalhe() {
                   contracts={contracts}
                   onAllocate={() => setAllocOpen(true)}
                   onDeallocate={handleDeallocate}
-                  onCreateContract={() => setContractOpen(true)}
+                  onCreateContract={() => openEditor("financial")}
                 />
               </TabsContent>
 
@@ -2372,16 +2372,7 @@ export default function ProjetoDetalhe() {
           excludeActorIds={allocs.map((a) => a.actor_id)}
           onAllocated={load}
         />
-        <NovoContratoDialog
-          open={contractOpen}
-          onOpenChange={(v) => {
-            setContractOpen(v);
-            if (!v) setEditingContractId(null);
-          }}
-          projectId={projectId!}
-          contractId={editingContractId ?? undefined}
-          onCreated={load}
-        />
+        {/* contrato de manutenção agora é editado inline no card Financeiro */}
         {confirmDialogEl}
       </div>
     </TooltipProvider>
