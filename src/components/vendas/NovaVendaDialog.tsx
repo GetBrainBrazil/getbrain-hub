@@ -12,6 +12,7 @@ import { useCreateVenda, TipoVenda } from "@/hooks/useVendas";
 import { formatCurrency } from "@/lib/formatters";
 import { format } from "date-fns";
 import { TIPO_VENDA_LABEL } from "@/lib/vendas-helpers";
+import { getEffectiveMrr, getDiscountInfo } from "@/lib/maintenance";
 
 interface Props {
   open: boolean;
@@ -129,7 +130,7 @@ export function NovaVendaDialog({ open, onOpenChange, defaultProjectId }: Props)
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("maintenance_contracts")
-        .select("id, monthly_fee, status, start_date")
+        .select("id, monthly_fee, monthly_fee_discount_percent, discount_duration_months, status, start_date")
         .eq("project_id", projectId)
         .is("deleted_at", null);
       return data || [];
@@ -272,11 +273,20 @@ export function NovaVendaDialog({ open, onOpenChange, defaultProjectId }: Props)
                     {contratos?.length === 0 && (
                       <SelectItem value="__none" disabled>Nenhum contrato encontrado para este projeto</SelectItem>
                     )}
-                    {contratos?.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {formatCurrency(Number(c.monthly_fee))}/mês — desde {c.start_date}
-                      </SelectItem>
-                    ))}
+                    {contratos?.map((c: any) => {
+                      const eff = getEffectiveMrr(c);
+                      const info = getDiscountInfo(c);
+                      const discountTag = info.hasDiscount
+                        ? info.expired
+                          ? " (desc. expirado)"
+                          : ` (- ${c.monthly_fee_discount_percent}%${info.indefinite ? " indef." : ""})`
+                        : "";
+                      return (
+                        <SelectItem key={c.id} value={c.id}>
+                          {formatCurrency(eff)}/mês{discountTag} — desde {c.start_date}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-2">
