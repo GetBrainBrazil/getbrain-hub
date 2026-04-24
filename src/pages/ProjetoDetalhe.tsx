@@ -109,6 +109,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { getDiscountInfo, getEffectiveMrr } from "@/lib/maintenance";
 import { CurrencyInput, IntegerInput, PercentInput } from "@/components/ui/currency-input";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { AbaEscopo } from "@/components/projetos/AbaEscopo";
 import { AbaMarcos } from "@/components/projetos/AbaMarcos";
 import { AbaRiscos } from "@/components/projetos/AbaRiscos";
@@ -432,9 +433,9 @@ export default function ProjetoDetalhe() {
   const [draftContractValue, setDraftContractValue] = useState("");
   const [draftInstallments, setDraftInstallments] = useState("");
   const [draftTokenBudget, setDraftTokenBudget] = useState("");
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEstimated, setDraftEstimated] = useState("");
-  const [draftActual, setDraftActual] = useState("");
+  const [draftStartDate, setDraftStartDate] = useState<string | null>(null);
+  const [draftEstimated, setDraftEstimated] = useState<string | null>(null);
+  const [draftActual, setDraftActual] = useState<string | null>(null);
   const [draftDescription, setDraftDescription] = useState("");
   const [draftCriteria, setDraftCriteria] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
@@ -463,9 +464,9 @@ export default function ProjetoDetalhe() {
     setDraftContractValue(source.contract_value != null ? String(source.contract_value) : "");
     setDraftInstallments(source.installments_count != null ? String(source.installments_count) : "");
     setDraftTokenBudget(source.token_budget_brl != null ? String(source.token_budget_brl) : "");
-    setDraftStartDate(source.start_date ?? "");
-    setDraftEstimated(source.estimated_delivery_date ?? "");
-    setDraftActual(source.actual_delivery_date ?? "");
+    setDraftStartDate(source.start_date ?? null);
+    setDraftEstimated(source.estimated_delivery_date ?? null);
+    setDraftActual(source.actual_delivery_date ?? null);
     setDraftDescription(source.description ?? "");
     setDraftCriteria(source.acceptance_criteria ?? "");
     setDraftNotes(source.notes ?? "");
@@ -1731,13 +1732,13 @@ export default function ProjetoDetalhe() {
                             const sd = draftStartDate || null;
                             if (sd !== (project.start_date ?? null)) {
                               updates.start_date = sd;
-                              changes.start_date = { before: project.start_date, after: sd };
+                              changes.start_date = { before: project.start_date ?? null, after: sd };
                             }
                             const ed = draftEstimated || null;
                             if (ed !== (project.estimated_delivery_date ?? null)) {
                               updates.estimated_delivery_date = ed;
                               changes.estimated_delivery_date = {
-                                before: project.estimated_delivery_date,
+                                before: project.estimated_delivery_date ?? null,
                                 after: ed,
                               };
                             }
@@ -1745,7 +1746,7 @@ export default function ProjetoDetalhe() {
                             if (ad !== (project.actual_delivery_date ?? null)) {
                               updates.actual_delivery_date = ad;
                               changes.actual_delivery_date = {
-                                before: project.actual_delivery_date,
+                                before: project.actual_delivery_date ?? null,
                                 after: ad,
                               };
                             }
@@ -1769,12 +1770,13 @@ export default function ProjetoDetalhe() {
                   <div className="divide-y divide-border/40">
                     <PropRow label="Início">
                       {editing === "schedule" ? (
-                        <Input
-                          type="date"
-                          value={draftStartDate}
-                          onChange={(e) => setDraftStartDate(e.target.value)}
-                          className="ml-auto h-8 w-[180px]"
-                        />
+                        <div className="ml-auto">
+                          <DatePickerField
+                            value={draftStartDate}
+                            onChange={setDraftStartDate}
+                            placeholder="—"
+                          />
+                        </div>
                       ) : project.start_date ? (
                         formatDate(project.start_date)
                       ) : (
@@ -1783,12 +1785,13 @@ export default function ProjetoDetalhe() {
                     </PropRow>
                     <PropRow label="Entrega Estimada">
                       {editing === "schedule" ? (
-                        <Input
-                          type="date"
-                          value={draftEstimated}
-                          onChange={(e) => setDraftEstimated(e.target.value)}
-                          className="ml-auto h-8 w-[180px]"
-                        />
+                        <div className="ml-auto">
+                          <DatePickerField
+                            value={draftEstimated}
+                            onChange={setDraftEstimated}
+                            placeholder="—"
+                          />
+                        </div>
                       ) : project.estimated_delivery_date ? (
                         formatDate(project.estimated_delivery_date)
                       ) : (
@@ -1797,12 +1800,13 @@ export default function ProjetoDetalhe() {
                     </PropRow>
                     <PropRow label="Entrega Real">
                       {editing === "schedule" ? (
-                        <Input
-                          type="date"
-                          value={draftActual}
-                          onChange={(e) => setDraftActual(e.target.value)}
-                          className="ml-auto h-8 w-[180px]"
-                        />
+                        <div className="ml-auto">
+                          <DatePickerField
+                            value={draftActual}
+                            onChange={setDraftActual}
+                            placeholder="—"
+                          />
+                        </div>
                       ) : project.actual_delivery_date ? (
                         formatDate(project.actual_delivery_date)
                       ) : (
