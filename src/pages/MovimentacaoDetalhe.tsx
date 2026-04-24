@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getHierarchicalOptions, getVinculacaoTipo, type VinculacaoTipo } from "@/lib/categorias-hierarchy";
 import CategoryPicker from "@/components/CategoryPicker";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowDown,
@@ -121,6 +121,8 @@ const emptyForm = {
 
 export default function MovimentacaoDetalhe() {
   const { id, tipo: tipoParam } = useParams<{ id?: string; tipo?: string }>();
+  const [searchParams] = useSearchParams();
+  const initialProjectId = searchParams.get("projectId") || "";
   const navigate = useNavigate();
   const { user } = useAuth();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
@@ -254,7 +256,12 @@ export default function MovimentacaoDetalhe() {
 
       if (isCreate) {
         const today = new Date().toISOString().split("T")[0];
-        setForm({ ...emptyForm, data_competencia: today, data_vencimento: today });
+        setForm({
+          ...emptyForm,
+          data_competencia: today,
+          data_vencimento: today,
+          projeto_id: initialProjectId,
+        });
         setMov(null);
         setLoading(false);
         return;

@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
 import { Sparkles } from "lucide-react";
@@ -189,6 +189,8 @@ export default function Movimentacoes() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const projectIdFromUrl = searchParams.get("projectId") || "";
   const [tab, setTab] = useURLState<string>("aba", "pagar");
   const tabKey = tab === "receber" ? "receber" : "pagar";
   const [movsByTab, setMovsByTab] = useState<Record<TabType, any[]>>({ pagar: [], receber: [] });
@@ -253,6 +255,29 @@ export default function Movimentacoes() {
   useEffect(() => {
     void loadInitialData();
   }, []);
+
+  // Filtro vindo de deep-link (ex.: /projetos/:id/financeiro → "Ver em Contas a…")
+  // Quando ?projectId=... está na URL, aplica como filtro único do Projeto na aba ativa.
+  useEffect(() => {
+    if (!projectIdFromUrl) return;
+    if (projetoFilter.length === 1 && projetoFilter[0] === projectIdFromUrl) return;
+    setProjetoFilter([projectIdFromUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectIdFromUrl, tabKey]);
+
+  function clearProjectIdFilter() {
+    setProjetoFilter([]);
+    if (projectIdFromUrl) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("projectId");
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }
 
   function setTabsLoading(targetTabs: TabType[], value: boolean) {
     setLoadingByTab((prev) => {
@@ -710,7 +735,7 @@ export default function Movimentacoes() {
   }
 
   function resetForm() {
-    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "", recorrente: false, frequencia_recorrencia: "mensal", quantidade_recorrencia: "12" });
+    setForm({ descricao: "", cliente_id: "", fornecedor_id: "", projeto_id: projectIdFromUrl, categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "", recorrente: false, frequencia_recorrencia: "mensal", quantidade_recorrencia: "12" });
     setFornecedorSearch("");
     setClienteSearch("");
   }
@@ -1010,6 +1035,23 @@ export default function Movimentacoes() {
 
       {/* Filters */}
       <div className="flex flex-col gap-3">
+        {projectIdFromUrl && (() => {
+          const proj: any = projetos.find((p: any) => p.id === projectIdFromUrl);
+          const label = proj ? [proj.code, proj.name].filter(Boolean).join(" — ") : "projeto";
+          return (
+            <div className="flex items-center gap-2 self-start rounded-md border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs">
+              <span className="font-medium text-accent">Filtrado por projeto:</span>
+              <span className="font-mono text-foreground">{label}</span>
+              <button
+                type="button"
+                onClick={clearProjectIdFilter}
+                className="ml-1 inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" /> limpar
+              </button>
+            </div>
+          );
+        })()}
         <div className="flex gap-3 flex-wrap items-center">
           <div className="relative flex-1 min-w-[240px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

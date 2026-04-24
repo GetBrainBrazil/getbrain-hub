@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -487,9 +488,11 @@ export default function ProjetoFinanceiroDetalhe() {
     );
   }
 
-  const novaParcelaHref = `/financeiro/movimentacoes/novo/receita?projectId=${projectId}`;
+  const novaParcelaHref = `/financeiro/movimentacoes/novo/receber?projectId=${projectId}`;
   const novaRecorrenciaHref = `/financeiro/contratos?projectId=${projectId}&new=1`;
-  const novoCustoHref = `/financeiro/movimentacoes/novo/despesa?projectId=${projectId}`;
+  const novoCustoHref = `/financeiro/movimentacoes/novo/pagar?projectId=${projectId}`;
+  const verContasReceberHref = `/financeiro/movimentacoes?aba=receber&projectId=${projectId}`;
+  const verContasPagarHref = `/financeiro/movimentacoes?aba=pagar&projectId=${projectId}`;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
@@ -532,7 +535,12 @@ export default function ProjetoFinanceiroDetalhe() {
         icon={Repeat}
         title="Parcelas & Recorrências"
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
+              <Link to={verContasReceberHref}>
+                <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ver em Contas a Receber
+              </Link>
+            </Button>
             <Button asChild size="sm" variant="outline">
               <Link to={novaRecorrenciaHref}>
                 <Plus className="mr-1 h-3.5 w-3.5" /> Nova recorrência
@@ -624,11 +632,18 @@ export default function ProjetoFinanceiroDetalhe() {
         icon={Receipt}
         title="Custos do projeto"
         action={
-          <Button asChild size="sm" variant="outline">
-            <Link to={novoCustoHref}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> Registrar custo
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
+              <Link to={verContasPagarHref}>
+                <ExternalLink className="mr-1 h-3.5 w-3.5" /> Ver em Contas a Pagar
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to={novoCustoHref}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Registrar custo
+              </Link>
+            </Button>
+          </div>
         }
       >
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
