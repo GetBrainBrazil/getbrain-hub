@@ -1937,15 +1937,28 @@ export default function ProjetoDetalhe() {
                   }
                 >
                   {editing === "criteria" ? (
-                    <Textarea
-                      rows={5}
+                    <RichTextEditor
                       value={draftCriteria}
-                      onChange={(e) => setDraftCriteria(e.target.value)}
+                      onChange={setDraftCriteria}
                       placeholder="- [ ] Entrega A&#10;- [ ] Entrega B"
-                      className="font-mono text-sm"
+                      onSave={async (v) => {
+                        const next = v || null;
+                        if (next !== (project.acceptance_criteria ?? null)) {
+                          await patchProject(
+                            { acceptance_criteria: next } as any,
+                            {
+                              acceptance_criteria: {
+                                before: project.acceptance_criteria,
+                                after: next,
+                              },
+                            },
+                          );
+                        }
+                      }}
+                      onCancel={closeEditor}
                     />
                   ) : project.acceptance_criteria ? (
-                    <CriteriaList
+                    <RichTextView
                       text={project.acceptance_criteria}
                       onToggle={async (newText) => {
                         await patchProject(
