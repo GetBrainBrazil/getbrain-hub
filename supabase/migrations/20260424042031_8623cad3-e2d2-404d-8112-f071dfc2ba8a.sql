@@ -1,0 +1,1 @@
+ALTER VIEW public.crm_funnel_metrics SET (security_invoker = true);
