@@ -1,54 +1,87 @@
 ## Objetivo
 
-Substituir a "Linha do tempo de parcelas (todas)" do card **Saúde financeira** (aba Operacional do projeto) por uma **visualização em calendário mensal**, mais legível que a régua horizontal atual onde os pontos se sobrepõem.
+Substituir o `ParcelasCalendar` atual (poluído, com bolinhas amontoadas e pouco legível) por um calendário financeiro mensal mais bonito, prático de ler, e que mostre **entradas e saídas** com tooltip detalhado ao passar o mouse — incluindo descrição, valor, data e **categoria** (Salário, Implementação, Manutenção, etc.).
 
-## O que muda
+## O que muda visualmente
 
-Apenas o componente `Timeline` em `src/pages/projetos/ProjetoFinanceiroDetalhe.tsx` (linhas ~229-323) será substituído por um novo `ParcelasCalendar`. Tudo mais (dados, filtros, métricas, blocos abaixo) permanece igual.
+### Antes
+- Cards densos com bolinhas coloridas pequenas (até 8 por mês), título do mês, contagem e valor previsto.
+- Tooltip nativo do browser (`title=`) — feio, lento e sem formatação.
+- Mostra apenas receitas (`allReceitas`).
 
-## Visualização proposta
-
-Calendário compacto agrupando parcelas por mês, do primeiro ao último mês com lançamentos:
+### Depois — calendário mensal "heatmap" financeiro
+Cada célula do mês passa a ter:
 
 ```text
-┌─ Recebido 16   ● Previsto 11   ● Atrasado 1 ──────── [‹ 2025 ›] ─┐
-│                                                                  │
-│  JAN/25   FEV/25   MAR/25   ABR/25   MAI/25   JUN/25             │
-│  ──       ──       ──       ──       ──       ●                  │
-│                                                R$ 725             │
-│                                                                  │
-│  JUL/25   AGO/25   SET/25   OUT/25   NOV/25   DEZ/25             │
-│  ●        ●        ●        ●        ● ●      ●                  │
-│  R$725    R$725    R$725    R$750    R$1.500  R$750               │
-│                                                                  │
-│  JAN/26   FEV/26   MAR/26  [ABR/26] MAI/26    JUN/26             │
-│  ●        ●        ●        ● ●     ○         ○                  │
-│  R$750    R$750    R$750    R$1.500 R$750     R$750               │
-└──────────────────────────────────────────────────────────────────┘
-● recebido  ● atrasado  ○ previsto       Mês de hoje destacado
+┌──────────────────────────┐
+│ JUL                   3  │  ← mês + nº de lançamentos
+│                          │
+│  +R$ 2.250        ▲      │  ← entradas (verde) com seta ↑
+│  −R$    450       ▼      │  ← saídas  (vermelho) com seta ↓
+│ ─────────────────────    │
+│  Saldo  +R$ 1.800        │  ← saldo líquido
+│                          │
+│  ●●● ○○                  │  ← micro-barra de status (recebido/previsto/atrasado)
+└──────────────────────────┘
 ```
 
-Características:
-- **Grade mensal** (4 colunas em mobile, 6 em desktop) cobrindo o intervalo completo das parcelas.
-- Cada célula mostra **mês/ano**, **bolinhas coloridas** (uma por parcela, cor = status) e o **total do mês** em fonte mono.
-- **Mês atual** com borda destacada (ring accent).
-- **Hover/tooltip** em cada bolinha com descrição, valor e data (mantém comportamento atual).
-- **Clique na bolinha**: abre tooltip detalhado (descrição + valor + data + status). Sem navegação por enquanto para manter escopo enxuto.
-- Legenda no topo (Recebido / Previsto / Atrasado) — preservada.
+- Fundo do card recebe um leve **tint verde/vermelho** conforme o saldo do mês (heatmap discreto).
+- Mês atual destacado com `ring-accent`.
+- Meses sem lançamento ficam **vazios e apagados** (sem borda forte) para o olho focar nos meses com atividade.
+- Tipografia mono nos valores, alinhamento `tabular-nums` para colunas verticais limpas.
 
-## Implementação técnica
+### Tooltip rico (Radix `HoverCard` / `Tooltip`)
+Ao passar o mouse sobre uma célula do mês, abre um popover com a lista detalhada:
 
-Arquivo único alterado: `src/pages/projetos/ProjetoFinanceiroDetalhe.tsx`
+```text
+Julho · 2025                            +R$ 1.800,00 líquido
+─────────────────────────────────────────────────────────────
+ENTRADAS
+  ● 10/07  Mensalidade contrato         Manutenção    R$ 750,00
+  ● 15/07  Parcela 3/6 implementação    Implementação R$ 1.500,00
 
-1. Remover a função `Timeline` (linhas ~229-323).
-2. Criar `ParcelasCalendar({ items }: { items: ProjectMovimentacao[] })`:
-   - Agrupa `items` por `YYYY-MM` de `data_vencimento` usando `date-fns` (`format`, `startOfMonth`, `eachMonthOfInterval`).
-   - Gera todos os meses entre `min` e `max` (inclui meses vazios para manter continuidade visual).
-   - Para cada mês: lista de parcelas + soma de `valor_previsto`.
-   - Reusa helpers existentes: `parcelStatus`, `statusColor`, `statusLabel`, `formatCurrency`, `formatDate`.
-   - Renderiza grid Tailwind (`grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2`).
-   - Cada célula = `Tooltip` (shadcn) wrappando bolinhas; mês atual recebe `ring-2 ring-accent`.
-3. Trocar a chamada `<Timeline items={allReceitas} />` (linha 666) por `<ParcelasCalendar items={allReceitas} />`.
-4. Atualizar o título do bloco (linha 664) de "Linha do tempo de parcelas (todas)" para **"Calendário de parcelas (todas)"**.
+SAÍDAS
+  ● 05/07  Salário João                 Salário       R$ 350,00
+  ● 20/07  API OpenAI                   Integrações   R$ 100,00
+```
 
-Sem mudanças em banco, queries, tipos, rotas ou outros componentes. Sem novas dependências (`date-fns` já está no projeto).
+Cada linha clicável → abre `/financeiro/movimentacoes/:id` (mesmo destino do `ParcelaRow` atual).
+
+## Mudanças técnicas
+
+**Arquivo:** `src/pages/projetos/ProjetoFinanceiroDetalhe.tsx`
+
+1. **Passar entradas + saídas para o calendário**
+   - Trocar `<ParcelasCalendar items={allReceitas} />` por `<ParcelasCalendar receitas={allReceitas} despesas={detail?.despesas ?? []} />`.
+
+2. **Reescrever `ParcelasCalendar`**
+   - Nova assinatura: `{ receitas, despesas }`.
+   - Construir `byMonth: Map<string, { receitas: [], despesas: [] }>` cobrindo o range completo (min..max) das duas listas juntas.
+   - Para cada mês calcular: `entradas`, `saidas`, `saldo`, contagem por status.
+   - Renderizar grid responsivo `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6`.
+   - Heatmap: `bg-success/5` quando saldo > 0, `bg-destructive/5` quando saldo < 0, intensidade proporcional ao maior saldo absoluto do range (clamp em 3 níveis: `/5`, `/10`, `/15`).
+
+3. **Tooltip rico com `HoverCard`**
+   - Importar de `@/components/ui/hover-card` (já existe no projeto shadcn).
+   - `HoverCardTrigger` envolve a célula inteira; `HoverCardContent` lista lançamentos agrupados em ENTRADAS / SAÍDAS, ordenados por data.
+   - Cada item exibe: bolinha de status, dia/mês, descrição (truncada), badge da categoria, valor.
+
+4. **Resolver nome da categoria**
+   - Adicionar fetch leve no hook `useProjectFinanceDetail.ts`: após carregar movimentações, coletar `categoria_id` distintos e fazer um único `select("id, nome")` em `categorias_financeiras`.
+   - Expor `categoriasMap: Record<string, string>` no retorno do hook.
+   - Fallback de label quando `categoria_id == null`:
+     - `source_entity_type === "maintenance_contract"` → `"Manutenção"`
+     - `tipo === "despesa"` e descrição contém "salário" → `"Salário"` (heurística leve)
+     - caso contrário → `"Sem categoria"`
+
+5. **Legenda atualizada**
+   - Manter contadores Recebido / Previsto / Atrasado (apenas para receitas, como hoje).
+   - Adicionar linha extra com totais do range: `Entradas R$ X · Saídas R$ Y · Saldo R$ Z`.
+
+6. **Título da seção**
+   - Mudar de "Calendário de parcelas (todas)" para **"Calendário financeiro"**.
+
+## Fora do escopo
+- Não alteramos os gráficos donut nem os totais já corrigidos na rodada anterior.
+- Não mexemos na lógica de `parcelStatus` / `statusColor`.
+- Não criamos visão diária (continua mensal — pedido foi melhorar a leitura, não trocar a granularidade).
