@@ -1499,8 +1499,10 @@ export default function ProjetoDetalhe() {
                               changes.token_budget_brl = { before: project.token_budget_brl, after: tb };
                             }
                             await patchProject(updates, changes);
+                            await saveContract();
                             setEditing(null);
                           }}
+                          disabled={savingContract}
                         >
                           <Save className="mr-1 h-3.5 w-3.5" /> Salvar
                         </Button>
