@@ -1079,6 +1079,18 @@ export default function FinanceiroVisaoGeral() {
             </CardContent>
           </Card>
         </DashboardSection>
+
+        {/* ============== Bloco 5 — Por Projeto ============== */}
+        <BlocoPorProjeto />
+
+        {/* ============== Bloco 6 — Por Cliente ============== */}
+        <BlocoPorCliente />
+
+        {/* ============== Bloco 7 — Comparativo Histórico ============== */}
+        <BlocoComparativoHistorico />
+
+        {/* ============== Bloco 8 — Próximas Movimentações ============== */}
+        <BlocoProximasMovimentacoes />
       </div>
     </TooltipProvider>
   );
