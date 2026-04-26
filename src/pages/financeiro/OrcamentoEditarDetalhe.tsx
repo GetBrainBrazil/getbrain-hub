@@ -45,7 +45,7 @@ export default function OrcamentoEditarDetalhe() {
   const [validationDays, setValidationDays] = useState(7);
   const [considerations, setConsiderations] = useState<string[]>([]);
   const [validUntil, setValidUntil] = useState("");
-  const [templateKey, setTemplateKey] = useState<string>("anbi");
+  const [templateKey, setTemplateKey] = useState<string>("inovacao_tecnologica");
   const [zoom, setZoom] = useState(0.5);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -71,7 +71,7 @@ export default function OrcamentoEditarDetalhe() {
       Array.isArray(data.considerations) ? (data.considerations as string[]) : []
     );
     setValidUntil(data.valid_until || "");
-    setTemplateKey((data as any).template_key || "anbi");
+    setTemplateKey((data as any).template_key || "inovacao_tecnologica");
     setDirty(false);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
     // Reset initial load flag after state settles

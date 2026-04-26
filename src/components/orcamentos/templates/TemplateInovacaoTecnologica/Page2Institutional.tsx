@@ -25,7 +25,7 @@ const METAS = [
 ];
 
 /**
- * Página 2 — Conteúdo institucional FIXO. Reproduz literalmente o template ANBI.
+ * Página 2 — Conteúdo institucional FIXO. Reproduz literalmente o template "Inovacao Tecnologica".
  */
 export function Page2Institutional() {
   return (
