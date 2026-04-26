@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import type { Deal, DealStage } from '@/types/crm';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton as UISkeleton } from '@/components/ui/skeleton';
+import { DealProposalsSection } from '@/components/orcamentos/DealProposalsSection';
 
 function daysUntil(date: string | null) {
   if (!date) return 'sem previsão';
