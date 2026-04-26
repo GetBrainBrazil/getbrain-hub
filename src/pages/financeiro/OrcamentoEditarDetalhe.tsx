@@ -45,6 +45,7 @@ export default function OrcamentoEditarDetalhe() {
   const [validationDays, setValidationDays] = useState(7);
   const [considerations, setConsiderations] = useState<string[]>([]);
   const [validUntil, setValidUntil] = useState("");
+  const [templateKey, setTemplateKey] = useState<string>("anbi");
   const [zoom, setZoom] = useState(0.5);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
