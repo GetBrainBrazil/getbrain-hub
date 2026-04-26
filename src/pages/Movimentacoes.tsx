@@ -1075,6 +1075,11 @@ export default function Movimentacoes() {
           </div>
           <PeriodFilter preset={periodPreset as PeriodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
           <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <Switch checked={hideRecurringFuture} onCheckedChange={setHideRecurringFuture} />
+            Ocultar parcelas futuras de recorrências
+            <HelpTooltip content="Esconde parcelas de recorrências com vencimento após o fim do mês atual." />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
             Exibir Saldos Parciais
             <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
