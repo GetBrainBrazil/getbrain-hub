@@ -13,6 +13,8 @@ import Movimentacoes from "./pages/Movimentacoes";
 import MovimentacaoDetalhe from "./pages/MovimentacaoDetalhe";
 import Recorrencias from "./pages/financeiro/Recorrencias";
 import RecorrenciaDetalhe from "./pages/financeiro/RecorrenciaDetalhe";
+import Orcamentos from "./pages/financeiro/Orcamentos";
+import OrcamentoEditarDetalhe from "./pages/financeiro/OrcamentoEditarDetalhe";
 
 import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
