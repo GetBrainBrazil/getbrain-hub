@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Download, Send, Check, X, Save, ZoomIn, ZoomOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,11 +45,16 @@ export default function OrcamentoEditarDetalhe() {
   const [validationDays, setValidationDays] = useState(7);
   const [considerations, setConsiderations] = useState<string[]>([]);
   const [validUntil, setValidUntil] = useState("");
+  const [templateKey, setTemplateKey] = useState<string>("anbi");
   const [zoom, setZoom] = useState(0.5);
   const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     if (!data) return;
+    isInitialLoad.current = true;
     setClientName(data.client_company_name || "");
     setClientCity(data.client_city || "");
     setClientLogoUrl(data.client_logo_url || null);
@@ -66,7 +71,11 @@ export default function OrcamentoEditarDetalhe() {
       Array.isArray(data.considerations) ? (data.considerations as string[]) : []
     );
     setValidUntil(data.valid_until || "");
+    setTemplateKey((data as any).template_key || "anbi");
     setDirty(false);
+    setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
+    // Reset initial load flag after state settles
+    setTimeout(() => { isInitialLoad.current = false; }, 0);
   }, [data?.id]);
 
   const previewProposal = useMemo(
@@ -101,7 +110,7 @@ export default function OrcamentoEditarDetalhe() {
     };
   }
 
-  async function save(extra: Record<string, any> = {}) {
+  async function save(extra: Record<string, any> = {}, opts: { silent?: boolean } = {}) {
     if (!id) return;
     await update.mutateAsync({
       id,
@@ -117,12 +126,42 @@ export default function OrcamentoEditarDetalhe() {
         validation_days: validationDays,
         considerations,
         valid_until: validUntil,
+        template_key: templateKey,
         ...extra,
       },
     });
     setDirty(false);
-    toast.success("Salvo");
+    setLastSavedAt(new Date());
+    if (!opts.silent) toast.success("Salvo");
   }
+
+  // Autosave: 2s de debounce após qualquer mudança
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (!dirty) return;
+    if (!id) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      save({}, { silent: true }).catch(() => {});
+    }, 2000);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    dirty,
+    clientName,
+    clientCity,
+    clientLogoUrl,
+    scopeItems,
+    maintenance,
+    maintenanceDesc,
+    implementationDays,
+    validationDays,
+    considerations,
+    validUntil,
+    templateKey,
+  ]);
 
   async function handleMarkSent() {
     if (scopeItems.length === 0) {
@@ -169,8 +208,12 @@ export default function OrcamentoEditarDetalhe() {
   }
 
   const total = calculateScopeTotal(scopeItems);
+  const monthlyTotal = typeof maintenance === "number" && maintenance > 0 ? maintenance : 0;
   const eff = effectiveStatus(data.status as any, validUntil);
   const isLocked = data.status === "aceito" || data.status === "cancelado";
+  const savedLabel = lastSavedAt
+    ? `Salvo às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+    : "—";
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
@@ -186,6 +229,12 @@ export default function OrcamentoEditarDetalhe() {
         <div className="flex items-center gap-2">
           <span className="font-mono font-semibold text-sm">{data.code}</span>
           <OrcamentoStatusBadge status={eff} />
+          <span
+            className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+            title="Template visual aplicado ao PDF"
+          >
+            {templateKey}
+          </span>
           {data.deal && (
             <Link
               to={`/crm/deals/${data.deal.code}`}
@@ -195,13 +244,37 @@ export default function OrcamentoEditarDetalhe() {
             </Link>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Total: <span className="text-success font-semibold tabular-nums">{formatBRL(total)}</span>
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Itens (one-time)
+              </span>
+              <span className="text-success font-bold tabular-nums text-sm">
+                {formatBRL(total)}
+              </span>
+            </div>
+            <div className="h-7 w-px bg-border" />
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Manutenção mensal
+              </span>
+              <span className={`${monthlyTotal > 0 ? "text-primary" : "text-muted-foreground"} font-bold tabular-nums text-sm`}>
+                {monthlyTotal > 0 ? formatBRL(monthlyTotal) : "—"}
+              </span>
+            </div>
+          </div>
+          <span className="text-[11px] text-muted-foreground hidden sm:inline">
+            {update.isPending ? (
+              <span className="text-amber-500 inline-flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
+              </span>
+            ) : dirty ? (
+              <span className="text-amber-500">• não salvo</span>
+            ) : (
+              savedLabel
+            )}
           </span>
-          {dirty && (
-            <span className="text-xs text-amber-500">• não salvo</span>
-          )}
           <Button
             size="sm"
             variant="outline"

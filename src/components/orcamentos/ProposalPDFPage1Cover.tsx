@@ -29,19 +29,33 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
         position: "relative",
       }}
     >
-      {/* Círculos concêntricos decorativos (lado direito) */}
+      {/* Halo radial sutil atrás dos círculos (profundidade) */}
       <div
         aria-hidden
         style={{
           position: "absolute",
-          top: "8mm",
-          right: "-60mm",
-          width: "180mm",
-          height: "180mm",
+          top: "-40mm",
+          right: "-80mm",
+          width: "260mm",
+          height: "260mm",
+          background: `radial-gradient(circle at 30% 50%, ${PDF_COLORS.coverCircle}33 0%, transparent 55%)`,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Círculos concêntricos decorativos (lado direito) — densidade aumentada */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: "0mm",
+          right: "-70mm",
+          width: "200mm",
+          height: "200mm",
           pointerEvents: "none",
         }}
       >
-        {[0, 18, 36, 54, 72, 90].map((offset) => (
+        {[0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104].map((offset, i) => (
           <div
             key={offset}
             style={{
@@ -50,9 +64,9 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
               left: `${offset / 2}mm`,
               right: `${offset / 2}mm`,
               bottom: `${offset / 2}mm`,
-              border: `0.6mm solid ${PDF_COLORS.coverCircle}`,
+              border: `0.5mm solid ${PDF_COLORS.coverCircle}`,
               borderRadius: "50%",
-              opacity: 0.35,
+              opacity: 0.18 + (i % 3) * 0.12,
             }}
           />
         ))}
@@ -63,14 +77,14 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
         aria-hidden
         style={{
           position: "absolute",
-          bottom: "30mm",
-          left: "-30mm",
-          width: "60mm",
-          height: "60mm",
+          bottom: "26mm",
+          left: "-40mm",
+          width: "80mm",
+          height: "80mm",
           pointerEvents: "none",
         }}
       >
-        {[0, 8, 16, 24].map((o) => (
+        {[0, 6, 12, 18, 24, 30, 36, 42].map((o, i) => (
           <div
             key={o}
             style={{
@@ -79,13 +93,28 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
               left: `${o / 2}mm`,
               right: `${o / 2}mm`,
               bottom: `${o / 2}mm`,
-              border: `0.5mm solid ${PDF_COLORS.coverCircle}`,
+              border: `0.4mm solid ${PDF_COLORS.coverCircle}`,
               borderRadius: "50%",
-              opacity: 0.25,
+              opacity: 0.14 + (i % 2) * 0.1,
             }}
           />
         ))}
       </div>
+
+      {/* Círculo "marcador" sólido pequeno cyan no canto superior direito */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: "22mm",
+          right: "22mm",
+          width: "5mm",
+          height: "5mm",
+          backgroundColor: PDF_COLORS.coverCircle,
+          borderRadius: "50%",
+          boxShadow: `0 0 0 2mm ${PDF_COLORS.coverCircle}33`,
+        }}
+      />
 
       {/* Logo GetBrain topo esquerdo */}
       <div
@@ -171,18 +200,24 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
         ) : (
           <div
             style={{
-              width: "26mm",
-              height: "26mm",
-              border: `0.8mm solid ${PDF_COLORS.ink}`,
+              width: "28mm",
+              height: "28mm",
+              borderRadius: "50%",
+              border: `0.6mm dashed ${PDF_COLORS.inkSoft}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: PDF_COLORS.ink,
-              fontWeight: 700,
-              fontSize: "10pt",
+              color: PDF_COLORS.inkSoft,
+              fontWeight: 600,
+              fontSize: "8pt",
+              letterSpacing: "1.5pt",
+              textAlign: "center",
+              lineHeight: 1.1,
             }}
           >
             LOGO
+            <br />
+            CLIENTE
           </div>
         )}
         <div
