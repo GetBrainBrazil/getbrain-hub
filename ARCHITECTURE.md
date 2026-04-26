@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.6 — 23/04/2026**
+> **Versão atual: v1.7 — 26/04/2026**
 
 ---
 
@@ -499,9 +499,65 @@ responsible_actor_id uuid FK → actors
 identified_at date default current_date
 resolved_at date
 notes text
-created_at, updated_at, deleted_at
-created_by_actor_id, updated_by_actor_id
 ```
+
+### 4.Z `financial_recurrences` — Entidade canônica de séries financeiras (v1.7)
+
+> **Adicionada em 09C-1A (26/04/2026).** Representa qualquer série de movimentações financeiras: recorrências contínuas (assinaturas, salários, aluguéis, contratos de manutenção) ou parcelamentos finitos (vendas em N×, propostas fechadas pelo CRM). Substitui os 5 padrões inconsistentes anteriores.
+
+**Conceitos:**
+
+- `type = 'recurrence'`: série contínua, com ou sem `end_date`. Sem `end_date` = gera 12 meses rolling via cron mensal.
+- `type = 'installment'`: série finita com `total_installments` parcelas. Geração de uma vez.
+- Cardinalidade: 1 `financial_recurrences` → N `movimentacoes` (filhas vinculadas via `recurrence_id`).
+- Code: `REC-XXXX` (sequência `recurrence_code_seq`, padrão similar a `PRJ-XXX`).
+
+**Geradores que populam esta entidade** (todos refatorados em 09C-1A):
+
+| Origem | Função | Comportamento |
+|--------|--------|---------------|
+| Forms financeiros | RPC `create_recurrence_with_installments` | Toggle "Conta recorrente" em `ContasPagar.tsx`, `Movimentacoes.tsx`, `MovimentacaoDetalhe.tsx` |
+| CRM (deal fechado) | `close_deal_as_won` | Cria recurrence com `source_module='crm'`, `type=installment` se >1 parcela |
+| Vendas | `vendas_gerar_parcelas` | Tipo parcelado → installment; recorrente → delegado à manutenção; avulso → linha direta em `movimentacoes` |
+| Manutenção | `sync_maintenance_contract_recurrence` (trigger) | Cria/atualiza/cancela 1 recurrence por contrato ativo |
+| Migração 09C-1A | seed direto | 31 registros legados consolidados em 3 recurrences |
+
+**Regra de ouro do trigger `propagate_recurrence_changes`:**
+
+> Parcelas com `status='pago'` ou `data_vencimento < CURRENT_DATE` são **imutáveis** pela cascata. Mudanças na recorrência mãe propagam apenas para parcelas pendentes futuras.
+
+**Estados (`status`):**
+
+- `ativa` → gera parcelas, propaga mudanças
+- `pausada` → não gera novas; parcelas existentes intactas. Reativação chama gerador para recriar faltantes.
+- `cancelada` → soft-delete em parcelas pendentes futuras
+- `encerrada` → idem cancelada, semanticamente diferente (encerramento natural vs. interrupção)
+
+**RLS:** `authenticated_all` (segue padrão atual; endurecimento por `organization_id` está na DT-09C1A-3 da seção 16).
+
+### 4.X — Conceito complementar: deprecation de campos (v1.7)
+
+A partir de v1.7, este documento adota explicitamente o padrão de **deprecation antes de remoção**:
+
+1. Campo marcado com `COMMENT 'DEPRECATED desde XX. Use Y. Removido em prompt futuro.'`
+2. Refactor de **todos** os leitores e escritores para a nova fonte de verdade
+3. Período de validação (mínimo **30 dias**) com monitoramento
+4. Prompt dedicado de remoção (`DROP COLUMN`) — só após confirmar zero uso vivo
+
+Isso protege contra regressão silenciosa em fluxos não auditados.
+
+**Campos atualmente em deprecation (`movimentacoes`)** — desde 09C-1A (26/04/2026):
+
+| Campo legado | Substituto |
+|--------------|------------|
+| `recorrente` | `recurrence_id IS NOT NULL` |
+| `frequencia_recorrencia` | `financial_recurrences.frequency` |
+| `movimentacao_pai_id` | `recurrence_id` |
+| `parcelado` | `recurrence_id` com `financial_recurrences.type='installment'` |
+| `parcela_atual` | `installment_number` |
+| `total_parcelas` | `installments_total` |
+
+**Novas colunas em `movimentacoes` (v1.7):** `recurrence_id`, `installment_number`, `installments_total`, `deleted_at` (soft delete).
 
 ---
 
@@ -532,6 +588,18 @@ Toda tabela tem RLS habilitado. Políticas padrão:
 - **Leitura:** autenticado e pertence à mesma `organization_id` que o usuário.
 - **Escrita:** autenticado, mesma org, e tem role suficiente (ex: só `owner` edita `humans`).
 - **Portal do cliente:** via magic link com JWT que contém `company_id`. Vê só dados do próprio `company_id`.
+
+### 5.5 Soft delete em tabelas financeiras (v1.7)
+
+A partir de v1.7, `movimentacoes` passa a ter `deleted_at timestamptz NULL`, alinhada ao princípio 2.7. Toda query de leitura deve filtrar por `deleted_at IS NULL` explicitamente. O backup `_backup_movimentacoes_legacy_recurrence` é a única exceção (preserva o estado pré-migração 09C-1A).
+
+### 5.6 Numeração de séries (v1.7)
+
+Para qualquer entidade que represente "série" (recorrências, parcelas), padrão é:
+
+- Coluna sequencial dentro da série: `installment_number integer`
+- Coluna do total esperado (quando aplicável): `installments_total integer`
+- Numeração via `ROW_NUMBER() OVER (PARTITION BY parent ORDER BY data_natural)` em migrações
 
 ---
 
@@ -964,74 +1032,117 @@ Todas as métricas cruzadas são expostas via view `project_metrics` (criada no 
 
 ## 13. Mapa de integrações entre módulos
 
+> **Substituída integralmente em v1.7 (09C-1A).** Mudança principal: Movimentações deixa de ser destino direto de origens; passa por `financial_recurrences` quando há série.
+
 Esta seção define quais eventos de um módulo disparam quais ações em outro módulo. Todo prompt que cria ou modifica um módulo deve incluir seção "Integrações ativas deste módulo" com referência a esta tabela.
 
-### 13.1 Projetos → Financeiro
+### 13.1 Fluxos canônicos pós-09C-1A
+
+```
+[Origem]                   [Intermediário]                [Destino]
+
+Forms financeiros          ┐
+(toggle "recorrente")      │
+                           │
+CRM (close_deal_as_won)    ├─→ financial_recurrences ─→ movimentacoes
+                           │   (entidade canônica)        (filhas)
+Vendas (parcelado/recorr.) │
+                           │
+Manutenção (trigger)       ┘
+
+Forms financeiros
+(modo simples, sem toggle) ────────────────────────────→ movimentacoes
+                                                          (linha única)
+
+Vendas (avulso)            ────────────────────────────→ movimentacoes
+                                                          (linha única)
+```
+
+### 13.2 Tabela de fluxos por módulo
+
+| Origem | Como dispara | Tabela criada | Filhas em `movimentacoes` |
+|--------|--------------|---------------|---------------------------|
+| Form Conta Recorrente | submit com `recorrente=true` | 1 `financial_recurrences` (`type=recurrence`) | 12 (horizonte rolling) |
+| Form Conta Simples | submit sem toggle | — | 1 linha direta |
+| CRM `close_deal_as_won` | botão "Fechar como ganho" | 1 `financial_recurrences` (`type=installment` se >1, recurrence se =1) | N (= total de parcelas do deal) |
+| Vendas tipo `parcelado` | submit do form Venda | 1 `financial_recurrences` (`type=installment`) | N (= `quantidade_parcelas`) |
+| Vendas tipo `avulso` | submit do form Venda | — | 1 linha direta |
+| Vendas tipo `recorrente` | submit do form Venda | — (delegado à manutenção) | — |
+| Contrato de Manutenção criado | trigger `sync_maintenance_contract_recurrence` | 1 `financial_recurrences` (`type=recurrence`, `end_date = contract.end_date`) | 12 iniciais (rolling se end_date NULL) |
+| Contrato de Manutenção cancelado | mesmo trigger, status <> 'active' | — (atualiza recurrence existente para `cancelada`) | Soft-delete via trigger de propagação |
+| Cron mensal | `extend_recurrences_monthly` (`0 3 1 * *`) | — | +1 mês para cada recurrence ativa sem `end_date` |
+
+### 13.3 Edição em cascata (trigger `recurrence_propagate`)
+
+Mudanças em `financial_recurrences` propagam automaticamente para filhas pendentes futuras:
+
+- `amount` muda → `valor_previsto` das pendentes futuras é atualizado
+- Vínculos mudam (`categoria_id`, `cliente_id`, etc.) → propaga
+- `status` vira `cancelada`/`encerrada` → soft-delete em pendentes futuras
+- `status` volta de `pausada` para `ativa` → recria parcelas faltantes via gerador
+
+> Parcelas pagas ou vencidas (`data_vencimento < CURRENT_DATE`) são imutáveis pela cascata.
+
+### 13.4 Dependências de leitura
+
+Componentes que leem dados de `financial_recurrences`:
+
+- `useProjectFinanceDetail.ts` — join via `recurrence:financial_recurrences(id, type, frequency, status)`, filtra one-shot (`recurrence_id IS NULL`) vs installments vs recurring
+- `ProjetoFinanceiroDetalhe.tsx` — badge `installment_number`/`installments_total`
+- (Futuro 09C-1B) Sub-aba `/financeiro/recorrencias`
+
+> **Princípio:** nenhum código TS lê os campos legados (`recorrente`, `parcelado`, `pai_id`, `parcela_atual`, `total_parcelas`). Se ler, é dívida técnica nova.
+
+### 13.5 Projetos → Financeiro
 
 | Evento gatilho | Ação automatizada | Quem dispara |
 |----------------|-------------------|--------------|
-| `projects.status` muda para `aceito` | Criar N lançamentos de Contas a Receber no Financeiro, um por parcela do `contract_value / installments_count`, espaçados mensalmente a partir de `start_date` ou data atual. Marca `source_module='projects'`, `is_automatic=true`. | Trigger no banco + Edge Function |
-| `projects.status` muda para `cancelado` | Listar lançamentos futuros com `source_entity_id = project.id` e marcar como `cancelled`. Perguntar ao usuário (modal) se deve estornar parcelas já pagas. | Edge Function |
-| `projects.status` muda para `entregue` | Sugerir (não criar automaticamente) abertura de `maintenance_contract` com valores pré-preenchidos baseados no tipo de projeto. Exibir modal de confirmação. | Frontend após trigger |
-| Ator alocado a projeto | Calcular custo projetado mensal (`humans.hourly_cost` × horas_semana × 4) e expor em "Custos do Projeto". | View ou função |
+| `projects.status` muda para `aceito` | Criar N lançamentos de Contas a Receber via `financial_recurrences` (`type=installment`), espaçados mensalmente. Marca `source_module='projects'`, `is_automatic=true`. | Trigger no banco + Edge Function |
+| `projects.status` muda para `cancelado` | Listar lançamentos futuros com `source_entity_id = project.id` e marcar como `cancelled`. Perguntar ao usuário se deve estornar parcelas já pagas. | Edge Function |
+| `projects.status` muda para `entregue` | Sugerir (não criar automaticamente) abertura de `maintenance_contract` com valores pré-preenchidos. | Frontend após trigger |
+| Ator alocado a projeto | Calcular custo projetado mensal e expor em "Custos do Projeto". | View ou função |
 
-### 13.2 Manutenção → Financeiro
+### 13.6 Manutenção → Financeiro
 
-| Evento gatilho | Ação automatizada |
-|----------------|-------------------|
-| `maintenance_contract.status = active` criado | Criar série de lançamentos recorrentes mensais em Contas a Receber, a partir de `start_date`, com valor `monthly_fee × (1 - discount_percent/100)`. |
-| `maintenance_contract.status` muda para `paused` | Marcar lançamentos futuros (ainda não-pagos) como `paused`. |
-| `maintenance_contract.status` muda para `ended` / `cancelled` | Marcar lançamentos futuros como `cancelled`. Lançamentos já pagos ficam intactos. |
-| `maintenance_contract.end_date` atingido | Mudar status automaticamente para `ended` (Edge Function agendada). |
+Ver tabela 13.2 (linhas "Contrato de Manutenção"). Trigger `sync_maintenance_contract_recurrence` mantém 1 `financial_recurrences` por contrato ativo.
 
-### 13.3 Tokens → Financeiro (futuro, Prompt do módulo Tokens)
+### 13.7 Tokens → Financeiro (futuro)
 
 | Evento gatilho | Ação |
 |----------------|------|
 | Consumo atinge 80% do `token_budget_brl` | Notificar Daniel (email/UI). |
-| Consumo ultrapassa 100% | Criar lançamento adicional em Contas a Receber com valor do excedente, `source_module='tokens'`. |
+| Consumo ultrapassa 100% | Criar lançamento adicional em Contas a Receber (linha direta), `source_module='tokens'`. |
 
-### 13.4 CRM → Projetos (futuro, Prompt do módulo CRM)
-
-| Evento gatilho | Ação |
-|----------------|------|
-| Pipeline muda para `fechado` | Criar `project` com `status='aceito'`, pré-populando `company_id`, `project_type`, `contract_value`, descrição a partir do lead. |
-| Pipeline muda para `perdido` | Atualizar `companies.status='lost'`. |
-
-### 13.5 Suporte → Manutenção (futuro, Prompt do módulo Suporte)
+### 13.8 Suporte → Manutenção (futuro)
 
 | Evento gatilho | Ação |
 |----------------|------|
-| Ticket resolvido | Registrar horas gastas no `maintenance_contract` vinculado. Alertar se acumulado > `hours_budget`. |
+| Ticket resolvido | Registrar horas no `maintenance_contract`. Alertar se acumulado > `hours_budget`. |
 | Ticket reaberto 2+ vezes | Aumentar prioridade, notificar Daniel. |
 
-### 13.6 Projetos → Atividade global
-
-Toda mudança de status ou campo importante em qualquer módulo deve gerar entrada em `audit_logs` — base para feed de atividade do projeto, dashboard global e auditoria.
-
-### 13.7 Regras gerais de implementação
-
-- **Edge Functions (Supabase)** implementam automações que atravessam tabelas.
-- **Triggers SQL** implementam automações simples dentro de uma tabela.
-- **Frontend** dispara eventos explicitamente quando user confirma ação que precisa de input (ex: sugerir criar contrato de manutenção).
-- Toda tabela que recebe eventos de outros módulos tem colunas: `source_module text`, `source_entity_type text`, `source_entity_id uuid`, `is_automatic boolean default false`.
-- **Nenhuma automação roda sem estar documentada aqui primeiro.** Se um prompt futuro precisa adicionar automação, atualizar esta seção.
-
-### 13.8 Projetos ← outros módulos (entradas)
+### 13.9 Projetos ← outros módulos (entradas)
 
 | Módulo origem | Evento | Como aparece em Projetos |
 |---------------|--------|--------------------------|
-| Área Dev (Tarefas) | Task criada/atualizada com `project_id` preenchido | Contagem no painel Tarefas da aba Operacional |
-| Área Dev (Tarefas) | Task com `hours_actual` registrado | Soma em `project_metrics.hours_actual` |
-| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pago | Soma em `project_metrics.revenue_received` |
-| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pendente | Soma em `project_metrics.revenue_pending` |
-| Suporte (Tickets) | Ticket criado com `project_id` | Contagem no painel Suporte |
+| Área Dev (Tarefas) | Task com `project_id` | Contagem no painel Tarefas |
+| Área Dev (Tarefas) | Task com `hours_actual` | Soma em `project_metrics.hours_actual` |
+| Financeiro | Lançamento com `source_entity_id = project.id` e status pago | Soma em `project_metrics.revenue_received` |
+| Financeiro | Lançamento idem, status pendente | Soma em `project_metrics.revenue_pending` |
+| Suporte | Ticket criado com `project_id` | Contagem no painel Suporte |
 | Tokens | Consumo registrado com `project_id` | Soma no painel Tokens |
-| CRM | Pipeline fechado | Cria projeto automaticamente com `status='aceito'` |
+| CRM | Pipeline fechado (`close_deal_as_won`) | Cria projeto + `financial_recurrences` automaticamente |
 
-### 13.9 Princípio de agregação
+### 13.10 Regras gerais de implementação
 
-Todas as métricas cruzadas são expostas via view `project_metrics` (criada no Prompt 02c). Nenhum módulo precisa "saber" que Projetos está consumindo — o Projetos simplesmente lê a view, que faz LEFT JOIN com as tabelas dos outros módulos. Quando uma tabela-fonte ainda não existe (Suporte, Tokens), a view retorna 0 para aquele agregado — e passa a retornar dados reais automaticamente quando a tabela for criada no prompt futuro.
+- **Edge Functions** implementam automações cross-tabela.
+- **Triggers SQL** implementam automações intra-tabela e cascatas de séries (`propagate_recurrence_changes`).
+- **Frontend** dispara eventos explicitamente quando user confirma ação que precisa de input.
+- Toda tabela que recebe eventos de outros módulos tem colunas: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`.
+- **Nenhuma automação roda sem estar documentada aqui primeiro.**
+
+### 13.11 Princípio de agregação
+
+Métricas cruzadas via view `project_metrics`. Nenhum módulo precisa "saber" que Projetos está consumindo — a view faz LEFT JOIN com tabelas dos outros módulos.
 
 ---
 
@@ -1058,3 +1169,60 @@ Para evitar escopo inflado, o adendo não inclui:
 2. **Tabela `projetos` (PT) órfã**: existe mas está vazia (0 linhas). Toda integração de `movimentacoes.projeto_id` aponta para `projects` (EN). Limpar/dropar `projetos` em prompt futuro de limpeza.
 3. **Sem FK declarada em `movimentacoes.projeto_id`**: 100% das linhas populadas hoje apontam para `projects.id`, mas falta constraint formal. Adicionar `FOREIGN KEY` em prompt futuro.
 4. **Categoria oficial de "Tokens IA"**: não existe ainda. Destaque condicional adiado para quando o módulo Tokens (08) criar a categoria.
+
+### Adicionadas em v1.7 (09C-1A — 26/04/2026)
+
+5. **DT-09C1A-1: Audit log ausente em `financial_recurrences`**
+   - Origem: `audit_trigger_function` referenciada no prompt 09C-1A não existe no banco
+   - Impacto: tabela `financial_recurrences` não tem trigger `audit_*`, divergindo do padrão da seção 5
+   - Plano: investigar como `audit_logs` é populado hoje (TS-side? trigger genérico?). Se não houver mecanismo automático para novas tabelas, criar prompt dedicado
+   - Prazo: após 09C-1B
+   - Risco: baixo. Operações de `financial_recurrences` ficam fora do trail enquanto não resolvido
+
+6. **DT-09C1A-2: Drop dos campos legados em `movimentacoes`**
+   - Origem: 6 campos marcados como DEPRECATED em 09C-1A (`recorrente`, `frequencia_recorrencia`, `movimentacao_pai_id`, `parcelado`, `parcela_atual`, `total_parcelas`)
+   - Plano: prompt dedicado de cleanup. Pré-condições:
+     - Período de validação ≥ 30 dias (a partir de 26/04/2026 → liberado em **26/05/2026**)
+     - Confirmar que nenhum código TS ou SQL ainda referencia os campos legados
+     - Validar que o backup `_backup_movimentacoes_legacy_recurrence` continua íntegro
+   - Risco: médio. Sem o cleanup, schema fica bagunçado e novos devs/forks podem inadvertidamente usar campos mortos
+
+7. **DT-09C1A-3: Linters de segurança pré-existentes (Security Definer Views, RLS permissivo)**
+   - Já registrado em v1.6, mas reaparecem no relatório do 09C-1A
+   - Não é regressão, é dívida antiga
+   - Plano: prompt "Endurecer RLS por organization_id" após Portal do Cliente
+
+---
+
+## 17. Versões
+
+### v1.7 — 26/04/2026
+
+**Origem:** 09C-1A (Fundação de Recorrências)
+
+**Mudanças:**
+
+- Nova entidade canônica `financial_recurrences` (tabela + RPC + 2 funções + 1 trigger)
+- Novas colunas em `movimentacoes`: `recurrence_id`, `installment_number`, `installments_total`, `deleted_at`
+- 6 campos em `movimentacoes` marcados como DEPRECATED
+- 6 geradores refatorados:
+  - SQL: `close_deal_as_won`, `vendas_gerar_parcelas`, `sync_maintenance_contract_recurrence`
+  - TS: `ContasPagar`, `Movimentacoes`, `MovimentacaoDetalhe`
+- 2 leitores TS refatorados sem fallback (`useProjectFinanceDetail`, `ProjetoFinanceiroDetalhe`)
+- Cron substituído: `extend_recurrences_monthly` via SQL puro
+- 31 registros legados migrados em 3 recurrences (REC-0001/0002/0003)
+- Backup defensivo `_backup_movimentacoes_legacy_recurrence` preservado
+
+**Princípios novos:**
+
+- Deprecation antes de remoção (período mínimo 30 dias) — seção 4.X
+- Soft delete em tabelas financeiras — seção 5.5
+- Princípio "zero leitura de campos deprecated em código vivo"
+
+**Dívidas técnicas registradas:**
+
+- DT-09C1A-1: Audit log ausente em `financial_recurrences`
+- DT-09C1A-2: Drop dos campos legados (liberado 26/05/2026)
+- DT-09C1A-3: Linters de segurança pré-existentes (já em v1.6)
+
+**Próximo:** 09C-1B (sub-aba `/financeiro/recorrencias` com UI completa)
