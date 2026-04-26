@@ -160,6 +160,7 @@ export default function OrcamentoEditarDetalhe() {
     validationDays,
     considerations,
     validUntil,
+    templateKey,
   ]);
 
   async function handleMarkSent() {
