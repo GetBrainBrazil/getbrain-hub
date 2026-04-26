@@ -234,13 +234,37 @@ export default function OrcamentoEditarDetalhe() {
             </Link>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Total: <span className="text-success font-semibold tabular-nums">{formatBRL(total)}</span>
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Itens (one-time)
+              </span>
+              <span className="text-success font-bold tabular-nums text-sm">
+                {formatBRL(total)}
+              </span>
+            </div>
+            <div className="h-7 w-px bg-border" />
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Manutenção mensal
+              </span>
+              <span className={`${monthlyTotal > 0 ? "text-primary" : "text-muted-foreground"} font-bold tabular-nums text-sm`}>
+                {monthlyTotal > 0 ? formatBRL(monthlyTotal) : "—"}
+              </span>
+            </div>
+          </div>
+          <span className="text-[11px] text-muted-foreground hidden sm:inline">
+            {update.isPending ? (
+              <span className="text-amber-500 inline-flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
+              </span>
+            ) : dirty ? (
+              <span className="text-amber-500">• não salvo</span>
+            ) : (
+              savedLabel
+            )}
           </span>
-          {dirty && (
-            <span className="text-xs text-amber-500">• não salvo</span>
-          )}
           <Button
             size="sm"
             variant="outline"
