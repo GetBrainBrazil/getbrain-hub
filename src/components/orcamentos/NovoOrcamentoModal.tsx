@@ -60,7 +60,6 @@ export function NovoOrcamentoModal({
           .select("id, code, title, stage, company_id")
           .is("deleted_at", null)
           .in("stage", [
-            "triagem_feita",
             "presencial_agendada",
             "presencial_feita",
             "orcamento_enviado",
