@@ -53,6 +53,7 @@ export default function OrcamentoEditarDetalhe() {
 
   useEffect(() => {
     if (!data) return;
+    isInitialLoad.current = true;
     setClientName(data.client_company_name || "");
     setClientCity(data.client_city || "");
     setClientLogoUrl(data.client_logo_url || null);
@@ -70,6 +71,9 @@ export default function OrcamentoEditarDetalhe() {
     );
     setValidUntil(data.valid_until || "");
     setDirty(false);
+    setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
+    // Reset initial load flag after state settles
+    setTimeout(() => { isInitialLoad.current = false; }, 0);
   }, [data?.id]);
 
   const previewProposal = useMemo(
