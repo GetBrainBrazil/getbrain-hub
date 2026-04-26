@@ -456,61 +456,39 @@ export default function MovimentacaoDetalhe() {
   async function handleCreate() {
     if (!validate()) return;
     setSaving(true);
-    const base = { ...buildPayload(), created_by: user?.id ?? null };
+    const payload = buildPayload();
 
-    const { data: parent, error } = await supabase
-      .from("movimentacoes")
-      .insert(base as any)
-      .select()
-      .single();
-
-    if (error || !parent) {
-      setSaving(false);
-      toast.error("Erro ao salvar. Tente novamente.");
-      return;
-    }
-
-    // Recorrência: gera ocorrências retroativas (data inicial → hoje) e futuras (até "recAte" ou 120 períodos).
-    // Para frequência mensal sem prazo, o cron mensal "generate-recurring-movimentacoes" continua criando o mês corrente.
     if (recorrente) {
-      const intervalo = Math.max(parseInt(recIntervalo) || 1, 1);
-      const limite = recAte ? new Date(recAte + "T12:00:00") : null;
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const maxOcorrencias = 240; // teto de segurança
-      const recurrences: any[] = [];
-      for (let i = 1; i < maxOcorrencias; i++) {
-        const competencia = addByFrequency(form.data_competencia, intervalo * i, recPeriodo);
-        const vencimento = addByFrequency(form.data_vencimento, intervalo * i, recPeriodo);
-        const venc = new Date(vencimento + "T12:00:00");
-        if (limite && venc > limite) break;
-        // Sem prazo: gera tudo até hoje + 120 períodos no futuro
-        if (!limite) {
-          const todayIso = new Date().toISOString().slice(0, 10);
-          const futureCutoff = addByFrequency(todayIso, 120, recPeriodo);
-          if (vencimento > futureCutoff) break;
-        }
-        const status = venc < today ? "atrasado" : "pendente";
-        recurrences.push({
-          ...base,
-          data_competencia: competencia,
-          data_vencimento: vencimento,
-          status,
-          movimentacao_pai_id: parent.id,
-          recorrente: true,
-          frequencia_recorrencia: recPeriodo,
-        });
-      }
-      if (recurrences.length > 0) {
-        await supabase.from("movimentacoes").insert(recurrences as any);
-      }
-      // Atualiza pai para marcar como recorrente
-      await supabase
-        .from("movimentacoes")
-        .update({ recorrente: true, frequencia_recorrencia: recPeriodo } as any)
-        .eq("id", parent.id);
+      // Cria série em financial_recurrences + parcelas via RPC.
+      const limite = recAte || null;
+      const { error: rpcError } = await supabase.rpc("create_recurrence_with_installments" as any, {
+        p_payload: {
+          description: payload.descricao,
+          type: "recurrence",
+          direction: payload.tipo,
+          amount: payload.valor_previsto,
+          frequency: recPeriodo,
+          start_date: payload.data_vencimento,
+          end_date: limite,
+          cliente_id: payload.cliente_id,
+          fornecedor_id: payload.fornecedor_id,
+          projeto_id: payload.projeto_id,
+          categoria_id: payload.categoria_id,
+          centro_custo_id: payload.centro_custo_id,
+          conta_bancaria_id: payload.conta_bancaria_id,
+          meio_pagamento_id: payload.meio_pagamento_id,
+        } as any,
+        p_horizon_months: 12,
+      });
+      setSaving(false);
+      if (rpcError) { toast.error("Erro ao salvar. Tente novamente."); return; }
+    } else {
+      const base = { ...payload, created_by: user?.id ?? null };
+      const { error } = await supabase.from("movimentacoes").insert(base as any);
+      setSaving(false);
+      if (error) { toast.error("Erro ao salvar. Tente novamente."); return; }
     }
 
-    setSaving(false);
     toast.success(isPagar ? "Conta a pagar cadastrada com sucesso" : "Conta a receber cadastrada com sucesso");
     clearDraft();
     navigate(backUrl);

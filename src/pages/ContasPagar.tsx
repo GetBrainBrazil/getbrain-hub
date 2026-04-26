@@ -143,50 +143,42 @@ export default function ContasPagar() {
       return;
     }
 
-    const baseRecord = {
-      tipo: "despesa" as const,
-      descricao: form.descricao,
-      fornecedor_id: form.fornecedor_id || null,
-      conta_bancaria_id: form.conta_bancaria_id || null,
-      projeto_id: form.projeto_id || null,
-      valor_previsto: parseFloat(form.valor_previsto),
-      data_competencia: form.data_competencia,
-      data_vencimento: form.data_vencimento,
-      observacoes: form.observacoes || null,
-      recorrente: form.recorrente,
-      frequencia_recorrencia: form.recorrente ? form.frequencia_recorrencia : null,
-      created_by: user?.id,
-    };
-
-    // Insert the first record
-    const { data: parentData, error } = await supabase.from("movimentacoes").insert(baseRecord).select().single();
-    if (error) { toast.error("Erro ao salvar"); return; }
-
-    // Se recorrente: gera retroativo (data inicial → hoje, status "atrasado") + 120 meses futuros (status "pendente").
-    if (form.recorrente && parentData) {
-      const recurrences: any[] = [];
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      for (let i = 1; i <= 240; i++) {
-        const competencia = addMonths(form.data_competencia, i);
-        const vencimento = addMonths(form.data_vencimento, i);
-        const venc = new Date(vencimento + "T12:00:00");
-        // Limite: hoje + 120 meses no futuro
-        const futureCutoff = new Date(); futureCutoff.setMonth(futureCutoff.getMonth() + 120); futureCutoff.setHours(0, 0, 0, 0);
-        if (venc > futureCutoff) break;
-        const status = venc < today ? "atrasado" : "pendente";
-        recurrences.push({
-          ...baseRecord,
-          data_competencia: competencia,
-          data_vencimento: vencimento,
-          status,
-          movimentacao_pai_id: parentData.id,
-        });
-      }
-      const { error: recError } = await supabase.from("movimentacoes").insert(recurrences);
-      if (recError) { toast.error("Erro ao criar recorrências"); }
+    if (form.recorrente) {
+      // Cria série recorrente (financial_recurrences) + parcelas via RPC.
+      const { error: rpcError } = await supabase.rpc("create_recurrence_with_installments" as any, {
+        p_payload: {
+          description: form.descricao,
+          type: "recurrence",
+          direction: "despesa",
+          amount: parseFloat(form.valor_previsto),
+          frequency: form.frequencia_recorrencia,
+          start_date: form.data_vencimento,
+          fornecedor_id: form.fornecedor_id || null,
+          projeto_id: form.projeto_id || null,
+          conta_bancaria_id: form.conta_bancaria_id || null,
+        } as any,
+        p_horizon_months: 12,
+      });
+      if (rpcError) { toast.error("Erro ao criar recorrência"); return; }
+      toast.success("Conta recorrente criada (12 meses iniciais)!");
+    } else {
+      const baseRecord = {
+        tipo: "despesa" as const,
+        descricao: form.descricao,
+        fornecedor_id: form.fornecedor_id || null,
+        conta_bancaria_id: form.conta_bancaria_id || null,
+        projeto_id: form.projeto_id || null,
+        valor_previsto: parseFloat(form.valor_previsto),
+        data_competencia: form.data_competencia,
+        data_vencimento: form.data_vencimento,
+        observacoes: form.observacoes || null,
+        created_by: user?.id,
+      };
+      const { error } = await supabase.from("movimentacoes").insert(baseRecord);
+      if (error) { toast.error("Erro ao salvar"); return; }
+      toast.success("Conta a pagar criada!");
     }
 
-    toast.success(form.recorrente ? "Conta recorrente criada (120 meses)!" : "Conta a pagar criada!");
     setOpenNew(false);
     setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", projeto_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal", observacoes: "" });
     setFornecedorSearch("");

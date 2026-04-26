@@ -14,6 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_movimentacoes_legacy_recurrence: {
+        Row: {
+          categoria_id: string | null
+          centro_custo_id: string | null
+          cliente_id: string | null
+          cofins: number | null
+          colaborador_id: string | null
+          conciliado: boolean | null
+          conta_bancaria_id: string | null
+          created_at: string | null
+          created_by: string | null
+          csll: number | null
+          data_competencia: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          deleted_at: string | null
+          desconto_previsto: number | null
+          descricao: string | null
+          fornecedor_id: string | null
+          frequencia_recorrencia: string | null
+          id: string | null
+          inss: number | null
+          installment_number: number | null
+          installments_total: number | null
+          ir: number | null
+          is_automatic: boolean | null
+          iss: number | null
+          juros: number | null
+          meio_pagamento_id: string | null
+          movimentacao_pai_id: string | null
+          multa: number | null
+          observacoes: string | null
+          parcela_atual: number | null
+          parcelado: boolean | null
+          pis: number | null
+          projeto_id: string | null
+          recorrencia_ativa: boolean | null
+          recorrente: boolean | null
+          recurrence_id: string | null
+          source_entity_id: string | null
+          source_entity_type: string | null
+          source_module: string | null
+          status: string | null
+          tags: string[] | null
+          taxas_adm: number | null
+          tipo: string | null
+          total_parcelas: number | null
+          updated_at: string | null
+          valor_previsto: number | null
+          valor_realizado: number | null
+        }
+        Insert: {
+          categoria_id?: string | null
+          centro_custo_id?: string | null
+          cliente_id?: string | null
+          cofins?: number | null
+          colaborador_id?: string | null
+          conciliado?: boolean | null
+          conta_bancaria_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          csll?: number | null
+          data_competencia?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          deleted_at?: string | null
+          desconto_previsto?: number | null
+          descricao?: string | null
+          fornecedor_id?: string | null
+          frequencia_recorrencia?: string | null
+          id?: string | null
+          inss?: number | null
+          installment_number?: number | null
+          installments_total?: number | null
+          ir?: number | null
+          is_automatic?: boolean | null
+          iss?: number | null
+          juros?: number | null
+          meio_pagamento_id?: string | null
+          movimentacao_pai_id?: string | null
+          multa?: number | null
+          observacoes?: string | null
+          parcela_atual?: number | null
+          parcelado?: boolean | null
+          pis?: number | null
+          projeto_id?: string | null
+          recorrencia_ativa?: boolean | null
+          recorrente?: boolean | null
+          recurrence_id?: string | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          source_module?: string | null
+          status?: string | null
+          tags?: string[] | null
+          taxas_adm?: number | null
+          tipo?: string | null
+          total_parcelas?: number | null
+          updated_at?: string | null
+          valor_previsto?: number | null
+          valor_realizado?: number | null
+        }
+        Update: {
+          categoria_id?: string | null
+          centro_custo_id?: string | null
+          cliente_id?: string | null
+          cofins?: number | null
+          colaborador_id?: string | null
+          conciliado?: boolean | null
+          conta_bancaria_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          csll?: number | null
+          data_competencia?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          deleted_at?: string | null
+          desconto_previsto?: number | null
+          descricao?: string | null
+          fornecedor_id?: string | null
+          frequencia_recorrencia?: string | null
+          id?: string | null
+          inss?: number | null
+          installment_number?: number | null
+          installments_total?: number | null
+          ir?: number | null
+          is_automatic?: boolean | null
+          iss?: number | null
+          juros?: number | null
+          meio_pagamento_id?: string | null
+          movimentacao_pai_id?: string | null
+          multa?: number | null
+          observacoes?: string | null
+          parcela_atual?: number | null
+          parcelado?: boolean | null
+          pis?: number | null
+          projeto_id?: string | null
+          recorrencia_ativa?: boolean | null
+          recorrente?: boolean | null
+          recurrence_id?: string | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          source_module?: string | null
+          status?: string | null
+          tags?: string[] | null
+          taxas_adm?: number | null
+          tipo?: string | null
+          total_parcelas?: number | null
+          updated_at?: string | null
+          valor_previsto?: number | null
+          valor_realizado?: number | null
+        }
+        Relationships: []
+      }
       actors: {
         Row: {
           avatar_url: string | null
@@ -972,6 +1125,160 @@ export type Database = {
           },
         ]
       }
+      financial_recurrences: {
+        Row: {
+          amount: number
+          categoria_id: string | null
+          centro_custo_id: string | null
+          cliente_id: string | null
+          code: string
+          conta_bancaria_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string
+          direction: string
+          end_date: string | null
+          fornecedor_id: string | null
+          frequency: string
+          id: string
+          meio_pagamento_id: string | null
+          organization_id: string
+          projeto_id: string | null
+          source_entity_id: string | null
+          source_entity_type: string | null
+          source_module: string | null
+          start_date: string
+          status: string
+          total_installments: number | null
+          type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          categoria_id?: string | null
+          centro_custo_id?: string | null
+          cliente_id?: string | null
+          code?: string
+          conta_bancaria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description: string
+          direction: string
+          end_date?: string | null
+          fornecedor_id?: string | null
+          frequency: string
+          id?: string
+          meio_pagamento_id?: string | null
+          organization_id: string
+          projeto_id?: string | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          source_module?: string | null
+          start_date: string
+          status?: string
+          total_installments?: number | null
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          categoria_id?: string | null
+          centro_custo_id?: string | null
+          cliente_id?: string | null
+          code?: string
+          conta_bancaria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string
+          direction?: string
+          end_date?: string | null
+          fornecedor_id?: string | null
+          frequency?: string
+          id?: string
+          meio_pagamento_id?: string | null
+          organization_id?: string
+          projeto_id?: string | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          source_module?: string | null
+          start_date?: string
+          status?: string
+          total_installments?: number | null
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_recurrences_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "centros_custo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_meio_pagamento_id_fkey"
+            columns: ["meio_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "meios_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "financial_recurrences_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           ativo: boolean | null
@@ -1363,12 +1670,15 @@ export type Database = {
           data_competencia: string
           data_pagamento: string | null
           data_vencimento: string
+          deleted_at: string | null
           desconto_previsto: number | null
           descricao: string
           fornecedor_id: string | null
           frequencia_recorrencia: string | null
           id: string
           inss: number | null
+          installment_number: number | null
+          installments_total: number | null
           ir: number | null
           is_automatic: boolean
           iss: number | null
@@ -1383,6 +1693,7 @@ export type Database = {
           projeto_id: string | null
           recorrencia_ativa: boolean
           recorrente: boolean | null
+          recurrence_id: string | null
           source_entity_id: string | null
           source_entity_type: string | null
           source_module: string | null
@@ -1409,12 +1720,15 @@ export type Database = {
           data_competencia: string
           data_pagamento?: string | null
           data_vencimento: string
+          deleted_at?: string | null
           desconto_previsto?: number | null
           descricao: string
           fornecedor_id?: string | null
           frequencia_recorrencia?: string | null
           id?: string
           inss?: number | null
+          installment_number?: number | null
+          installments_total?: number | null
           ir?: number | null
           is_automatic?: boolean
           iss?: number | null
@@ -1429,6 +1743,7 @@ export type Database = {
           projeto_id?: string | null
           recorrencia_ativa?: boolean
           recorrente?: boolean | null
+          recurrence_id?: string | null
           source_entity_id?: string | null
           source_entity_type?: string | null
           source_module?: string | null
@@ -1455,12 +1770,15 @@ export type Database = {
           data_competencia?: string
           data_pagamento?: string | null
           data_vencimento?: string
+          deleted_at?: string | null
           desconto_previsto?: number | null
           descricao?: string
           fornecedor_id?: string | null
           frequencia_recorrencia?: string | null
           id?: string
           inss?: number | null
+          installment_number?: number | null
+          installments_total?: number | null
           ir?: number | null
           is_automatic?: boolean
           iss?: number | null
@@ -1475,6 +1793,7 @@ export type Database = {
           projeto_id?: string | null
           recorrencia_ativa?: boolean
           recorrente?: boolean | null
+          recurrence_id?: string | null
           source_entity_id?: string | null
           source_entity_type?: string | null
           source_module?: string | null
@@ -1556,6 +1875,13 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_recurrence_id_fkey"
+            columns: ["recurrence_id"]
+            isOneToOne: false
+            referencedRelation: "financial_recurrences"
             referencedColumns: ["id"]
           },
         ]
@@ -2817,6 +3143,11 @@ export type Database = {
         Args: { p_deal_data?: Json; p_lead_id: string }
         Returns: string
       }
+      create_recurrence_with_installments: {
+        Args: { p_horizon_months?: number; p_payload: Json }
+        Returns: Json
+      }
+      cron_extend_recurrences: { Args: never; Returns: number }
       financeiro_dashboard: {
         Args: { p_fim?: string; p_inicio?: string }
         Returns: {
@@ -2868,6 +3199,10 @@ export type Database = {
         }[]
       }
       generate_project_code: { Args: never; Returns: string }
+      generate_recurrence_installments: {
+        Args: { p_horizon_months?: number; p_recurrence_id: string }
+        Returns: number
+      }
       generate_venda_numero: { Args: never; Returns: string }
       get_account_balances: {
         Args: { p_days_history?: number }

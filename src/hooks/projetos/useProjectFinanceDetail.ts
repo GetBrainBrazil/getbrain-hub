@@ -18,9 +18,10 @@ export interface ProjectMovimentacao {
   data_vencimento: string;
   data_pagamento: string | null;
   status: string;
-  parcela_atual: number | null;
-  total_parcelas: number | null;
-  recorrente: boolean;
+  installment_number: number | null;
+  installments_total: number | null;
+  recurrence_id: string | null;
+  recurrence: { id: string; type: "installment" | "recurrence"; frequency: string; status: string } | null;
   categoria_id: string | null;
   fornecedor_id: string | null;
   source_entity_type: string | null;
@@ -103,17 +104,18 @@ export function useProjectFinanceDetail(projectId: string | undefined) {
       const movRes = await supabase
         .from("movimentacoes")
         .select(
-          "id, tipo, descricao, valor_previsto, valor_realizado, data_vencimento, data_pagamento, status, parcela_atual, total_parcelas, recorrente, categoria_id, fornecedor_id, source_entity_type, source_entity_id, projeto_id",
+          "id, tipo, descricao, valor_previsto, valor_realizado, data_vencimento, data_pagamento, status, installment_number, installments_total, recurrence_id, categoria_id, fornecedor_id, source_entity_type, source_entity_id, projeto_id, recurrence:financial_recurrences(id, type, frequency, status)" as any,
         )
         .or(movementScopes.join(","))
+        .is("deleted_at", null)
         .order("data_vencimento", { ascending: true });
 
       if (movRes.error) throw movRes.error;
 
       const all = (movRes.data ?? []) as any[];
-      const receitas = all.filter((m) => m.tipo === "receita" && !m.recorrente);
+      const receitas = all.filter((m) => m.tipo === "receita" && m.recurrence_id === null);
       const despesas = all.filter((m) => m.tipo === "despesa");
-      const recurring_receitas = all.filter((m) => m.tipo === "receita" && m.recorrente);
+      const recurring_receitas = all.filter((m) => m.tipo === "receita" && m.recurrence?.type === "recurrence");
 
       // Resolve nomes das categorias usadas em todas as movimentações
       const categoriaIds = Array.from(

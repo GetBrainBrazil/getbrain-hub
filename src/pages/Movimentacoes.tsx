@@ -685,42 +685,44 @@ export default function Movimentacoes() {
       return;
     }
 
-    const baseRecord = {
-      tipo,
-      descricao: form.descricao,
-      cliente_id: !isPagar ? (form.cliente_id || null) : null,
-      fornecedor_id: isPagar ? (form.fornecedor_id || null) : null,
-      projeto_id: form.projeto_id || null,
-      categoria_id: form.categoria_id || null,
-      conta_bancaria_id: form.conta_bancaria_id || null,
-      valor_previsto: parseFloat(form.valor_previsto),
-      data_competencia: form.data_competencia,
-      data_vencimento: form.data_vencimento,
-      observacoes: form.observacoes || null,
-      recorrente: form.recorrente,
-      frequencia_recorrencia: form.recorrente ? form.frequencia_recorrencia : null,
-      created_by: user?.id,
-    };
-
-    const { data: parentData, error } = await supabase.from("movimentacoes").insert(baseRecord).select().single();
-    if (error) { toast.error("Erro ao salvar"); return; }
-
-    // If recorrente, create additional occurrences
     const qtdRecorrencia = parseInt(form.quantidade_recorrencia) || 1;
-    if (form.recorrente && parentData && qtdRecorrencia > 1) {
-      const recurrences: any[] = [];
-      for (let i = 1; i < qtdRecorrencia; i++) {
-        const competencia = addByFrequency(form.data_competencia, i, form.frequencia_recorrencia);
-        const vencimento = addByFrequency(form.data_vencimento, i, form.frequencia_recorrencia);
-        recurrences.push({
-          ...baseRecord,
-          data_competencia: competencia,
-          data_vencimento: vencimento,
-          movimentacao_pai_id: parentData.id,
-        });
-      }
-      const { error: recError } = await supabase.from("movimentacoes").insert(recurrences);
-      if (recError) { toast.error("Erro ao criar recorrências"); }
+
+    if (form.recorrente) {
+      // Cria série em financial_recurrences + parcelas via RPC.
+      const { error: rpcError } = await supabase.rpc("create_recurrence_with_installments" as any, {
+        p_payload: {
+          description: form.descricao,
+          type: "recurrence",
+          direction: tipo,
+          amount: parseFloat(form.valor_previsto),
+          frequency: form.frequencia_recorrencia,
+          start_date: form.data_vencimento,
+          cliente_id: !isPagar ? (form.cliente_id || null) : null,
+          fornecedor_id: isPagar ? (form.fornecedor_id || null) : null,
+          projeto_id: form.projeto_id || null,
+          categoria_id: form.categoria_id || null,
+          conta_bancaria_id: form.conta_bancaria_id || null,
+        } as any,
+        p_horizon_months: Math.max(qtdRecorrencia, 12),
+      });
+      if (rpcError) { toast.error("Erro ao salvar"); return; }
+    } else {
+      const baseRecord = {
+        tipo,
+        descricao: form.descricao,
+        cliente_id: !isPagar ? (form.cliente_id || null) : null,
+        fornecedor_id: isPagar ? (form.fornecedor_id || null) : null,
+        projeto_id: form.projeto_id || null,
+        categoria_id: form.categoria_id || null,
+        conta_bancaria_id: form.conta_bancaria_id || null,
+        valor_previsto: parseFloat(form.valor_previsto),
+        data_competencia: form.data_competencia,
+        data_vencimento: form.data_vencimento,
+        observacoes: form.observacoes || null,
+        created_by: user?.id,
+      };
+      const { error } = await supabase.from("movimentacoes").insert(baseRecord);
+      if (error) { toast.error("Erro ao salvar"); return; }
     }
 
     const freqLabel = form.frequencia_recorrencia === "diario" ? "dias" : form.frequencia_recorrencia === "anual" ? "anos" : "meses";
