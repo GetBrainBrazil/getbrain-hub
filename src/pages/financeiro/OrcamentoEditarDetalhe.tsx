@@ -108,7 +108,7 @@ export default function OrcamentoEditarDetalhe() {
     };
   }
 
-  async function save(extra: Record<string, any> = {}) {
+  async function save(extra: Record<string, any> = {}, opts: { silent?: boolean } = {}) {
     if (!id) return;
     await update.mutateAsync({
       id,
@@ -128,8 +128,36 @@ export default function OrcamentoEditarDetalhe() {
       },
     });
     setDirty(false);
-    toast.success("Salvo");
+    setLastSavedAt(new Date());
+    if (!opts.silent) toast.success("Salvo");
   }
+
+  // Autosave: 2s de debounce após qualquer mudança
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (!dirty) return;
+    if (!id) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      save({}, { silent: true }).catch(() => {});
+    }, 2000);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    dirty,
+    clientName,
+    clientCity,
+    clientLogoUrl,
+    scopeItems,
+    maintenance,
+    maintenanceDesc,
+    implementationDays,
+    validationDays,
+    considerations,
+    validUntil,
+  ]);
 
   async function handleMarkSent() {
     if (scopeItems.length === 0) {
