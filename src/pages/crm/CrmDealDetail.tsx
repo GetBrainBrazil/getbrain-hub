@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Copy, ExternalLink, MoreVertical, Trash2, Trophy, XCircle } from 'lucide-react';
+import { Copy, ExternalLink, MoreVertical, Trash2, Trophy, XCircle, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -22,6 +22,8 @@ import { useCrmActors, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Deal, DealStage } from '@/types/crm';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton as UISkeleton } from '@/components/ui/skeleton';
 
 function daysUntil(date: string | null) {
   if (!date) return 'sem previsão';
