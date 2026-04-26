@@ -39,7 +39,7 @@ export function OrcamentoKPICards() {
     {
       label: "Conversão",
       value: `${data.conversao.toFixed(0)}%`,
-      sub: `Aceito ÷ (Aceito + Recusado)`,
+      sub: `Aceitos ÷ (Aceitos + Recusados)`,
       icon: TrendingUp,
       tone: "text-foreground",
     },
