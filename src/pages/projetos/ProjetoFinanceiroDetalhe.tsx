@@ -671,9 +671,9 @@ function ParcelaRow({ m }: { m: ProjectMovimentacao }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">
           {m.descricao}
-          {m.parcela_atual && m.total_parcelas ? (
+          {m.installment_number && m.installments_total ? (
             <span className="ml-2 font-mono text-[11px] font-normal text-muted-foreground">
-              {m.parcela_atual}/{m.total_parcelas}
+              {m.installment_number}/{m.installments_total}
             </span>
           ) : null}
         </p>
