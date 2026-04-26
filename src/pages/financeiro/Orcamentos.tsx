@@ -123,7 +123,7 @@ export default function Orcamentos() {
       const ok = await confirm({
         title: "Excluir orçamento?",
         description: `O orçamento ${row.code} será movido para a lixeira.`,
-        confirmText: "Excluir",
+        confirmLabel: "Excluir",
         variant: "destructive",
       });
       if (ok) del.mutate(row.id, { onSuccess: () => toast.success("Excluído") });

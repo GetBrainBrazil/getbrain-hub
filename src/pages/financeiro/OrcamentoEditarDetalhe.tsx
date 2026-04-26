@@ -133,7 +133,7 @@ export default function OrcamentoEditarDetalhe() {
       title: "Marcar como enviado?",
       description:
         "Após marcar como enviado, edições não bloqueiam mas você verá um aviso.",
-      confirmText: "Marcar como enviado",
+      confirmLabel: "Marcar como enviado",
     });
     if (!ok) return;
     await save({ status: "enviado", sent_at: new Date().toISOString() });
