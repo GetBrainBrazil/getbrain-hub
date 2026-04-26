@@ -13,6 +13,8 @@ import Movimentacoes from "./pages/Movimentacoes";
 import MovimentacaoDetalhe from "./pages/MovimentacaoDetalhe";
 import Recorrencias from "./pages/financeiro/Recorrencias";
 import RecorrenciaDetalhe from "./pages/financeiro/RecorrenciaDetalhe";
+import Orcamentos from "./pages/financeiro/Orcamentos";
+import OrcamentoEditarDetalhe from "./pages/financeiro/OrcamentoEditarDetalhe";
 
 import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
@@ -91,6 +93,8 @@ const App = () => (
             <Route path="/financeiro/movimentacoes/:id" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
             <Route path="/financeiro/recorrencias" element={<ProtectedRoute><Recorrencias /></ProtectedRoute>} />
             <Route path="/financeiro/recorrencias/:id" element={<ProtectedRoute><RecorrenciaDetalhe /></ProtectedRoute>} />
+            <Route path="/financeiro/orcamentos" element={<ProtectedRoute><Orcamentos /></ProtectedRoute>} />
+            <Route path="/financeiro/orcamentos/:id/editar" element={<ProtectedRoute><OrcamentoEditarDetalhe /></ProtectedRoute>} />
             
             <Route path="/financeiro/orcamento" element={<ProtectedRoute><Orcamento /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
