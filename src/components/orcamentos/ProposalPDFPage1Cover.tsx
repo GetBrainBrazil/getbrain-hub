@@ -200,18 +200,24 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
         ) : (
           <div
             style={{
-              width: "26mm",
-              height: "26mm",
-              border: `0.8mm solid ${PDF_COLORS.ink}`,
+              width: "28mm",
+              height: "28mm",
+              borderRadius: "50%",
+              border: `0.6mm dashed ${PDF_COLORS.inkSoft}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: PDF_COLORS.ink,
-              fontWeight: 700,
-              fontSize: "10pt",
+              color: PDF_COLORS.inkSoft,
+              fontWeight: 600,
+              fontSize: "8pt",
+              letterSpacing: "1.5pt",
+              textAlign: "center",
+              lineHeight: 1.1,
             }}
           >
             LOGO
+            <br />
+            CLIENTE
           </div>
         )}
         <div
