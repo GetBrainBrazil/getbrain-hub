@@ -71,6 +71,7 @@ export default function OrcamentoEditarDetalhe() {
       Array.isArray(data.considerations) ? (data.considerations as string[]) : []
     );
     setValidUntil(data.valid_until || "");
+    setTemplateKey((data as any).template_key || "anbi");
     setDirty(false);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
     // Reset initial load flag after state settles
