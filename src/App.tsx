@@ -11,6 +11,8 @@ import Index from "./pages/Index";
 import FinanceiroVisaoGeral from "./pages/FinanceiroVisaoGeral";
 import Movimentacoes from "./pages/Movimentacoes";
 import MovimentacaoDetalhe from "./pages/MovimentacaoDetalhe";
+import Recorrencias from "./pages/financeiro/Recorrencias";
+import RecorrenciaDetalhe from "./pages/financeiro/RecorrenciaDetalhe";
 
 import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
@@ -87,6 +89,8 @@ const App = () => (
             <Route path="/financeiro/movimentacoes" element={<ProtectedRoute><Movimentacoes /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes/novo/:tipo" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
             <Route path="/financeiro/movimentacoes/:id" element={<ProtectedRoute><MovimentacaoDetalhe /></ProtectedRoute>} />
+            <Route path="/financeiro/recorrencias" element={<ProtectedRoute><Recorrencias /></ProtectedRoute>} />
+            <Route path="/financeiro/recorrencias/:id" element={<ProtectedRoute><RecorrenciaDetalhe /></ProtectedRoute>} />
             
             <Route path="/financeiro/orcamento" element={<ProtectedRoute><Orcamento /></ProtectedRoute>} />
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
