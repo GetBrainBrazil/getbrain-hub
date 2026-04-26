@@ -18,9 +18,10 @@ export interface ProjectMovimentacao {
   data_vencimento: string;
   data_pagamento: string | null;
   status: string;
-  parcela_atual: number | null;
-  total_parcelas: number | null;
-  recorrente: boolean;
+  installment_number: number | null;
+  installments_total: number | null;
+  recurrence_id: string | null;
+  recurrence: { id: string; type: "installment" | "recurrence"; frequency: string; status: string } | null;
   categoria_id: string | null;
   fornecedor_id: string | null;
   source_entity_type: string | null;
