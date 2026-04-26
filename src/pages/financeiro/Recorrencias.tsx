@@ -192,7 +192,7 @@ export default function Recorrencias() {
           description={ACTION_TEXT[actionRow.action].description}
           confirmLabel={ACTION_TEXT[actionRow.action].confirm}
           destructive={ACTION_TEXT[actionRow.action].destructive}
-          onConfirm={() => statusMut.mutateAsync({ id: actionRow.row.id, status: ACTION_TEXT[actionRow.action].status })}
+          onConfirm={async () => { await statusMut.mutateAsync({ id: actionRow.row.id, status: ACTION_TEXT[actionRow.action].status }); }}
         />
       )}
     </div>
