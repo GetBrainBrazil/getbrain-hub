@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
     children: [
       { title: "Dashboard", url: "/financeiro" },
       { title: "Contas a Pagar / Receber", url: "/financeiro/movimentacoes" },
+      { title: "Recorrências", url: "/financeiro/recorrencias" },
       { title: "Contratos", url: "/financeiro/contratos" },
       { title: "Orçamento", url: "/financeiro/orcamento" },
       { title: "Relatórios", url: "/financeiro/relatorios" },

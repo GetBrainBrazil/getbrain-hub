@@ -744,6 +744,21 @@ export default function MovimentacaoDetalhe() {
         </div>
       </div>
 
+      {/* Link de recorrência se aplicável */}
+      {mov?.recurrence_id && (
+        <button
+          type="button"
+          onClick={() => navigate(`/financeiro/recorrencias/${mov.recurrence_id}`)}
+          className="flex items-center gap-2 text-sm text-primary hover:underline"
+        >
+          <Repeat className="h-4 w-4" />
+          Esta movimentação faz parte de uma recorrência
+          {mov.installment_number && mov.installments_total
+            ? ` — parcela ${mov.installment_number}/${mov.installments_total}`
+            : ""} → Ver recorrência
+        </button>
+      )}
+
       {/* Card principal */}
       <Card>
         <CardContent className="p-6 space-y-8">
