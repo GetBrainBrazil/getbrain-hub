@@ -204,8 +204,12 @@ export default function OrcamentoEditarDetalhe() {
   }
 
   const total = calculateScopeTotal(scopeItems);
+  const monthlyTotal = typeof maintenance === "number" && maintenance > 0 ? maintenance : 0;
   const eff = effectiveStatus(data.status as any, validUntil);
   const isLocked = data.status === "aceito" || data.status === "cancelado";
+  const savedLabel = lastSavedAt
+    ? `Salvo às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+    : "—";
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
