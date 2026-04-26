@@ -228,6 +228,12 @@ export default function OrcamentoEditarDetalhe() {
         <div className="flex items-center gap-2">
           <span className="font-mono font-semibold text-sm">{data.code}</span>
           <OrcamentoStatusBadge status={eff} />
+          <span
+            className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+            title="Template visual aplicado ao PDF"
+          >
+            {templateKey}
+          </span>
           {data.deal && (
             <Link
               to={`/crm/deals/${data.deal.code}`}
