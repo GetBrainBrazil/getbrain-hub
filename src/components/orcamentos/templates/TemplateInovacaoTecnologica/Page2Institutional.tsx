@@ -27,7 +27,7 @@ const METAS = [
 /**
  * Página 2 — Conteúdo institucional FIXO. Reproduz literalmente o template ANBI.
  */
-export function ProposalPDFPage2Institutional() {
+export function Page2Institutional() {
   return (
     <div
       className="proposal-pdf-page relative overflow-hidden"
