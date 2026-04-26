@@ -589,6 +589,18 @@ Toda tabela tem RLS habilitado. Políticas padrão:
 - **Escrita:** autenticado, mesma org, e tem role suficiente (ex: só `owner` edita `humans`).
 - **Portal do cliente:** via magic link com JWT que contém `company_id`. Vê só dados do próprio `company_id`.
 
+### 5.5 Soft delete em tabelas financeiras (v1.7)
+
+A partir de v1.7, `movimentacoes` passa a ter `deleted_at timestamptz NULL`, alinhada ao princípio 2.7. Toda query de leitura deve filtrar por `deleted_at IS NULL` explicitamente. O backup `_backup_movimentacoes_legacy_recurrence` é a única exceção (preserva o estado pré-migração 09C-1A).
+
+### 5.6 Numeração de séries (v1.7)
+
+Para qualquer entidade que represente "série" (recorrências, parcelas), padrão é:
+
+- Coluna sequencial dentro da série: `installment_number integer`
+- Coluna do total esperado (quando aplicável): `installments_total integer`
+- Numeração via `ROW_NUMBER() OVER (PARTITION BY parent ORDER BY data_natural)` em migrações
+
 ---
 
 ## 6. Padrões de UI
