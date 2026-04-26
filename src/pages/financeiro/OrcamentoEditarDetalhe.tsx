@@ -126,6 +126,7 @@ export default function OrcamentoEditarDetalhe() {
         validation_days: validationDays,
         considerations,
         valid_until: validUntil,
+        template_key: templateKey,
         ...extra,
       },
     });
