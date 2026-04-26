@@ -2638,6 +2638,135 @@ export type Database = {
           },
         ]
       }
+      proposals: {
+        Row: {
+          accepted_at: string | null
+          client_city: string | null
+          client_company_name: string
+          client_logo_url: string | null
+          code: string
+          company_id: string | null
+          considerations: Json | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          deleted_at: string | null
+          id: string
+          implementation_days: number | null
+          maintenance_description: string | null
+          maintenance_monthly_value: number | null
+          organization_id: string
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          project_id: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          scope_items: Json
+          sent_at: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+          valid_until: string
+          validation_days: number | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          client_city?: string | null
+          client_company_name: string
+          client_logo_url?: string | null
+          code?: string
+          company_id?: string | null
+          considerations?: Json | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          deleted_at?: string | null
+          id?: string
+          implementation_days?: number | null
+          maintenance_description?: string | null
+          maintenance_monthly_value?: number | null
+          organization_id: string
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          project_id?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          scope_items?: Json
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          valid_until: string
+          validation_days?: number | null
+        }
+        Update: {
+          accepted_at?: string | null
+          client_city?: string | null
+          client_company_name?: string
+          client_logo_url?: string | null
+          code?: string
+          company_id?: string | null
+          considerations?: Json | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          deleted_at?: string | null
+          id?: string
+          implementation_days?: number | null
+          maintenance_description?: string | null
+          maintenance_monthly_value?: number | null
+          organization_id?: string
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          project_id?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          scope_items?: Json
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          valid_until?: string
+          validation_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sprints: {
         Row: {
           actual_end_date: string | null
