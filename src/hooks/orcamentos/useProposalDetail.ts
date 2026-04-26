@@ -11,6 +11,7 @@ export interface ProposalDetail extends ProposalRow {
   considerations: string[];
   rejection_reason: string | null;
   updated_at: string;
+  template_key: string;
 }
 
 export function useProposalDetail(id: string | undefined) {
