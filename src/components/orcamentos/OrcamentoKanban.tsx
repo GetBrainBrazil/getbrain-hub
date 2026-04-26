@@ -5,6 +5,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  closestCorners,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -129,51 +130,55 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
     <>
       <DndContext
         sensors={sensors}
+        collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveRow(null)}
       >
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          <OrcamentoKanbanColumn
-            id="rascunho"
-            label="Rascunho"
-            rows={columns.rascunho}
-            onCardClick={onCardClick}
-          />
-          <OrcamentoKanbanColumn
-            id="enviado"
-            label="Enviado"
-            rows={columns.enviado}
-            onCardClick={onCardClick}
-            accentClass="text-primary"
-          />
-          <OrcamentoKanbanColumn
-            id="aceito"
-            label="Aceito"
-            rows={columns.aceito}
-            onCardClick={onCardClick}
-            accentClass="text-success"
-          />
-          <OrcamentoKanbanColumn
-            id="recusado"
-            label="Recusado"
-            rows={columns.recusado}
-            onCardClick={onCardClick}
-            accentClass="text-destructive"
-          />
-          <OrcamentoKanbanColumn
-            id="expirado"
-            label="Expirado"
-            rows={columns.expirado}
-            onCardClick={onCardClick}
-            derived
-            accentClass="text-amber-500"
-          />
+        <div className="h-[calc(100vh-18rem)] min-h-[480px]">
+          <div className="flex gap-3 h-full overflow-x-auto overflow-y-hidden pb-2">
+            <OrcamentoKanbanColumn
+              id="rascunho"
+              label="Rascunho"
+              rows={columns.rascunho}
+              onCardClick={onCardClick}
+            />
+            <OrcamentoKanbanColumn
+              id="enviado"
+              label="Enviado"
+              rows={columns.enviado}
+              onCardClick={onCardClick}
+              accentClass="text-primary"
+            />
+            <OrcamentoKanbanColumn
+              id="aceito"
+              label="Aceito"
+              rows={columns.aceito}
+              onCardClick={onCardClick}
+              accentClass="text-success"
+            />
+            <OrcamentoKanbanColumn
+              id="recusado"
+              label="Recusado"
+              rows={columns.recusado}
+              onCardClick={onCardClick}
+              accentClass="text-destructive"
+            />
+            <OrcamentoKanbanColumn
+              id="expirado"
+              label="Expirado"
+              rows={columns.expirado}
+              onCardClick={onCardClick}
+              derived
+              accentClass="text-amber-500"
+            />
+          </div>
         </div>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={null}>
           {activeRow ? (
-            <div className="rotate-2 opacity-90 w-[260px]">
-              <OrcamentoKanbanCard proposal={activeRow} onClick={() => {}} />
+            <div className="w-[260px]">
+              <OrcamentoKanbanCard proposal={activeRow} onClick={() => {}} overlay />
             </div>
           ) : null}
         </DragOverlay>

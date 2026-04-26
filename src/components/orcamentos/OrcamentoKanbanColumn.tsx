@@ -33,14 +33,14 @@ export function OrcamentoKanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-col rounded-lg border border-border bg-muted/20 min-w-[260px] w-[260px] transition-colors",
-        isOver && !derived && "border-primary/60 bg-primary/5",
+        "flex flex-col rounded-lg border border-border bg-muted/20 min-w-[280px] w-[280px] h-full transition-colors",
+        isOver && !derived && "border-primary/60 bg-primary/5 ring-2 ring-primary/30",
         isOver && derived && "border-amber-500/40 bg-amber-500/5"
       )}
     >
       <header
         className={cn(
-          "px-3 pt-3 pb-2 border-b border-border space-y-0.5",
+          "px-3 pt-3 pb-2 border-b border-border space-y-0.5 shrink-0",
           accentClass
         )}
       >
@@ -61,7 +61,7 @@ export function OrcamentoKanbanColumn({
           </div>
         )}
       </header>
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-22rem)] min-h-[120px]">
+      <div className="flex-1 min-h-0 p-2 space-y-2 overflow-y-auto">
         {rows.length === 0 ? (
           <div className="text-[11px] text-muted-foreground/60 text-center py-6 italic">
             Vazio

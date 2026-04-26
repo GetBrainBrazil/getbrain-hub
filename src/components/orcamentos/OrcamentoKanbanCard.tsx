@@ -9,27 +9,58 @@ import {
 } from "@/lib/orcamentos/calculateTotal";
 import type { ProposalRow } from "@/hooks/orcamentos/useProposals";
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 
 interface Props {
   proposal: ProposalRow;
   onClick: () => void;
+  /** Quando true, renderiza estático (sem dnd) — usado pelo DragOverlay */
+  overlay?: boolean;
 }
 
-export function OrcamentoKanbanCard({ proposal, onClick }: Props) {
+export function OrcamentoKanbanCard({ proposal, onClick, overlay }: Props) {
   const total = calculateScopeTotal(proposal.scope_items);
   const eff = effectiveStatus(proposal.status, proposal.valid_until);
   const monthly = proposal.maintenance_monthly_value || 0;
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: proposal.id,
-      data: { proposal },
-    });
+  // Modo overlay: card estático (sem hooks de drag) renderizado pelo DragOverlay
+  if (overlay) {
+    return (
+      <Card className="p-3 space-y-2 shadow-lg border-primary/40 bg-card cursor-grabbing select-none rotate-2">
+        <CardBody
+          proposal={proposal}
+          total={total}
+          eff={eff}
+          monthly={monthly}
+        />
+      </Card>
+    );
+  }
 
+  return <DraggableCard proposal={proposal} onClick={onClick} total={total} eff={eff} monthly={monthly} />;
+}
+
+function DraggableCard({
+  proposal,
+  onClick,
+  total,
+  eff,
+  monthly,
+}: {
+  proposal: ProposalRow;
+  onClick: () => void;
+  total: number;
+  eff: ReturnType<typeof effectiveStatus>;
+  monthly: number;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: proposal.id,
+    data: { proposal },
+  });
+
+  // IMPORTANTE: não aplicar transform no card original — o DragOverlay já
+  // renderiza um clone que segue o cursor. Aqui apenas esmaecemos.
   const style: React.CSSProperties = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.35 : 1,
     cursor: isDragging ? "grabbing" : "grab",
     touchAction: "none",
   };
@@ -41,13 +72,35 @@ export function OrcamentoKanbanCard({ proposal, onClick }: Props) {
       {...listeners}
       {...attributes}
       onClick={(e) => {
-        // não abre drawer durante drag
         if (isDragging) return;
         e.stopPropagation();
         onClick();
       }}
-      className="p-3 space-y-2 hover:border-primary/50 hover:shadow-sm transition-all select-none"
+      className="p-3 space-y-2 hover:border-primary/50 hover:shadow-sm transition-shadow select-none"
     >
+      <CardBody
+        proposal={proposal}
+        total={total}
+        eff={eff}
+        monthly={monthly}
+      />
+    </Card>
+  );
+}
+
+function CardBody({
+  proposal,
+  total,
+  eff,
+  monthly,
+}: {
+  proposal: ProposalRow;
+  total: number;
+  eff: ReturnType<typeof effectiveStatus>;
+  monthly: number;
+}) {
+  return (
+    <>
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] font-semibold text-muted-foreground">
           {proposal.code}
@@ -85,6 +138,6 @@ export function OrcamentoKanbanCard({ proposal, onClick }: Props) {
           </>
         )}
       </div>
-    </Card>
+    </>
   );
 }

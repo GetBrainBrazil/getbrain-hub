@@ -1,87 +1,49 @@
-## Objetivo
+# Correções do Kanban de Orçamentos
 
-Substituir o `ParcelasCalendar` atual (poluído, com bolinhas amontoadas e pouco legível) por um calendário financeiro mensal mais bonito, prático de ler, e que mostre **entradas e saídas** com tooltip detalhado ao passar o mouse — incluindo descrição, valor, data e **categoria** (Salário, Implementação, Manutenção, etc.).
+## Problemas identificados
 
-## O que muda visualmente
+1. **"Visualização fantasma" seguindo o cursor**: O card original aplica `transform` do `useDraggable` ao mesmo tempo em que o `DragOverlay` renderiza outra cópia. Resultado: dois cards se movem (o original "voa" junto). O padrão dnd-kit é **ou usar `DragOverlay` (e o original fica parado, só com opacity)**, **ou** usar `transform` no item — nunca os dois.
 
-### Antes
-- Cards densos com bolinhas coloridas pequenas (até 8 por mês), título do mês, contagem e valor previsto.
-- Tooltip nativo do browser (`title=`) — feio, lento e sem formatação.
-- Mostra apenas receitas (`allReceitas`).
+2. **Barra de scroll lateral aparece ao arrastar**: O `transform: translate3d` empurra o card para fora da coluna, e como o container da coluna tem `overflow-y-auto`, o navegador adiciona scrollbars quando o card sai dos limites.
 
-### Depois — calendário mensal "heatmap" financeiro
-Cada célula do mês passa a ter:
+3. **Barra de scroll vertical na coluna ao arrastar**: O `max-h-[calc(100vh-22rem)]` na lista interna combinada com o card "subindo" via transform faz o conteúdo estourar e habilitar scroll.
 
-```text
-┌──────────────────────────┐
-│ JUL                   3  │  ← mês + nº de lançamentos
-│                          │
-│  +R$ 2.250        ▲      │  ← entradas (verde) com seta ↑
-│  −R$    450       ▼      │  ← saídas  (vermelho) com seta ↓
-│ ─────────────────────    │
-│  Saldo  +R$ 1.800        │  ← saldo líquido
-│                          │
-│  ●●● ○○                  │  ← micro-barra de status (recebido/previsto/atrasado)
-└──────────────────────────┘
-```
+4. **`touchAction: "none"` no card inteiro** bloqueia scroll natural da página em mobile/trackpad até no clique simples.
 
-- Fundo do card recebe um leve **tint verde/vermelho** conforme o saldo do mês (heatmap discreto).
-- Mês atual destacado com `ring-accent`.
-- Meses sem lançamento ficam **vazios e apagados** (sem borda forte) para o olho focar nos meses com atividade.
-- Tipografia mono nos valores, alinhamento `tabular-nums` para colunas verticais limpas.
+## Solução (Kanban padrão)
 
-### Tooltip rico (Radix `HoverCard` / `Tooltip`)
-Ao passar o mouse sobre uma célula do mês, abre um popover com a lista detalhada:
+### `OrcamentoKanbanCard.tsx`
+- **Remover `transform` do style** quando há `DragOverlay` ativo. O card original fica no lugar, apenas com `opacity: 0.4` e `pointer-events: none` durante drag.
+- Mover `touchAction: "none"` para um **drag handle** (a área inteira do card continua arrastável, mas só ativa quando o pointer realmente arrasta — já temos `activationConstraint: { distance: 6 }`, então ok manter no card, mas sem o transform o scroll volta a funcionar).
+- Aplicar `aria-hidden` e visibilidade reduzida no original durante drag.
 
-```text
-Julho · 2025                            +R$ 1.800,00 líquido
-─────────────────────────────────────────────────────────────
-ENTRADAS
-  ● 10/07  Mensalidade contrato         Manutenção    R$ 750,00
-  ● 15/07  Parcela 3/6 implementação    Implementação R$ 1.500,00
+### `OrcamentoKanbanColumn.tsx`
+- Trocar `overflow-y-auto` + `max-h-[calc(100vh-22rem)]` por **altura controlada no container do board** (não na coluna). Coluna usa `flex-1 overflow-y-auto` dentro de um wrapper com altura fixa (`h-[calc(100vh-16rem)]`).
+- Remover `min-h-[120px]` e usar área de drop que ocupa toda a coluna (não só a lista). Hoje o `setNodeRef` está no wrapper externo, mas a área visual de drop fica confusa por causa do header. Vamos manter o ref no wrapper mas garantir que o feedback `isOver` cubra a coluna inteira.
 
-SAÍDAS
-  ● 05/07  Salário João                 Salário       R$ 350,00
-  ● 20/07  API OpenAI                   Integrações   R$ 100,00
-```
+### `OrcamentoKanban.tsx`
+- Adicionar `collisionDetection={closestCorners}` para drop mais preciso.
+- Envolver as colunas em um wrapper com altura fixa para evitar que o board cresça verticalmente:
+  ```text
+  <div className="h-[calc(100vh-16rem)] overflow-hidden">
+    <div className="flex gap-3 h-full overflow-x-auto pb-2">
+      [colunas com h-full]
+    </div>
+  </div>
+  ```
+- `DragOverlay` mantém o card "fantasma" único que segue o cursor (esse é o correto).
 
-Cada linha clicável → abre `/financeiro/movimentacoes/:id` (mesmo destino do `ParcelaRow` atual).
+## Resultado esperado
 
-## Mudanças técnicas
+- Apenas **um card "fantasma"** segue o cursor (via `DragOverlay`), o original fica parado e esmaecido.
+- **Sem scrollbars** aparecendo durante o drag.
+- Coluna com altura fixa, scroll interno só quando há muitos cards (não relacionado ao drag).
+- Comportamento idêntico aos Kanbans padrão (Trello/Linear).
 
-**Arquivo:** `src/pages/projetos/ProjetoFinanceiroDetalhe.tsx`
+## Arquivos alterados
 
-1. **Passar entradas + saídas para o calendário**
-   - Trocar `<ParcelasCalendar items={allReceitas} />` por `<ParcelasCalendar receitas={allReceitas} despesas={detail?.despesas ?? []} />`.
+- `src/components/orcamentos/OrcamentoKanbanCard.tsx`
+- `src/components/orcamentos/OrcamentoKanbanColumn.tsx`
+- `src/components/orcamentos/OrcamentoKanban.tsx`
 
-2. **Reescrever `ParcelasCalendar`**
-   - Nova assinatura: `{ receitas, despesas }`.
-   - Construir `byMonth: Map<string, { receitas: [], despesas: [] }>` cobrindo o range completo (min..max) das duas listas juntas.
-   - Para cada mês calcular: `entradas`, `saidas`, `saldo`, contagem por status.
-   - Renderizar grid responsivo `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6`.
-   - Heatmap: `bg-success/5` quando saldo > 0, `bg-destructive/5` quando saldo < 0, intensidade proporcional ao maior saldo absoluto do range (clamp em 3 níveis: `/5`, `/10`, `/15`).
-
-3. **Tooltip rico com `HoverCard`**
-   - Importar de `@/components/ui/hover-card` (já existe no projeto shadcn).
-   - `HoverCardTrigger` envolve a célula inteira; `HoverCardContent` lista lançamentos agrupados em ENTRADAS / SAÍDAS, ordenados por data.
-   - Cada item exibe: bolinha de status, dia/mês, descrição (truncada), badge da categoria, valor.
-
-4. **Resolver nome da categoria**
-   - Adicionar fetch leve no hook `useProjectFinanceDetail.ts`: após carregar movimentações, coletar `categoria_id` distintos e fazer um único `select("id, nome")` em `categorias_financeiras`.
-   - Expor `categoriasMap: Record<string, string>` no retorno do hook.
-   - Fallback de label quando `categoria_id == null`:
-     - `source_entity_type === "maintenance_contract"` → `"Manutenção"`
-     - `tipo === "despesa"` e descrição contém "salário" → `"Salário"` (heurística leve)
-     - caso contrário → `"Sem categoria"`
-
-5. **Legenda atualizada**
-   - Manter contadores Recebido / Previsto / Atrasado (apenas para receitas, como hoje).
-   - Adicionar linha extra com totais do range: `Entradas R$ X · Saídas R$ Y · Saldo R$ Z`.
-
-6. **Título da seção**
-   - Mudar de "Calendário de parcelas (todas)" para **"Calendário financeiro"**.
-
-## Fora do escopo
-- Não alteramos os gráficos donut nem os totais já corrigidos na rodada anterior.
-- Não mexemos na lógica de `parcelStatus` / `statusColor`.
-- Não criamos visão diária (continua mensal — pedido foi melhorar a leitura, não trocar a granularidade).
+Nenhuma mudança em DB, hooks ou outras telas.
