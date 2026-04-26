@@ -218,6 +218,7 @@ export default function Movimentacoes() {
   const [sortConfig, setSortConfig] = usePersistedState<SortConfig>(`movimentacoes_${tabKey}_sort`, { key: null, direction: null });
   const [lancamentoOrder, setLancamentoOrder] = usePersistedState<"none" | "recent" | "old">(`movimentacoes_${tabKey}_lancamento_order`, "none");
   const [showSaldosParciais, setShowSaldosParciais] = usePersistedState("movimentacoes_saldos_parciais", false);
+  const [hideRecurringFuture, setHideRecurringFuture] = usePersistedState("movimentacoes_hide_recurring_future", false);
   const [tipBannerDismissed, setTipBannerDismissed] = usePersistedState("movimentacoes_tip_banner_dismissed", false);
   const [openNew, setOpenNew] = useState(false);
   const [openBaixa, setOpenBaixa] = useState(false);
@@ -399,14 +400,22 @@ export default function Movimentacoes() {
   const periodRange = useMemo(() => getDateRange(periodPreset as PeriodPreset, periodCustom), [periodPreset, periodCustom]);
 
   const periodFiltered = useMemo(() => {
-    if (!periodRange.startDate && !periodRange.endDate) return movs;
-    return movs.filter(m => {
+    let base = movs;
+    if (hideRecurringFuture) {
+      // fim do mês atual (yyyy-MM-dd)
+      const now = new Date();
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const endOfMonth = lastDay.toISOString().slice(0, 10);
+      base = base.filter((m: any) => !(m.recurrence_id && m.data_vencimento > endOfMonth));
+    }
+    if (!periodRange.startDate && !periodRange.endDate) return base;
+    return base.filter(m => {
       const d = new Date(m.data_vencimento + "T12:00:00");
       if (periodRange.startDate && d < periodRange.startDate) return false;
       if (periodRange.endDate && d > periodRange.endDate) return false;
       return true;
     });
-  }, [movs, periodRange]);
+  }, [movs, periodRange, hideRecurringFuture]);
 
   const statusOptions = useMemo<FilterOption[]>(() => ([
     { value: "pendente", label: "Pendentes", keywords: "pendente" },
