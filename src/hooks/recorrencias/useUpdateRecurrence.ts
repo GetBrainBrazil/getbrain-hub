@@ -32,8 +32,8 @@ export function useUpdateRecurrence() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, payload }: { id: string; payload: Record<string, any> }) => {
-      const { error } = await supabase
-        .from("financial_recurrences")
+      const { error } = await (supabase
+        .from("financial_recurrences") as any)
         .update(payload)
         .eq("id", id);
       if (error) throw error;
