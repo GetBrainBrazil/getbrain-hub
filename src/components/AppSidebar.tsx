@@ -7,7 +7,6 @@ import {
   Settings,
   Code2,
   Handshake,
-  Repeat,
   ChevronDown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
