@@ -33,7 +33,7 @@ const STATUS_TABS: { v: StatusFilter; label: string }[] = [
 
 export default function Orcamentos() {
   const navigate = useNavigate();
-  const confirm = useConfirm();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const [status, setStatus] = usePersistedState<StatusFilter>(
     "orcamentos:status",
     "todos"
@@ -187,6 +187,7 @@ export default function Orcamentos() {
       )}
 
       <NovoOrcamentoModal open={novoOpen} onOpenChange={setNovoOpen} />
+      {confirmDialog}
 
       {/* Render off-screen template for PDF generation */}
       {pdfRow && (

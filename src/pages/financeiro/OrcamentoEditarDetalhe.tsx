@@ -29,7 +29,7 @@ const PDF_DOM_ID = "proposal-pdf-template-live";
 export default function OrcamentoEditarDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const confirm = useConfirm();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const { data, isLoading } = useProposalDetail(id);
   const update = useUpdateProposal();
   const gen = useGeneratePDF();
@@ -442,6 +442,7 @@ export default function OrcamentoEditarDetalhe() {
           <div style={{ height: `${297 * 3 * zoom}mm` }} aria-hidden />
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }
