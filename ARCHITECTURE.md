@@ -1169,3 +1169,60 @@ Para evitar escopo inflado, o adendo não inclui:
 2. **Tabela `projetos` (PT) órfã**: existe mas está vazia (0 linhas). Toda integração de `movimentacoes.projeto_id` aponta para `projects` (EN). Limpar/dropar `projetos` em prompt futuro de limpeza.
 3. **Sem FK declarada em `movimentacoes.projeto_id`**: 100% das linhas populadas hoje apontam para `projects.id`, mas falta constraint formal. Adicionar `FOREIGN KEY` em prompt futuro.
 4. **Categoria oficial de "Tokens IA"**: não existe ainda. Destaque condicional adiado para quando o módulo Tokens (08) criar a categoria.
+
+### Adicionadas em v1.7 (09C-1A — 26/04/2026)
+
+5. **DT-09C1A-1: Audit log ausente em `financial_recurrences`**
+   - Origem: `audit_trigger_function` referenciada no prompt 09C-1A não existe no banco
+   - Impacto: tabela `financial_recurrences` não tem trigger `audit_*`, divergindo do padrão da seção 5
+   - Plano: investigar como `audit_logs` é populado hoje (TS-side? trigger genérico?). Se não houver mecanismo automático para novas tabelas, criar prompt dedicado
+   - Prazo: após 09C-1B
+   - Risco: baixo. Operações de `financial_recurrences` ficam fora do trail enquanto não resolvido
+
+6. **DT-09C1A-2: Drop dos campos legados em `movimentacoes`**
+   - Origem: 6 campos marcados como DEPRECATED em 09C-1A (`recorrente`, `frequencia_recorrencia`, `movimentacao_pai_id`, `parcelado`, `parcela_atual`, `total_parcelas`)
+   - Plano: prompt dedicado de cleanup. Pré-condições:
+     - Período de validação ≥ 30 dias (a partir de 26/04/2026 → liberado em **26/05/2026**)
+     - Confirmar que nenhum código TS ou SQL ainda referencia os campos legados
+     - Validar que o backup `_backup_movimentacoes_legacy_recurrence` continua íntegro
+   - Risco: médio. Sem o cleanup, schema fica bagunçado e novos devs/forks podem inadvertidamente usar campos mortos
+
+7. **DT-09C1A-3: Linters de segurança pré-existentes (Security Definer Views, RLS permissivo)**
+   - Já registrado em v1.6, mas reaparecem no relatório do 09C-1A
+   - Não é regressão, é dívida antiga
+   - Plano: prompt "Endurecer RLS por organization_id" após Portal do Cliente
+
+---
+
+## 17. Versões
+
+### v1.7 — 26/04/2026
+
+**Origem:** 09C-1A (Fundação de Recorrências)
+
+**Mudanças:**
+
+- Nova entidade canônica `financial_recurrences` (tabela + RPC + 2 funções + 1 trigger)
+- Novas colunas em `movimentacoes`: `recurrence_id`, `installment_number`, `installments_total`, `deleted_at`
+- 6 campos em `movimentacoes` marcados como DEPRECATED
+- 6 geradores refatorados:
+  - SQL: `close_deal_as_won`, `vendas_gerar_parcelas`, `sync_maintenance_contract_recurrence`
+  - TS: `ContasPagar`, `Movimentacoes`, `MovimentacaoDetalhe`
+- 2 leitores TS refatorados sem fallback (`useProjectFinanceDetail`, `ProjetoFinanceiroDetalhe`)
+- Cron substituído: `extend_recurrences_monthly` via SQL puro
+- 31 registros legados migrados em 3 recurrences (REC-0001/0002/0003)
+- Backup defensivo `_backup_movimentacoes_legacy_recurrence` preservado
+
+**Princípios novos:**
+
+- Deprecation antes de remoção (período mínimo 30 dias) — seção 4.X
+- Soft delete em tabelas financeiras — seção 5.5
+- Princípio "zero leitura de campos deprecated em código vivo"
+
+**Dívidas técnicas registradas:**
+
+- DT-09C1A-1: Audit log ausente em `financial_recurrences`
+- DT-09C1A-2: Drop dos campos legados (liberado 26/05/2026)
+- DT-09C1A-3: Linters de segurança pré-existentes (já em v1.6)
+
+**Próximo:** 09C-1B (sub-aba `/financeiro/recorrencias` com UI completa)
