@@ -25,9 +25,9 @@ const METAS = [
 ];
 
 /**
- * Página 2 — Conteúdo institucional FIXO. Reproduz literalmente o template ANBI.
+ * Página 2 — Conteúdo institucional FIXO. Reproduz literalmente o template "Inovacao Tecnologica".
  */
-export function ProposalPDFPage2Institutional() {
+export function Page2Institutional() {
   return (
     <div
       className="proposal-pdf-page relative overflow-hidden"

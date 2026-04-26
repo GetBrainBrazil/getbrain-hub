@@ -23,6 +23,14 @@ import {
   type ScopeItem,
 } from "@/lib/orcamentos/calculateTotal";
 import { useConfirm } from "@/components/ConfirmDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { listTemplates } from "@/lib/orcamentos/templates";
 
 const PDF_DOM_ID = "proposal-pdf-template-live";
 
@@ -45,7 +53,7 @@ export default function OrcamentoEditarDetalhe() {
   const [validationDays, setValidationDays] = useState(7);
   const [considerations, setConsiderations] = useState<string[]>([]);
   const [validUntil, setValidUntil] = useState("");
-  const [templateKey, setTemplateKey] = useState<string>("anbi");
+  const [templateKey, setTemplateKey] = useState<string>("inovacao_tecnologica");
   const [zoom, setZoom] = useState(0.5);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -71,7 +79,7 @@ export default function OrcamentoEditarDetalhe() {
       Array.isArray(data.considerations) ? (data.considerations as string[]) : []
     );
     setValidUntil(data.valid_until || "");
-    setTemplateKey((data as any).template_key || "anbi");
+    setTemplateKey((data as any).template_key || "inovacao_tecnologica");
     setDirty(false);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
     // Reset initial load flag after state settles
@@ -195,6 +203,20 @@ export default function OrcamentoEditarDetalhe() {
       code: data.code,
       clientName: clientName || data.client_company_name,
       elementId: PDF_DOM_ID,
+      snapshot: {
+        client_company_name: clientName,
+        client_logo_url: clientLogoUrl,
+        client_city: clientCity,
+        scope_items: scopeItems,
+        maintenance_monthly_value:
+          typeof maintenance === "number" && maintenance > 0 ? maintenance : null,
+        maintenance_description: maintenanceDesc || null,
+        implementation_days: implementationDays,
+        validation_days: validationDays,
+        considerations,
+        valid_until: validUntil,
+        template_key: templateKey,
+      },
     });
   }
 
@@ -229,12 +251,24 @@ export default function OrcamentoEditarDetalhe() {
         <div className="flex items-center gap-2">
           <span className="font-mono font-semibold text-sm">{data.code}</span>
           <OrcamentoStatusBadge status={eff} />
-          <span
-            className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
-            title="Template visual aplicado ao PDF"
+          <Select
+            value={templateKey}
+            onValueChange={(v) => {
+              setTemplateKey(v);
+              setDirty(true);
+            }}
           >
-            {templateKey}
-          </span>
+            <SelectTrigger className="h-7 w-[180px] text-xs">
+              <SelectValue placeholder="Template" />
+            </SelectTrigger>
+            <SelectContent>
+              {listTemplates().map((t) => (
+                <SelectItem key={t.key} value={t.key} className="text-xs">
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {data.deal && (
             <Link
               to={`/crm/deals/${data.deal.code}`}

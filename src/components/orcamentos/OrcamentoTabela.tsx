@@ -32,9 +32,11 @@ interface Props {
     row: ProposalRow,
     action: "edit" | "duplicate" | "download" | "mark-sent" | "mark-accepted" | "mark-rejected" | "delete"
   ) => void;
+  /** Click na linha — se ausente, navega pro editor por padrão. */
+  onRowClick?: (row: ProposalRow) => void;
 }
 
-export function OrcamentoTabela({ rows, loading, onAction }: Props) {
+export function OrcamentoTabela({ rows, loading, onAction, onRowClick }: Props) {
   const navigate = useNavigate();
 
   if (loading) {
@@ -66,7 +68,11 @@ export function OrcamentoTabela({ rows, loading, onAction }: Props) {
               <TableRow
                 key={r.id}
                 className="cursor-pointer hover:bg-muted/40"
-                onClick={() => navigate(`/financeiro/orcamentos/${r.id}/editar`)}
+                onClick={() =>
+                  onRowClick
+                    ? onRowClick(r)
+                    : navigate(`/financeiro/orcamentos/${r.id}/editar`)
+                }
               >
                 <TableCell className="font-mono font-semibold text-xs">
                   {r.code}

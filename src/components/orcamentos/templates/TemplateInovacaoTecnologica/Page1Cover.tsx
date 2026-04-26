@@ -7,15 +7,14 @@ interface Props {
 }
 
 /**
- * Página 1 — Capa A4. Reproduz o template ANBI:
+ * Página 1 — Capa A4. Template "Inovação Tecnológica":
  * - Fundo preto sólido
  * - Logo GetBrain topo esquerdo
- * - Título "PROPOSTA DE INOVAÇÃO TECNOLÓGICA" em cinza fantasma
- * - Círculos concêntricos cyan decorativos no canto direito
+ * - Título "PROPOSTA DE INOVAÇÃO TECNOLÓGICA"
+ * - Círculos concêntricos cyan decorativos
  * - Bloco branco arredondado inferior com logo + nome do cliente
- * - Rodapé: ELABORADO PARA + getbrain.com.br RIO DE JANEIRO, RJ
  */
-export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
+export function Page1Cover({ clientName, clientLogoUrl }: Props) {
   return (
     <div
       className="proposal-pdf-page relative overflow-hidden"
@@ -29,7 +28,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
         position: "relative",
       }}
     >
-      {/* Halo radial sutil atrás dos círculos (profundidade) */}
       <div
         aria-hidden
         style={{
@@ -42,8 +40,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
           pointerEvents: "none",
         }}
       />
-
-      {/* Círculos concêntricos decorativos (lado direito) — densidade aumentada */}
       <div
         aria-hidden
         style={{
@@ -71,8 +67,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
           />
         ))}
       </div>
-
-      {/* Círculos decorativos inferior esquerdo */}
       <div
         aria-hidden
         style={{
@@ -100,8 +94,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
           />
         ))}
       </div>
-
-      {/* Círculo "marcador" sólido pequeno cyan no canto superior direito */}
       <div
         aria-hidden
         style={{
@@ -115,8 +107,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
           boxShadow: `0 0 0 2mm ${PDF_COLORS.coverCircle}33`,
         }}
       />
-
-      {/* Logo GetBrain topo esquerdo */}
       <div
         style={{
           position: "absolute",
@@ -145,8 +135,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
           backgroundColor: "#fff",
         }}
       />
-
-      {/* Título principal */}
       <div
         style={{
           position: "absolute",
@@ -168,8 +156,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
         <br />
         TECNOLÓGICA
       </div>
-
-      {/* Bloco branco do cliente */}
       <div
         style={{
           position: "absolute",
@@ -231,8 +217,6 @@ export function ProposalPDFPage1Cover({ clientName, clientLogoUrl }: Props) {
           {clientName}
         </div>
       </div>
-
-      {/* Rodapé */}
       <div
         style={{
           position: "absolute",

@@ -2638,6 +2638,50 @@ export type Database = {
           },
         ]
       }
+      proposal_versions: {
+        Row: {
+          created_at: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          pdf_storage_path: string
+          pdf_url: string
+          proposal_id: string
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          pdf_storage_path: string
+          pdf_url: string
+          proposal_id: string
+          snapshot: Json
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          pdf_storage_path?: string
+          pdf_url?: string
+          proposal_id?: string
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           accepted_at: string | null

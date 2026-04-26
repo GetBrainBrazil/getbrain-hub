@@ -30,7 +30,7 @@ const CRONOGRAMA = [
 /**
  * Página 3 — Conteúdo dinâmico (proposta + cronograma + prazo + considerações).
  */
-export function ProposalPDFPage3Proposal({
+export function Page3Proposal({
   scopeItems,
   maintenanceMonthlyValue,
   maintenanceDescription,
