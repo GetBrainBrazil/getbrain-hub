@@ -2664,6 +2664,7 @@ export type Database = {
           scope_items: Json
           sent_at: string | null
           status: string
+          template_key: string
           updated_at: string
           updated_by: string | null
           valid_until: string
@@ -2694,6 +2695,7 @@ export type Database = {
           scope_items?: Json
           sent_at?: string | null
           status?: string
+          template_key?: string
           updated_at?: string
           updated_by?: string | null
           valid_until: string
@@ -2724,6 +2726,7 @@ export type Database = {
           scope_items?: Json
           sent_at?: string | null
           status?: string
+          template_key?: string
           updated_at?: string
           updated_by?: string | null
           valid_until?: string
