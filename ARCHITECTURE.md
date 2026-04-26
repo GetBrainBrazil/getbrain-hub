@@ -499,9 +499,65 @@ responsible_actor_id uuid FK → actors
 identified_at date default current_date
 resolved_at date
 notes text
-created_at, updated_at, deleted_at
-created_by_actor_id, updated_by_actor_id
 ```
+
+### 4.Z `financial_recurrences` — Entidade canônica de séries financeiras (v1.7)
+
+> **Adicionada em 09C-1A (26/04/2026).** Representa qualquer série de movimentações financeiras: recorrências contínuas (assinaturas, salários, aluguéis, contratos de manutenção) ou parcelamentos finitos (vendas em N×, propostas fechadas pelo CRM). Substitui os 5 padrões inconsistentes anteriores.
+
+**Conceitos:**
+
+- `type = 'recurrence'`: série contínua, com ou sem `end_date`. Sem `end_date` = gera 12 meses rolling via cron mensal.
+- `type = 'installment'`: série finita com `total_installments` parcelas. Geração de uma vez.
+- Cardinalidade: 1 `financial_recurrences` → N `movimentacoes` (filhas vinculadas via `recurrence_id`).
+- Code: `REC-XXXX` (sequência `recurrence_code_seq`, padrão similar a `PRJ-XXX`).
+
+**Geradores que populam esta entidade** (todos refatorados em 09C-1A):
+
+| Origem | Função | Comportamento |
+|--------|--------|---------------|
+| Forms financeiros | RPC `create_recurrence_with_installments` | Toggle "Conta recorrente" em `ContasPagar.tsx`, `Movimentacoes.tsx`, `MovimentacaoDetalhe.tsx` |
+| CRM (deal fechado) | `close_deal_as_won` | Cria recurrence com `source_module='crm'`, `type=installment` se >1 parcela |
+| Vendas | `vendas_gerar_parcelas` | Tipo parcelado → installment; recorrente → delegado à manutenção; avulso → linha direta em `movimentacoes` |
+| Manutenção | `sync_maintenance_contract_recurrence` (trigger) | Cria/atualiza/cancela 1 recurrence por contrato ativo |
+| Migração 09C-1A | seed direto | 31 registros legados consolidados em 3 recurrences |
+
+**Regra de ouro do trigger `propagate_recurrence_changes`:**
+
+> Parcelas com `status='pago'` ou `data_vencimento < CURRENT_DATE` são **imutáveis** pela cascata. Mudanças na recorrência mãe propagam apenas para parcelas pendentes futuras.
+
+**Estados (`status`):**
+
+- `ativa` → gera parcelas, propaga mudanças
+- `pausada` → não gera novas; parcelas existentes intactas. Reativação chama gerador para recriar faltantes.
+- `cancelada` → soft-delete em parcelas pendentes futuras
+- `encerrada` → idem cancelada, semanticamente diferente (encerramento natural vs. interrupção)
+
+**RLS:** `authenticated_all` (segue padrão atual; endurecimento por `organization_id` está na DT-09C1A-3 da seção 16).
+
+### 4.X — Conceito complementar: deprecation de campos (v1.7)
+
+A partir de v1.7, este documento adota explicitamente o padrão de **deprecation antes de remoção**:
+
+1. Campo marcado com `COMMENT 'DEPRECATED desde XX. Use Y. Removido em prompt futuro.'`
+2. Refactor de **todos** os leitores e escritores para a nova fonte de verdade
+3. Período de validação (mínimo **30 dias**) com monitoramento
+4. Prompt dedicado de remoção (`DROP COLUMN`) — só após confirmar zero uso vivo
+
+Isso protege contra regressão silenciosa em fluxos não auditados.
+
+**Campos atualmente em deprecation (`movimentacoes`)** — desde 09C-1A (26/04/2026):
+
+| Campo legado | Substituto |
+|--------------|------------|
+| `recorrente` | `recurrence_id IS NOT NULL` |
+| `frequencia_recorrencia` | `financial_recurrences.frequency` |
+| `movimentacao_pai_id` | `recurrence_id` |
+| `parcelado` | `recurrence_id` com `financial_recurrences.type='installment'` |
+| `parcela_atual` | `installment_number` |
+| `total_parcelas` | `installments_total` |
+
+**Novas colunas em `movimentacoes` (v1.7):** `recurrence_id`, `installment_number`, `installments_total`, `deleted_at` (soft delete).
 
 ---
 
