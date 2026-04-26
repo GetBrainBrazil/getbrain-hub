@@ -1032,74 +1032,117 @@ Todas as métricas cruzadas são expostas via view `project_metrics` (criada no 
 
 ## 13. Mapa de integrações entre módulos
 
+> **Substituída integralmente em v1.7 (09C-1A).** Mudança principal: Movimentações deixa de ser destino direto de origens; passa por `financial_recurrences` quando há série.
+
 Esta seção define quais eventos de um módulo disparam quais ações em outro módulo. Todo prompt que cria ou modifica um módulo deve incluir seção "Integrações ativas deste módulo" com referência a esta tabela.
 
-### 13.1 Projetos → Financeiro
+### 13.1 Fluxos canônicos pós-09C-1A
+
+```
+[Origem]                   [Intermediário]                [Destino]
+
+Forms financeiros          ┐
+(toggle "recorrente")      │
+                           │
+CRM (close_deal_as_won)    ├─→ financial_recurrences ─→ movimentacoes
+                           │   (entidade canônica)        (filhas)
+Vendas (parcelado/recorr.) │
+                           │
+Manutenção (trigger)       ┘
+
+Forms financeiros
+(modo simples, sem toggle) ────────────────────────────→ movimentacoes
+                                                          (linha única)
+
+Vendas (avulso)            ────────────────────────────→ movimentacoes
+                                                          (linha única)
+```
+
+### 13.2 Tabela de fluxos por módulo
+
+| Origem | Como dispara | Tabela criada | Filhas em `movimentacoes` |
+|--------|--------------|---------------|---------------------------|
+| Form Conta Recorrente | submit com `recorrente=true` | 1 `financial_recurrences` (`type=recurrence`) | 12 (horizonte rolling) |
+| Form Conta Simples | submit sem toggle | — | 1 linha direta |
+| CRM `close_deal_as_won` | botão "Fechar como ganho" | 1 `financial_recurrences` (`type=installment` se >1, recurrence se =1) | N (= total de parcelas do deal) |
+| Vendas tipo `parcelado` | submit do form Venda | 1 `financial_recurrences` (`type=installment`) | N (= `quantidade_parcelas`) |
+| Vendas tipo `avulso` | submit do form Venda | — | 1 linha direta |
+| Vendas tipo `recorrente` | submit do form Venda | — (delegado à manutenção) | — |
+| Contrato de Manutenção criado | trigger `sync_maintenance_contract_recurrence` | 1 `financial_recurrences` (`type=recurrence`, `end_date = contract.end_date`) | 12 iniciais (rolling se end_date NULL) |
+| Contrato de Manutenção cancelado | mesmo trigger, status <> 'active' | — (atualiza recurrence existente para `cancelada`) | Soft-delete via trigger de propagação |
+| Cron mensal | `extend_recurrences_monthly` (`0 3 1 * *`) | — | +1 mês para cada recurrence ativa sem `end_date` |
+
+### 13.3 Edição em cascata (trigger `recurrence_propagate`)
+
+Mudanças em `financial_recurrences` propagam automaticamente para filhas pendentes futuras:
+
+- `amount` muda → `valor_previsto` das pendentes futuras é atualizado
+- Vínculos mudam (`categoria_id`, `cliente_id`, etc.) → propaga
+- `status` vira `cancelada`/`encerrada` → soft-delete em pendentes futuras
+- `status` volta de `pausada` para `ativa` → recria parcelas faltantes via gerador
+
+> Parcelas pagas ou vencidas (`data_vencimento < CURRENT_DATE`) são imutáveis pela cascata.
+
+### 13.4 Dependências de leitura
+
+Componentes que leem dados de `financial_recurrences`:
+
+- `useProjectFinanceDetail.ts` — join via `recurrence:financial_recurrences(id, type, frequency, status)`, filtra one-shot (`recurrence_id IS NULL`) vs installments vs recurring
+- `ProjetoFinanceiroDetalhe.tsx` — badge `installment_number`/`installments_total`
+- (Futuro 09C-1B) Sub-aba `/financeiro/recorrencias`
+
+> **Princípio:** nenhum código TS lê os campos legados (`recorrente`, `parcelado`, `pai_id`, `parcela_atual`, `total_parcelas`). Se ler, é dívida técnica nova.
+
+### 13.5 Projetos → Financeiro
 
 | Evento gatilho | Ação automatizada | Quem dispara |
 |----------------|-------------------|--------------|
-| `projects.status` muda para `aceito` | Criar N lançamentos de Contas a Receber no Financeiro, um por parcela do `contract_value / installments_count`, espaçados mensalmente a partir de `start_date` ou data atual. Marca `source_module='projects'`, `is_automatic=true`. | Trigger no banco + Edge Function |
-| `projects.status` muda para `cancelado` | Listar lançamentos futuros com `source_entity_id = project.id` e marcar como `cancelled`. Perguntar ao usuário (modal) se deve estornar parcelas já pagas. | Edge Function |
-| `projects.status` muda para `entregue` | Sugerir (não criar automaticamente) abertura de `maintenance_contract` com valores pré-preenchidos baseados no tipo de projeto. Exibir modal de confirmação. | Frontend após trigger |
-| Ator alocado a projeto | Calcular custo projetado mensal (`humans.hourly_cost` × horas_semana × 4) e expor em "Custos do Projeto". | View ou função |
+| `projects.status` muda para `aceito` | Criar N lançamentos de Contas a Receber via `financial_recurrences` (`type=installment`), espaçados mensalmente. Marca `source_module='projects'`, `is_automatic=true`. | Trigger no banco + Edge Function |
+| `projects.status` muda para `cancelado` | Listar lançamentos futuros com `source_entity_id = project.id` e marcar como `cancelled`. Perguntar ao usuário se deve estornar parcelas já pagas. | Edge Function |
+| `projects.status` muda para `entregue` | Sugerir (não criar automaticamente) abertura de `maintenance_contract` com valores pré-preenchidos. | Frontend após trigger |
+| Ator alocado a projeto | Calcular custo projetado mensal e expor em "Custos do Projeto". | View ou função |
 
-### 13.2 Manutenção → Financeiro
+### 13.6 Manutenção → Financeiro
 
-| Evento gatilho | Ação automatizada |
-|----------------|-------------------|
-| `maintenance_contract.status = active` criado | Criar série de lançamentos recorrentes mensais em Contas a Receber, a partir de `start_date`, com valor `monthly_fee × (1 - discount_percent/100)`. |
-| `maintenance_contract.status` muda para `paused` | Marcar lançamentos futuros (ainda não-pagos) como `paused`. |
-| `maintenance_contract.status` muda para `ended` / `cancelled` | Marcar lançamentos futuros como `cancelled`. Lançamentos já pagos ficam intactos. |
-| `maintenance_contract.end_date` atingido | Mudar status automaticamente para `ended` (Edge Function agendada). |
+Ver tabela 13.2 (linhas "Contrato de Manutenção"). Trigger `sync_maintenance_contract_recurrence` mantém 1 `financial_recurrences` por contrato ativo.
 
-### 13.3 Tokens → Financeiro (futuro, Prompt do módulo Tokens)
+### 13.7 Tokens → Financeiro (futuro)
 
 | Evento gatilho | Ação |
 |----------------|------|
 | Consumo atinge 80% do `token_budget_brl` | Notificar Daniel (email/UI). |
-| Consumo ultrapassa 100% | Criar lançamento adicional em Contas a Receber com valor do excedente, `source_module='tokens'`. |
+| Consumo ultrapassa 100% | Criar lançamento adicional em Contas a Receber (linha direta), `source_module='tokens'`. |
 
-### 13.4 CRM → Projetos (futuro, Prompt do módulo CRM)
-
-| Evento gatilho | Ação |
-|----------------|------|
-| Pipeline muda para `fechado` | Criar `project` com `status='aceito'`, pré-populando `company_id`, `project_type`, `contract_value`, descrição a partir do lead. |
-| Pipeline muda para `perdido` | Atualizar `companies.status='lost'`. |
-
-### 13.5 Suporte → Manutenção (futuro, Prompt do módulo Suporte)
+### 13.8 Suporte → Manutenção (futuro)
 
 | Evento gatilho | Ação |
 |----------------|------|
-| Ticket resolvido | Registrar horas gastas no `maintenance_contract` vinculado. Alertar se acumulado > `hours_budget`. |
+| Ticket resolvido | Registrar horas no `maintenance_contract`. Alertar se acumulado > `hours_budget`. |
 | Ticket reaberto 2+ vezes | Aumentar prioridade, notificar Daniel. |
 
-### 13.6 Projetos → Atividade global
-
-Toda mudança de status ou campo importante em qualquer módulo deve gerar entrada em `audit_logs` — base para feed de atividade do projeto, dashboard global e auditoria.
-
-### 13.7 Regras gerais de implementação
-
-- **Edge Functions (Supabase)** implementam automações que atravessam tabelas.
-- **Triggers SQL** implementam automações simples dentro de uma tabela.
-- **Frontend** dispara eventos explicitamente quando user confirma ação que precisa de input (ex: sugerir criar contrato de manutenção).
-- Toda tabela que recebe eventos de outros módulos tem colunas: `source_module text`, `source_entity_type text`, `source_entity_id uuid`, `is_automatic boolean default false`.
-- **Nenhuma automação roda sem estar documentada aqui primeiro.** Se um prompt futuro precisa adicionar automação, atualizar esta seção.
-
-### 13.8 Projetos ← outros módulos (entradas)
+### 13.9 Projetos ← outros módulos (entradas)
 
 | Módulo origem | Evento | Como aparece em Projetos |
 |---------------|--------|--------------------------|
-| Área Dev (Tarefas) | Task criada/atualizada com `project_id` preenchido | Contagem no painel Tarefas da aba Operacional |
-| Área Dev (Tarefas) | Task com `hours_actual` registrado | Soma em `project_metrics.hours_actual` |
-| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pago | Soma em `project_metrics.revenue_received` |
-| Financeiro (Lançamentos) | Lançamento com `source_entity_id = project.id` e status pendente | Soma em `project_metrics.revenue_pending` |
-| Suporte (Tickets) | Ticket criado com `project_id` | Contagem no painel Suporte |
+| Área Dev (Tarefas) | Task com `project_id` | Contagem no painel Tarefas |
+| Área Dev (Tarefas) | Task com `hours_actual` | Soma em `project_metrics.hours_actual` |
+| Financeiro | Lançamento com `source_entity_id = project.id` e status pago | Soma em `project_metrics.revenue_received` |
+| Financeiro | Lançamento idem, status pendente | Soma em `project_metrics.revenue_pending` |
+| Suporte | Ticket criado com `project_id` | Contagem no painel Suporte |
 | Tokens | Consumo registrado com `project_id` | Soma no painel Tokens |
-| CRM | Pipeline fechado | Cria projeto automaticamente com `status='aceito'` |
+| CRM | Pipeline fechado (`close_deal_as_won`) | Cria projeto + `financial_recurrences` automaticamente |
 
-### 13.9 Princípio de agregação
+### 13.10 Regras gerais de implementação
 
-Todas as métricas cruzadas são expostas via view `project_metrics` (criada no Prompt 02c). Nenhum módulo precisa "saber" que Projetos está consumindo — o Projetos simplesmente lê a view, que faz LEFT JOIN com as tabelas dos outros módulos. Quando uma tabela-fonte ainda não existe (Suporte, Tokens), a view retorna 0 para aquele agregado — e passa a retornar dados reais automaticamente quando a tabela for criada no prompt futuro.
+- **Edge Functions** implementam automações cross-tabela.
+- **Triggers SQL** implementam automações intra-tabela e cascatas de séries (`propagate_recurrence_changes`).
+- **Frontend** dispara eventos explicitamente quando user confirma ação que precisa de input.
+- Toda tabela que recebe eventos de outros módulos tem colunas: `source_module`, `source_entity_type`, `source_entity_id`, `is_automatic`.
+- **Nenhuma automação roda sem estar documentada aqui primeiro.**
+
+### 13.11 Princípio de agregação
+
+Métricas cruzadas via view `project_metrics`. Nenhum módulo precisa "saber" que Projetos está consumindo — a view faz LEFT JOIN com tabelas dos outros módulos.
 
 ---
 
