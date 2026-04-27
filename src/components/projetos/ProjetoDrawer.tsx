@@ -27,6 +27,8 @@ import { NovoContratoDialog } from "./NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { AcceptanceCriteriaEditor } from "@/components/shared/AcceptanceCriteriaEditor";
+import type { AcceptanceCriterion } from "@/types/shared";
 
 interface Props {
   projectId: string | null;
