@@ -1,41 +1,37 @@
-## Objetivo
+## Problema
 
-Adicionar **drag-and-drop** ao Kanban da aba Cards de `/projetos`, permitindo arrastar um card de uma coluna (etapa) para outra e atualizar o status do projeto no banco. Hoje as colunas existem mas os cards não são arrastáveis.
+Na sidebar (`AppSidebar.tsx`), a marcação de "ativo" usa **igualdade exata** de `location.pathname` com a URL do item. Em rotas de detalhe — por exemplo `/financeiro/orcamentos/:id/editar`, `/projetos/:id`, `/crm/deals/:code`, `/dev/tasks/:code`, `/financeiro/movimentacoes/:id`, `/financeiro/recorrencias/:id` — nenhum submódulo bate exatamente. Resultado: o submódulo perde o destaque (texto cyan + fundo) e o módulo pai também fica sem a faixa lateral de cor.
 
-## Como vai funcionar
+## Solução
 
-- Biblioteca: **`@dnd-kit/core`** (já instalada e usada no Kanban de Orçamentos — mesmo padrão).
-- Cada **card** vira `useDraggable` (id = project id, data = row).
-- Cada **coluna** vira `useDroppable` (id = status).
-- Sensor: `PointerSensor` com `activationConstraint: { distance: 6 }` — assim o `onClick` que abre o detalhe do projeto continua funcionando sem disparar drag.
-- `DragOverlay` mostra um clone "fantasma" do card seguindo o cursor, com leve rotação (igual Orçamentos).
-- Ao soltar em outra coluna: abrir `useConfirm` ("Mover X para Y?"). Se confirmar, `UPDATE projects.status` e recarregar.
-- Soltar na própria coluna ou fora: ignora.
-- Feedback visual: coluna alvo recebe `ring-2 ring-primary/30 bg-primary/5` enquanto está sendo "hovered".
-- Card durante drag: `opacity: 0.35` no original, cursor `grabbing`, `touchAction: none`.
+Trocar a regra de "ativo" por **match por prefixo**, escolhendo o submódulo mais específico (URL mais longa que seja prefixo do `pathname`). O módulo pai fica destacado sempre que a rota atual estiver dentro dele.
 
-## Arquivos
+### Regras de match
 
-**Novo**: `src/components/projetos/ProjetosKanban.tsx`
-- Componente isolado com toda a lógica D&D (DndContext, colunas, cards, overlay).
-- Recebe `rows`, `visibleStatuses`, `onCardClick`, `onChanged` (callback de reload) por props.
-- Usa `useConfirm` interno para o diálogo de mudança de status.
-- Usa `supabase.from("projects").update({ status })` direto.
+- **Submódulo ativo**: o `child` cuja `url` é prefixo de `location.pathname` e tem o maior comprimento entre os irmãos. Para evitar falso match (ex.: `/financeiro` casar com qualquer subitem), exige que o caractere seguinte ao prefixo seja `/` ou fim da string.
+- **Módulo pai ativo**: quando `location.pathname` começa com `item.url` (mesmo critério de fronteira). Sempre que o pai está ativo, ele recebe a faixa cyan, **inclusive** quando há um submódulo ativo (hoje só destaca o pai se `!activeChild`).
+- **Dashboard** (`/dashboard`) continua com match exato (também aceita `/`).
 
-**Editado**: `src/pages/Projetos.tsx`
-- Remove o JSX inline da grade de colunas Kanban (~80 linhas atuais).
-- Substitui por `<ProjetosKanban rows={filtered} visibleStatuses={statusFilter} onCardClick={openDrawer} onChanged={load} />`.
-- Mantém todo o resto (KPIs, filtros, Tabela, mobile cards, paginação) intocado.
+### Casos cobertos
 
-## Detalhes técnicos
+| Rota atual | Módulo destacado | Submódulo destacado |
+|---|---|---|
+| `/financeiro/orcamentos/:id/editar` | Financeiro | Orçamentos |
+| `/financeiro/movimentacoes/:id` | Financeiro | Contas a Pagar / Receber |
+| `/financeiro/recorrencias/:id` | Financeiro | Recorrências |
+| `/financeiro/extratos/movimentacao/:id` | Financeiro | Extratos Bancários |
+| `/projetos/:id` (e abas) | Projetos | — |
+| `/crm/deals/:code`, `/crm/leads/:code`, `/crm/empresas/:id` | CRM | Pipeline / Leads / Empresas |
+| `/dev/tasks/:code` | Área Dev | Kanban (default) |
 
-- O `onClick` do card (abrir detalhe) é preservado dentro do wrapper draggable — graças à `activationConstraint.distance: 6`, clicks simples não viram drag.
-- Mobile (`md:hidden`) **não usa** o componente Kanban, segue como grid vertical de cards (drag horizontal não faz sentido em telas pequenas).
-- Status `"arquivado"` e `"cancelado"` continuam sendo colunas válidas se o usuário marcá-los no filtro — soltar lá funciona como mover para essa etapa (substituindo a ação "arquivar" do menu, mas o menu segue existindo).
-- Sem reordenação dentro da mesma coluna nesta entrega (a ordenação do banco é por `code`).
+Para `/dev/tasks/:code` não há submódulo natural; nesse caso só o módulo pai fica destacado (não força nenhum submódulo).
 
-## Fora do escopo
+## Arquivo alterado
 
-- Reordenação manual dentro da coluna.
-- Salvar uma "ordem" customizada por status.
-- D&D no mobile.
+- `src/components/AppSidebar.tsx`
+  - Substituir `isExactActive` por helper `isPathInside(url)` (prefix + boundary).
+  - Calcular `activeChild` pelo prefixo mais longo.
+  - Ajustar `parentActive` para destacar o pai sempre que a rota estiver dentro do módulo.
+  - Manter o comportamento exato apenas para o item Dashboard.
+
+Sem mudanças de visual, rotas, ou em outros arquivos.

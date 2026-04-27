@@ -86,18 +86,34 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Match by prefix with path-boundary (avoids /foo matching /foobar).
+  const isPathInside = (url: string) => {
+    const path = location.pathname;
+    if (path === url) return true;
+    return path.startsWith(url + "/");
+  };
+
+  // Exact match used only for leaf items like Dashboard.
   const isExactActive = (url: string) =>
     url === "/dashboard"
       ? location.pathname === "/dashboard" || location.pathname === "/"
       : location.pathname === url;
 
+  // Pick most specific child (longest url that is prefix of pathname).
+  const getActiveChild = (item: NavItem) => {
+    if (!item.children) return undefined;
+    const matches = item.children.filter((c) => isPathInside(c.url));
+    if (matches.length === 0) return undefined;
+    return matches.reduce((a, b) => (b.url.length > a.url.length ? b : a));
+  };
+
   const isGroupOpen = (item: NavItem) =>
-    !!item.children && location.pathname.startsWith(item.url);
+    !!item.children && isPathInside(item.url);
 
   const [openMap, setOpenMap] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
     navItems.forEach((i) => {
-      if (i.children) map[i.title] = location.pathname.startsWith(i.url);
+      if (i.children) map[i.title] = isPathInside(i.url);
     });
     return map;
   });
@@ -106,7 +122,7 @@ export function AppSidebar() {
     const next: Record<string, boolean> = {};
     navItems.forEach((i) => {
       if (i.children) {
-        next[i.title] = location.pathname.startsWith(i.url);
+        next[i.title] = isPathInside(i.url);
       }
     });
     setOpenMap(next);
@@ -125,9 +141,10 @@ export function AppSidebar() {
             const hasChildren = !!item.children?.length;
             const open = openMap[item.title] ?? false;
 
-            // Item without children: simple NavLink
+            // Item without children: simple NavLink (active when inside its url).
             if (!hasChildren) {
-              const active = isExactActive(item.url);
+              const active =
+                item.url === "/dashboard" ? isExactActive(item.url) : isPathInside(item.url);
               return (
                 <NavLink
                   key={item.title}
@@ -142,8 +159,8 @@ export function AppSidebar() {
             }
 
             // Item with children: parent navigates to first child / item.url, chevron toggles
-            const activeChild = item.children!.find((c) => isExactActive(c.url));
-            const parentActive = isGroupOpen(item) && !activeChild;
+            const activeChild = getActiveChild(item);
+            const parentActive = isGroupOpen(item);
 
             return (
               <Collapsible
@@ -196,7 +213,7 @@ export function AppSidebar() {
                   <CollapsibleContent>
                     <div className="mt-1 ml-[1.6rem] pl-3 border-l border-sidebar-border/40 space-y-0.5">
                       {item.children!.map((sub) => {
-                        const subActive = isExactActive(sub.url);
+                        const subActive = activeChild?.url === sub.url;
                         return (
                           <NavLink
                             key={sub.title}
