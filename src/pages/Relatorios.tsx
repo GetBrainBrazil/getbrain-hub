@@ -710,10 +710,11 @@ export default function Relatorios() {
               {loading ? (
                 <div className="flex items-center justify-center py-16 text-muted-foreground">Carregando...</div>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-1/2">Descrição</TableHead>
+                      <TableHead className="w-1/2 min-w-[200px]">Descrição</TableHead>
                       <TableHead className="text-right">Valor Atual</TableHead>
                       {compare && (
                         <>
@@ -725,6 +726,7 @@ export default function Relatorios() {
                   </TableHeader>
                   <TableBody>{renderDRERows()}</TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>
