@@ -55,6 +55,7 @@ import { StatusBadge, TypeBadge } from "@/components/projetos/ProjetoBadges";
 import { ActorAvatar, ActorAvatarStack } from "@/components/projetos/ActorAvatar";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { NovoProjetoDialog } from "@/components/projetos/NovoProjetoDialog";
+import { ProjetosKanban } from "@/components/projetos/ProjetosKanban";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
