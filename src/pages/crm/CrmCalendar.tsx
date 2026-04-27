@@ -134,7 +134,7 @@ export default function CrmCalendar() {
           </CardHeader>
           <CardContent>
             {view === 'month' ? (
-              <div className="grid grid-cols-7 gap-2">
+              <div className="hidden sm:grid grid-cols-7 gap-2">
                 {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day) => (
                   <div key={day} className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{day}</div>
                 ))}
