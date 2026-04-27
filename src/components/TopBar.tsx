@@ -159,16 +159,30 @@ export function TopBar() {
               <DropdownMenuSubTrigger>
                 <Eye className="h-4 w-4 mr-2" /> Ver como…
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-72 p-0">
+              <DropdownMenuSubContent className="w-72 p-0 max-h-[80vh] overflow-y-auto">
                 <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground">
                   POR FUNÇÃO
                 </div>
-                <DropdownMenuItem disabled className="text-muted-foreground">
-                  Administrador (atual)
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>Gerente</DropdownMenuItem>
-                <DropdownMenuItem disabled>Agente de Vendas</DropdownMenuItem>
-                <DropdownMenuItem disabled>Operações</DropdownMenuItem>
+                {orderedCargos.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">Nenhum cargo cadastrado</div>
+                )}
+                {orderedCargos.map((c) => {
+                  const active = viewAsMode.kind === "cargo" && viewAsMode.cargoId === c.id;
+                  return (
+                    <DropdownMenuItem
+                      key={c.id}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setViewAs({ kind: "cargo", cargoId: c.id, cargoNome: c.nome, cargoCor: c.cor });
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.cor }} />
+                      <span className={cnActive(active)}>{c.nome}</span>
+                      {active && <span className="text-[10px] text-muted-foreground ml-auto">(atual)</span>}
+                    </DropdownMenuItem>
+                  );
+                })}
 
                 <DropdownMenuSeparator />
 
@@ -179,24 +193,50 @@ export function TopBar() {
                   <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
                       placeholder="Buscar usuário..."
                       className="h-8 pl-8 text-sm"
-                      disabled
                     />
                   </div>
                 </div>
-                <DropdownMenuItem disabled className="flex items-center justify-between gap-2">
-                  <span className="truncate"><span className="font-medium">Daniel (Master)</span> <span className="text-muted-foreground">— Administrador</span></span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <span className="truncate"><span className="font-medium">Rodrigo Athayde</span> <span className="text-muted-foreground">— Administrador</span></span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <span className="truncate"><span className="font-medium">Camile Bernardes</span> <span className="text-muted-foreground">— Administrador</span></span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <span className="truncate"><span className="font-medium">Ana Paula Souza</span> <span className="text-muted-foreground">— Gerente</span></span>
-                </DropdownMenuItem>
+                {filteredUsers.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">Nenhum usuário encontrado</div>
+                )}
+                {filteredUsers.map((u) => {
+                  const active = viewAsMode.kind === "user" && viewAsMode.userId === u.id;
+                  return (
+                    <DropdownMenuItem
+                      key={u.id}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setViewAs({
+                          kind: "user",
+                          userId: u.id,
+                          userNome: u.full_name,
+                          cargoNome: u.cargo_nome ?? undefined,
+                        });
+                      }}
+                    >
+                      <span className="truncate flex-1">
+                        <span className={cnActive(active)}>{u.full_name}</span>
+                        {u.cargo_nome && <span className="text-muted-foreground"> — {u.cargo_nome}</span>}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+                {viewAsMode.kind !== "none" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={(e) => { e.preventDefault(); setViewAs({ kind: "none" }); }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      Sair de "Ver como…"
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           )}
