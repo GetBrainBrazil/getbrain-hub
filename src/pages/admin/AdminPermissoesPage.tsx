@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Plus, Pencil, Trash2, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Check, Plus, Pencil, Trash2, Lock, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCargos, useAllCargoPermissoes, useDeleteCargo, MODULOS, Cargo } from "@/hooks/useCargos";
 import { CargoDialog } from "@/components/configuracoes/CargoDialog";
 import {
