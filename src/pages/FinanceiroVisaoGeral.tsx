@@ -84,6 +84,7 @@ import {
   BlocoComparativoHistorico,
   BlocoProximasMovimentacoes,
 } from "@/components/dashboard/FinanceBlocks09B";
+import { BlocoDiagnosticoSaldos } from "@/components/dashboard/BlocoDiagnosticoSaldos";
 
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
