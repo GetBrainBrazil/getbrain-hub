@@ -14,7 +14,7 @@ export function MultiFilter({ label, selected, options, onChange }: { label: str
           {label}{selected.length > 0 && <span className="ml-1 rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-mono text-accent">{selected.length}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] p-2">
+      <PopoverContent align="start" sideOffset={6} collisionPadding={12} className="w-[min(20rem,calc(100vw-1.5rem))] p-2">
         <div className="max-h-72 space-y-1 overflow-y-auto">
           {options.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">Sem opções</p>}
           {options.map((o) => (
@@ -37,7 +37,7 @@ export function ValueRangeFilter({ value, onChange }: { value: [number, number] 
           Valor{value && <span className="ml-1 rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-mono text-accent">ativo</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] space-y-3">
+      <PopoverContent align="start" sideOffset={6} collisionPadding={12} className="w-[min(20rem,calc(100vw-1.5rem))] space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1"><Label className="text-xs">Mínimo</Label><Input type="number" value={value?.[0] ?? ''} onChange={(e) => onChange([Number(e.target.value || 0), value?.[1] ?? 999999])} /></div>
           <div className="space-y-1"><Label className="text-xs">Máximo</Label><Input type="number" value={value?.[1] ?? ''} onChange={(e) => onChange([value?.[0] ?? 0, Number(e.target.value || 999999)])} /></div>
