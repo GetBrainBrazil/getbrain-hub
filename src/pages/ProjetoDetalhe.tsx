@@ -1874,83 +1874,21 @@ export default function ProjetoDetalhe() {
                 </CardBlock>
 
                 {/* Critérios de Aceite */}
-                <CardBlock
-                  title="Critérios de Aceite"
-                  icon={ListChecks}
-                  action={
-                    editing === "criteria" ? (
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={async () => {
-                            const next = draftCriteria || null;
-                            if (next !== (project.acceptance_criteria ?? null)) {
-                              await patchProject(
-                                { acceptance_criteria: next } as any,
-                                {
-                                  acceptance_criteria: {
-                                    before: project.acceptance_criteria,
-                                    after: next,
-                                  },
-                                },
-                              );
-                            }
-                            setEditing(null);
-                          }}
-                        >
-                          <Save className="mr-1 h-3.5 w-3.5" /> Salvar
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={closeEditor}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button size="sm" variant="ghost" onClick={() => openEditor("criteria")}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
-                      </Button>
-                    )
-                  }
-                >
-                  {editing === "criteria" ? (
-                    <RichTextEditor
-                      value={draftCriteria}
-                      onChange={setDraftCriteria}
-                      placeholder="- [ ] Entrega A&#10;- [ ] Entrega B"
-                      onSave={async (v) => {
-                        const next = v || null;
-                        if (next !== (project.acceptance_criteria ?? null)) {
-                          await patchProject(
-                            { acceptance_criteria: next } as any,
-                            {
-                              acceptance_criteria: {
-                                before: project.acceptance_criteria,
-                                after: next,
-                              },
-                            },
-                          );
-                        }
-                      }}
-                      onCancel={closeEditor}
-                    />
-                  ) : project.acceptance_criteria ? (
-                    <RichTextView
-                      text={project.acceptance_criteria}
-                      onToggle={async (newText) => {
-                        await patchProject(
-                          { acceptance_criteria: newText } as any,
-                          {
-                            acceptance_criteria: {
-                              before: project.acceptance_criteria,
-                              after: newText,
-                            },
+                <CardBlock title="Critérios de Aceite" icon={ListChecks}>
+                  <AcceptanceCriteriaEditor
+                    value={project.acceptance_criteria}
+                    onChange={async (next) => {
+                      await patchProject(
+                        { acceptance_criteria: next as never } as any,
+                        {
+                          acceptance_criteria: {
+                            before: project.acceptance_criteria,
+                            after: next,
                           },
-                        );
-                      }}
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">—</p>
-                  )}
+                        },
+                      );
+                    }}
+                  />
                 </CardBlock>
 
                 {/* Observações */}
