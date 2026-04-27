@@ -1065,36 +1065,37 @@ export default function Movimentacoes() {
             </div>
           );
         })()}
-        <div className="flex gap-3 flex-wrap items-center">
-          <div className="relative flex-1 min-w-[240px] max-w-md">
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative flex-1 min-w-[200px] md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por descrição, vinculado, categoria, projeto, conta..."
+              placeholder="Buscar..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-10 md:h-9"
             />
           </div>
           <PeriodFilter preset={periodPreset as PeriodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
-          <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <label className="hidden lg:flex ml-auto items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <Switch checked={hideRecurringFuture} onCheckedChange={setHideRecurringFuture} />
             Ocultar parcelas futuras de recorrências
             <HelpTooltip content="Esconde parcelas de recorrências com vencimento após o fim do mês atual." />
           </label>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <label className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
             Exibir Saldos Parciais
             <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
           </label>
           {hasActiveFilters && (
-            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="h-9 gap-1 text-xs">
+            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="h-10 md:h-9 gap-1 text-xs">
               <X className="h-3.5 w-3.5" />
-              Limpar filtros
+              <span className="hidden sm:inline">Limpar filtros</span>
             </Button>
           )}
         </div>
 
-        <div className="flex gap-2 flex-wrap items-center">
+        {/* Filtros avançados — scroll horizontal no mobile */}
+        <div className="flex gap-2 items-center overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0 md:flex-wrap md:overflow-visible scrollbar-thin">
           <MultiSelectFilter title="Status" selected={statusFilter} onChange={setStatusFilter} options={statusOptions} placeholder="Buscar status..." />
           <MultiSelectFilter title={isPagar ? "Vinculado" : "Cliente"} selected={vinculadoFilter} onChange={setVinculadoFilter} options={vinculadoOptions} placeholder={isPagar ? "Buscar fornecedor ou colaborador..." : "Buscar cliente..."} />
           <MultiSelectFilter title="Categoria" selected={categoriaFilter} onChange={setCategoriaFilter} options={categoriaOptions} placeholder="Buscar categoria..." />
@@ -1104,7 +1105,7 @@ export default function Movimentacoes() {
           <MultiSelectFilter title="Recorrência" selected={recorrenciaFilter} onChange={setRecorrenciaFilter} options={recorrenciaOptions} placeholder="Buscar recorrência..." />
           <MultiSelectFilter title="Conciliação" selected={conciliacaoFilter} onChange={setConciliacaoFilter} options={conciliacaoOptions} placeholder="Buscar conciliação..." />
           <Select value={lancamentoOrder} onValueChange={(v) => setLancamentoOrder(v as "none" | "recent" | "old")}>
-            <SelectTrigger className="h-8 w-auto gap-1.5 px-2.5 text-xs font-normal">
+            <SelectTrigger className="h-8 w-auto gap-1.5 px-2.5 text-xs font-normal shrink-0">
               <SelectValue placeholder="Lançamentos" />
             </SelectTrigger>
             <SelectContent>
@@ -1113,6 +1114,18 @@ export default function Movimentacoes() {
               <SelectItem value="old">Mais antigos</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Toggles que ficam escondidos em telas < lg, exibidos abaixo em mobile/tablet */}
+        <div className="flex flex-col gap-2 lg:hidden">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <Switch checked={hideRecurringFuture} onCheckedChange={setHideRecurringFuture} />
+            Ocultar parcelas futuras de recorrências
+          </label>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
+            Exibir Saldos Parciais
+          </label>
         </div>
       </div>
 
