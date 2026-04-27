@@ -269,128 +269,195 @@ export default function FinanceiroVisaoGeral() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={period} onValueChange={(v) => setPeriod(v as FinancePeriodPreset)}>
-              <SelectTrigger className="h-9 w-[170px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIOD_OPTIONS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>
-                    {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={compareWith}
-              onValueChange={(v) => setCompareWith(v as FinanceCompareOption)}
-            >
-              <SelectTrigger className="h-9 w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {COMPARE_OPTIONS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    Comparar: {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Toggle Regime — destacado */}
-            <div className="inline-flex h-9 items-center rounded-md border bg-background p-0.5 text-xs">
-              {(["competencia", "caixa"] as FinanceRegime[]).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRegime(r)}
-                  className={cn(
-                    "h-full rounded px-3 font-medium transition-colors",
-                    regime === r
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
+          {(() => {
+            const advancedFilters = (
+              <>
+                <Select
+                  value={accountFilter[0] ?? "__all__"}
+                  onValueChange={(v) =>
+                    setAccountFilter(v === "__all__" ? [] : [v])
+                  }
                 >
-                  {r === "competencia" ? "Competência" : "Caixa"}
-                </button>
-              ))}
-            </div>
+                  <SelectTrigger className="h-10 md:h-9 w-full md:w-[160px]">
+                    <SelectValue placeholder="Contas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Todas as contas</SelectItem>
+                    {(refsQ.data?.contas ?? []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Select
-              value={accountFilter[0] ?? "__all__"}
-              onValueChange={(v) =>
-                setAccountFilter(v === "__all__" ? [] : [v])
-              }
-            >
-              <SelectTrigger className="h-9 w-[160px]">
-                <SelectValue placeholder="Contas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas as contas</SelectItem>
-                {(refsQ.data?.contas ?? []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <Select
+                  value={projectFilter[0] ?? "__all__"}
+                  onValueChange={(v) =>
+                    setProjectFilter(v === "__all__" ? [] : [v])
+                  }
+                >
+                  <SelectTrigger className="h-10 md:h-9 w-full md:w-[160px]">
+                    <SelectValue placeholder="Projetos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Todos projetos</SelectItem>
+                    {(refsQ.data?.projetos ?? []).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.code} · {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Select
-              value={projectFilter[0] ?? "__all__"}
-              onValueChange={(v) =>
-                setProjectFilter(v === "__all__" ? [] : [v])
-              }
-            >
-              <SelectTrigger className="h-9 w-[160px]">
-                <SelectValue placeholder="Projetos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos projetos</SelectItem>
-                {(refsQ.data?.projetos ?? []).map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.code} · {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <Select
+                  value={categoryFilter[0] ?? "__all__"}
+                  onValueChange={(v) =>
+                    setCategoryFilter(v === "__all__" ? [] : [v])
+                  }
+                >
+                  <SelectTrigger className="h-10 md:h-9 w-full md:w-[160px]">
+                    <SelectValue placeholder="Categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Todas categorias</SelectItem>
+                    {(refsQ.data?.categorias ?? []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            );
 
-            <Select
-              value={categoryFilter[0] ?? "__all__"}
-              onValueChange={(v) =>
-                setCategoryFilter(v === "__all__" ? [] : [v])
-              }
-            >
-              <SelectTrigger className="h-9 w-[160px]">
-                <SelectValue placeholder="Categorias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas categorias</SelectItem>
-                {(refsQ.data?.categorias ?? []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            return (
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <Select value={period} onValueChange={(v) => setPeriod(v as FinancePeriodPreset)}>
+                  <SelectTrigger className="h-10 md:h-9 flex-1 min-w-[140px] md:flex-none md:w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERIOD_OPTIONS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            {filtersActive ? (
-              <Button variant="ghost" size="sm" onClick={resetFilters}>
-                <X className="mr-1 h-3 w-3" />
-                Limpar
-              </Button>
-            ) : null}
+                <Select
+                  value={compareWith}
+                  onValueChange={(v) => setCompareWith(v as FinanceCompareOption)}
+                >
+                  <SelectTrigger className="hidden md:flex h-9 w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMPARE_OPTIONS.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        Comparar: {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => summaryQ.refetch()}
-              title="Atualizar"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
+                {/* Toggle Regime — destacado */}
+                <div className="inline-flex h-10 md:h-9 items-center rounded-md border bg-background p-0.5 text-xs">
+                  {(["competencia", "caixa"] as FinanceRegime[]).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setRegime(r)}
+                      className={cn(
+                        "h-full rounded px-3 font-medium transition-colors",
+                        regime === r
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {r === "competencia" ? "Competência" : "Caixa"}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Desktop: filtros inline */}
+                <div className="hidden md:contents">{advancedFilters}</div>
+
+                {/* Mobile: botão "Filtros" abre Sheet */}
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="md:hidden h-10 px-3"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      <span>Filtros</span>
+                      {filtersActive ? (
+                        <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground">
+                          •
+                        </span>
+                      ) : null}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Filtros</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Comparar com</label>
+                        <Select
+                          value={compareWith}
+                          onValueChange={(v) => setCompareWith(v as FinanceCompareOption)}
+                        >
+                          <SelectTrigger className="h-10 w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COMPARE_OPTIONS.map((c) => (
+                              <SelectItem key={c.value} value={c.value}>
+                                {c.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {advancedFilters}
+                      {filtersActive ? (
+                        <Button variant="outline" className="w-full h-11" onClick={resetFilters}>
+                          <X className="mr-1 h-4 w-4" />
+                          Limpar filtros
+                        </Button>
+                      ) : null}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                {filtersActive ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetFilters}
+                    className="hidden md:inline-flex"
+                  >
+                    <X className="mr-1 h-3 w-3" />
+                    Limpar
+                  </Button>
+                ) : null}
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 md:h-9 md:w-9"
+                  onClick={() => summaryQ.refetch()}
+                  title="Atualizar"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          })()}
         </header>
 
         {/* ============== Alertas ============== */}
