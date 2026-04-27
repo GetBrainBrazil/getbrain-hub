@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -8,6 +8,24 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
+  const prevPath = useRef(pathname);
+
+  // Ao mudar de rota, fecha automaticamente qualquer Dialog/Popover/Sheet/Dropdown
+  // do Radix que esteja aberto, evitando que overlays modais bloqueiem a navegação
+  // pela sidebar quando o usuário esquece um dialog aberto.
+  useEffect(() => {
+    if (prevPath.current !== pathname) {
+      prevPath.current = pathname;
+      // Dispara Escape no documento — todos os primitivos do Radix escutam isso
+      // por padrão e fecham. Usamos rAF para rodar após a navegação aplicar.
+      requestAnimationFrame(() => {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+      });
+    }
+  }, [pathname]);
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
