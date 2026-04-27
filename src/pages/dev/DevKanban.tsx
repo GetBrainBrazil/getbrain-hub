@@ -76,7 +76,7 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
-    <div className="flex w-80 shrink-0 flex-col rounded-lg bg-muted/20 p-3">
+    <div className="flex w-[85vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-lg bg-muted/20 p-3 sm:w-80">
       <div className="mb-3 flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
@@ -251,52 +251,54 @@ export default function DevKanban() {
   return (
     <TooltipProvider delayDuration={150}>
       {/* Filtros */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/50 p-3">
-        <div className="relative">
+      <div className="mb-4 flex flex-col gap-2 rounded-lg border border-border bg-card/50 p-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:w-auto">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar tarefa..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-[240px] pl-8 text-sm"
+            className="h-10 w-full pl-8 text-sm sm:h-9 sm:w-[240px]"
           />
         </div>
 
-        <FilterPopover
-          label="Projetos"
-          count={projectFilter.length}
-          options={projects.map((p) => ({ value: p.id, label: `${p.code} ${p.name}` }))}
-          selected={projectFilter}
-          onChange={setProjectFilter}
-        />
-        <FilterPopover
-          label="Assignees"
-          count={assigneeFilter.length}
-          options={actors.map((a) => ({ value: a.id, label: a.display_name }))}
-          selected={assigneeFilter}
-          onChange={setAssigneeFilter}
-        />
-        <FilterPopover
-          label="Tipo"
-          count={typeFilter.length}
-          options={TYPES.map((t) => ({ value: t, label: `${TYPE_ICON[t]} ${TYPE_LABEL[t]}` }))}
-          selected={typeFilter}
-          onChange={(v) => setTypeFilter(v as TaskTypeKind[])}
-        />
-        <FilterPopover
-          label="Prioridade"
-          count={priorityFilter.length}
-          options={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))}
-          selected={priorityFilter}
-          onChange={(v) => setPriorityFilter(v as TaskPriority[])}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterPopover
+            label="Projetos"
+            count={projectFilter.length}
+            options={projects.map((p) => ({ value: p.id, label: `${p.code} ${p.name}` }))}
+            selected={projectFilter}
+            onChange={setProjectFilter}
+          />
+          <FilterPopover
+            label="Assignees"
+            count={assigneeFilter.length}
+            options={actors.map((a) => ({ value: a.id, label: a.display_name }))}
+            selected={assigneeFilter}
+            onChange={setAssigneeFilter}
+          />
+          <FilterPopover
+            label="Tipo"
+            count={typeFilter.length}
+            options={TYPES.map((t) => ({ value: t, label: `${TYPE_ICON[t]} ${TYPE_LABEL[t]}` }))}
+            selected={typeFilter}
+            onChange={(v) => setTypeFilter(v as TaskTypeKind[])}
+          />
+          <FilterPopover
+            label="Prioridade"
+            count={priorityFilter.length}
+            options={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))}
+            selected={priorityFilter}
+            onChange={(v) => setPriorityFilter(v as TaskPriority[])}
+          />
+        </div>
 
         {(projectFilter.length || assigneeFilter.length || typeFilter.length || priorityFilter.length || search) ? (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => useDevHubStore.getState().resetFilters()}
-            className="ml-auto h-9 text-xs"
+            className="h-9 text-xs sm:ml-auto"
           >
             Limpar filtros
           </Button>
@@ -316,7 +318,7 @@ export default function DevKanban() {
       {/* Kanban */}
       {filtered.length > 0 && (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 sm:snap-none sm:gap-4">
             {COLUMNS.map((col) => (
               <Column
                 key={col.id}

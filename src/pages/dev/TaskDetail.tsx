@@ -106,7 +106,7 @@ export default function TaskDetail() {
         </div>
 
         {/* Header denso */}
-        <header className="mb-6 space-y-3 rounded-lg border border-border bg-card/30 p-5">
+        <header className="mb-6 space-y-3 rounded-lg border border-border bg-card/30 p-3 sm:p-5">
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="font-mono font-semibold text-muted-foreground">{task.code}</span>
             <span className="text-muted-foreground">·</span>
@@ -143,12 +143,12 @@ export default function TaskDetail() {
                   if (e.key === "Enter") saveTitle();
                   if (e.key === "Escape") { setTitleDraft(task.title); setEditingTitle(false); }
                 }}
-                className="text-2xl font-semibold h-auto py-1 font-display"
+                className="text-xl sm:text-2xl font-semibold h-auto py-1 font-display"
               />
             ) : (
               <h1
                 onClick={() => setEditingTitle(true)}
-                className="flex-1 cursor-text text-2xl font-semibold leading-tight text-foreground font-display hover:text-foreground/90"
+                className="flex-1 cursor-text text-xl sm:text-2xl font-semibold leading-tight text-foreground font-display hover:text-foreground/90 break-words"
                 title="Clique para editar"
               >
                 {task.title}
@@ -204,16 +204,16 @@ export default function TaskDetail() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           <div className="min-w-0">
             <Tabs defaultValue="description" className="w-full">
-              <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
+              <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-transparent p-0">
                 <TabsTrigger
                   value="description"
-                  className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-2 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                  className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2 text-sm font-medium text-muted-foreground shadow-none sm:px-4 data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
                   Descrição
                 </TabsTrigger>
                 <TabsTrigger
                   value="activity"
-                  className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-2 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                  className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2 text-sm font-medium text-muted-foreground shadow-none sm:px-4 data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
                   Atividade
                 </TabsTrigger>

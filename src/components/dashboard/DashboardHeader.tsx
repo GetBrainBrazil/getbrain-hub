@@ -59,7 +59,7 @@ export function DashboardHeader() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Sprint
@@ -68,7 +68,7 @@ export function DashboardHeader() {
             value={selectedSprintId ?? undefined}
             onValueChange={(v) => setSelectedSprintId(v)}
           >
-            <SelectTrigger className="h-9 w-[320px]">
+            <SelectTrigger className="h-10 w-full sm:h-9 sm:w-[320px]">
               <SelectValue placeholder="Selecione a sprint" />
             </SelectTrigger>
             <SelectContent>
@@ -82,14 +82,14 @@ export function DashboardHeader() {
         </div>
 
         {previous && (
-          <Badge variant="outline" className="h-6 gap-1">
+          <Badge variant="outline" className="h-6 w-fit gap-1">
             <span className="text-[10px] uppercase text-muted-foreground">vs</span>
             <span className="font-mono text-[11px]">{previous.code}</span>
           </Badge>
         )}
 
-        <div className="ml-auto">
-          <Button variant="outline" size="sm" onClick={refresh}>
+        <div className="sm:ml-auto">
+          <Button variant="outline" size="sm" onClick={refresh} className="w-full sm:w-auto">
             <RotateCw className="mr-1.5 h-3.5 w-3.5" />
             Atualizar
           </Button>
