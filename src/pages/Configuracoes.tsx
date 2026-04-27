@@ -66,7 +66,7 @@ function MinhaContaTab() {
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
+    <div className="space-y-4 sm:space-y-6 max-w-full sm:max-w-lg">
       <Card>
         <CardHeader><CardTitle className="text-base">Dados Pessoais</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -107,10 +107,10 @@ function MeiosPagamentoTab() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <CardTitle className="text-base">Meios de Pagamento</CardTitle>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Novo</Button></DialogTrigger>
+          <DialogTrigger asChild><Button size="sm" className="gap-1 min-h-10 w-full sm:w-auto"><Plus className="h-4 w-4" /> Novo</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Novo Meio de Pagamento</DialogTitle></DialogHeader>
             <div className="space-y-3">
@@ -120,7 +120,7 @@ function MeiosPagamentoTab() {
           </DialogContent>
         </Dialog>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Ativo</TableHead></TableRow></TableHeader>
           <TableBody>{items.map(i => (
