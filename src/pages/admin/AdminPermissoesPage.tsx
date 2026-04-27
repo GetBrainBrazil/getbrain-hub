@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Plus, Pencil, Trash2, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Check, Plus, Pencil, Trash2, Lock, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCargos, useAllCargoPermissoes, useDeleteCargo, MODULOS, Cargo } from "@/hooks/useCargos";
 import { CargoDialog } from "@/components/configuracoes/CargoDialog";
 import {
@@ -20,6 +21,9 @@ export default function AdminPermissoesPage() {
   const [editing, setEditing] = useState<Cargo | null>(null);
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Cargo | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
 
   const matrix = useMemo(() => {
     const m = new Map<string, Set<string>>();
@@ -30,7 +34,22 @@ export default function AdminPermissoesPage() {
     return m;
   }, [perms]);
 
-  const ordered = [...cargos].sort((a, b) => b.nivel - a.nivel);
+  const ordered = useMemo(() => [...cargos].sort((a, b) => b.nivel - a.nivel), [cargos]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return ordered;
+    return ordered.filter(c =>
+      c.nome.toLowerCase().includes(q) ||
+      (c.descricao ?? "").toLowerCase().includes(q)
+    );
+  }, [ordered, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   function handleNew() {
     setEditing(null);
@@ -104,46 +123,83 @@ export default function AdminPermissoesPage() {
         </div>
       </Card>
 
-      {/* Cards por cargo com CRUD */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {ordered.map(c => {
-          const set = matrix.get(c.id) ?? new Set<string>();
-          return (
-            <Card key={c.id} className="p-4 flex flex-col">
-              <div className="flex items-start justify-between mb-3 gap-2">
-                <div className="font-semibold flex items-center gap-2 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.cor }} />
-                  <span className="truncate">{c.nome}</span>
-                  {c.is_system && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
-                </div>
-                <Badge variant="outline" className="text-xs shrink-0">{set.size}/{MODULOS.length}</Badge>
-              </div>
-              {c.descricao && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{c.descricao}</p>}
-              <ul className="space-y-1 text-sm flex-1">
-                {MODULOS.map(m => {
-                  const has = set.has(m.key);
-                  return (
-                    <li key={m.key} className={cn("flex items-center gap-2", has ? "text-foreground" : "text-muted-foreground/40")}>
-                      <span className={cn("h-1.5 w-1.5 rounded-full", has ? "bg-primary" : "bg-muted-foreground/30")} />
-                      {m.label}
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => handleEdit(c)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                  {c.is_system ? "Ver" : "Editar"}
-                </Button>
-                {!c.is_system && (
-                  <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(c)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-            </Card>
-          );
-        })}
+      {/* Cards por cargo com CRUD + busca + paginação */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="font-semibold">Cargos ({filtered.length})</div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar cargo pelo nome..."
+              className="pl-9 h-9"
+            />
+          </div>
+        </div>
+
+        {paginated.length === 0 ? (
+          <Card className="p-8 text-center text-sm text-muted-foreground">
+            Nenhum cargo encontrado{search ? ` para "${search}"` : ""}.
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {paginated.map(c => {
+              const set = matrix.get(c.id) ?? new Set<string>();
+              return (
+                <Card key={c.id} className="p-4 flex flex-col">
+                  <div className="flex items-start justify-between mb-3 gap-2">
+                    <div className="font-semibold flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.cor }} />
+                      <span className="truncate">{c.nome}</span>
+                      {c.is_system && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
+                    </div>
+                    <Badge variant="outline" className="text-xs shrink-0">{set.size}/{MODULOS.length}</Badge>
+                  </div>
+                  {c.descricao && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{c.descricao}</p>}
+                  <ul className="space-y-1 text-sm flex-1">
+                    {MODULOS.map(m => {
+                      const has = set.has(m.key);
+                      return (
+                        <li key={m.key} className={cn("flex items-center gap-2", has ? "text-foreground" : "text-muted-foreground/40")}>
+                          <span className={cn("h-1.5 w-1.5 rounded-full", has ? "bg-primary" : "bg-muted-foreground/30")} />
+                          {m.label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => handleEdit(c)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      {c.is_system ? "Ver" : "Editar"}
+                    </Button>
+                    {!c.is_system && (
+                      <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(c)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <div className="text-xs text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="gap-1">
+                <ChevronLeft className="h-4 w-4" /> Anterior
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="gap-1">
+                Próxima <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <CargoDialog open={open} onOpenChange={setOpen} cargo={editing} />
