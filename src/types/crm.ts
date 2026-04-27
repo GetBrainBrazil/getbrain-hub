@@ -68,8 +68,45 @@ export interface Lead {
 
 export interface Deal {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null; origin_lead_id: string | null;
-  stage: DealStage; estimated_value: number | null; probability_pct: number; expected_close_date: string | null; project_type: string | null;
+  stage: DealStage; estimated_value: number | null; probability_pct: number; expected_close_date: string | null;
+  project_type: string | null;          // legacy enum (compartilhado com projects)
+  project_type_v2: DealProjectType | null;  // novo enum específico de deals (v2.0)
+  project_type_custom: string | null;
   scope_summary: string | null; proposal_url: string | null; notes: string | null; stage_changed_at: string; closed_at: string | null; lost_reason: string | null; generated_project_id: string | null;
+
+  // v2.0 — descoberta enxuta
+  business_context: string | null;
+  scope_in: string | null;
+  scope_out: string | null;
+  acceptance_criteria: AcceptanceCriterion[];
+  deliverables: string[];
+  premises: string[];
+  identified_risks: string[];
+  technical_stack: string[];
+
+  // Dor estruturada
+  pain_category: DealPainCategory | null;
+  pain_description: string | null;
+  pain_cost_brl_monthly: number | null;
+  pain_hours_monthly: number | null;
+  current_solution: string | null;
+
+  // Estimativa grossa
+  estimated_hours_total: number | null;
+  estimated_complexity: number | null;
+  estimation_confidence: EstimationConfidence | null;
+
+  // Comercial
+  budget_range_min: number | null;
+  budget_range_max: number | null;
+  pricing_rationale: string | null;
+  decision_makers: string | null;
+  competitors: string | null;
+  next_step: string | null;
+  next_step_date: string | null;
+  desired_start_date: string | null;
+  desired_delivery_date: string | null;
+
   created_at?: string; company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; origin_source?: string | null; origin_code?: string | null; last_activity?: DealActivity | null;
 }
 
