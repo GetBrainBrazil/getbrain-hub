@@ -242,16 +242,15 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <FieldLabel hint="estimativa do cliente, ok ser aproximado">Custo da dor (R$/mês)</FieldLabel>
-          <InlineNumber
+          <InlineMoney
             value={deal.pain_cost_brl_monthly}
             onSave={(v) => save({ pain_cost_brl_monthly: v })}
-            placeholder="0"
-            prefix="R$"
+            placeholder="R$ 0,00"
           />
         </div>
         <div className="space-y-2">
           <FieldLabel>Horas perdidas (h/mês)</FieldLabel>
-          <InlineNumber
+          <InlineInteger
             value={deal.pain_hours_monthly}
             onSave={(v) => save({ pain_hours_monthly: v })}
             placeholder="0"
