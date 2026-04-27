@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
       { title: "Pipeline", url: "/crm/pipeline" },
       { title: "Leads", url: "/crm/leads" },
       { title: "Empresas", url: "/crm/empresas" },
+      { title: "Clientes", url: "/clientes" },
       { title: "Calendário", url: "/crm/calendario" },
     ],
   },
@@ -58,7 +59,6 @@ const navItems: NavItem[] = [
       { title: "Configurações", url: "/financeiro/configuracoes" },
     ],
   },
-  { title: "Clientes", url: "/clientes", icon: Users },
   {
     title: "Área Dev",
     url: "/dev",
