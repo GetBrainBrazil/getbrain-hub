@@ -8,7 +8,7 @@ const ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 type ProjectRow = { id: string; code: string; name: string; status: string; project_type: string; contract_value: number | null; start_date: string | null; owner_actor_id: string | null; owner?: CrmActor | null };
 type AuditRow = { id: string; created_at: string; action: string; entity_type: string; changes: Record<string, unknown> | null; metadata: Record<string, unknown> | null; actor?: CrmActor | null };
-type CompanyDetail = CrmCompany & { cnpj: string | null; industry: string | null; employee_count_range: string | null; website: string | null; linkedin_url: string | null; notes: string | null; created_at: string; updated_at: string };
+type CompanyDetail = CrmCompany & { cnpj: string | null; industry: string | null; employee_count_range: string | null; website: string | null; linkedin_url: string | null; notes: string | null; created_at: string; updated_at: string; sector_id: string | null; client_type: import('@/types/crm').CompanyClientType | null; revenue_range: import('@/types/crm').CompanyRevenueRange | null; digital_maturity: number | null };
 type CompanyStats = { leadsOpen: number; dealsOpen: number; dealsOpenValue: number; dealsWon: number; revenueWon: number; projects: number };
 
 async function hydrateDeals(rows: unknown[]): Promise<Deal[]> {
