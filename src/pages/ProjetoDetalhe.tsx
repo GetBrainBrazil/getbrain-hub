@@ -131,32 +131,8 @@ import {
 // -----------------------------------------------------------
 // Tipagem leve
 // -----------------------------------------------------------
-type Project = {
-  id: string;
-  code: string;
-  name: string;
-  status: ProjectStatus;
-  project_type: ProjectType;
-  company_id: string;
-  contract_value: number | null;
-  installments_count: number | null;
-  start_date: string | null;
-  estimated_delivery_date: string | null;
-  actual_delivery_date: string | null;
-  description: string | null;
-  acceptance_criteria: string | null;
-  notes: string | null;
-  token_budget_brl: number | null;
-  business_context: string | null;
-  scope_in: string | null;
-  scope_out: string | null;
-  premises: string | null;
-  deliverables: string | null;
-  technical_stack: string | null;
-  identified_risks: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import type { Project } from "@/types/projects";
+import type { AcceptanceCriterion } from "@/types/shared";
 
 // Pipeline visual: ordem dos estágios não-terminais
 const PIPELINE_STAGES: ProjectStatus[] = [
