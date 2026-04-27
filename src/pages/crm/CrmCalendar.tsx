@@ -164,7 +164,41 @@ export default function CrmCalendar() {
                   );
                 })}
               </div>
-            ) : (
+            ) : null}
+            {(view === 'agenda' || view === 'month') && (
+              <div className={view === 'month' ? 'sm:hidden space-y-2 mt-2' : 'space-y-3'}>
+                {view === 'month' && (
+                  <p className="text-xs text-muted-foreground text-center pb-2">Visão mensal disponível em telas maiores. Mostrando agenda.</p>
+                )}
+                {upcoming.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma atividade encontrada para os filtros atuais.</p>
+                ) : (
+                  upcoming.map((item) => {
+                    const status = getStatus(item);
+                    const href = getHref(item);
+                    return (
+                      <div key={item.id} className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 rounded-lg border border-border bg-background/40 p-3">
+                        <div className="min-w-0 flex-1">
+                          <button type="button" onClick={() => href && navigate(href)} className="text-left text-sm font-medium text-foreground hover:text-accent">{item.title}</button>
+                          <p className="text-xs text-muted-foreground">{format(new Date(item.scheduled_at ?? item.happened_at ?? new Date()), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} · {TYPE_LABEL[item.type]}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.owner?.display_name ?? 'Sem responsável'} {item.deal_code ? `· ${item.deal_code}` : item.lead_code ? `· ${item.lead_code}` : ''}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className={STATUS_STYLES[status]}>{status}</Badge>
+                          {!item.happened_at && (
+                            <Button size="sm" variant="outline" className="min-h-9" onClick={() => updateActivity.mutate({ id: item.id, updates: { happened_at: new Date().toISOString() } })}>
+                              <CheckCircle2 className="h-4 w-4" /> <span className="hidden sm:inline">Marcar feita</span>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+            {false && (
+
               <div className="space-y-3">
                 {upcoming.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhuma atividade encontrada para os filtros atuais.</p>
