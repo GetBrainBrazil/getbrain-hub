@@ -139,6 +139,7 @@ export function OrcamentoTabela({ rows, loading, onAction, onRowClick }: Props) 
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
