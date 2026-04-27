@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { UsuariosTab } from "@/components/configuracoes/UsuariosTab";
+import { CargosTab } from "@/components/configuracoes/CargosTab";
 
 export default function Configuracoes() {
   const [tab, setTab] = usePersistedState<string>("configuracoes:tab", "conta");
@@ -21,9 +23,13 @@ export default function Configuracoes() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full sm:w-auto overflow-x-auto justify-start">
           <TabsTrigger value="conta" className="min-h-10">Minha Conta</TabsTrigger>
+          <TabsTrigger value="usuarios" className="min-h-10">Usuários</TabsTrigger>
+          <TabsTrigger value="cargos" className="min-h-10">Cargos</TabsTrigger>
           <TabsTrigger value="meios" className="min-h-10">Meios de Pagamento</TabsTrigger>
         </TabsList>
         <TabsContent value="conta"><MinhaContaTab /></TabsContent>
+        <TabsContent value="usuarios"><UsuariosTab /></TabsContent>
+        <TabsContent value="cargos"><CargosTab /></TabsContent>
         <TabsContent value="meios"><MeiosPagamentoTab /></TabsContent>
       </Tabs>
     </div>

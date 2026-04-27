@@ -369,6 +369,71 @@ export type Database = {
           },
         ]
       }
+      cargo_permissoes: {
+        Row: {
+          acao: string
+          cargo_id: string
+          created_at: string
+          id: string
+          modulo: string
+        }
+        Insert: {
+          acao: string
+          cargo_id: string
+          created_at?: string
+          id?: string
+          modulo: string
+        }
+        Update: {
+          acao?: string
+          cargo_id?: string
+          created_at?: string
+          id?: string
+          modulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargo_permissoes_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cargos: {
+        Row: {
+          cor: string
+          created_at: string
+          descricao: string | null
+          id: string
+          is_system: boolean
+          nivel: number
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_system?: boolean
+          nivel?: number
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_system?: boolean
+          nivel?: number
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categorias: {
         Row: {
           ativo: boolean | null
@@ -2003,24 +2068,36 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ativo: boolean
           avatar_url: string | null
           created_at: string | null
+          email: string | null
           full_name: string
           id: string
+          telefone: string | null
+          ultimo_acesso: string | null
           updated_at: string | null
         }
         Insert: {
+          ativo?: boolean
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           full_name: string
           id: string
+          telefone?: string | null
+          ultimo_acesso?: string | null
           updated_at?: string | null
         }
         Update: {
+          ativo?: boolean
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           full_name?: string
           id?: string
+          telefone?: string | null
+          ultimo_acesso?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -3096,6 +3173,38 @@ export type Database = {
         }
         Relationships: []
       }
+      usuario_cargos: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          cargo_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          cargo_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          cargo_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_cargos_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendas: {
         Row: {
           categoria_id: string | null
@@ -3644,6 +3753,10 @@ export type Database = {
         }[]
       }
       getbrain_org_id: { Args: never; Returns: string }
+      has_permission: {
+        Args: { _acao: string; _modulo: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
