@@ -33,6 +33,7 @@ import { Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
+import { MovimentacaoMobileCard } from "@/components/MovimentacaoMobileCard";
 
 type TabType = "pagar" | "receber";
 
