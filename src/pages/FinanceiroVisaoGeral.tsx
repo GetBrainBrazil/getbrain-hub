@@ -28,7 +28,15 @@ import {
   X,
   AlertTriangle,
   ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Area,
   AreaChart,
