@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput, IntegerInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
@@ -149,9 +150,9 @@ function InlineText({
   );
 }
 
-function InlineNumber({
-  value, onSave, placeholder, prefix, suffix,
-}: { value: number | null; onSave: (v: number | null) => void; placeholder?: string; prefix?: string; suffix?: string }) {
+function InlineMoney({
+  value, onSave, placeholder,
+}: { value: number | null; onSave: (v: number | null) => void; placeholder?: string }) {
   const [local, setLocal] = useState(value === null ? '' : String(value));
   useEffect(() => { setLocal(value === null ? '' : String(value)); }, [value]);
   const commit = () => {
@@ -160,20 +161,44 @@ function InlineNumber({
       if (value !== null) onSave(null);
       return;
     }
-    const n = Number(trimmed.replace(',', '.'));
+    const n = Number(trimmed);
+    if (Number.isFinite(n) && n !== value) onSave(n);
+  };
+  return (
+    <CurrencyInput
+      value={local}
+      onValueChange={setLocal}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
+      placeholder={placeholder}
+      withPrefix
+    />
+  );
+}
+
+function InlineInteger({
+  value, onSave, placeholder, suffix,
+}: { value: number | null; onSave: (v: number | null) => void; placeholder?: string; suffix?: string }) {
+  const [local, setLocal] = useState(value === null ? '' : String(value));
+  useEffect(() => { setLocal(value === null ? '' : String(value)); }, [value]);
+  const commit = () => {
+    const trimmed = local.trim();
+    if (trimmed === '') {
+      if (value !== null) onSave(null);
+      return;
+    }
+    const n = Number(trimmed);
     if (Number.isFinite(n) && n !== value) onSave(n);
   };
   return (
     <div className="flex items-center rounded-md border border-input bg-background/60 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
-      {prefix && <span className="pl-2.5 text-xs text-muted-foreground">{prefix}</span>}
-      <Input
-        type="number"
-        inputMode="decimal"
+      <IntegerInput
         value={local}
-        placeholder={placeholder}
-        onChange={(e) => setLocal(e.target.value)}
+        onValueChange={setLocal}
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
+        placeholder={placeholder}
+        withSeparator
         className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
       />
       {suffix && <span className="pr-2.5 text-xs text-muted-foreground">{suffix}</span>}
@@ -217,16 +242,15 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <FieldLabel hint="estimativa do cliente, ok ser aproximado">Custo da dor (R$/mês)</FieldLabel>
-          <InlineNumber
+          <InlineMoney
             value={deal.pain_cost_brl_monthly}
             onSave={(v) => save({ pain_cost_brl_monthly: v })}
-            placeholder="0"
-            prefix="R$"
+            placeholder="R$ 0,00"
           />
         </div>
         <div className="space-y-2">
           <FieldLabel>Horas perdidas (h/mês)</FieldLabel>
-          <InlineNumber
+          <InlineInteger
             value={deal.pain_hours_monthly}
             onSave={(v) => save({ pain_hours_monthly: v })}
             placeholder="0"
@@ -375,7 +399,7 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <FieldLabel>Horas totais</FieldLabel>
-            <InlineNumber
+            <InlineInteger
               value={deal.estimated_hours_total}
               onSave={(v) => save({ estimated_hours_total: v })}
               placeholder="0"
