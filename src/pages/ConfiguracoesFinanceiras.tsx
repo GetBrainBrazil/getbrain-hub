@@ -52,16 +52,16 @@ export default function ConfiguracoesFinanceiras() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             Configurações Financeiras
             <HelpTooltip content="Aqui você configura todos os dados base do seu financeiro: contas bancárias, pessoas, categorias e centros de custo. Esses dados alimentam todo o sistema." />
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Gerencie contas, categorias, clientes, fornecedores e centros de custo</p>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gerencie contas, categorias, clientes, fornecedores e centros de custo</p>
         </div>
-        <Button variant="outline" size="sm" onClick={syncRecorrencias} disabled={syncing} className="gap-2">
+        <Button variant="outline" size="sm" onClick={syncRecorrencias} disabled={syncing} className="gap-2 min-h-10 w-full sm:w-auto">
           <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           {syncing ? "Sincronizando..." : "Sincronizar recorrências"}
         </Button>
@@ -84,21 +84,21 @@ export default function ConfiguracoesFinanceiras() {
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <TabsList>
+          <TabsList className="w-full sm:w-auto overflow-x-auto justify-start h-auto flex-wrap sm:flex-nowrap">
             {Object.entries(tabConfig).map(([key, cfg]) => (
-              <TabsTrigger key={key} value={key} className="gap-1.5"><cfg.icon className="h-4 w-4" />{cfg.label}</TabsTrigger>
+              <TabsTrigger key={key} value={key} className="gap-1.5 min-h-10 shrink-0"><cfg.icon className="h-4 w-4" /><span className="hidden sm:inline">{cfg.label}</span><span className="sm:hidden text-xs">{cfg.label}</span></TabsTrigger>
             ))}
           </TabsList>
         </div>
 
         <div className="flex items-center gap-3 mt-4">
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-10"
             />
           </div>
         </div>

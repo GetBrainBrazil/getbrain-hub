@@ -45,19 +45,19 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 safe-area-inset">
       <div className="w-full max-w-md animate-fade-slide">
-        <div className="flex justify-center mb-8">
-          <img src={logo} alt="GetBrain" className="h-12" />
+        <div className="flex justify-center mb-6 sm:mb-8">
+          <img src={logo} alt="GetBrain" className="h-10 sm:h-12" />
         </div>
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">{isSignUp ? "Criar Conta" : "Entrar"}</CardTitle>
-            <CardDescription>
+          <CardHeader className="text-center px-4 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl">{isSignUp ? "Criar Conta" : "Entrar"}</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               {isSignUp ? "Preencha os dados para criar sua conta" : "Acesse a plataforma GetBrain"}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignUp && (
                 <div className="space-y-2">
@@ -68,6 +68,7 @@ export default function Login() {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Seu nome"
                     required
+                    className="h-11"
                   />
                 </div>
               )}
@@ -80,6 +81,8 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   required
+                  className="h-11"
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -92,9 +95,11 @@ export default function Login() {
                   placeholder="••••••••"
                   required
                   minLength={6}
+                  className="h-11"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full h-11" disabled={loading}>
                 {loading ? "Carregando..." : isSignUp ? "Criar Conta" : "Entrar"}
               </Button>
             </form>
