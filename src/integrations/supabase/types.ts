@@ -167,6 +167,39 @@ export type Database = {
         }
         Relationships: []
       }
+      _backup_projects_text_fields_pre_v1_9: {
+        Row: {
+          acceptance_criteria: string | null
+          backup_taken_at: string | null
+          code: string | null
+          deliverables: string | null
+          id: string | null
+          identified_risks: string | null
+          premises: string | null
+          technical_stack: string | null
+        }
+        Insert: {
+          acceptance_criteria?: string | null
+          backup_taken_at?: string | null
+          code?: string | null
+          deliverables?: string | null
+          id?: string | null
+          identified_risks?: string | null
+          premises?: string | null
+          technical_stack?: string | null
+        }
+        Update: {
+          acceptance_criteria?: string | null
+          backup_taken_at?: string | null
+          code?: string | null
+          deliverables?: string | null
+          id?: string | null
+          identified_risks?: string | null
+          premises?: string | null
+          technical_stack?: string | null
+        }
+        Relationships: []
+      }
       actors: {
         Row: {
           avatar_url: string | null
@@ -2619,7 +2652,7 @@ export type Database = {
       }
       projects: {
         Row: {
-          acceptance_criteria: string | null
+          acceptance_criteria: Json
           actual_delivery_date: string | null
           business_context: string | null
           code: string
@@ -2628,29 +2661,29 @@ export type Database = {
           created_at: string
           created_by_actor_id: string | null
           deleted_at: string | null
-          deliverables: string | null
+          deliverables: string[]
           description: string | null
           estimated_delivery_date: string | null
           id: string
-          identified_risks: string | null
+          identified_risks: string[]
           installments_count: number | null
           name: string
           notes: string | null
           organization_id: string
           owner_actor_id: string | null
-          premises: string | null
+          premises: string[]
           project_type: Database["public"]["Enums"]["project_type"]
           scope_in: string | null
           scope_out: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
-          technical_stack: string | null
+          technical_stack: string[]
           token_budget_brl: number | null
           updated_at: string
           updated_by_actor_id: string | null
         }
         Insert: {
-          acceptance_criteria?: string | null
+          acceptance_criteria?: Json
           actual_delivery_date?: string | null
           business_context?: string | null
           code?: string
@@ -2659,29 +2692,29 @@ export type Database = {
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
-          deliverables?: string | null
+          deliverables?: string[]
           description?: string | null
           estimated_delivery_date?: string | null
           id?: string
-          identified_risks?: string | null
+          identified_risks?: string[]
           installments_count?: number | null
           name: string
           notes?: string | null
           organization_id: string
           owner_actor_id?: string | null
-          premises?: string | null
+          premises?: string[]
           project_type: Database["public"]["Enums"]["project_type"]
           scope_in?: string | null
           scope_out?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
-          technical_stack?: string | null
+          technical_stack?: string[]
           token_budget_brl?: number | null
           updated_at?: string
           updated_by_actor_id?: string | null
         }
         Update: {
-          acceptance_criteria?: string | null
+          acceptance_criteria?: Json
           actual_delivery_date?: string | null
           business_context?: string | null
           code?: string
@@ -2690,23 +2723,23 @@ export type Database = {
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
-          deliverables?: string | null
+          deliverables?: string[]
           description?: string | null
           estimated_delivery_date?: string | null
           id?: string
-          identified_risks?: string | null
+          identified_risks?: string[]
           installments_count?: number | null
           name?: string
           notes?: string | null
           organization_id?: string
           owner_actor_id?: string | null
-          premises?: string | null
+          premises?: string[]
           project_type?: Database["public"]["Enums"]["project_type"]
           scope_in?: string | null
           scope_out?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
-          technical_stack?: string | null
+          technical_stack?: string[]
           token_budget_brl?: number | null
           updated_at?: string
           updated_by_actor_id?: string | null
