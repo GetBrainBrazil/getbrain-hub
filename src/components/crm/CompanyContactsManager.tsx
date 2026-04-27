@@ -1,0 +1,249 @@
+import { useState } from 'react';
+import { Plus, Star, X, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+import { CONTACT_ROLE_LABEL } from '@/constants/dealEnumLabels';
+import {
+  useCompanyContactsWithRoles,
+  useCreateContactForCompany,
+} from '@/hooks/crm/useCompanyContacts';
+import {
+  useAddContactRole, useRemoveContactRole,
+} from '@/hooks/crm/useCompanyContactRoles';
+import { cn } from '@/lib/utils';
+import type { ContactRole } from '@/types/crm';
+
+const ROLE_TONE: Record<ContactRole, string> = {
+  decisor: 'bg-success/15 text-success border-success/30',
+  usuario_final: 'bg-accent/15 text-accent border-accent/30',
+  tecnico: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
+  financeiro: 'bg-warning/15 text-warning border-warning/30',
+  outro: 'bg-muted/40 text-muted-foreground border-border',
+};
+
+const ALL_ROLES: ContactRole[] = ['decisor', 'usuario_final', 'tecnico', 'financeiro', 'outro'];
+
+interface Props {
+  companyId: string;
+  primaryContactId: string | null;
+  onMakePrimary?: (personId: string) => void;
+}
+
+export function CompanyContactsManager({ companyId, primaryContactId, onMakePrimary }: Props) {
+  const { data: contacts, isLoading } = useCompanyContactsWithRoles(companyId);
+  const createContact = useCreateContactForCompany();
+  const addRole = useAddContactRole();
+  const removeRole = useRemoveContactRole();
+  const [openNew, setOpenNew] = useState(false);
+
+  if (isLoading) {
+    return <p className="text-xs text-muted-foreground">Carregando contatos…</p>;
+  }
+
+  const list = contacts ?? [];
+
+  return (
+    <div className="space-y-2">
+      {list.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => setOpenNew(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background/30 px-3 py-4 text-sm text-muted-foreground transition-colors hover:border-accent/40 hover:bg-muted/30 hover:text-foreground"
+        >
+          <UserPlus className="h-4 w-4" />
+          Nenhum contato vinculado. Adicionar o primeiro.
+        </button>
+      ) : (
+        <ul className="space-y-1.5">
+          {list.map((c) => {
+            const isPrimary = c.person.id === primaryContactId;
+            const usedRoles = new Set(c.roles.map((r) => r.role));
+            const availableRoles = ALL_ROLES.filter((r) => !usedRoles.has(r));
+            return (
+              <li
+                key={c.link_id}
+                className={cn(
+                  'flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border bg-background/40 px-3 py-2',
+                  isPrimary ? 'border-accent/40' : 'border-border',
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => onMakePrimary?.(c.person.id)}
+                  title={isPrimary ? 'Contato principal do deal' : 'Tornar contato principal do deal'}
+                  className={cn(
+                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors',
+                    isPrimary
+                      ? 'border-accent bg-accent/20 text-accent'
+                      : 'border-border text-muted-foreground hover:border-accent hover:text-accent',
+                  )}
+                >
+                  <Star className={cn('h-3 w-3', isPrimary && 'fill-current')} />
+                </button>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <p className="truncate text-sm font-medium text-foreground">{c.person.full_name}</p>
+                    {c.person.role_in_company && (
+                      <span className="truncate text-[11px] text-muted-foreground">
+                        {c.person.role_in_company}
+                      </span>
+                    )}
+                  </div>
+                  {(c.person.email || c.person.phone) && (
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {[c.person.email, c.person.phone].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1">
+                  {c.roles.map((r) => (
+                    <Badge
+                      key={r.id}
+                      variant="outline"
+                      className={cn('h-5 gap-1 px-1.5 text-[10px] font-medium', ROLE_TONE[r.role])}
+                    >
+                      {CONTACT_ROLE_LABEL[r.role]}
+                      <button
+                        type="button"
+                        aria-label={`Remover papel ${CONTACT_ROLE_LABEL[r.role]}`}
+                        onClick={() =>
+                          removeRole.mutate(
+                            { id: r.id, company_person_id: c.link_id },
+                            { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ''}`) },
+                          )
+                        }
+                        className="hover:opacity-70"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </Badge>
+                  ))}
+                  {availableRoles.length > 0 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground">
+                          <Plus className="mr-0.5 h-2.5 w-2.5" /> papel
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-44 p-1" align="end">
+                        {availableRoles.map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() =>
+                              addRole.mutate(
+                                { company_person_id: c.link_id, role: r },
+                                { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ''}`) },
+                              )
+                            }
+                            className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-muted/50"
+                          >
+                            {CONTACT_ROLE_LABEL[r]}
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setOpenNew(true)}
+        className="h-7 gap-1.5 border-dashed text-xs"
+      >
+        <Plus className="h-3 w-3" /> Adicionar contato
+      </Button>
+
+      <NewContactDialog
+        open={openNew}
+        onOpenChange={setOpenNew}
+        onSubmit={(payload) => {
+          createContact.mutate(
+            { company_id: companyId, ...payload },
+            {
+              onSuccess: () => {
+                toast.success('Contato adicionado');
+                setOpenNew(false);
+              },
+              onError: (e: any) => toast.error(`Erro: ${e?.message ?? 'falhou'}`),
+            },
+          );
+        }}
+        loading={createContact.isPending}
+      />
+    </div>
+  );
+}
+
+function NewContactDialog({
+  open, onOpenChange, onSubmit, loading,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSubmit: (p: { full_name: string; email?: string; phone?: string; role_in_company?: string }) => void;
+  loading: boolean;
+}) {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState('');
+
+  const reset = () => { setFullName(''); setEmail(''); setPhone(''); setRole(''); };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novo contato</DialogTitle>
+          <DialogDescription>Cria a pessoa e vincula à empresa do deal.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Nome completo *</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ex: Maria Silva" />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">E-mail</Label>
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="maria@empresa.com" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Telefone</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 9..." />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Cargo na empresa</Label>
+            <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Ex: Diretora de TI" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
+          <Button
+            onClick={() => onSubmit({ full_name: fullName, email, phone, role_in_company: role })}
+            disabled={!fullName.trim() || loading}
+          >
+            {loading ? 'Salvando…' : 'Adicionar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
