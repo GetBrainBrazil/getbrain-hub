@@ -16,7 +16,7 @@ import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
 import { OrcamentoKPICards } from "@/components/orcamentos/OrcamentoKPICards";
 import { OrcamentoTabela } from "@/components/orcamentos/OrcamentoTabela";
 import { OrcamentoKanban } from "@/components/orcamentos/OrcamentoKanban";
-import { OrcamentoDrawer } from "@/components/orcamentos/OrcamentoDrawer";
+
 import { NovoOrcamentoModal } from "@/components/orcamentos/NovoOrcamentoModal";
 import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
