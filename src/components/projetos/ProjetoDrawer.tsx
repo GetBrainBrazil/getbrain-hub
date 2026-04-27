@@ -358,13 +358,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
             </div>
             <div>
               <Label>Critérios de Aceite</Label>
-              <RichTextEditor
-                value={criteria}
-                onChange={setCriteria}
-                rows={3}
-                autoFocus={false}
-                placeholder="- [ ] Entrega A&#10;- [ ] Entrega B"
-              />
+              <AcceptanceCriteriaEditor value={criteria} onChange={setCriteria} />
             </div>
             <div>
               <Label>Observações</Label>
