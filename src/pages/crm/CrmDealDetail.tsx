@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, Construction } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CurrencyInput, IntegerInput } from '@/components/ui/currency-input';
@@ -10,10 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
-import { DetailBreadcrumb, DetailShell, InfoBadge, StageStepper } from '@/components/crm/CrmDetailShared';
+import { DetailBreadcrumb, DetailShell } from '@/components/crm/CrmDetailShared';
 import { StringListEditor } from '@/components/shared/StringListEditor';
 import { AcceptanceCriteriaEditor } from '@/components/shared/AcceptanceCriteriaEditor';
-import { DEAL_STAGE_PROBABILITY } from '@/constants/dealStages';
+import { DealHeader } from '@/components/crm/DealHeader';
+import { DealSidebarRich } from '@/components/crm/DealSidebarRich';
+import { ZoneCliente } from '@/components/crm/ZoneCliente';
+import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import {
   PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
@@ -21,14 +23,12 @@ import {
   COMPLEXITY_LABEL,
 } from '@/constants/dealEnumLabels';
 import { useDealByCode, useUpdateDealField } from '@/hooks/crm/useCrmDetails';
-import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
   Deal,
   DealPainCategory,
   DealProjectType,
-  DealStage,
   EstimationConfidence,
 } from '@/types/crm';
 
@@ -450,158 +450,32 @@ function ComplexitySlider({ value, onSave }: { value: number | null; onSave: (v:
   );
 }
 
-// ---------- Placeholder das zonas que vêm no 2B/2C ----------
-
-function ZonePlaceholder({
-  id, number, title, loop,
-}: { id: string; number: number; title: string; loop: '2B' | '2C' }) {
-  return (
-    <section id={id} className="scroll-mt-24 rounded-lg border border-dashed border-border/60 bg-card/10 p-5">
-      <header className="mb-2 flex items-baseline gap-3">
-        <span className="font-mono text-xs text-muted-foreground">0{number}</span>
-        <h2 className="text-base font-semibold tracking-tight text-muted-foreground">{title}</h2>
-      </header>
-      <div className="flex items-center gap-3 rounded-md bg-background/30 p-4 text-sm text-muted-foreground">
-        <Construction className="h-4 w-4 shrink-0" />
-        <span>Em construção — chega no Loop {loop}.</span>
-      </div>
-    </section>
-  );
-}
-
-// ---------- Sidebar mínima 30% ----------
-
-function DealSidebarBasic({ deal }: { deal: Deal }) {
-  const zones = [
-    { id: 'zona-cliente', n: 1, label: 'Cliente', loop: '2B' as const, ready: false },
-    { id: 'zona-dor', n: 2, label: 'Dor', loop: '2A' as const, ready: true },
-    { id: 'zona-solucao', n: 3, label: 'Solução', loop: '2A' as const, ready: true },
-    { id: 'zona-dependencias', n: 4, label: 'Dependências', loop: '2C' as const, ready: false },
-    { id: 'zona-comercial', n: 5, label: 'Comercial', loop: '2B' as const, ready: false },
-  ];
-  return (
-    <aside className="space-y-4">
-      <div className="rounded-lg border border-border bg-card/30 p-4">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Navegação</h3>
-        <nav className="space-y-1">
-          {zones.map((z) => (
-            <a
-              key={z.id}
-              href={`#${z.id}`}
-              className={cn(
-                'flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm transition-colors',
-                z.ready ? 'text-foreground hover:bg-muted/40' : 'text-muted-foreground hover:bg-muted/20',
-              )}
-            >
-              <span className="flex items-center gap-2">
-                <span className="font-mono text-[10px] text-muted-foreground">0{z.n}</span>
-                {z.label}
-              </span>
-              {!z.ready && <span className="rounded bg-muted/40 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">{z.loop}</span>}
-            </a>
-          ))}
-        </nav>
-      </div>
-
-      <div className="rounded-lg border border-border bg-card/30 p-4">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resumo rápido</h3>
-        <dl className="space-y-2 text-sm">
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">Empresa</dt>
-            <dd className="text-right font-medium">{deal.company?.trade_name || deal.company?.legal_name || '—'}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">Owner</dt>
-            <dd className="text-right">{deal.owner?.display_name ?? '—'}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">Valor</dt>
-            <dd className="text-right font-mono">{formatCurrency(Number(deal.estimated_value ?? 0))}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">Probabilidade</dt>
-            <dd className="text-right font-mono">{deal.probability_pct}%</dd>
-          </div>
-        </dl>
-        <p className="mt-3 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
-          Sidebar rica (atividades, owner editável, lead origem) chega no Loop 2B.
-        </p>
-      </div>
-    </aside>
-  );
-}
-
 // ---------- Indicador de descoberta completa ----------
 
 function computeCompleteness(deal: Deal): { pct: number; painOk: boolean; solucaoOk: boolean } {
-  // Dor "ok" = categoria + descrição com ≥40 chars
   const painOk = !!deal.pain_category && (deal.pain_description?.trim().length ?? 0) >= 40;
-  // Solução "ok" = project_type_v2 + scope_summary ≥40 chars + ≥3 deliverables OU ≥3 acceptance_criteria
   const solucaoOk =
     !!deal.project_type_v2 &&
     (deal.scope_summary?.trim().length ?? 0) >= 40 &&
     ((deal.deliverables?.length ?? 0) >= 3 || (deal.acceptance_criteria?.length ?? 0) >= 3);
-  // 2A só conta Dor + Solução (50% cada). Outras zonas entram no 2B/2C.
+  // 2A só conta Dor + Solução (50% cada). Cliente/Comercial entram pelo refinamento posterior.
   const pct = (painOk ? 50 : 0) + (solucaoOk ? 50 : 0);
   return { pct, painOk, solucaoOk };
-}
-
-function CompletenessBadge({ deal }: { deal: Deal }) {
-  const { pct, painOk, solucaoOk } = useMemo(() => computeCompleteness(deal), [deal]);
-  const tone = pct === 100 ? 'border-success/40 bg-success/10 text-success'
-    : pct >= 50 ? 'border-warning/40 bg-warning/10 text-warning'
-    : 'border-border bg-muted/30 text-muted-foreground';
-  return (
-    <Badge variant="outline" className={cn('gap-1.5 font-medium', tone)}>
-      <span className="font-mono">{pct}%</span>
-      <span>descoberta</span>
-      <span className="text-[10px] opacity-70">
-        ({painOk ? '✓' : '○'}dor · {solucaoOk ? '✓' : '○'}solução)
-      </span>
-    </Badge>
-  );
 }
 
 // ---------- Página ----------
 
 export default function CrmDealDetail() {
   const { code } = useParams<{ code: string }>();
-  const navigate = useNavigate();
   const { data: deal, isLoading } = useDealByCode(code);
-  const update = useUpdateDealField(code);
   const save = useDealAutosave(deal);
 
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [title, setTitle] = useState('');
-
-  useEffect(() => {
-    if (deal) setTitle(deal.title);
-  }, [deal?.id, deal?.title]);
-
-  const saveTitle = () => {
-    if (!deal) return;
-    const trimmed = title.trim();
-    if (trimmed && trimmed !== deal.title) {
-      update.mutate(
-        { id: deal.id, updates: { title: trimmed } },
-        { onError: (err: any) => toast.error(`Erro: ${err?.message ?? 'falhou'}`) },
-      );
+  const handleCloseRequest = (kind: 'won' | 'lost') => {
+    if (kind === 'won') {
+      toast.info('Fechamento como ganho com preview de transferência pro projeto chega no Loop 3 (DealWonDialog).');
     } else {
-      setTitle(deal.title);
+      toast.info('Fechamento como perdido (com motivo) chega no Loop 3.');
     }
-    setEditingTitle(false);
-  };
-
-  const stageChange = (s: DealStage) => {
-    if (!deal) return;
-    if (s === 'fechado_ganho' || s === 'fechado_perdido') {
-      toast.info('Fechamento de deal chega no Loop 2B (cabeçalho denso com botões dedicados).');
-      return;
-    }
-    update.mutate({
-      id: deal.id,
-      updates: { stage: s, probability_pct: DEAL_STAGE_PROBABILITY[s], closed_at: null },
-    });
   };
 
   if (isLoading) {
@@ -626,6 +500,8 @@ export default function CrmDealDetail() {
     );
   }
 
+  const { pct, painOk, solucaoOk } = computeCompleteness(deal);
+
   return (
     <DetailShell>
       <DetailBreadcrumb
@@ -637,69 +513,42 @@ export default function CrmDealDetail() {
         ]}
       />
 
-      {/* Cabeçalho rudimentar — denso vem no 2B */}
-      <header className="mb-6 space-y-4 rounded-lg border border-border bg-card/30 p-5">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-mono font-semibold text-muted-foreground">{deal.code}</span>
-          <InfoBadge>
-            <Link to={`/crm/empresas/${deal.company_id}`}>
-              {deal.company?.trade_name || deal.company?.legal_name}
-            </Link>
-          </InfoBadge>
-          {deal.project_type_v2 && (
-            <InfoBadge className={PROJECT_TYPE_V2_COLOR[deal.project_type_v2]}>
-              {PROJECT_TYPE_V2_LABEL[deal.project_type_v2]}
-            </InfoBadge>
-          )}
-          <div className="ml-auto">
-            <CompletenessBadge deal={deal} />
-          </div>
-        </div>
-
-        {editingTitle ? (
-          <Input
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={saveTitle}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveTitle();
-              if (e.key === 'Escape') { setTitle(deal.title); setEditingTitle(false); }
-            }}
-            className="h-auto bg-background/60 text-2xl font-semibold"
-          />
-        ) : (
-          <h1
-            onClick={() => setEditingTitle(true)}
-            className="cursor-text text-2xl font-semibold text-foreground hover:text-accent transition-colors"
-          >
-            {deal.title}
-          </h1>
-        )}
-
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
-          <span><span className="text-foreground font-mono">{formatCurrency(Number(deal.estimated_value ?? 0))}</span> estimado</span>
-          <span><span className="text-foreground font-mono">{deal.probability_pct}%</span> probabilidade</span>
-          {deal.expected_close_date && (
-            <span>fecha em <span className="text-foreground">{new Date(`${deal.expected_close_date}T12:00:00`).toLocaleDateString('pt-BR')}</span></span>
-          )}
-        </div>
-
-        <StageStepper stage={deal.stage} onChange={stageChange} />
-      </header>
+      <DealHeader
+        deal={deal}
+        completenessPct={pct}
+        painOk={painOk}
+        solucaoOk={solucaoOk}
+        onCloseRequest={handleCloseRequest}
+      />
 
       {/* Layout 70/30 com âncoras */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <main className="min-w-0 space-y-6">
-          <ZonePlaceholder id="zona-cliente" number={1} title="Cliente & Empresa" loop="2B" />
+          <ZoneCliente deal={deal} />
           <ZoneDor deal={deal} save={save} />
           <ZoneSolucao deal={deal} save={save} />
-          <ZonePlaceholder id="zona-dependencias" number={4} title="Dependências" loop="2C" />
-          <ZonePlaceholder id="zona-comercial" number={5} title="Comercial & Decisão" loop="2B" />
+          <ZonePlaceholderDeps />
+          <ZoneComercial deal={deal} />
         </main>
 
-        <DealSidebarBasic deal={deal} />
+        <DealSidebarRich deal={deal} />
       </div>
     </DetailShell>
   );
 }
+
+// Único placeholder restante: Zona Dependências (Loop 2C)
+function ZonePlaceholderDeps() {
+  return (
+    <section id="zona-dependencias" className="scroll-mt-24 rounded-lg border border-dashed border-border/60 bg-card/10 p-5">
+      <header className="mb-2 flex items-baseline gap-3">
+        <span className="font-mono text-xs text-muted-foreground">04</span>
+        <h2 className="text-base font-semibold tracking-tight text-muted-foreground">Dependências</h2>
+      </header>
+      <p className="rounded-md bg-background/30 p-4 text-sm text-muted-foreground">
+        O que precisamos receber do cliente pra projeto rodar (acessos, dados, decisores). Chega no Loop 2C.
+      </p>
+    </section>
+  );
+}
+
