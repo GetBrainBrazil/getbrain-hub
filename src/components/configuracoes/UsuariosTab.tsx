@@ -158,15 +158,20 @@ export function UsuariosTab() {
       </CardContent>
 
       <UsuarioDialog open={dialogOpen} onOpenChange={setDialogOpen} usuario={editing} />
-      <ConfirmDialog
-        open={!!confirmDelete}
-        onOpenChange={(v) => !v && setConfirmDelete(null)}
-        title="Excluir usuário?"
-        description={`Tem certeza que deseja excluir ${confirmDelete?.full_name}? Esta ação não pode ser desfeita.`}
-        onConfirm={handleDelete}
-        confirmLabel="Excluir"
-        variant="destructive"
-      />
+      <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {confirmDelete?.full_name}? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
