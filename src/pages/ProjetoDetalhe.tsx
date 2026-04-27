@@ -1064,7 +1064,7 @@ export default function ProjetoDetalhe() {
           )}
 
           {/* Title row */}
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-3 sm:gap-4">
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-mono text-xl font-semibold tracking-tight text-accent">
@@ -1118,12 +1118,12 @@ export default function ProjetoDetalhe() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Select
                 value={project.status}
                 onValueChange={(v) => handleStatusChange(v as ProjectStatus)}
               >
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger className="flex-1 sm:flex-none sm:w-[220px] h-11 sm:h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1136,7 +1136,7 @@ export default function ProjetoDetalhe() {
               </Select>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-10 w-10">
+                  <Button variant="outline" size="icon" className="h-11 w-11 sm:h-10 sm:w-10 shrink-0">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1239,7 +1239,7 @@ export default function ProjetoDetalhe() {
           {/* COLUNA ESQUERDA */}
           <div className="min-w-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
+              <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 overflow-x-auto flex-nowrap whitespace-nowrap scrollbar-hide">
                 {[
                   ["overview", "Visão Geral", null],
                   ["scope", "Escopo", null],
