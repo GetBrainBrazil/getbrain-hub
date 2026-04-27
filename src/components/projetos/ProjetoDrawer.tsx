@@ -85,7 +85,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
     setEstimated(p.estimated_delivery_date ?? "");
     setActual(p.actual_delivery_date ?? "");
     setDescription(p.description ?? "");
-    setCriteria(p.acceptance_criteria ?? "");
+    setCriteria(Array.isArray(p.acceptance_criteria) ? (p.acceptance_criteria as unknown as AcceptanceCriterion[]) : []);
     setNotes(p.notes ?? "");
 
     const { data: c } = await supabase
