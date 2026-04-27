@@ -1,37 +1,47 @@
-## Problema
+## Problemas identificados
 
-Na sidebar (`AppSidebar.tsx`), a marcação de "ativo" usa **igualdade exata** de `location.pathname` com a URL do item. Em rotas de detalhe — por exemplo `/financeiro/orcamentos/:id/editar`, `/projetos/:id`, `/crm/deals/:code`, `/dev/tasks/:code`, `/financeiro/movimentacoes/:id`, `/financeiro/recorrencias/:id` — nenhum submódulo bate exatamente. Resultado: o submódulo perde o destaque (texto cyan + fundo) e o módulo pai também fica sem a faixa lateral de cor.
+No detalhe do deal (`/crm/deals/:code`):
+
+1. **Barra de marcos (StageStepper)** — `src/components/crm/CrmDetailShared.tsx`
+   - Bolinhas de 12px sem rótulo visível: alvo de clique pequeno e nada intuitivo (só `sr-only`).
+   - Os dois últimos marcos (`Ganho` e `Perdido`) abrem **modais** (`DealWonDialog` / `LostDialog`) ao serem clicados. Como ficam coladinhos aos demais e não têm feedback visual diferente, qualquer clique perto deles dispara o dialog — daí a sensação de "bug".
+   - Não há tooltip nem destaque do estado atual além de um anel sutil.
+
+2. **Slider de Probabilidade** — `DealSidebar` em `src/pages/crm/CrmDealDetail.tsx`
+   - Sem rótulos de min/max, track fino, valor pequeno ao lado e step de 5 — fica difícil arrastar sem mira precisa, e o feedback é mínimo.
 
 ## Solução
 
-Trocar a regra de "ativo" por **match por prefixo**, escolhendo o submódulo mais específico (URL mais longa que seja prefixo do `pathname`). O módulo pai fica destacado sempre que a rota atual estiver dentro dele.
+### A) StageStepper redesenhado (alvos grandes, rótulos visíveis, etapas finais separadas)
 
-### Regras de match
+Reescrever o `StageStepper` em `CrmDetailShared.tsx` para:
 
-- **Submódulo ativo**: o `child` cuja `url` é prefixo de `location.pathname` e tem o maior comprimento entre os irmãos. Para evitar falso match (ex.: `/financeiro` casar com qualquer subitem), exige que o caractere seguinte ao prefixo seja `/` ou fim da string.
-- **Módulo pai ativo**: quando `location.pathname` começa com `item.url` (mesmo critério de fronteira). Sempre que o pai está ativo, ele recebe a faixa cyan, **inclusive** quando há um submódulo ativo (hoje só destaca o pai se `!activeChild`).
-- **Dashboard** (`/dashboard`) continua com match exato (também aceita `/`).
+- Renderizar **apenas as 4 etapas em progresso** (`presencial_agendada` → `em_negociacao`) na linha de marcos. As etapas terminais (`Ganho` / `Perdido`) **não fazem mais parte do stepper**, evitando cliques acidentais.
+- Cada marco vira um **botão grande** (alvo ≥ 36px de altura) com:
+  - Bolinha 18px (h-4.5).
+  - **Rótulo visível abaixo** (texto pequeno em pt-BR).
+  - Tooltip com o nome completo + probabilidade default.
+  - Cor cyan (accent) para etapas concluídas/atual, cinza para futuras; estado atual com `font-semibold` e ring accent.
+- Linha conectora entre marcos com mais altura (h-1) e cantos arredondados.
+- Layout responsivo: em mobile, scroll horizontal (`overflow-x-auto`) para não comprimir os alvos.
 
-### Casos cobertos
+Quando o deal estiver fechado (`fechado_ganho` / `fechado_perdido`), exibir **um badge final** em vez do stepper interativo, mostrando o estado terminal — mantendo o botão "Reabrir deal" que já existe na header para voltar a `em_negociacao`.
 
-| Rota atual | Módulo destacado | Submódulo destacado |
-|---|---|---|
-| `/financeiro/orcamentos/:id/editar` | Financeiro | Orçamentos |
-| `/financeiro/movimentacoes/:id` | Financeiro | Contas a Pagar / Receber |
-| `/financeiro/recorrencias/:id` | Financeiro | Recorrências |
-| `/financeiro/extratos/movimentacao/:id` | Financeiro | Extratos Bancários |
-| `/projetos/:id` (e abas) | Projetos | — |
-| `/crm/deals/:code`, `/crm/leads/:code`, `/crm/empresas/:id` | CRM | Pipeline / Leads / Empresas |
-| `/dev/tasks/:code` | Área Dev | Kanban (default) |
+### B) Slider de Probabilidade mais usável
 
-Para `/dev/tasks/:code` não há submódulo natural; nesse caso só o módulo pai fica destacado (não força nenhum submódulo).
+No `DealSidebar` do `CrmDealDetail.tsx`, trocar o slider por um bloco mais claro:
 
-## Arquivo alterado
+- Aumentar a área clicável envolvendo o slider em um container com mais padding vertical.
+- Mostrar o **valor grande** (ex.: `text-lg font-semibold` cyan) acima/à esquerda.
+- Adicionar marcações com os valores de cada stage (20/40/60/75/100) em texto pequeno embaixo, mostrando o ponto correspondente ao stage atual em destaque.
+- Manter `step={5}`, mas adicionar handler de `onValueCommit` para salvar **só ao soltar** — evita dezenas de saves enquanto arrasta.
+- Adicionar dois botões `-5` / `+5` discretos para ajuste fino sem precisar acertar o thumb.
 
-- `src/components/AppSidebar.tsx`
-  - Substituir `isExactActive` por helper `isPathInside(url)` (prefix + boundary).
-  - Calcular `activeChild` pelo prefixo mais longo.
-  - Ajustar `parentActive` para destacar o pai sempre que a rota estiver dentro do módulo.
-  - Manter o comportamento exato apenas para o item Dashboard.
+Visual segue o design system (tokens cyan/accent), nada de cores hardcoded.
 
-Sem mudanças de visual, rotas, ou em outros arquivos.
+## Arquivos alterados
+
+- `src/components/crm/CrmDetailShared.tsx` — redesenho do `StageStepper`.
+- `src/pages/crm/CrmDealDetail.tsx` — novo bloco de probabilidade no `DealSidebar`; o `stageChange` continua igual (Ganho/Perdido seguem disponíveis pelos botões "Fechar como Ganho" / "Marcar como Perdido" que já existem na header).
+
+Sem mudanças em banco, rotas ou hooks.
