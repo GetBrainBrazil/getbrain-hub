@@ -307,94 +307,154 @@ export default function Projetos() {
 
       {/* Filtros */}
       <Card>
-        <CardContent className="py-4 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
+        <CardContent className="py-3 sm:py-4 flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="relative flex-1 min-w-[160px] sm:min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, código ou cliente..."
+              placeholder="Buscar..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9"
+              className="pl-9 h-10 sm:h-9"
             />
           </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                Status ({statusFilter.length})
+          {/* Mobile: tudo em Sheet */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="md:hidden min-h-10 gap-1">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filtros
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                {PROJECT_STATUS_OPTIONS.map((o) => (
-                  <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={statusFilter.includes(o.value)}
-                      onCheckedChange={(c) => {
-                        setStatusFilter(
-                          c
-                            ? [...statusFilter, o.value]
-                            : statusFilter.filter((s) => s !== o.value),
-                        );
-                        setPage(1);
-                      }}
-                    />
-                    {o.label}
-                  </label>
-                ))}
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filtros</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-5">
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase text-muted-foreground">Status</p>
+                  <div className="space-y-2">
+                    {PROJECT_STATUS_OPTIONS.map((o) => (
+                      <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer min-h-10">
+                        <Checkbox
+                          checked={statusFilter.includes(o.value)}
+                          onCheckedChange={(c) => {
+                            setStatusFilter(
+                              c ? [...statusFilter, o.value] : statusFilter.filter((s) => s !== o.value),
+                            );
+                            setPage(1);
+                          }}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase text-muted-foreground">Tipo</p>
+                  <div className="space-y-2">
+                    {PROJECT_TYPE_OPTIONS.map((o) => (
+                      <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer min-h-10">
+                        <Checkbox
+                          checked={typeFilter.includes(o.value)}
+                          onCheckedChange={(c) => {
+                            setTypeFilter(
+                              c ? [...typeFilter, o.value] : typeFilter.filter((s) => s !== o.value),
+                            );
+                            setPage(1);
+                          }}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase text-muted-foreground">Cliente</p>
+                  <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setPage(1); }}>
+                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </PopoverContent>
-          </Popover>
+            </SheetContent>
+          </Sheet>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                Tipo ({typeFilter.length})
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                {PROJECT_TYPE_OPTIONS.map((o) => (
-                  <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={typeFilter.includes(o.value)}
-                      onCheckedChange={(c) => {
-                        setTypeFilter(
-                          c ? [...typeFilter, o.value] : typeFilter.filter((s) => s !== o.value),
-                        );
-                        setPage(1);
-                      }}
-                    />
-                    {o.label}
-                  </label>
+          {/* Desktop: inline */}
+          <div className="hidden md:flex items-center gap-3 flex-wrap">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Status ({statusFilter.length})
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  {PROJECT_STATUS_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={statusFilter.includes(o.value)}
+                        onCheckedChange={(c) => {
+                          setStatusFilter(
+                            c ? [...statusFilter, o.value] : statusFilter.filter((s) => s !== o.value),
+                          );
+                          setPage(1);
+                        }}
+                      />
+                      {o.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Tipo ({typeFilter.length})
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  {PROJECT_TYPE_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={typeFilter.includes(o.value)}
+                        onCheckedChange={(c) => {
+                          setTypeFilter(
+                            c ? [...typeFilter, o.value] : typeFilter.filter((s) => s !== o.value),
+                          );
+                          setPage(1);
+                        }}
+                      />
+                      {o.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
                 ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select
-            value={companyFilter}
-            onValueChange={(v) => {
-              setCompanyFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Tabs value={view} onValueChange={(v) => setView(v as any)}>
+          {/* Tabs view: visível só ≥md (no mobile sempre cards) */}
+          <Tabs value={view} onValueChange={(v) => setView(v as any)} className="hidden md:block ml-auto">
             <TabsList>
               <TabsTrigger value="table" className="gap-1">
                 <TableIcon className="h-4 w-4" /> Tabela
