@@ -84,6 +84,7 @@ import {
   BlocoComparativoHistorico,
   BlocoProximasMovimentacoes,
 } from "@/components/dashboard/FinanceBlocks09B";
+import { BlocoDiagnosticoSaldos } from "@/components/dashboard/BlocoDiagnosticoSaldos";
 
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -631,6 +632,9 @@ export default function FinanceiroVisaoGeral() {
             </CardContent>
           </Card>
         </DashboardSection>
+
+        {/* ============== Diagnóstico de saldos (somente leitura) ============== */}
+        <BlocoDiagnosticoSaldos />
 
         {/* ============== Bloco 4 — Fluxo Projetado ============== */}
         <DashboardSection
