@@ -82,9 +82,10 @@ export function StringListEditor({
         <button
           type="button"
           onClick={addItem}
-          className="w-full rounded-md border border-dashed border-border bg-muted/10 p-4 text-left text-sm text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground"
+          className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-muted/10 p-4 text-left text-sm text-muted-foreground transition-colors hover:border-accent/60 hover:bg-muted/20 hover:text-foreground"
         >
-          {emptyHint}
+          <Plus className="h-4 w-4 shrink-0 text-accent" />
+          <span>{emptyHint}</span>
         </button>
       ) : (
         <ul className="space-y-1">
