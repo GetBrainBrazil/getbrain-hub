@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { key: "usuarios", label: "Usuários", path: "/admin/usuarios" },
   { key: "permissoes", label: "Permissões", path: "/admin/permissoes" },
-  { key: "agencia", label: "Agência", path: "/admin/agencia" },
   { key: "logs", label: "Logs", path: "/admin/logs" },
 ] as const;
 
@@ -24,7 +23,7 @@ export default function AdminLayout({ children }: { children?: ReactNode }) {
         </Button>
         <div>
           <h1 className="font-serif text-3xl sm:text-4xl tracking-tight">Admin</h1>
-          <p className="text-sm text-muted-foreground mt-1">Usuários, permissões, agência e logs.</p>
+          <p className="text-sm text-muted-foreground mt-1">Usuários, permissões e logs.</p>
         </div>
       </div>
 
