@@ -16,12 +16,12 @@ import { usePersistedState } from "@/hooks/use-persisted-state";
 export default function Configuracoes() {
   const [tab, setTab] = usePersistedState<string>("configuracoes:tab", "conta");
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Configurações</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold">Configurações</h1>
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="conta">Minha Conta</TabsTrigger>
-          <TabsTrigger value="meios">Meios de Pagamento</TabsTrigger>
+        <TabsList className="w-full sm:w-auto overflow-x-auto justify-start">
+          <TabsTrigger value="conta" className="min-h-10">Minha Conta</TabsTrigger>
+          <TabsTrigger value="meios" className="min-h-10">Meios de Pagamento</TabsTrigger>
         </TabsList>
         <TabsContent value="conta"><MinhaContaTab /></TabsContent>
         <TabsContent value="meios"><MeiosPagamentoTab /></TabsContent>
