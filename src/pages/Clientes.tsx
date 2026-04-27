@@ -45,12 +45,16 @@ export default function Clientes() {
   const filtered = clientes.filter(c => !search || c.nome.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Clientes</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" /> Novo Cliente</Button></DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogTrigger asChild>
+            <Button className="gap-1 min-h-11 sm:min-h-9 w-full sm:w-auto">
+              <Plus className="h-4 w-4" /> Novo Cliente
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Novo Cliente</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div><Label>Nome / Razão Social *</Label><Input value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} /></div>
@@ -64,7 +68,7 @@ export default function Clientes() {
                 </Select>
               </div>
               <div><Label>{form.tipo_pessoa === "PJ" ? "CNPJ" : "CPF"}</Label><Input value={form.cpf_cnpj} onChange={e => setForm({...form, cpf_cnpj: e.target.value})} /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>E-mail</Label><Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
                 <div><Label>Telefone</Label><Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} /></div>
               </div>
@@ -80,7 +84,7 @@ export default function Clientes() {
         <CardContent className="pt-4">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar clientes..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Buscar clientes..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-10 sm:h-9" />
           </div>
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-center">
@@ -89,30 +93,54 @@ export default function Clientes() {
               <p className="text-muted-foreground">Adicione seu primeiro cliente.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>CPF/CNPJ</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>CPF/CNPJ</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map(c => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.nome}</TableCell>
+                        <TableCell><Badge variant="outline">{c.tipo_pessoa}</Badge></TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{c.cpf_cnpj || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{c.telefone || "—"}</TableCell>
+                        <TableCell><Badge variant="outline" className={c.ativo ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}>{c.ativo ? "Ativo" : "Inativo"}</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-2">
                 {filtered.map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.nome}</TableCell>
-                    <TableCell><Badge variant="outline">{c.tipo_pessoa}</Badge></TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{c.cpf_cnpj || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{c.telefone || "—"}</TableCell>
-                    <TableCell><Badge variant="outline" className={c.ativo ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}>{c.ativo ? "Ativo" : "Inativo"}</Badge></TableCell>
-                  </TableRow>
+                  <div key={c.id} className="rounded-lg border border-border bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-sm line-clamp-2">{c.nome}</p>
+                      <Badge variant="outline" className="shrink-0">{c.tipo_pessoa}</Badge>
+                    </div>
+                    {c.cpf_cnpj && <p className="text-xs text-muted-foreground mt-1">{c.cpf_cnpj}</p>}
+                    <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                      {c.email && <p className="truncate">📧 {c.email}</p>}
+                      {c.telefone && <p>📞 {c.telefone}</p>}
+                    </div>
+                    <div className="mt-2">
+                      <Badge variant="outline" className={c.ativo ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}>{c.ativo ? "Ativo" : "Inativo"}</Badge>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
