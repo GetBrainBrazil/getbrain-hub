@@ -135,7 +135,16 @@ const App = () => (
               <Route path="calendario" element={<CrmCalendar />} />
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+            <Route path="/configuracoes" element={<Navigate to="/admin/usuarios" replace />} />
+            <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="usuarios" replace />} />
+              <Route path="usuarios" element={<AdminUsuariosList />} />
+              <Route path="permissoes" element={<AdminPermissoesPage />} />
+              <Route path="agencia" element={<AdminAgenciaPage />} />
+              <Route path="logs" element={<AdminLogsPage />} />
+            </Route>
+            <Route path="/admin/usuarios/:id" element={<ProtectedRoute><UsuarioFichaPage mode="admin" /></ProtectedRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
             <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
