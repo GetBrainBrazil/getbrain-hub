@@ -501,6 +501,50 @@ resolved_at date
 notes text
 ```
 
+### 4.16 Campos de descoberta em `deals` (v1.8)
+
+> Adicionada em 09D-prep (27/04/2026). 17 campos novos em `deals` para suportar
+> a fase de descoberta comercial e pré-preencher projetos no fechamento.
+
+Agrupados por finalidade:
+
+- **Escopo (transferidos para o projeto no `close_deal_as_won`):**
+  `business_context TEXT`, `scope_in TEXT`, `scope_out TEXT`,
+  `deliverables TEXT[]`, `premises TEXT[]`, `identified_risks TEXT[]`,
+  `technical_stack TEXT[]`, `acceptance_criteria JSONB` (formato
+  `[{id, text, checked, checked_at, checked_by}]`).
+- **Datas sugeridas (pré-preenchem o projeto, editáveis no dialog):**
+  `desired_start_date date`, `desired_delivery_date date`.
+- **Comerciais (permanecem só no deal):** `pricing_rationale TEXT`,
+  `decision_makers TEXT`, `competitors TEXT`,
+  `budget_range_min numeric`, `budget_range_max numeric`,
+  `next_step TEXT`, `next_step_date date`.
+
+Constraint: `deals_budget_range_check` garante `budget_range_min <= budget_range_max`.
+Index: `idx_deals_next_step_date` para próximas ações na timeline.
+
+### 4.17 Tipos estruturados em campos de escopo de `projects` (v1.9)
+
+> Adicionada em 09D (27/04/2026). Conserta divergência entre `projects.acceptance_criteria` e os 4 arrays de escopo, que estavam tipados como `JSONB`/`TEXT[]` em `src/integrations/supabase/types.ts` mas eram `TEXT` no banco.
+
+5 colunas migradas:
+
+- `acceptance_criteria`: `TEXT` → `JSONB` (default `'[]'::jsonb`, NOT NULL).
+  Mesmo formato de `tasks.acceptance_criteria`: `[{id, text, checked, checked_at, checked_by}]`.
+- `deliverables`: `TEXT` → `TEXT[]` (default `ARRAY[]::TEXT[]`, NOT NULL).
+- `premises`: `TEXT` → `TEXT[]` (idem).
+- `identified_risks`: `TEXT` → `TEXT[]` (idem).
+- `technical_stack`: `TEXT` → `TEXT[]` (idem).
+
+**Justificativa:**
+1. Conserta divergência banco↔types.ts (front compilava como estruturado, banco devolvia string).
+2. Alinha `projects.acceptance_criteria` com o já-estruturado `tasks.acceptance_criteria`.
+3. Alinha com os arrays equivalentes em `deals` (v1.8 / 4.16), permitindo que o `close_deal_as_won` copie arrays nativos sem stringify.
+
+**Backup:** `_backup_projects_text_fields_pre_v1_9` (snapshot dos 5 campos antes do ALTER).
+Pode ser dropado após 30 dias de validação em produção.
+
+
 ### 4.Z `financial_recurrences` — Entidade canônica de séries financeiras (v1.7)
 
 > **Adicionada em 09C-1A (26/04/2026).** Representa qualquer série de movimentações financeiras: recorrências contínuas (assinaturas, salários, aluguéis, contratos de manutenção) ou parcelamentos finitos (vendas em N×, propostas fechadas pelo CRM). Substitui os 5 padrões inconsistentes anteriores.
