@@ -399,7 +399,7 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <FieldLabel>Horas totais</FieldLabel>
-            <InlineNumber
+            <InlineInteger
               value={deal.estimated_hours_total}
               onSave={(v) => save({ estimated_hours_total: v })}
               placeholder="0"
