@@ -1130,8 +1130,46 @@ export default function Movimentacoes() {
         </div>
       </div>
 
+      {/* Mobile: lista de cards */}
+      <Card className="md:hidden overflow-hidden">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-4 space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : ordered.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              Nenhuma movimentação encontrada com os filtros atuais.
+            </p>
+          ) : (
+            ordered.map((m: any) => {
+              const v = getVinculado(m);
+              return (
+                <MovimentacaoMobileCard
+                  key={m.id}
+                  m={m}
+                  isPagar={isPagar}
+                  selected={selectedIds.has(m.id)}
+                  onSelect={() => toggleSelect(m.id)}
+                  onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
+                  onLiquidar={() => openDarBaixa(m)}
+                  onEditar={() => openEditModal(m)}
+                  onDuplicar={() => handleDuplicate(m)}
+                  onExcluir={() => handleDelete(m.id)}
+                  vinculadoNome={v.nome}
+                  vinculadoBadge={v.badge}
+                />
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Desktop: tabela tradicional */}
       {/* Table */}
-      <Card className="overflow-hidden">
+      <Card className="hidden md:block overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
