@@ -141,9 +141,10 @@ export function AppSidebar() {
             const hasChildren = !!item.children?.length;
             const open = openMap[item.title] ?? false;
 
-            // Item without children: simple NavLink
+            // Item without children: simple NavLink (active when inside its url).
             if (!hasChildren) {
-              const active = isExactActive(item.url);
+              const active =
+                item.url === "/dashboard" ? isExactActive(item.url) : isPathInside(item.url);
               return (
                 <NavLink
                   key={item.title}
@@ -158,8 +159,8 @@ export function AppSidebar() {
             }
 
             // Item with children: parent navigates to first child / item.url, chevron toggles
-            const activeChild = item.children!.find((c) => isExactActive(c.url));
-            const parentActive = isGroupOpen(item) && !activeChild;
+            const activeChild = getActiveChild(item);
+            const parentActive = isGroupOpen(item);
 
             return (
               <Collapsible
