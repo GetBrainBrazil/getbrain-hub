@@ -553,8 +553,8 @@ export default function ProjetoDetalhe() {
       setLoading(false);
       return;
     }
-    setProject(p as Project);
-    syncDrafts(p as Project);
+    setProject(p as unknown as Project);
+    syncDrafts(p as unknown as Project);
 
     const { data: c } = await supabase
       .from("companies")
