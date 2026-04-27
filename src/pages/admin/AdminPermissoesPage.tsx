@@ -21,6 +21,9 @@ export default function AdminPermissoesPage() {
   const [editing, setEditing] = useState<Cargo | null>(null);
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Cargo | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
 
   const matrix = useMemo(() => {
     const m = new Map<string, Set<string>>();
@@ -31,7 +34,22 @@ export default function AdminPermissoesPage() {
     return m;
   }, [perms]);
 
-  const ordered = [...cargos].sort((a, b) => b.nivel - a.nivel);
+  const ordered = useMemo(() => [...cargos].sort((a, b) => b.nivel - a.nivel), [cargos]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return ordered;
+    return ordered.filter(c =>
+      c.nome.toLowerCase().includes(q) ||
+      (c.descricao ?? "").toLowerCase().includes(q)
+    );
+  }, [ordered, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   function handleNew() {
     setEditing(null);
