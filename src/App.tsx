@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
-import { RouteTracker, getLastRoute } from "@/components/RouteTracker";
+import { RouteTracker, getLastRoute, isReturnableRoute } from "@/components/RouteTracker";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import FinanceiroVisaoGeral from "./pages/FinanceiroVisaoGeral";
@@ -73,7 +73,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 /** Redirects "/" to the last visited route (sessionStorage) if available */
 function HomeRedirect() {
   const lastRoute = getLastRoute();
-  if (lastRoute && lastRoute !== "/") {
+  if (isReturnableRoute(lastRoute)) {
     return <Navigate to={lastRoute} replace />;
   }
   return <ProtectedRoute><Index /></ProtectedRoute>;
