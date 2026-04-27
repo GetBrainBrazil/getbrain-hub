@@ -693,11 +693,13 @@ export type Database = {
       }
       companies: {
         Row: {
+          client_type: Database["public"]["Enums"]["company_client_type"] | null
           cnpj: string | null
           company_type: Database["public"]["Enums"]["company_type"]
           created_at: string
           created_by_actor_id: string | null
           deleted_at: string | null
+          digital_maturity: number | null
           employee_count_range: string | null
           id: string
           industry: string | null
@@ -706,6 +708,10 @@ export type Database = {
           notes: string | null
           organization_id: string
           relationship_status: Database["public"]["Enums"]["company_relationship_status"]
+          revenue_range:
+            | Database["public"]["Enums"]["company_revenue_range"]
+            | null
+          sector_id: string | null
           size: Database["public"]["Enums"]["company_size"] | null
           status: Database["public"]["Enums"]["company_status"]
           trade_name: string | null
@@ -713,11 +719,15 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          client_type?:
+            | Database["public"]["Enums"]["company_client_type"]
+            | null
           cnpj?: string | null
           company_type: Database["public"]["Enums"]["company_type"]
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          digital_maturity?: number | null
           employee_count_range?: string | null
           id?: string
           industry?: string | null
@@ -726,6 +736,10 @@ export type Database = {
           notes?: string | null
           organization_id: string
           relationship_status?: Database["public"]["Enums"]["company_relationship_status"]
+          revenue_range?:
+            | Database["public"]["Enums"]["company_revenue_range"]
+            | null
+          sector_id?: string | null
           size?: Database["public"]["Enums"]["company_size"] | null
           status?: Database["public"]["Enums"]["company_status"]
           trade_name?: string | null
@@ -733,11 +747,15 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          client_type?:
+            | Database["public"]["Enums"]["company_client_type"]
+            | null
           cnpj?: string | null
           company_type?: Database["public"]["Enums"]["company_type"]
           created_at?: string
           created_by_actor_id?: string | null
           deleted_at?: string | null
+          digital_maturity?: number | null
           employee_count_range?: string | null
           id?: string
           industry?: string | null
@@ -746,6 +764,10 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           relationship_status?: Database["public"]["Enums"]["company_relationship_status"]
+          revenue_range?:
+            | Database["public"]["Enums"]["company_revenue_range"]
+            | null
+          sector_id?: string | null
           size?: Database["public"]["Enums"]["company_size"] | null
           status?: Database["public"]["Enums"]["company_status"]
           trade_name?: string | null
@@ -762,6 +784,65 @@ export type Database = {
           },
           {
             foreignKeyName: "companies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_contact_roles: {
+        Row: {
+          company_person_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["contact_role"]
+        }
+        Insert: {
+          company_person_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          organization_id: string
+          role: Database["public"]["Enums"]["contact_role"]
+        }
+        Update: {
+          company_person_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["contact_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_contact_roles_company_person_id_fkey"
+            columns: ["company_person_id"]
+            isOneToOne: false
+            referencedRelation: "company_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_contact_roles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_contact_roles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -961,6 +1042,89 @@ export type Database = {
           },
         ]
       }
+      deal_dependencies: {
+        Row: {
+          agreed_deadline: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string
+          deleted_at: string | null
+          dependency_type: Database["public"]["Enums"]["deal_dependency_type"]
+          description: string
+          id: string
+          notes: string | null
+          organization_id: string
+          responsible_person_name: string | null
+          responsible_person_role: string | null
+          status: Database["public"]["Enums"]["deal_dependency_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          agreed_deadline?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id: string
+          deleted_at?: string | null
+          dependency_type: Database["public"]["Enums"]["deal_dependency_type"]
+          description: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          responsible_person_name?: string | null
+          responsible_person_role?: string | null
+          status?: Database["public"]["Enums"]["deal_dependency_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          agreed_deadline?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string
+          deleted_at?: string | null
+          dependency_type?: Database["public"]["Enums"]["deal_dependency_type"]
+          description?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          responsible_person_name?: string | null
+          responsible_person_role?: string | null
+          status?: Database["public"]["Enums"]["deal_dependency_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_dependencies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_dependencies_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_dependencies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_dependencies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
           acceptance_criteria: Json
@@ -974,12 +1138,18 @@ export type Database = {
           contact_person_id: string | null
           created_at: string
           created_by: string | null
+          current_solution: string | null
           decision_makers: string | null
           deleted_at: string | null
           deliverables: string[]
           desired_delivery_date: string | null
           desired_start_date: string | null
+          estimated_complexity: number | null
+          estimated_hours_total: number | null
           estimated_value: number | null
+          estimation_confidence:
+            | Database["public"]["Enums"]["estimation_confidence"]
+            | null
           expected_close_date: string | null
           generated_project_id: string | null
           id: string
@@ -991,10 +1161,20 @@ export type Database = {
           organization_id: string
           origin_lead_id: string | null
           owner_actor_id: string | null
+          pain_category:
+            | Database["public"]["Enums"]["deal_pain_category"]
+            | null
+          pain_cost_brl_monthly: number | null
+          pain_description: string | null
+          pain_hours_monthly: number | null
           premises: string[]
           pricing_rationale: string | null
           probability_pct: number
           project_type: Database["public"]["Enums"]["project_type"] | null
+          project_type_custom: string | null
+          project_type_v2:
+            | Database["public"]["Enums"]["deal_project_type"]
+            | null
           proposal_url: string | null
           scope_in: string | null
           scope_out: string | null
@@ -1018,12 +1198,18 @@ export type Database = {
           contact_person_id?: string | null
           created_at?: string
           created_by?: string | null
+          current_solution?: string | null
           decision_makers?: string | null
           deleted_at?: string | null
           deliverables?: string[]
           desired_delivery_date?: string | null
           desired_start_date?: string | null
+          estimated_complexity?: number | null
+          estimated_hours_total?: number | null
           estimated_value?: number | null
+          estimation_confidence?:
+            | Database["public"]["Enums"]["estimation_confidence"]
+            | null
           expected_close_date?: string | null
           generated_project_id?: string | null
           id?: string
@@ -1035,10 +1221,20 @@ export type Database = {
           organization_id: string
           origin_lead_id?: string | null
           owner_actor_id?: string | null
+          pain_category?:
+            | Database["public"]["Enums"]["deal_pain_category"]
+            | null
+          pain_cost_brl_monthly?: number | null
+          pain_description?: string | null
+          pain_hours_monthly?: number | null
           premises?: string[]
           pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
+          project_type_custom?: string | null
+          project_type_v2?:
+            | Database["public"]["Enums"]["deal_project_type"]
+            | null
           proposal_url?: string | null
           scope_in?: string | null
           scope_out?: string | null
@@ -1062,12 +1258,18 @@ export type Database = {
           contact_person_id?: string | null
           created_at?: string
           created_by?: string | null
+          current_solution?: string | null
           decision_makers?: string | null
           deleted_at?: string | null
           deliverables?: string[]
           desired_delivery_date?: string | null
           desired_start_date?: string | null
+          estimated_complexity?: number | null
+          estimated_hours_total?: number | null
           estimated_value?: number | null
+          estimation_confidence?:
+            | Database["public"]["Enums"]["estimation_confidence"]
+            | null
           expected_close_date?: string | null
           generated_project_id?: string | null
           id?: string
@@ -1079,10 +1281,20 @@ export type Database = {
           organization_id?: string
           origin_lead_id?: string | null
           owner_actor_id?: string | null
+          pain_category?:
+            | Database["public"]["Enums"]["deal_pain_category"]
+            | null
+          pain_cost_brl_monthly?: number | null
+          pain_description?: string | null
+          pain_hours_monthly?: number | null
           premises?: string[]
           pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
+          project_type_custom?: string | null
+          project_type_v2?:
+            | Database["public"]["Enums"]["deal_project_type"]
+            | null
           proposal_url?: string | null
           scope_in?: string | null
           scope_out?: string | null
@@ -2291,6 +2503,7 @@ export type Database = {
           requested_at: string | null
           requested_from: string | null
           responsible_actor_id: string | null
+          source_deal_dependency_id: string | null
           status: Database["public"]["Enums"]["project_dependency_status"]
           title: string
           updated_at: string
@@ -2312,6 +2525,7 @@ export type Database = {
           requested_at?: string | null
           requested_from?: string | null
           responsible_actor_id?: string | null
+          source_deal_dependency_id?: string | null
           status?: Database["public"]["Enums"]["project_dependency_status"]
           title: string
           updated_at?: string
@@ -2333,6 +2547,7 @@ export type Database = {
           requested_at?: string | null
           requested_from?: string | null
           responsible_actor_id?: string | null
+          source_deal_dependency_id?: string | null
           status?: Database["public"]["Enums"]["project_dependency_status"]
           title?: string
           updated_at?: string
@@ -2365,6 +2580,13 @@ export type Database = {
             columns: ["responsible_actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_dependencies_source_deal_dependency_id_fkey"
+            columns: ["source_deal_dependency_id"]
+            isOneToOne: false
+            referencedRelation: "deal_dependencies"
             referencedColumns: ["id"]
           },
           {
@@ -2657,6 +2879,7 @@ export type Database = {
           business_context: string | null
           code: string
           company_id: string
+          complexity_baseline: number | null
           contract_value: number | null
           created_at: string
           created_by_actor_id: string | null
@@ -2664,6 +2887,7 @@ export type Database = {
           deliverables: string[]
           description: string | null
           estimated_delivery_date: string | null
+          estimated_hours_baseline: number | null
           id: string
           identified_risks: string[]
           installments_count: number | null
@@ -2675,6 +2899,7 @@ export type Database = {
           project_type: Database["public"]["Enums"]["project_type"]
           scope_in: string | null
           scope_out: string | null
+          source_deal_id: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
           technical_stack: string[]
@@ -2688,6 +2913,7 @@ export type Database = {
           business_context?: string | null
           code?: string
           company_id: string
+          complexity_baseline?: number | null
           contract_value?: number | null
           created_at?: string
           created_by_actor_id?: string | null
@@ -2695,6 +2921,7 @@ export type Database = {
           deliverables?: string[]
           description?: string | null
           estimated_delivery_date?: string | null
+          estimated_hours_baseline?: number | null
           id?: string
           identified_risks?: string[]
           installments_count?: number | null
@@ -2706,6 +2933,7 @@ export type Database = {
           project_type: Database["public"]["Enums"]["project_type"]
           scope_in?: string | null
           scope_out?: string | null
+          source_deal_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           technical_stack?: string[]
@@ -2719,6 +2947,7 @@ export type Database = {
           business_context?: string | null
           code?: string
           company_id?: string
+          complexity_baseline?: number | null
           contract_value?: number | null
           created_at?: string
           created_by_actor_id?: string | null
@@ -2726,6 +2955,7 @@ export type Database = {
           deliverables?: string[]
           description?: string | null
           estimated_delivery_date?: string | null
+          estimated_hours_baseline?: number | null
           id?: string
           identified_risks?: string[]
           installments_count?: number | null
@@ -2737,6 +2967,7 @@ export type Database = {
           project_type?: Database["public"]["Enums"]["project_type"]
           scope_in?: string | null
           scope_out?: string | null
+          source_deal_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           technical_stack?: string[]
@@ -2771,6 +3002,13 @@ export type Database = {
             columns: ["owner_actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_source_deal_id_fkey"
+            columns: ["source_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
@@ -3004,6 +3242,74 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sectors: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          parent_sector_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          parent_sector_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          parent_sector_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sectors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sectors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sectors_parent_sector_id_fkey"
+            columns: ["parent_sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sectors_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
             referencedColumns: ["id"]
           },
         ]
@@ -4054,15 +4360,53 @@ export type Database = {
         | "restore"
         | "status_change"
         | "custom"
+      company_client_type: "b2b" | "b2c" | "b2b_b2c"
       company_relationship_status:
         | "prospect"
         | "lead"
         | "active_client"
         | "former_client"
         | "lost"
+      company_revenue_range:
+        | "ate_360k"
+        | "de_360k_a_4_8m"
+        | "de_4_8m_a_30m"
+        | "acima_30m"
       company_size: "micro" | "small" | "medium" | "large" | "enterprise"
       company_status: "active" | "inactive" | "churned" | "lost"
       company_type: "client" | "prospect" | "supplier" | "partner" | "other"
+      contact_role:
+        | "decisor"
+        | "usuario_final"
+        | "tecnico"
+        | "financeiro"
+        | "outro"
+      deal_dependency_status:
+        | "aguardando_combinar"
+        | "combinado"
+        | "liberado"
+        | "atrasado"
+      deal_dependency_type:
+        | "acesso_sistema"
+        | "dado"
+        | "pessoa"
+        | "hardware"
+        | "autorizacao_legal"
+        | "outro"
+      deal_pain_category:
+        | "operacional"
+        | "comercial"
+        | "estrategica"
+        | "compliance"
+        | "experiencia"
+        | "outra"
+      deal_project_type:
+        | "whatsapp_chatbot"
+        | "ai_sdr"
+        | "sistema_gestao"
+        | "automacao_processo"
+        | "integracao_sistemas"
+        | "outro"
       deal_stage:
         | "presencial_agendada"
         | "presencial_feita"
@@ -4071,6 +4415,7 @@ export type Database = {
         | "fechado_ganho"
         | "fechado_perdido"
       employment_type: "founder" | "pj" | "clt" | "intern" | "freelancer"
+      estimation_confidence: "alta" | "media" | "baixa"
       human_role:
         | "owner"
         | "developer"
@@ -4304,6 +4649,7 @@ export const Constants = {
         "status_change",
         "custom",
       ],
+      company_client_type: ["b2b", "b2c", "b2b_b2c"],
       company_relationship_status: [
         "prospect",
         "lead",
@@ -4311,9 +4657,52 @@ export const Constants = {
         "former_client",
         "lost",
       ],
+      company_revenue_range: [
+        "ate_360k",
+        "de_360k_a_4_8m",
+        "de_4_8m_a_30m",
+        "acima_30m",
+      ],
       company_size: ["micro", "small", "medium", "large", "enterprise"],
       company_status: ["active", "inactive", "churned", "lost"],
       company_type: ["client", "prospect", "supplier", "partner", "other"],
+      contact_role: [
+        "decisor",
+        "usuario_final",
+        "tecnico",
+        "financeiro",
+        "outro",
+      ],
+      deal_dependency_status: [
+        "aguardando_combinar",
+        "combinado",
+        "liberado",
+        "atrasado",
+      ],
+      deal_dependency_type: [
+        "acesso_sistema",
+        "dado",
+        "pessoa",
+        "hardware",
+        "autorizacao_legal",
+        "outro",
+      ],
+      deal_pain_category: [
+        "operacional",
+        "comercial",
+        "estrategica",
+        "compliance",
+        "experiencia",
+        "outra",
+      ],
+      deal_project_type: [
+        "whatsapp_chatbot",
+        "ai_sdr",
+        "sistema_gestao",
+        "automacao_processo",
+        "integracao_sistemas",
+        "outro",
+      ],
       deal_stage: [
         "presencial_agendada",
         "presencial_feita",
@@ -4323,6 +4712,7 @@ export const Constants = {
         "fechado_perdido",
       ],
       employment_type: ["founder", "pj", "clt", "intern", "freelancer"],
+      estimation_confidence: ["alta", "media", "baixa"],
       human_role: [
         "owner",
         "developer",
