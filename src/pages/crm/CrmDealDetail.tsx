@@ -47,6 +47,49 @@ function LostDialog({ deal, open, onOpenChange }: { deal: Deal | null; open: boo
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>Marcar {deal?.code} como perdido</DialogTitle></DialogHeader><div className="space-y-2"><Label>Por que o deal foi perdido?</Label><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Cliente escolheu concorrente, orçamento não aprovado..." /></div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button variant="destructive" disabled={!reason.trim() || update.isPending || !deal} onClick={() => deal && update.mutate({ id: deal.id, updates: { stage: 'fechado_perdido', probability_pct: 0, closed_at: new Date().toISOString(), lost_reason: reason } }, { onSuccess: () => { toast.success('Deal marcado como perdido'); onOpenChange(false); } })}>Marcar como perdido</Button></DialogFooter></DialogContent></Dialog>;
 }
 
+function ProbabilitySlider({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
+  const clamp = (n: number) => Math.max(0, Math.min(100, n));
+  const adjust = (delta: number) => {
+    const next = clamp(Math.round((local + delta) / 5) * 5);
+    setLocal(next);
+    onCommit(next);
+  };
+  const stageMarks = Object.entries(DEAL_STAGE_PROBABILITY)
+    .filter(([k]) => k !== 'fechado_perdido')
+    .map(([k, v]) => ({ stage: k as DealStage, value: v }))
+    .sort((a, b) => a.value - b.value);
+  return (
+    <div className="rounded-md border border-border bg-background/40 px-3 pt-3 pb-2">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <span className="text-2xl font-semibold tabular-nums text-accent">{local}%</span>
+        <div className="flex items-center gap-1">
+          <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => adjust(-5)} disabled={local <= 0}>−</Button>
+          <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => adjust(5)} disabled={local >= 100}>+</Button>
+        </div>
+      </div>
+      <div className="px-1 py-2">
+        <Slider
+          value={[local]}
+          min={0}
+          max={100}
+          step={5}
+          onValueChange={([v]) => setLocal(v)}
+          onValueCommit={([v]) => onCommit(v)}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] tabular-nums text-muted-foreground">
+        {stageMarks.map((m) => (
+          <span key={m.stage} className={cn('transition', local >= m.value ? 'text-accent font-medium' : '')}>
+            {m.value}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DealSidebar({ deal, onWon, onLost }: { deal: Deal; onWon: () => void; onLost: () => void }) {
   const update = useUpdateDealField(deal.code);
   const { data: actors = [] } = useCrmActors();
@@ -57,7 +100,7 @@ function DealSidebar({ deal, onWon, onLost }: { deal: Deal; onWon: () => void; o
     if (stage === 'fechado_perdido') return onLost();
     save({ stage, probability_pct: DEAL_STAGE_PROBABILITY[stage], closed_at: null });
   };
-  return <aside className="space-y-5 rounded-lg border border-border bg-card/30 p-4"><Field label="Stage"><Select value={deal.stage} onValueChange={(v) => changeStage(v as DealStage)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DEAL_STAGES.map((s) => <SelectItem key={s} value={s}>{DEAL_STAGE_LABEL[s]}</SelectItem>)}</SelectContent></Select></Field><Field label="Probabilidade"><div className="flex items-center gap-3"><Slider value={[deal.probability_pct]} min={0} max={100} step={5} onValueChange={([v]) => save({ probability_pct: v })} /><span className="w-10 text-right text-sm text-foreground">{deal.probability_pct}%</span></div></Field><Field label="Valor"><Input type="number" defaultValue={deal.estimated_value ?? ''} onBlur={(e) => save({ estimated_value: e.target.value ? Number(e.target.value) : null })} /></Field><Field label="Fecha em"><Input type="date" value={deal.expected_close_date ?? ''} onChange={(e) => save({ expected_close_date: e.target.value || null })} /><p className="text-xs text-muted-foreground">{daysUntil(deal.expected_close_date)}</p></Field><Field label="Tipo de projeto"><Select value={deal.project_type ?? 'none'} onValueChange={(v) => save({ project_type: v === 'none' ? null : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem tipo</SelectItem>{PROJECT_TYPE_OPTIONS.map((p) => <SelectItem key={p} value={p}>{PROJECT_TYPE_LABEL[p]}</SelectItem>)}</SelectContent></Select></Field><Field label="Empresa"><Button asChild variant="outline" className="w-full justify-start"><Link to={`/crm/empresas/${deal.company_id}`}>{deal.company?.trade_name || deal.company?.legal_name}</Link></Button></Field><Field label="Contato"><Select value={deal.contact_person_id ?? 'none'} onValueChange={(v) => save({ contact_person_id: v === 'none' ? null : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem contato</SelectItem>{contacts.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}</SelectContent></Select></Field><Field label="Owner"><Select value={deal.owner_actor_id ?? 'none'} onValueChange={(v) => save({ owner_actor_id: v === 'none' ? null : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem owner</SelectItem>{actors.map((a) => <SelectItem key={a.id} value={a.id}>{a.display_name}</SelectItem>)}</SelectContent></Select></Field><Field label="Origem">{deal.origin_lead_id ? <Link className="text-sm text-accent hover:underline" to={`/crm/leads/${deal.origin_source ?? ''}`}>Lead original</Link> : <p className="text-sm text-muted-foreground">Criado direto</p>}</Field><Field label="Metadata"><div className="space-y-1 text-xs text-muted-foreground"><p>Stage alterado: {new Date(deal.stage_changed_at).toLocaleString('pt-BR')}</p>{deal.closed_at && <p>Fechado: {new Date(deal.closed_at).toLocaleString('pt-BR')}</p>}</div></Field></aside>;
+  return <aside className="space-y-5 rounded-lg border border-border bg-card/30 p-4"><Field label="Stage"><Select value={deal.stage} onValueChange={(v) => changeStage(v as DealStage)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DEAL_STAGES.map((s) => <SelectItem key={s} value={s}>{DEAL_STAGE_LABEL[s]}</SelectItem>)}</SelectContent></Select></Field><Field label="Probabilidade"><ProbabilitySlider value={deal.probability_pct} onCommit={(v) => save({ probability_pct: v })} /></Field><Field label="Valor"><Input type="number" defaultValue={deal.estimated_value ?? ''} onBlur={(e) => save({ estimated_value: e.target.value ? Number(e.target.value) : null })} /></Field><Field label="Fecha em"><Input type="date" value={deal.expected_close_date ?? ''} onChange={(e) => save({ expected_close_date: e.target.value || null })} /><p className="text-xs text-muted-foreground">{daysUntil(deal.expected_close_date)}</p></Field><Field label="Tipo de projeto"><Select value={deal.project_type ?? 'none'} onValueChange={(v) => save({ project_type: v === 'none' ? null : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem tipo</SelectItem>{PROJECT_TYPE_OPTIONS.map((p) => <SelectItem key={p} value={p}>{PROJECT_TYPE_LABEL[p]}</SelectItem>)}</SelectContent></Select></Field><Field label="Empresa"><Button asChild variant="outline" className="w-full justify-start"><Link to={`/crm/empresas/${deal.company_id}`}>{deal.company?.trade_name || deal.company?.legal_name}</Link></Button></Field><Field label="Contato"><Select value={deal.contact_person_id ?? 'none'} onValueChange={(v) => save({ contact_person_id: v === 'none' ? null : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem contato</SelectItem>{contacts.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}</SelectContent></Select></Field><Field label="Owner"><Select value={deal.owner_actor_id ?? 'none'} onValueChange={(v) => save({ owner_actor_id: v === 'none' ? null : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sem owner</SelectItem>{actors.map((a) => <SelectItem key={a.id} value={a.id}>{a.display_name}</SelectItem>)}</SelectContent></Select></Field><Field label="Origem">{deal.origin_lead_id ? <Link className="text-sm text-accent hover:underline" to={`/crm/leads/${deal.origin_source ?? ''}`}>Lead original</Link> : <p className="text-sm text-muted-foreground">Criado direto</p>}</Field><Field label="Metadata"><div className="space-y-1 text-xs text-muted-foreground"><p>Stage alterado: {new Date(deal.stage_changed_at).toLocaleString('pt-BR')}</p>{deal.closed_at && <p>Fechado: {new Date(deal.closed_at).toLocaleString('pt-BR')}</p>}</div></Field></aside>;
 }
 
 export default function CrmDealDetail() {
