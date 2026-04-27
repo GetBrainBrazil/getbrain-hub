@@ -13,7 +13,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar />
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
             {/* key={pathname} reseta o boundary ao navegar para outra rota */}
             <ErrorBoundary key={pathname}>{children}</ErrorBoundary>
           </main>
