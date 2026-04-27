@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, Construction } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CurrencyInput, IntegerInput } from '@/components/ui/currency-input';
@@ -10,10 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
-import { DetailBreadcrumb, DetailShell, InfoBadge, StageStepper } from '@/components/crm/CrmDetailShared';
+import { DetailBreadcrumb, DetailShell } from '@/components/crm/CrmDetailShared';
 import { StringListEditor } from '@/components/shared/StringListEditor';
 import { AcceptanceCriteriaEditor } from '@/components/shared/AcceptanceCriteriaEditor';
-import { DEAL_STAGE_PROBABILITY } from '@/constants/dealStages';
+import { DealHeader } from '@/components/crm/DealHeader';
+import { DealSidebarRich } from '@/components/crm/DealSidebarRich';
+import { ZoneCliente } from '@/components/crm/ZoneCliente';
+import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import {
   PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
@@ -21,14 +23,12 @@ import {
   COMPLEXITY_LABEL,
 } from '@/constants/dealEnumLabels';
 import { useDealByCode, useUpdateDealField } from '@/hooks/crm/useCrmDetails';
-import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
   Deal,
   DealPainCategory,
   DealProjectType,
-  DealStage,
   EstimationConfidence,
 } from '@/types/crm';
 
