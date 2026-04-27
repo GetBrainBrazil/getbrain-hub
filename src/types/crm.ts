@@ -3,6 +3,58 @@ export type LeadStatus = 'novo' | 'triagem_agendada' | 'triagem_feita' | 'descar
 export type DealStage = 'presencial_agendada' | 'presencial_feita' | 'orcamento_enviado' | 'em_negociacao' | 'fechado_ganho' | 'fechado_perdido';
 export type ActivityType = 'reuniao_presencial' | 'reuniao_virtual' | 'ligacao' | 'email' | 'whatsapp' | 'outro';
 
+// v2.0 — descoberta enxuta
+export type DealProjectType =
+  | 'whatsapp_chatbot' | 'ai_sdr' | 'sistema_gestao'
+  | 'automacao_processo' | 'integracao_sistemas' | 'outro';
+
+export type DealPainCategory =
+  | 'operacional' | 'comercial' | 'estrategica'
+  | 'compliance' | 'experiencia' | 'outra';
+
+export type EstimationConfidence = 'alta' | 'media' | 'baixa';
+
+export type DealDependencyType =
+  | 'acesso_sistema' | 'dado' | 'pessoa'
+  | 'hardware' | 'autorizacao_legal' | 'outro';
+
+export type DealDependencyStatus =
+  | 'aguardando_combinar' | 'combinado' | 'liberado' | 'atrasado';
+
+export type CompanyClientType = 'b2b' | 'b2c' | 'b2b_b2c';
+export type CompanyRevenueRange = 'ate_360k' | 'de_360k_a_4_8m' | 'de_4_8m_a_30m' | 'acima_30m';
+export type ContactRole = 'decisor' | 'usuario_final' | 'tecnico' | 'financeiro' | 'outro';
+
+export interface DealDependency {
+  id: string;
+  deal_id: string;
+  organization_id: string;
+  dependency_type: DealDependencyType;
+  description: string;
+  responsible_person_name: string | null;
+  responsible_person_role: string | null;
+  agreed_deadline: string | null;
+  status: DealDependencyStatus;
+  notes: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CompanyContactRole {
+  id: string;
+  company_person_id: string;
+  organization_id: string;
+  role: ContactRole;
+  created_at?: string;
+}
+
+// AcceptanceCriterion compartilhado com projects (mesma forma JSONB)
+export interface AcceptanceCriterion {
+  id: string;
+  text: string;
+  checked: boolean;
+}
+
 export interface CrmCompany { id: string; legal_name: string; trade_name: string | null; relationship_status?: CompanyRelationshipStatus; }
 export interface CrmPerson { id: string; full_name: string; email: string | null; phone?: string | null; role_in_company?: string | null; }
 export interface CrmActor { id: string; display_name: string; avatar_url?: string | null; }
