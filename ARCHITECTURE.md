@@ -1313,3 +1313,112 @@ Para evitar escopo inflado, o adendo não inclui:
 
 **Próximo:** 09E (redesign do CrmDealDetail consumindo os campos de descoberta).
 
+
+---
+
+## Addendum v2.0 — 27/04/2026 — Reconstrução do CRM como funil de conversão
+
+> Este addendum é **incremental**. As seções 1–4.17 anteriores permanecem válidas.
+> As novas seções 4.18 a 4.21 abaixo descrevem o redesign do módulo CRM entregue nos loops 09D + 09E (sub-loops 2A, 2B, 2C).
+
+### 4.18 Modelo de descoberta enxuta no CRM
+
+O detalhe do deal (`/crm/deals/:code`) é organizado em **5 zonas verticais** + sidebar 30%:
+
+1. **Cliente** — empresa, setor (hierárquico), tipo (B2B/B2C/B2B+B2C), faixa de receita, maturidade digital, contatos com papéis (decisor, usuário final, técnico, financeiro).
+2. **Dor** — categoria estruturada (`pain_category` enum), descrição, custo R$/mês, horas perdidas/mês, solução atual.
+3. **Solução** — `project_type_v2` (enum específico de deals), business_context, escopo IN/OUT, critérios de aceite (JSONB checklist), entregáveis, premissas, riscos, stack, estimativa baseline (horas + complexidade 1-5 + confiança).
+4. **Dependências externas** — lista estruturada com ciclo de vida (ver 4.20).
+5. **Comercial** — faixa de orçamento, pricing_rationale, decisores, concorrentes, próximo passo + data, datas desejadas.
+
+**Princípios:**
+
+- **Deal captura grosso, projeto refina fino.** O CRM não substitui o detalhamento do projeto — ele garante que o que entra para projeto já tem o mínimo necessário.
+- **Descoberta serve o funil.** Cada zona alimenta uma decisão comercial: ir/não ir, quanto cobrar, prazo realista, preparação técnica.
+- **Indicador de descoberta completa** no header do deal: 🟢 quando Dor (categoria + descrição ≥40 chars) **e** Solução (tipo + scope_summary ≥40 chars + ≥3 deliverables ou critérios) estão preenchidas. Tooltip lista o que falta quando incompleto.
+
+**Edição inline em todos os campos** (autosave on blur), reuso obrigatório dos componentes `StringListEditor` e `AcceptanceCriteriaEditor` da v1.9.
+
+### 4.19 Setores hierárquicos (`sectors`)
+
+Tabela `public.sectors` com hierarquia de **2 níveis máximo** (raiz → sub-setor), validada por trigger SQL (CHECK constraint não funcionaria com referência recursiva).
+
+- `parent_sector_id` nullable: NULL = setor raiz.
+- Trigger `sectors_max_two_levels` impede inserir/atualizar com avô (parent que já tem parent).
+- `companies.sector_id` substitui o legado `companies.industry` (texto livre).
+- Tela `/configuracoes/setores` permite criar, renomear e desativar setores e sub-setores.
+- `SectorPicker` (popover hierárquico com busca) é o único ponto de seleção de setor no sistema.
+
+`companies.industry` está **deprecated** (ver DT-09E-1).
+
+### 4.20 Dependências externas com ciclo de vida (`deal_dependencies`)
+
+Tabela `public.deal_dependencies` representa **o que precisa ser combinado/recebido do cliente** para o projeto rodar — causa-raiz #4 dos atrasos históricos da GetBrain.
+
+**Enums:**
+
+- `deal_dependency_type`: `acesso_sistema`, `dado`, `pessoa`, `hardware`, `autorizacao_legal`, `outro`.
+- `deal_dependency_status`: `aguardando_combinar` → `combinado` → `liberado` | `atrasado`.
+
+**Auto-flag de atrasado:** computado **no front** por enquanto (se `agreed_deadline < hoje` e `status != 'liberado'`, renderiza como `atrasado` sem reescrever o banco). Migração para trigger SQL planejada (DT-09E-2).
+
+**Cópia para projeto no fechamento:** quando `close_deal_as_won` é executada, todas as dependências do deal são copiadas para `project_dependencies` com `source_deal_dependency_id` preenchido, mapeando enums via tabela na RPC (DT-09E-5).
+
+### 4.21 Lista como home do CRM
+
+`/crm` abre em **modo Lista por padrão** (não kanban). Toggle Lista/Kanban persistido em `localStorage` na chave `crm_view_mode`.
+
+- **Modo Lista:** tabela densa ordenada por urgência da próxima ação (atrasados no topo, sem `next_step_date` no fim). Indicadores compactos por linha: ⚠️ próxima ação atrasada, 🟢 descoberta completa, 📄 proposta gerada, 🔗 dependência aberta atrasada.
+- **Modo Kanban:** mantém colunas por estágio. Card mostra chip colorido de tipo de projeto + indicador de descoberta + próxima ação destacada.
+
+Ordenações alternativas: próxima ação (default), valor, probabilidade, fecha em, recém-criado.
+
+> Implementação dos modos Lista e Kanban entregue no sub-loop 2C-2.
+
+---
+
+## Atualização da seção 13 — Mapa de integrações
+
+**CRM (deal ganho) → Projetos** agora copia:
+
+- Escopo estruturado completo: `scope_in`, `scope_out`, `acceptance_criteria` (JSONB), `deliverables`, `premises`, `identified_risks`, `technical_stack`.
+- **Dependências externas** com `source_deal_dependency_id` apontando para a origem.
+- Baseline de estimativa: `estimated_hours_baseline` (← `deals.estimated_hours_total`), `complexity_baseline` (← `deals.estimated_complexity`).
+- `source_deal_id` em `projects` para rastreabilidade.
+- **Histórico comercial NÃO migra:** `pain_category/description/cost/hours`, `pricing_rationale`, `budget_range_*`, `competitors`, `decision_makers`, `next_step` ficam no deal como histórico do funil.
+
+---
+
+## Atualização da seção 12 — Dívidas técnicas
+
+### Dívidas técnicas — CRM v2.0 (registradas em 09E)
+
+- **DT-09E-1: `companies.industry` deprecated.** Substituída por `companies.sector_id` na v2.0. Coluna mantida por compatibilidade com queries legadas. Remover na v2.2 após auditoria de uso.
+- **DT-09E-2: Trigger SQL de status=atrasado em `deal_dependencies`.** Hoje a flag de "atrasado" é computada no front (regra: `agreed_deadline < CURRENT_DATE AND status != 'liberado'`). Migrar para trigger BEFORE INSERT/UPDATE no banco para garantir consistência em queries diretas (relatórios, exports). Prazo: v2.1.
+- **DT-09E-3: Dois enums `project_type` coexistindo.** `project_type` (legacy, compartilhado entre `projects` e `deals.project_type`) e `deal_project_type` (novo, em `deals.project_type_v2`). A unificação foi adiada para evitar quebra de dados em projetos antigos. Avaliar migração unificadora em v2.2.
+- **DT-09E-4: `project_dependencies` sem `responsible_person_role` estruturado.** Hoje o cargo do responsável é concatenado em `requested_from` ao copiar do deal. Adicionar coluna estruturada na v2.1 e backfill via trigger.
+- **DT-09E-5: Mapping de enums na RPC `close_deal_as_won`.** Os tipos/status de `deal_dependencies` (`acesso_sistema`, `aguardando_combinar`, etc.) precisam ser mapeados para os enums equivalentes de `project_dependencies` na execução da RPC. Solução temporária: tabela CASE WHEN dentro da função. Idealmente, unificar os enums (combinar com DT-09E-3).
+
+---
+
+## Atualização da seção 17 — Histórico de versões
+
+### v2.0 — 27/04/2026
+
+**Origem:** 09E (Reconstrução do CRM como funil de conversão) — sub-loops 2A, 2B, 2C.
+
+**Mudanças:**
+
+- **Detalhe do deal reescrito** com 5 zonas (Cliente, Dor, Solução, Dependências, Comercial) + sidebar rica 30%, edição inline em todos os campos com autosave on blur.
+- **Setores hierárquicos** (tabela `sectors` com 2 níveis, trigger de validação) substituem `companies.industry`. Tela `/configuracoes/setores` para CRUD.
+- **Dependências externas com ciclo de vida** (`deal_dependencies`): 6 tipos × 4 estados, auto-flag visual de atrasado, cópia automática para `project_dependencies` no fechamento do deal.
+- **Lista como home do CRM** (`/crm` abre em modo Lista por padrão), toggle Lista/Kanban persistido em localStorage, ordenação por urgência.
+- **Card kanban redesenhado** com chip colorido de tipo + indicador de descoberta completa + próxima ação destacada.
+- **DealWonDialog reescrito** com seção colapsável de preview do que será transferido (escopo estruturado, dependências, baseline) vs. o que fica no deal (histórico comercial).
+- **`close_deal_as_won` RPC atualizada** copia escopo estruturado completo + dependências + baseline + `source_deal_id` para o projeto.
+- Reuso integral de `StringListEditor` e `AcceptanceCriteriaEditor` (v1.9) e dos componentes 2A/2B (`SectorPicker`, `CompanyContactsManager`, `ChipGroup`).
+
+**Dívidas técnicas registradas:** DT-09E-1 a DT-09E-5 (ver seção 12 atualizada).
+
+**Próximo:** v2.1 — migrar auto-flag de atrasado para trigger SQL (DT-09E-2) + estruturar `responsible_person_role` em projetos (DT-09E-4).
+
