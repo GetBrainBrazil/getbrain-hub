@@ -11,7 +11,9 @@ import {
   Table as TableIcon,
   MoreVertical,
   AlertTriangle,
+  SlidersHorizontal,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -270,20 +272,20 @@ export default function Projetos() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Projetos</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Projetos</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Gerencie todos os projetos da GetBrain em um só lugar.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-1">
+        <Button onClick={() => setCreateOpen(true)} className="gap-1 min-h-11 sm:min-h-9 w-full sm:w-auto">
           <Plus className="h-4 w-4" /> Novo Projeto
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <KPICard title="Projetos Ativos" value={kpis.ativos} icon={PlayCircle} isCurrency={false} />
         <KPICard title="Em Manutenção" value={kpis.manut} icon={Wrench} variant="success" isCurrency={false} />
         <KPICard title="Valor Contratado Total" value={kpis.contratado} icon={DollarSign} />
@@ -305,94 +307,154 @@ export default function Projetos() {
 
       {/* Filtros */}
       <Card>
-        <CardContent className="py-4 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
+        <CardContent className="py-3 sm:py-4 flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="relative flex-1 min-w-[160px] sm:min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, código ou cliente..."
+              placeholder="Buscar..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9"
+              className="pl-9 h-10 sm:h-9"
             />
           </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                Status ({statusFilter.length})
+          {/* Mobile: tudo em Sheet */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="md:hidden min-h-10 gap-1">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filtros
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                {PROJECT_STATUS_OPTIONS.map((o) => (
-                  <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={statusFilter.includes(o.value)}
-                      onCheckedChange={(c) => {
-                        setStatusFilter(
-                          c
-                            ? [...statusFilter, o.value]
-                            : statusFilter.filter((s) => s !== o.value),
-                        );
-                        setPage(1);
-                      }}
-                    />
-                    {o.label}
-                  </label>
-                ))}
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filtros</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-5">
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase text-muted-foreground">Status</p>
+                  <div className="space-y-2">
+                    {PROJECT_STATUS_OPTIONS.map((o) => (
+                      <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer min-h-10">
+                        <Checkbox
+                          checked={statusFilter.includes(o.value)}
+                          onCheckedChange={(c) => {
+                            setStatusFilter(
+                              c ? [...statusFilter, o.value] : statusFilter.filter((s) => s !== o.value),
+                            );
+                            setPage(1);
+                          }}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase text-muted-foreground">Tipo</p>
+                  <div className="space-y-2">
+                    {PROJECT_TYPE_OPTIONS.map((o) => (
+                      <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer min-h-10">
+                        <Checkbox
+                          checked={typeFilter.includes(o.value)}
+                          onCheckedChange={(c) => {
+                            setTypeFilter(
+                              c ? [...typeFilter, o.value] : typeFilter.filter((s) => s !== o.value),
+                            );
+                            setPage(1);
+                          }}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase text-muted-foreground">Cliente</p>
+                  <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setPage(1); }}>
+                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </PopoverContent>
-          </Popover>
+            </SheetContent>
+          </Sheet>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                Tipo ({typeFilter.length})
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                {PROJECT_TYPE_OPTIONS.map((o) => (
-                  <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={typeFilter.includes(o.value)}
-                      onCheckedChange={(c) => {
-                        setTypeFilter(
-                          c ? [...typeFilter, o.value] : typeFilter.filter((s) => s !== o.value),
-                        );
-                        setPage(1);
-                      }}
-                    />
-                    {o.label}
-                  </label>
+          {/* Desktop: inline */}
+          <div className="hidden md:flex items-center gap-3 flex-wrap">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Status ({statusFilter.length})
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  {PROJECT_STATUS_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={statusFilter.includes(o.value)}
+                        onCheckedChange={(c) => {
+                          setStatusFilter(
+                            c ? [...statusFilter, o.value] : statusFilter.filter((s) => s !== o.value),
+                          );
+                          setPage(1);
+                        }}
+                      />
+                      {o.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Tipo ({typeFilter.length})
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  {PROJECT_TYPE_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={typeFilter.includes(o.value)}
+                        onCheckedChange={(c) => {
+                          setTypeFilter(
+                            c ? [...typeFilter, o.value] : typeFilter.filter((s) => s !== o.value),
+                          );
+                          setPage(1);
+                        }}
+                      />
+                      {o.label}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
                 ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select
-            value={companyFilter}
-            onValueChange={(v) => {
-              setCompanyFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Tabs value={view} onValueChange={(v) => setView(v as any)}>
+          {/* Tabs view: visível só ≥md (no mobile sempre cards) */}
+          <Tabs value={view} onValueChange={(v) => setView(v as any)} className="hidden md:block ml-auto">
             <TabsList>
               <TabsTrigger value="table" className="gap-1">
                 <TableIcon className="h-4 w-4" /> Tabela
@@ -414,152 +476,196 @@ export default function Projetos() {
             Nenhum projeto encontrado com os filtros atuais.
           </CardContent>
         </Card>
-      ) : view === "table" ? (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {[
-                    ["code", "Código"],
-                    ["name", "Nome"],
-                    ["company_name", "Cliente"],
-                    ["project_type", "Tipo"],
-                    ["status", "Status"],
-                    ["contract_value", "Valor Contratado"],
-                    ["estimated_delivery_date", "Entrega Estimada"],
-                  ].map(([k, label]) => (
-                    <TableHead
-                      key={k}
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort(k as keyof ProjectRow)}
-                    >
-                      {label} {sortKey === k && (sortDir === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                  ))}
-                  <TableHead>Atores</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginated.map((r) => {
-                  const atrasado =
-                    r.estimated_delivery_date &&
-                    new Date(r.estimated_delivery_date) < new Date() &&
-                    !["entregue", "em_manutencao", "cancelado", "arquivado"].includes(r.status);
-                  return (
-                    <TableRow
-                      key={r.id}
-                      onClick={() => openDrawer(r.id)}
-                      className="cursor-pointer hover:bg-muted/40 transition-colors"
-                    >
-                      <TableCell>
-                        <span className="text-accent font-mono font-medium">
-                          {r.code}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <ActorAvatar name={r.company_name} size="sm" />
-                          <span className="text-sm">{r.company_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <TypeBadge type={r.project_type} />
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={r.status} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {r.contract_value ? formatCurrency(r.contract_value) : "—"}
-                      </TableCell>
-                      <TableCell className={cn(atrasado && "text-destructive font-medium")}>
-                        {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {r.actors.length > 0 ? (
-                          <ActorAvatarStack actors={r.actors} />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            <div className="flex items-center justify-between p-4 text-sm text-muted-foreground border-t">
-              <span>
-                {filtered.length} projeto(s) • Página {page} de {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
+      ) : (
+        <>
+          {/* Mobile: sempre cards */}
+          <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {paginated.map((r) => {
+              const prog = progress(r.start_date, r.estimated_delivery_date);
+              return (
+                <Card
+                  key={r.id}
+                  className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]"
+                  onClick={() => openDrawer(r.id)}
                 >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-accent font-mono text-xs font-semibold">{r.code}</span>
+                      <StatusBadge status={r.status} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <h3 className="font-semibold text-sm leading-tight line-clamp-2">{r.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <ActorAvatar name={r.company_name} size="sm" />
+                      <span className="text-xs text-muted-foreground truncate">{r.company_name}</span>
+                    </div>
+                    <TypeBadge type={r.project_type} />
+                    {r.contract_value && (
+                      <p className="text-sm font-bold">{formatCurrency(r.contract_value)}</p>
+                    )}
+                    {prog !== null && (
+                      <div>
+                        <Progress value={prog} className="h-1.5" />
+                        <p className="text-[10px] text-muted-foreground mt-1">{Math.round(prog)}% do prazo</p>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between pt-1">
+                      {r.actors.length > 0 ? <ActorAvatarStack actors={r.actors} /> : <span />}
+                      <span className="text-[10px] text-muted-foreground">
+                        {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "Sem prazo"}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+              <span>{filtered.length} projeto(s)</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>
                   Anterior
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page === totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
+                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
                   Próxima
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {paginated.map((r) => {
-            const prog = progress(r.start_date, r.estimated_delivery_date);
-            return (
-              <Card
-                key={r.id}
-                className="hover:shadow-md transition-shadow cursor-pointer animate-fade-slide"
-                onClick={() => openDrawer(r.id)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-accent font-mono text-sm font-semibold">{r.code}</span>
-                    <StatusBadge status={r.status} />
+          </div>
+
+          {/* Desktop ≥md: respeita view (table/cards) */}
+          <div className="hidden md:block">
+            {view === "table" ? (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {[
+                            ["code", "Código"],
+                            ["name", "Nome"],
+                            ["company_name", "Cliente"],
+                            ["project_type", "Tipo"],
+                            ["status", "Status"],
+                            ["contract_value", "Valor Contratado"],
+                            ["estimated_delivery_date", "Entrega Estimada"],
+                          ].map(([k, label]) => (
+                            <TableHead
+                              key={k}
+                              className="cursor-pointer select-none"
+                              onClick={() => toggleSort(k as keyof ProjectRow)}
+                            >
+                              {label} {sortKey === k && (sortDir === "asc" ? "↑" : "↓")}
+                            </TableHead>
+                          ))}
+                          <TableHead>Atores</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginated.map((r) => {
+                          const atrasado =
+                            r.estimated_delivery_date &&
+                            new Date(r.estimated_delivery_date) < new Date() &&
+                            !["entregue", "em_manutencao", "cancelado", "arquivado"].includes(r.status);
+                          return (
+                            <TableRow
+                              key={r.id}
+                              onClick={() => openDrawer(r.id)}
+                              className="cursor-pointer hover:bg-muted/40 transition-colors"
+                            >
+                              <TableCell>
+                                <span className="text-accent font-mono font-medium">{r.code}</span>
+                              </TableCell>
+                              <TableCell className="font-medium">{r.name}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <ActorAvatar name={r.company_name} size="sm" />
+                                  <span className="text-sm">{r.company_name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell><TypeBadge type={r.project_type} /></TableCell>
+                              <TableCell><StatusBadge status={r.status} /></TableCell>
+                              <TableCell className="text-right">
+                                {r.contract_value ? formatCurrency(r.contract_value) : "—"}
+                              </TableCell>
+                              <TableCell className={cn(atrasado && "text-destructive font-medium")}>
+                                {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {r.actors.length > 0 ? (
+                                  <ActorAvatarStack actors={r.actors} />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <h3 className="font-semibold leading-tight line-clamp-2">{r.name}</h3>
-                  <div className="flex items-center gap-2">
-                    <ActorAvatar name={r.company_name} size="sm" />
-                    <span className="text-sm text-muted-foreground truncate">{r.company_name}</span>
-                  </div>
-                  <TypeBadge type={r.project_type} />
-                  {r.contract_value && (
-                    <p className="text-sm font-bold">{formatCurrency(r.contract_value)}</p>
-                  )}
-                  {prog !== null && (
-                    <div>
-                      <Progress value={prog} className="h-1.5" />
-                      <p className="text-xs text-muted-foreground mt-1">{Math.round(prog)}% do prazo</p>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-1">
-                    {r.actors.length > 0 ? (
-                      <ActorAvatarStack actors={r.actors} />
-                    ) : (
-                      <span />
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "Sem prazo"}
+                  <div className="flex items-center justify-between p-4 text-sm text-muted-foreground border-t">
+                    <span>
+                      {filtered.length} projeto(s) • Página {page} de {totalPages}
                     </span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>
+                        Anterior
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+                        Próxima
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {paginated.map((r) => {
+                  const prog = progress(r.start_date, r.estimated_delivery_date);
+                  return (
+                    <Card
+                      key={r.id}
+                      className="hover:shadow-md transition-shadow cursor-pointer animate-fade-slide"
+                      onClick={() => openDrawer(r.id)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-accent font-mono text-sm font-semibold">{r.code}</span>
+                          <StatusBadge status={r.status} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <h3 className="font-semibold leading-tight line-clamp-2">{r.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <ActorAvatar name={r.company_name} size="sm" />
+                          <span className="text-sm text-muted-foreground truncate">{r.company_name}</span>
+                        </div>
+                        <TypeBadge type={r.project_type} />
+                        {r.contract_value && (
+                          <p className="text-sm font-bold">{formatCurrency(r.contract_value)}</p>
+                        )}
+                        {prog !== null && (
+                          <div>
+                            <Progress value={prog} className="h-1.5" />
+                            <p className="text-xs text-muted-foreground mt-1">{Math.round(prog)}% do prazo</p>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-1">
+                          {r.actors.length > 0 ? <ActorAvatarStack actors={r.actors} /> : <span />}
+                          <span className="text-xs text-muted-foreground">
+                            {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "Sem prazo"}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <NovoProjetoDialog

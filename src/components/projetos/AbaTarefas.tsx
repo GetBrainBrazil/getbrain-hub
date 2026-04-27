@@ -76,17 +76,17 @@ export function AbaTarefas({ projectId, projectCode }: Props) {
           />
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p className="text-xs text-muted-foreground">
             {tasks.length} tarefa(s) ativa(s) neste projeto
           </p>
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button size="sm" onClick={() => setCreateOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
               <Plus className="h-4 w-4" /> Nova tarefa
             </Button>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
               <Link to={`/dev/kanban?projects=${projectCode}`}>
-                <ExternalLink className="h-4 w-4" /> Ver na Área Dev
+                <ExternalLink className="h-4 w-4" /> <span className="hidden xs:inline sm:inline">Ver na Área Dev</span><span className="inline xs:hidden sm:hidden">Área Dev</span>
               </Link>
             </Button>
           </div>
@@ -100,35 +100,37 @@ export function AbaTarefas({ projectId, projectCode }: Props) {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {COLUMNS.map((col) => {
-              const list = grouped.get(col.id) ?? [];
-              return (
-                <div key={col.id} className="rounded-lg bg-muted/20 p-3">
-                  <div className="mb-2 flex items-center justify-between px-1">
-                    <h4 className="text-xs font-semibold text-foreground">{col.title}</h4>
-                    <span className={cn(
-                      "rounded-full bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground",
-                    )}>
-                      {list.length}
-                    </span>
+          <div className="-mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto sm:overflow-visible">
+            <div className="grid grid-flow-col auto-cols-[85vw] sm:auto-cols-auto sm:grid-flow-row sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              {COLUMNS.map((col) => {
+                const list = grouped.get(col.id) ?? [];
+                return (
+                  <div key={col.id} className="rounded-lg bg-muted/20 p-3 min-w-0">
+                    <div className="mb-2 flex items-center justify-between px-1">
+                      <h4 className="text-xs font-semibold text-foreground">{col.title}</h4>
+                      <span className={cn(
+                        "rounded-full bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground",
+                      )}>
+                        {list.length}
+                      </span>
+                    </div>
+                    <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
+                      {list.map((t) => (
+                        <TaskCard
+                          key={t.id}
+                          task={t}
+                          compact
+                          onClick={() => navigate(`/dev/tasks/${t.code}`)}
+                        />
+                      ))}
+                      {list.length === 0 && (
+                        <p className="px-2 py-3 text-[10px] text-muted-foreground">Vazio</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
-                    {list.map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        task={t}
-                        compact
-                        onClick={() => navigate(`/dev/tasks/${t.code}`)}
-                      />
-                    ))}
-                    {list.length === 0 && (
-                      <p className="px-2 py-3 text-[10px] text-muted-foreground">Vazio</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
