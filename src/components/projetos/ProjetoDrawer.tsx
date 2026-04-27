@@ -227,8 +227,9 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
     if (description !== (project.description ?? "")) {
       updates.description = description || null;
     }
-    if (criteria !== (project.acceptance_criteria ?? "")) {
-      updates.acceptance_criteria = criteria || null;
+    const currentAc = Array.isArray(project.acceptance_criteria) ? project.acceptance_criteria : [];
+    if (JSON.stringify(criteria) !== JSON.stringify(currentAc)) {
+      updates.acceptance_criteria = criteria as never;
     }
     if (notes !== (project.notes ?? "")) {
       updates.notes = notes || null;
