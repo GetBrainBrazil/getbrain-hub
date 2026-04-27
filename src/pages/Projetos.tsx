@@ -48,6 +48,8 @@ import {
   PROJECT_TYPE_OPTIONS,
   ProjectStatus,
   ProjectType,
+  getStatusBadgeClass,
+  getStatusLabel,
 } from "@/lib/projetos-helpers";
 import { StatusBadge, TypeBadge } from "@/components/projetos/ProjetoBadges";
 import { ActorAvatar, ActorAvatarStack } from "@/components/projetos/ActorAvatar";
