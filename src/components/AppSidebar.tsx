@@ -76,7 +76,7 @@ const navItems: NavItem[] = [
 
 const itemClasses = (active: boolean) =>
   cn(
-    "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors border-l-2",
+    "w-full flex items-center gap-3 px-3 py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-md text-sm font-medium transition-colors border-l-2",
     active
       ? "bg-sidebar-accent text-accent border-accent"
       : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -203,7 +203,7 @@ export function AppSidebar() {
                             to={sub.url}
                             end
                             className={cn(
-                              "block px-3 py-1.5 rounded-md text-sm transition-colors",
+                              "block px-3 py-2 md:py-1.5 min-h-10 md:min-h-0 rounded-md text-sm transition-colors flex items-center",
                               subActive
                                 ? "text-accent font-medium bg-sidebar-accent/40"
                                 : "text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-accent/30"
