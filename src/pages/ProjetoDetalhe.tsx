@@ -450,7 +450,7 @@ export default function ProjetoDetalhe() {
     setDraftEstimated(source.estimated_delivery_date ?? null);
     setDraftActual(source.actual_delivery_date ?? null);
     setDraftDescription(source.description ?? "");
-    setDraftCriteria(source.acceptance_criteria ?? "");
+    // acceptance_criteria agora é JSONB estruturado, gerenciado pelo AcceptanceCriteriaEditor (sem draft).
     setDraftNotes(source.notes ?? "");
     setDraftCompanyId((source as any).company_id ?? "");
   }
