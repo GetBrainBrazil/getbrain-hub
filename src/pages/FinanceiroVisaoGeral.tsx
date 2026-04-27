@@ -633,6 +633,9 @@ export default function FinanceiroVisaoGeral() {
           </Card>
         </DashboardSection>
 
+        {/* ============== Diagnóstico de saldos (somente leitura) ============== */}
+        <BlocoDiagnosticoSaldos />
+
         {/* ============== Bloco 4 — Fluxo Projetado ============== */}
         <DashboardSection
           title="Fluxo de caixa projetado"
