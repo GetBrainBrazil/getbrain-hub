@@ -16,6 +16,7 @@ import { DealHeader } from '@/components/crm/DealHeader';
 import { DealSidebarRich } from '@/components/crm/DealSidebarRich';
 import { ZoneCliente } from '@/components/crm/ZoneCliente';
 import { ZoneComercial } from '@/components/crm/ZoneComercial';
+import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
 import {
   PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
@@ -527,7 +528,7 @@ export default function CrmDealDetail() {
           <ZoneCliente deal={deal} />
           <ZoneDor deal={deal} save={save} />
           <ZoneSolucao deal={deal} save={save} />
-          <ZonePlaceholderDeps />
+          <ZoneDependencias dealId={deal.id} />
           <ZoneComercial deal={deal} />
         </main>
 
@@ -537,18 +538,4 @@ export default function CrmDealDetail() {
   );
 }
 
-// Único placeholder restante: Zona Dependências (Loop 2C)
-function ZonePlaceholderDeps() {
-  return (
-    <section id="zona-dependencias" className="scroll-mt-24 rounded-lg border border-dashed border-border/60 bg-card/10 p-5">
-      <header className="mb-2 flex items-baseline gap-3">
-        <span className="font-mono text-xs text-muted-foreground">04</span>
-        <h2 className="text-base font-semibold tracking-tight text-muted-foreground">Dependências</h2>
-      </header>
-      <p className="rounded-md bg-background/30 p-4 text-sm text-muted-foreground">
-        O que precisamos receber do cliente pra projeto rodar (acessos, dados, decisores). Chega no Loop 2C.
-      </p>
-    </section>
-  );
-}
 

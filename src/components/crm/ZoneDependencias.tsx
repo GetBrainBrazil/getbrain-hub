@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -269,7 +269,7 @@ function DependencyDialog({ open, onOpenChange, mode, initial, onSubmit }: Dialo
   const [saving, setSaving] = useState(false);
 
   // Reset quando reabre com novo initial
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       setType(initial?.dependency_type ?? 'acesso_sistema');
       setDescription(initial?.description ?? '');
