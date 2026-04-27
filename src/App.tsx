@@ -47,7 +47,6 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
 import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
-import AdminAgenciaPage from "./pages/admin/AdminAgenciaPage";
 import AdminLogsPage from "./pages/admin/AdminLogsPage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
@@ -141,7 +140,7 @@ const App = () => (
               <Route index element={<Navigate to="usuarios" replace />} />
               <Route path="usuarios" element={<AdminUsuariosList />} />
               <Route path="permissoes" element={<AdminPermissoesPage />} />
-              <Route path="agencia" element={<AdminAgenciaPage />} />
+              <Route path="agencia" element={<Navigate to="/admin/usuarios" replace />} />
               <Route path="logs" element={<AdminLogsPage />} />
             </Route>
             <Route path="/admin/usuarios/:id" element={<ProtectedRoute><UsuarioFichaPage mode="admin" /></ProtectedRoute>} />
