@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, CalendarDays, Check, Clock, Pencil, Percent, TrendingUp, Wallet } from 'lucide-react';
+import { Building2, CalendarDays, Clock, Pencil, Percent, TrendingUp, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -22,27 +22,183 @@ interface Props {
   onCloseRequest: (kind: 'won' | 'lost') => void;
 }
 
-function MiniKPI({
-  icon: Icon, label, value, accent = false,
-}: { icon: React.ComponentType<{ className?: string }>; label: string; value: React.ReactNode; accent?: boolean }) {
+/* ------------------------------------------------------------------ */
+/* Editable KPI                                                        */
+/* ------------------------------------------------------------------ */
+
+interface EditableKPIProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  display: React.ReactNode;
+  accent?: boolean;
+  /** Render the editor; receives a `done` callback to close. */
+  renderEditor: (done: () => void) => React.ReactNode;
+}
+
+function EditableKPI({ icon: Icon, label, display, accent, renderEditor }: EditableKPIProps) {
+  const [editing, setEditing] = useState(false);
   return (
-    <div className={cn(
-      'flex min-w-[140px] flex-1 items-center gap-3 rounded-md border bg-background/40 px-3 py-2.5',
-      accent ? 'border-accent/40' : 'border-border',
-    )}>
+    <div
+      className={cn(
+        'group relative flex min-w-[140px] flex-1 items-center gap-3 rounded-md border bg-background/40 px-3 py-2.5 transition-colors',
+        accent ? 'border-accent/40' : 'border-border',
+        !editing && 'cursor-pointer hover:border-accent/60 hover:bg-background/60',
+      )}
+      onClick={() => { if (!editing) setEditing(true); }}
+    >
       <span className={cn(
         'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
         accent ? 'bg-accent/15 text-accent' : 'bg-muted/40 text-muted-foreground',
       )}>
         <Icon className="h-4 w-4" />
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="truncate text-sm font-semibold text-foreground">{value}</p>
+        {editing ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            {renderEditor(() => setEditing(false))}
+          </div>
+        ) : (
+          <p className="truncate text-sm font-semibold text-foreground">{display}</p>
+        )}
       </div>
+      {!editing && (
+        <Pencil className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      )}
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Generic editors                                                     */
+/* ------------------------------------------------------------------ */
+
+function NumberEditor({
+  initial, onSave, done, min, max, step = '1', suffix,
+}: {
+  initial: number | null;
+  onSave: (v: number | null) => void;
+  done: () => void;
+  min?: number;
+  max?: number;
+  step?: string;
+  suffix?: string;
+}) {
+  const [val, setVal] = useState(initial == null ? '' : String(initial));
+  const commit = () => {
+    const trimmed = val.trim();
+    if (trimmed === '') { onSave(null); done(); return; }
+    let n = Number(trimmed.replace(',', '.'));
+    if (Number.isNaN(n)) { done(); return; }
+    if (min != null) n = Math.max(min, n);
+    if (max != null) n = Math.min(max, n);
+    onSave(n);
+    done();
+  };
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        autoFocus
+        type="number"
+        inputMode="decimal"
+        value={val}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') done();
+        }}
+        className="h-7 bg-background/80 px-2 text-sm font-semibold"
+      />
+      {suffix && <span className="text-xs text-muted-foreground">{suffix}</span>}
+    </div>
+  );
+}
+
+function DateEditor({
+  initial, onSave, done,
+}: {
+  initial: string | null;
+  onSave: (v: string | null) => void;
+  done: () => void;
+}) {
+  const [val, setVal] = useState(initial ?? '');
+  const commit = () => {
+    onSave(val ? val : null);
+    done();
+  };
+  return (
+    <Input
+      autoFocus
+      type="date"
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') done();
+      }}
+      className="h-7 bg-background/80 px-2 text-sm font-semibold"
+    />
+  );
+}
+
+function NextStepEditor({
+  initialText, initialDate, onSave, done,
+}: {
+  initialText: string | null;
+  initialDate: string | null;
+  onSave: (text: string | null, date: string | null) => void;
+  done: () => void;
+}) {
+  const [text, setText] = useState(initialText ?? '');
+  const [date, setDate] = useState(initialDate ?? '');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const commit = () => {
+    const t = text.trim();
+    onSave(t ? t : null, date ? date : null);
+    done();
+  };
+
+  // close when focus leaves the container
+  const handleBlur = (e: React.FocusEvent) => {
+    if (!containerRef.current?.contains(e.relatedTarget as Node)) commit();
+  };
+
+  return (
+    <div ref={containerRef} className="flex flex-col gap-1" onBlur={handleBlur}>
+      <Input
+        autoFocus
+        value={text}
+        placeholder="Próxima ação…"
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') done();
+        }}
+        className="h-7 bg-background/80 px-2 text-sm font-semibold"
+      />
+      <Input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') done();
+        }}
+        className="h-7 bg-background/80 px-2 text-xs"
+      />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Completeness                                                        */
+/* ------------------------------------------------------------------ */
 
 function CompletenessBadge({ pct, painOk, solucaoOk }: { pct: number; painOk: boolean; solucaoOk: boolean }) {
   const tone = pct === 100
@@ -61,12 +217,26 @@ function CompletenessBadge({ pct, painOk, solucaoOk }: { pct: number; painOk: bo
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Header                                                              */
+/* ------------------------------------------------------------------ */
+
 export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRequest }: Props) {
   const update = useUpdateDealField(deal.code);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(deal.title);
 
   useEffect(() => { setTitle(deal.title); }, [deal.id, deal.title]);
+
+  const saveField = (updates: Partial<Deal>, label: string) => {
+    update.mutate(
+      { id: deal.id, updates: updates as any },
+      {
+        onSuccess: () => toast.success(`${label} atualizado`),
+        onError: (err: any) => toast.error(`Erro: ${err?.message ?? 'falhou'}`),
+      },
+    );
+  };
 
   const saveTitle = () => {
     const trimmed = title.trim();
@@ -148,33 +318,70 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
       {/* Linha 3: pipeline horizontal */}
       <StageStepper stage={deal.stage} onChange={stageChange} />
 
-      {/* Linha 4: mini-KPIs */}
+      {/* Linha 4: mini-KPIs editáveis */}
       <div className="flex flex-wrap gap-2">
-        <MiniKPI
+        <EditableKPI
           icon={Wallet}
           label="Valor estimado"
-          value={<span className="font-mono">{formatCurrency(Number(deal.estimated_value ?? 0))}</span>}
           accent
+          display={<span className="font-mono">{formatCurrency(Number(deal.estimated_value ?? 0))}</span>}
+          renderEditor={(done) => (
+            <NumberEditor
+              initial={deal.estimated_value}
+              min={0}
+              step="100"
+              onSave={(v) => saveField({ estimated_value: v }, 'Valor estimado')}
+              done={done}
+            />
+          )}
         />
-        <MiniKPI
+        <EditableKPI
           icon={Percent}
           label="Probabilidade"
-          value={<span className="font-mono">{deal.probability_pct}%</span>}
+          display={<span className="font-mono">{deal.probability_pct}%</span>}
+          renderEditor={(done) => (
+            <NumberEditor
+              initial={deal.probability_pct}
+              min={0}
+              max={100}
+              step="5"
+              suffix="%"
+              onSave={(v) => saveField({ probability_pct: v ?? 0 }, 'Probabilidade')}
+              done={done}
+            />
+          )}
         />
-        <MiniKPI
+        <EditableKPI
           icon={CalendarDays}
           label="Fecha em"
-          value={fmtDate(deal.expected_close_date)}
+          display={fmtDate(deal.expected_close_date)}
+          renderEditor={(done) => (
+            <DateEditor
+              initial={deal.expected_close_date}
+              onSave={(v) => saveField({ expected_close_date: v }, 'Data de fechamento')}
+              done={done}
+            />
+          )}
         />
-        <MiniKPI
+        <EditableKPI
           icon={Clock}
           label="Estimativa"
-          value={deal.estimated_hours_total ? `${deal.estimated_hours_total} h` : '—'}
+          display={deal.estimated_hours_total ? `${deal.estimated_hours_total} h` : '—'}
+          renderEditor={(done) => (
+            <NumberEditor
+              initial={deal.estimated_hours_total}
+              min={0}
+              step="1"
+              suffix="h"
+              onSave={(v) => saveField({ estimated_hours_total: v }, 'Estimativa')}
+              done={done}
+            />
+          )}
         />
-        <MiniKPI
+        <EditableKPI
           icon={TrendingUp}
           label="Próxima ação"
-          value={
+          display={
             <span className="flex items-center gap-1.5">
               {deal.next_step ? (
                 <>
@@ -186,6 +393,14 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
               ) : '—'}
             </span>
           }
+          renderEditor={(done) => (
+            <NextStepEditor
+              initialText={deal.next_step}
+              initialDate={deal.next_step_date}
+              onSave={(text, date) => saveField({ next_step: text, next_step_date: date }, 'Próxima ação')}
+              done={done}
+            />
+          )}
         />
       </div>
     </header>
