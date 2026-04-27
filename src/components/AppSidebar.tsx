@@ -3,9 +3,9 @@ import {
   Home,
   DollarSign,
   FolderKanban,
-  Users,
   Code2,
   Handshake,
+  Settings,
   ChevronDown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -68,6 +68,14 @@ const navItems: NavItem[] = [
       { title: "Kanban", url: "/dev/kanban" },
       { title: "Sprints", url: "/dev/sprints" },
       { title: "Backlog", url: "/dev/backlog" },
+    ],
+  },
+  {
+    title: "Configurações",
+    url: "/configuracoes/setores",
+    icon: Settings,
+    children: [
+      { title: "Setores", url: "/configuracoes/setores" },
     ],
   },
 ];
