@@ -51,6 +51,7 @@ import AdminLogsPage from "./pages/admin/AdminLogsPage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
+import Setores from "./pages/configuracoes/Setores";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -136,6 +137,7 @@ const App = () => (
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<Navigate to="/admin/usuarios" replace />} />
+            <Route path="/configuracoes/setores" element={<ProtectedRoute><Setores /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="usuarios" replace />} />
