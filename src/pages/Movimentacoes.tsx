@@ -1390,7 +1390,7 @@ export default function Movimentacoes() {
             />
 
             {/* Linha 1: Data, Forma, Conta */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
                   Data do {isPagar ? "Pagamento" : "Recebimento"}
@@ -1419,7 +1419,7 @@ export default function Movimentacoes() {
 
             {/* Bloco Valor + ajustes */}
             <div className="rounded-lg border border-border p-4 space-y-3">
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 <div>
                   <Label className="text-[11px] font-medium text-foreground mb-1.5 block">
                     Valor Base (R$) *
@@ -1455,7 +1455,7 @@ export default function Movimentacoes() {
             {/* Impostos retidos */}
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
               <p className="text-[11px] font-semibold text-destructive uppercase tracking-widest">Impostos Retidos</p>
-              <div className="grid grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {(["pis", "cofins", "csll", "iss", "ir", "inss"] as const).map(k => (
                   <div key={k}>
                     <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block uppercase">{k}</Label>
@@ -1466,7 +1466,7 @@ export default function Movimentacoes() {
             </div>
 
             {/* Resumo */}
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 grid grid-cols-6 gap-3 text-center">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Previsão Original</p>
                 <p className="text-xs font-semibold text-foreground">{selectedMov?.data_vencimento ? formatDate(selectedMov.data_vencimento) : "—"}</p>
