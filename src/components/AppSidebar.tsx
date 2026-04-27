@@ -29,7 +29,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { title: "Dashboard", url: "/", icon: Home },
+  { title: "Dashboard", url: "/dashboard", icon: Home },
   {
     title: "Financeiro",
     url: "/financeiro",
@@ -87,7 +87,9 @@ export function AppSidebar() {
   const navigate = useNavigate();
 
   const isExactActive = (url: string) =>
-    url === "/" ? location.pathname === "/" : location.pathname === url;
+    url === "/dashboard"
+      ? location.pathname === "/dashboard" || location.pathname === "/"
+      : location.pathname === url;
 
   const isGroupOpen = (item: NavItem) =>
     !!item.children && location.pathname.startsWith(item.url);

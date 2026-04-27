@@ -8,6 +8,7 @@ export function isReturnableRoute(route: string | null): route is string {
   return Boolean(
     route &&
     route !== "/" &&
+    route !== "/dashboard" &&
     !route.startsWith("/admin") &&
     route !== "/perfil" &&
     route !== "/login"
@@ -19,11 +20,23 @@ export function RouteTracker() {
   const { pathname, search } = useLocation();
 
   useEffect(() => {
-    if (pathname !== "/login" && !pathname.startsWith("/admin") && pathname !== "/perfil") {
+    // Don't track Dashboard itself or root — they are not "returnable" destinations
+    const isTrackable =
+      pathname !== "/login" &&
+      pathname !== "/" &&
+      pathname !== "/dashboard" &&
+      !pathname.startsWith("/admin") &&
+      pathname !== "/perfil";
+    if (isTrackable) {
       sessionStorage.setItem(ROUTE_KEY, pathname + (search || ""));
     }
     // Track last non-admin / non-perfil route so the "back" button in Admin works
-    if (!pathname.startsWith("/admin") && pathname !== "/perfil" && pathname !== "/login") {
+    if (
+      !pathname.startsWith("/admin") &&
+      pathname !== "/perfil" &&
+      pathname !== "/login" &&
+      pathname !== "/dashboard"
+    ) {
       sessionStorage.setItem(PRE_ADMIN_KEY, pathname + (search || ""));
     }
   }, [pathname, search]);

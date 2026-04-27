@@ -174,7 +174,7 @@ function ContactRow({
   };
 
   return (
-    <>
+    <div className="contents">
     {confirmDialog}
     <div className="group/contact flex items-start gap-3 rounded-md border border-transparent px-2 py-2.5 transition-colors hover:border-border/60 hover:bg-muted/30">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
@@ -238,7 +238,7 @@ function ContactRow({
         </Tooltip>
       </div>
     </div>
-    </>
+    </div>
   );
 }
 
