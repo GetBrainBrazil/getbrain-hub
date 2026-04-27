@@ -231,25 +231,19 @@ export default function Orcamentos() {
       ) : viewMode === "kanban" ? (
         <OrcamentoKanban
           rows={data}
-          onCardClick={(r) => setDrawerId(r.id)}
+          onCardClick={(r) => navigate(`/financeiro/orcamentos/${r.id}/editar`)}
         />
       ) : (
         <OrcamentoTabela
           rows={data}
           loading={isLoading}
           onAction={handleAction}
-          onRowClick={(r) => setDrawerId(r.id)}
+          onRowClick={(r) => navigate(`/financeiro/orcamentos/${r.id}/editar`)}
         />
       )}
 
       <NovoOrcamentoModal open={novoOpen} onOpenChange={setNovoOpen} />
       {confirmDialog}
-
-      <OrcamentoDrawer
-        proposalId={drawerId}
-        onClose={() => setDrawerId(null)}
-      />
-
       {/* Render off-screen template for PDF generation */}
       {pdfRow && (
         <div
