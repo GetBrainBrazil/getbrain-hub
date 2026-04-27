@@ -94,29 +94,35 @@ export default function CrmCalendar() {
     .sort((a, b) => new Date(a.scheduled_at ?? a.happened_at ?? 0).getTime() - new Date(b.scheduled_at ?? b.happened_at ?? 0).getTime());
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/40 p-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 rounded-lg border border-border bg-card/40 p-3 sm:p-4">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Calendário comercial</h2>
-          <p className="text-sm text-muted-foreground">Agenda real de reuniões, ligações, emails e follow-ups do CRM.</p>
+          <h2 className="text-lg sm:text-xl font-semibold text-foreground">Calendário comercial</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">Agenda real de reuniões, ligações, emails e follow-ups do CRM.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <ToggleGroup type="single" value={view} onValueChange={(value) => value && setView(value as 'month' | 'agenda')}>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Mobile: agenda only */}
+          <div className="sm:hidden flex-1 text-xs text-muted-foreground text-center">Agenda</div>
+          <ToggleGroup type="single" value={view} onValueChange={(value) => value && setView(value as 'month' | 'agenda')} className="hidden sm:flex">
             <ToggleGroupItem value="month">Mês</ToggleGroupItem>
             <ToggleGroupItem value="agenda">Agenda</ToggleGroupItem>
           </ToggleGroup>
-          <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nova atividade</Button>
+          <Button size="sm" onClick={() => setOpen(true)} className="min-h-10 sm:min-h-9 shrink-0">
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Nova atividade</span>
+          </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/30 p-3">
-        <MultiFilter label="Tipo" selected={calendarTypes} onChange={setCalendarTypes} options={Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))} />
-        <MultiFilter label="Owner" selected={calendarOwners} onChange={setCalendarOwners} options={actors.map((actor) => ({ value: actor.id, label: actor.display_name }))} />
-        <MultiFilter label="Status" selected={calendarStatuses} onChange={setCalendarStatuses} options={[{ value: 'agendadas', label: 'Agendadas' }, { value: 'realizadas', label: 'Realizadas' }, { value: 'atrasadas', label: 'Atrasadas' }]} />
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCurrentMonth(format(subMonths(monthDate, 1), 'yyyy-MM-01'))}>Anterior</Button>
-          <div className="min-w-[170px] text-center text-sm font-medium text-foreground">{format(monthDate, "MMMM 'de' yyyy", { locale: ptBR })}</div>
-          <Button variant="outline" size="sm" onClick={() => setCurrentMonth(format(addMonths(monthDate, 1), 'yyyy-MM-01'))}>Próximo</Button>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 rounded-lg border border-border bg-card/30 p-2 sm:p-3">
+        <div className="flex flex-wrap gap-2">
+          <MultiFilter label="Tipo" selected={calendarTypes} onChange={setCalendarTypes} options={Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))} />
+          <MultiFilter label="Owner" selected={calendarOwners} onChange={setCalendarOwners} options={actors.map((actor) => ({ value: actor.id, label: actor.display_name }))} />
+          <MultiFilter label="Status" selected={calendarStatuses} onChange={setCalendarStatuses} options={[{ value: 'agendadas', label: 'Agendadas' }, { value: 'realizadas', label: 'Realizadas' }, { value: 'atrasadas', label: 'Atrasadas' }]} />
+        </div>
+        <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto">
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-h-10 sm:min-h-9" onClick={() => setCurrentMonth(format(subMonths(monthDate, 1), 'yyyy-MM-01'))}>Ant.</Button>
+          <div className="flex-1 sm:min-w-[170px] text-center text-xs sm:text-sm font-medium text-foreground">{format(monthDate, "MMM 'de' yyyy", { locale: ptBR })}</div>
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-h-10 sm:min-h-9" onClick={() => setCurrentMonth(format(addMonths(monthDate, 1), 'yyyy-MM-01'))}>Próx.</Button>
         </div>
       </div>
 
@@ -128,7 +134,7 @@ export default function CrmCalendar() {
           </CardHeader>
           <CardContent>
             {view === 'month' ? (
-              <div className="grid grid-cols-7 gap-2">
+              <div className="hidden sm:grid grid-cols-7 gap-2">
                 {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day) => (
                   <div key={day} className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{day}</div>
                 ))}
@@ -158,7 +164,41 @@ export default function CrmCalendar() {
                   );
                 })}
               </div>
-            ) : (
+            ) : null}
+            {(view === 'agenda' || view === 'month') && (
+              <div className={view === 'month' ? 'sm:hidden space-y-2 mt-2' : 'space-y-3'}>
+                {view === 'month' && (
+                  <p className="text-xs text-muted-foreground text-center pb-2">Visão mensal disponível em telas maiores. Mostrando agenda.</p>
+                )}
+                {upcoming.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma atividade encontrada para os filtros atuais.</p>
+                ) : (
+                  upcoming.map((item) => {
+                    const status = getStatus(item);
+                    const href = getHref(item);
+                    return (
+                      <div key={item.id} className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 rounded-lg border border-border bg-background/40 p-3">
+                        <div className="min-w-0 flex-1">
+                          <button type="button" onClick={() => href && navigate(href)} className="text-left text-sm font-medium text-foreground hover:text-accent">{item.title}</button>
+                          <p className="text-xs text-muted-foreground">{format(new Date(item.scheduled_at ?? item.happened_at ?? new Date()), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} · {TYPE_LABEL[item.type]}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.owner?.display_name ?? 'Sem responsável'} {item.deal_code ? `· ${item.deal_code}` : item.lead_code ? `· ${item.lead_code}` : ''}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className={STATUS_STYLES[status]}>{status}</Badge>
+                          {!item.happened_at && (
+                            <Button size="sm" variant="outline" className="min-h-9" onClick={() => updateActivity.mutate({ id: item.id, updates: { happened_at: new Date().toISOString() } })}>
+                              <CheckCircle2 className="h-4 w-4" /> <span className="hidden sm:inline">Marcar feita</span>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+            {false && (
+
               <div className="space-y-3">
                 {upcoming.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhuma atividade encontrada para os filtros atuais.</p>

@@ -42,6 +42,29 @@ function CompanyTableRow({ company }: { company: CompanyRow }) {
   return <TableRow className="cursor-pointer" onClick={() => navigate(`/crm/empresas/${company.id}`)}><TableCell className="font-medium">{company.trade_name || company.legal_name}</TableCell><TableCell><span className={statusClass(company.relationship_status)}>{STATUS_LABEL[company.relationship_status]}</span></TableCell><TableCell>{company.industry ?? '-'}</TableCell><TableCell>{company.employee_count_range ?? '-'}</TableCell><TableCell>{stats.leadsOpen}</TableCell><TableCell>{stats.dealsOpen}</TableCell><TableCell>{formatCurrency(stats.revenueWon)}</TableCell><TableCell>{new Date(company.created_at).toLocaleDateString('pt-BR')}</TableCell><TableCell>{company.website ? <a href={company.website} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-accent hover:underline"><ExternalLink className="h-4 w-4" /></a> : '-'}</TableCell></TableRow>;
 }
 
+function CompanyMobileCard({ company }: { company: CompanyRow }) {
+  const navigate = useNavigate();
+  const stats = useCompanyRowStats(company.id);
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(`/crm/empresas/${company.id}`)}
+      className="w-full rounded-lg border border-border bg-card p-3 text-left shadow-sm active:scale-[0.99] transition"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground line-clamp-2">{company.trade_name || company.legal_name}</p>
+        <span className={statusClass(company.relationship_status)}>{STATUS_LABEL[company.relationship_status]}</span>
+      </div>
+      {company.industry && <p className="text-xs text-muted-foreground mt-1">{company.industry}{company.employee_count_range ? ` · ${company.employee_count_range}` : ''}</p>}
+      <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+        <div><p className="text-[10px] text-muted-foreground uppercase">Leads</p><p className="font-semibold">{stats.leadsOpen}</p></div>
+        <div><p className="text-[10px] text-muted-foreground uppercase">Deals</p><p className="font-semibold">{stats.dealsOpen}</p></div>
+        <div><p className="text-[10px] text-muted-foreground uppercase">Receita</p><p className="font-semibold">{formatCurrency(stats.revenueWon)}</p></div>
+      </div>
+    </button>
+  );
+}
+
 export default function CrmEmpresas() {
   const { data: companies = [] } = useAllCompanies();
   const [statusFilter, setStatusFilter] = usePersistedState<CompanyRelationshipStatus[]>('crm-companies-status-filter', []);
@@ -60,5 +83,52 @@ export default function CrmEmpresas() {
   }), [companies, statusFilter, industryFilter, sizeFilter, search]);
   const activeClients = companies.filter((company) => company.relationship_status === 'active_client').length;
   const lost = companies.filter((company) => company.relationship_status === 'lost').length;
-  return <div className="space-y-5"><div className="grid gap-3 md:grid-cols-4"><Kpi label="Total empresas" value={String(companies.length)} /><Kpi label="Active clients" value={String(activeClients)} /><Kpi label="Leads em aberto" value={String(companies.filter((company) => company.relationship_status === 'lead').length)} /><Kpi label="Perdidas" value={String(lost)} /></div><div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/50 p-3"><MultiFilter label="Status" selected={statusFilter} onChange={(v) => setStatusFilter(v as CompanyRelationshipStatus[])} options={STATUS.map((status) => ({ value: status, label: STATUS_LABEL[status] }))} /><MultiFilter label="Indústria" selected={industryFilter} onChange={setIndustryFilter} options={industries.map((industry) => ({ value: industry, label: industry }))} /><MultiFilter label="Porte" selected={sizeFilter} onChange={setSizeFilter} options={sizes.map((size) => ({ value: size, label: size }))} /><SearchBox value={search} onChange={setSearch} placeholder="Buscar empresas..." /><Button className="ml-auto" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nova Empresa</Button></div><div className="rounded-lg border border-border bg-card/30"><Table><TableHeader><TableRow><TableHead>Trade name</TableHead><TableHead>Status</TableHead><TableHead>Indústria</TableHead><TableHead>Porte</TableHead><TableHead>Leads ativos</TableHead><TableHead>Deals ativos</TableHead><TableHead>Receita total</TableHead><TableHead>Criação</TableHead><TableHead>Website</TableHead></TableRow></TableHeader><TableBody>{filtered.map((company) => <CompanyTableRow key={company.id} company={company} />)}</TableBody></Table></div><NewCompanyDialog open={open} onOpenChange={setOpen} /></div>;
+  return (
+    <div className="space-y-4 sm:space-y-5">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
+        <Kpi label="Total empresas" value={String(companies.length)} />
+        <Kpi label="Active clients" value={String(activeClients)} />
+        <Kpi label="Leads em aberto" value={String(companies.filter((company) => company.relationship_status === 'lead').length)} />
+        <Kpi label="Perdidas" value={String(lost)} />
+      </div>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 rounded-lg border border-border bg-card/50 p-2 sm:p-3">
+        <div className="flex flex-wrap gap-2 flex-1">
+          <MultiFilter label="Status" selected={statusFilter} onChange={(v) => setStatusFilter(v as CompanyRelationshipStatus[])} options={STATUS.map((status) => ({ value: status, label: STATUS_LABEL[status] }))} />
+          <MultiFilter label="Indústria" selected={industryFilter} onChange={setIndustryFilter} options={industries.map((industry) => ({ value: industry, label: industry }))} />
+          <MultiFilter label="Porte" selected={sizeFilter} onChange={setSizeFilter} options={sizes.map((size) => ({ value: size, label: size }))} />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex-1 sm:flex-none"><SearchBox value={search} onChange={setSearch} placeholder="Buscar empresas..." /></div>
+          <Button size="sm" onClick={() => setOpen(true)} className="min-h-10 sm:min-h-9 shrink-0">
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Nova Empresa</span>
+          </Button>
+        </div>
+      </div>
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-lg border border-border bg-card/30 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Trade name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Indústria</TableHead>
+              <TableHead>Porte</TableHead>
+              <TableHead>Leads ativos</TableHead>
+              <TableHead>Deals ativos</TableHead>
+              <TableHead>Receita total</TableHead>
+              <TableHead>Criação</TableHead>
+              <TableHead>Website</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>{filtered.map((company) => <CompanyTableRow key={company.id} company={company} />)}</TableBody>
+        </Table>
+      </div>
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
+        {filtered.map((company) => <CompanyMobileCard key={company.id} company={company} />)}
+        {filtered.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Nenhuma empresa encontrada</p>}
+      </div>
+      <NewCompanyDialog open={open} onOpenChange={setOpen} />
+    </div>
+  );
 }
