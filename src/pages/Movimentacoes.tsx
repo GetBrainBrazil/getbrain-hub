@@ -1031,16 +1031,16 @@ export default function Movimentacoes() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-border">
+      <div className="flex items-center gap-4 md:gap-6 border-b border-border overflow-x-auto">
         <button
           onClick={() => setTab("pagar")}
-          className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`pb-2.5 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-11 md:min-h-0 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Pagar
         </button>
         <button
           onClick={() => setTab("receber")}
-          className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`pb-2.5 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-11 md:min-h-0 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Receber
         </button>
@@ -1360,7 +1360,7 @@ export default function Movimentacoes() {
 
       {/* Baixa / Registrar Pagamento Dialog */}
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-7">
+        <DialogContent className="sm:max-w-[760px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto p-4 sm:p-7">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-success flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
