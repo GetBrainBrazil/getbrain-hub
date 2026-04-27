@@ -42,6 +42,29 @@ function CompanyTableRow({ company }: { company: CompanyRow }) {
   return <TableRow className="cursor-pointer" onClick={() => navigate(`/crm/empresas/${company.id}`)}><TableCell className="font-medium">{company.trade_name || company.legal_name}</TableCell><TableCell><span className={statusClass(company.relationship_status)}>{STATUS_LABEL[company.relationship_status]}</span></TableCell><TableCell>{company.industry ?? '-'}</TableCell><TableCell>{company.employee_count_range ?? '-'}</TableCell><TableCell>{stats.leadsOpen}</TableCell><TableCell>{stats.dealsOpen}</TableCell><TableCell>{formatCurrency(stats.revenueWon)}</TableCell><TableCell>{new Date(company.created_at).toLocaleDateString('pt-BR')}</TableCell><TableCell>{company.website ? <a href={company.website} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="text-accent hover:underline"><ExternalLink className="h-4 w-4" /></a> : '-'}</TableCell></TableRow>;
 }
 
+function CompanyMobileCard({ company }: { company: CompanyRow }) {
+  const navigate = useNavigate();
+  const stats = useCompanyRowStats(company.id);
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(`/crm/empresas/${company.id}`)}
+      className="w-full rounded-lg border border-border bg-card p-3 text-left shadow-sm active:scale-[0.99] transition"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground line-clamp-2">{company.trade_name || company.legal_name}</p>
+        <span className={statusClass(company.relationship_status)}>{STATUS_LABEL[company.relationship_status]}</span>
+      </div>
+      {company.industry && <p className="text-xs text-muted-foreground mt-1">{company.industry}{company.employee_count_range ? ` · ${company.employee_count_range}` : ''}</p>}
+      <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+        <div><p className="text-[10px] text-muted-foreground uppercase">Leads</p><p className="font-semibold">{stats.leadsOpen}</p></div>
+        <div><p className="text-[10px] text-muted-foreground uppercase">Deals</p><p className="font-semibold">{stats.dealsOpen}</p></div>
+        <div><p className="text-[10px] text-muted-foreground uppercase">Receita</p><p className="font-semibold">{formatCurrency(stats.revenueWon)}</p></div>
+      </div>
+    </button>
+  );
+}
+
 export default function CrmEmpresas() {
   const { data: companies = [] } = useAllCompanies();
   const [statusFilter, setStatusFilter] = usePersistedState<CompanyRelationshipStatus[]>('crm-companies-status-filter', []);
