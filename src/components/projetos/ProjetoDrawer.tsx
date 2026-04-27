@@ -61,7 +61,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
   const [estimated, setEstimated] = useState("");
   const [actual, setActual] = useState("");
   const [description, setDescription] = useState("");
-  const [criteria, setCriteria] = useState("");
+  const [criteria, setCriteria] = useState<AcceptanceCriterion[]>([]);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
