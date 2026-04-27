@@ -930,82 +930,133 @@ export type Database = {
       }
       deals: {
         Row: {
+          acceptance_criteria: Json
+          budget_range_max: number | null
+          budget_range_min: number | null
+          business_context: string | null
           closed_at: string | null
           code: string
           company_id: string
+          competitors: string | null
           contact_person_id: string | null
           created_at: string
           created_by: string | null
+          decision_makers: string | null
           deleted_at: string | null
+          deliverables: string[]
+          desired_delivery_date: string | null
+          desired_start_date: string | null
           estimated_value: number | null
           expected_close_date: string | null
           generated_project_id: string | null
           id: string
+          identified_risks: string[]
           lost_reason: string | null
+          next_step: string | null
+          next_step_date: string | null
           notes: string | null
           organization_id: string
           origin_lead_id: string | null
           owner_actor_id: string | null
+          premises: string[]
+          pricing_rationale: string | null
           probability_pct: number
           project_type: Database["public"]["Enums"]["project_type"] | null
           proposal_url: string | null
+          scope_in: string | null
+          scope_out: string | null
           scope_summary: string | null
           stage: Database["public"]["Enums"]["deal_stage"]
           stage_changed_at: string
+          technical_stack: string[]
           title: string
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          acceptance_criteria?: Json
+          budget_range_max?: number | null
+          budget_range_min?: number | null
+          business_context?: string | null
           closed_at?: string | null
           code?: string
           company_id: string
+          competitors?: string | null
           contact_person_id?: string | null
           created_at?: string
           created_by?: string | null
+          decision_makers?: string | null
           deleted_at?: string | null
+          deliverables?: string[]
+          desired_delivery_date?: string | null
+          desired_start_date?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
           generated_project_id?: string | null
           id?: string
+          identified_risks?: string[]
           lost_reason?: string | null
+          next_step?: string | null
+          next_step_date?: string | null
           notes?: string | null
           organization_id: string
           origin_lead_id?: string | null
           owner_actor_id?: string | null
+          premises?: string[]
+          pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
           proposal_url?: string | null
+          scope_in?: string | null
+          scope_out?: string | null
           scope_summary?: string | null
           stage?: Database["public"]["Enums"]["deal_stage"]
           stage_changed_at?: string
+          technical_stack?: string[]
           title: string
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          acceptance_criteria?: Json
+          budget_range_max?: number | null
+          budget_range_min?: number | null
+          business_context?: string | null
           closed_at?: string | null
           code?: string
           company_id?: string
+          competitors?: string | null
           contact_person_id?: string | null
           created_at?: string
           created_by?: string | null
+          decision_makers?: string | null
           deleted_at?: string | null
+          deliverables?: string[]
+          desired_delivery_date?: string | null
+          desired_start_date?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
           generated_project_id?: string | null
           id?: string
+          identified_risks?: string[]
           lost_reason?: string | null
+          next_step?: string | null
+          next_step_date?: string | null
           notes?: string | null
           organization_id?: string
           origin_lead_id?: string | null
           owner_actor_id?: string | null
+          premises?: string[]
+          pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
           proposal_url?: string | null
+          scope_in?: string | null
+          scope_out?: string | null
           scope_summary?: string | null
           stage?: Database["public"]["Enums"]["deal_stage"]
           stage_changed_at?: string
+          technical_stack?: string[]
           title?: string
           updated_at?: string
           updated_by?: string | null
