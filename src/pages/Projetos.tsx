@@ -623,47 +623,89 @@ export default function Projetos() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {paginated.map((r) => {
-                  const prog = progress(r.start_date, r.estimated_delivery_date);
-                  return (
-                    <Card
-                      key={r.id}
-                      className="hover:shadow-md transition-shadow cursor-pointer animate-fade-slide"
-                      onClick={() => openDrawer(r.id)}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-accent font-mono text-sm font-semibold">{r.code}</span>
-                          <StatusBadge status={r.status} />
+              <div className="overflow-x-auto pb-2 -mx-2 px-2">
+                <div className="flex gap-4 min-w-max items-start">
+                  {PROJECT_STATUS_OPTIONS.filter((o) => statusFilter.includes(o.value)).map((o) => {
+                    const items = filtered.filter((r) => r.status === o.value);
+                    const badgeCls = getStatusBadgeClass(o.value);
+                    return (
+                      <div key={o.value} className="w-80 shrink-0 flex flex-col">
+                        <div
+                          className={cn(
+                            "rounded-t-lg border border-b-0 px-3 py-2 flex items-center justify-between sticky top-0 z-[1] backdrop-blur bg-card/90",
+                            badgeCls,
+                          )}
+                        >
+                          <span className="text-sm font-semibold">{getStatusLabel(o.value)}</span>
+                          <span className="text-xs font-mono opacity-80">{items.length}</span>
                         </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <h3 className="font-semibold leading-tight line-clamp-2">{r.name}</h3>
-                        <div className="flex items-center gap-2">
-                          <ActorAvatar name={r.company_name} size="sm" />
-                          <span className="text-sm text-muted-foreground truncate">{r.company_name}</span>
+                        <div className="rounded-b-lg border bg-muted/20 p-2 flex flex-col gap-2 min-h-[120px]">
+                          {items.length === 0 ? (
+                            <p className="text-xs text-muted-foreground text-center py-6">
+                              Nenhum projeto
+                            </p>
+                          ) : (
+                            items.map((r) => {
+                              const prog = progress(r.start_date, r.estimated_delivery_date);
+                              return (
+                                <Card
+                                  key={r.id}
+                                  className="hover:shadow-md transition-shadow cursor-pointer animate-fade-slide"
+                                  onClick={() => openDrawer(r.id)}
+                                >
+                                  <CardHeader className="pb-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-accent font-mono text-xs font-semibold">
+                                        {r.code}
+                                      </span>
+                                      <TypeBadge type={r.project_type} />
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent className="space-y-2">
+                                    <h3 className="font-semibold text-sm leading-tight line-clamp-2">
+                                      {r.name}
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                      <ActorAvatar name={r.company_name} size="sm" />
+                                      <span className="text-xs text-muted-foreground truncate">
+                                        {r.company_name}
+                                      </span>
+                                    </div>
+                                    {r.contract_value && (
+                                      <p className="text-sm font-bold">
+                                        {formatCurrency(r.contract_value)}
+                                      </p>
+                                    )}
+                                    {prog !== null && (
+                                      <div>
+                                        <Progress value={prog} className="h-1.5" />
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                          {Math.round(prog)}% do prazo
+                                        </p>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center justify-between pt-1">
+                                      {r.actors.length > 0 ? (
+                                        <ActorAvatarStack actors={r.actors} />
+                                      ) : (
+                                        <span />
+                                      )}
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {r.estimated_delivery_date
+                                          ? formatDate(r.estimated_delivery_date)
+                                          : "Sem prazo"}
+                                      </span>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })
+                          )}
                         </div>
-                        <TypeBadge type={r.project_type} />
-                        {r.contract_value && (
-                          <p className="text-sm font-bold">{formatCurrency(r.contract_value)}</p>
-                        )}
-                        {prog !== null && (
-                          <div>
-                            <Progress value={prog} className="h-1.5" />
-                            <p className="text-xs text-muted-foreground mt-1">{Math.round(prog)}% do prazo</p>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between pt-1">
-                          {r.actors.length > 0 ? <ActorAvatarStack actors={r.actors} /> : <span />}
-                          <span className="text-xs text-muted-foreground">
-                            {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "Sem prazo"}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
