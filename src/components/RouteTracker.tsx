@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 const ROUTE_KEY = "getbrain_last_route";
+const PRE_ADMIN_KEY = "getbrain_pre_admin_route";
 
 /** Saves the current route (pathname + search) to sessionStorage on every navigation. */
 export function RouteTracker() {
@@ -11,6 +12,10 @@ export function RouteTracker() {
     if (pathname !== "/login") {
       sessionStorage.setItem(ROUTE_KEY, pathname + (search || ""));
     }
+    // Track last non-admin / non-perfil route so the "back" button in Admin works
+    if (!pathname.startsWith("/admin") && pathname !== "/perfil" && pathname !== "/login") {
+      sessionStorage.setItem(PRE_ADMIN_KEY, pathname + (search || ""));
+    }
   }, [pathname, search]);
 
   return null;
@@ -18,4 +23,8 @@ export function RouteTracker() {
 
 export function getLastRoute(): string | null {
   return sessionStorage.getItem(ROUTE_KEY);
+}
+
+export function getPreAdminRoute(): string | null {
+  return sessionStorage.getItem(PRE_ADMIN_KEY);
 }
