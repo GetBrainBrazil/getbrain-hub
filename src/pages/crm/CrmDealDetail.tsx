@@ -76,13 +76,18 @@ function ChipGroup<T extends string>({
             key={o}
             type="button"
             onClick={() => onChange(active && allowClear ? null : o)}
+            aria-pressed={active}
             className={cn(
-              'rounded-md border px-2.5 py-1 text-xs font-medium transition-all',
+              'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-all',
               active
-                ? colors?.[o] ?? 'bg-accent text-accent-foreground border-accent'
-                : 'border-border bg-muted/20 text-muted-foreground hover:border-accent/40 hover:text-foreground',
+                ? cn(
+                    colors?.[o] ?? 'bg-accent/20 text-accent border-accent',
+                    'font-semibold ring-2 ring-accent/40 ring-offset-1 ring-offset-background shadow-sm',
+                  )
+                : 'border-border bg-muted/20 text-muted-foreground hover:border-accent/40 hover:text-foreground hover:bg-muted/40',
             )}
           >
+            {active && <Check className="h-3 w-3" strokeWidth={3} />}
             {labels[o]}
           </button>
         );
