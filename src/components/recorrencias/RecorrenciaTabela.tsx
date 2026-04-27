@@ -64,6 +64,7 @@ export function RecorrenciaTabela({ rows, loading, onRowClick, onAction }: Props
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-border overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
