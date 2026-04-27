@@ -250,10 +250,10 @@ export default function FinanceiroVisaoGeral() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* ============== Cabeçalho ============== */}
-        <header className="flex flex-wrap items-end justify-between gap-3">
+        <header className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Dashboard Financeiro</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Dashboard Financeiro</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">
               Liquidez, receita, despesa e projeção — {range.label.toLowerCase()} ·{" "}
               <span className="font-medium">
                 {regime === "competencia" ? "Regime de competência" : "Regime de caixa"}
