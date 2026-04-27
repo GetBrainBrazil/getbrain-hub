@@ -18,7 +18,7 @@ export default function AdminLayout({ children }: { children?: ReactNode }) {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-10 w-10 -ml-2 mt-1" aria-label="Voltar">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-10 w-10 -ml-2 mt-1" aria-label="Sair do Admin">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
