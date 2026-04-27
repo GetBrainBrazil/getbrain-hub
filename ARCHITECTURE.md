@@ -1398,6 +1398,7 @@ Ordenações alternativas: próxima ação (default), valor, probabilidade, fech
 - **DT-09E-3: Dois enums `project_type` coexistindo.** `project_type` (legacy, compartilhado entre `projects` e `deals.project_type`) e `deal_project_type` (novo, em `deals.project_type_v2`). A unificação foi adiada para evitar quebra de dados em projetos antigos. Avaliar migração unificadora em v2.2.
 - **DT-09E-4: `project_dependencies` sem `responsible_person_role` estruturado.** Hoje o cargo do responsável é concatenado em `requested_from` ao copiar do deal. Adicionar coluna estruturada na v2.1 e backfill via trigger.
 - **DT-09E-5: Mapping de enums na RPC `close_deal_as_won`.** Os tipos/status de `deal_dependencies` (`acesso_sistema`, `aguardando_combinar`, etc.) precisam ser mapeados para os enums equivalentes de `project_dependencies` na execução da RPC. Solução temporária: tabela CASE WHEN dentro da função. Idealmente, unificar os enums (combinar com DT-09E-3).
+- **DT-09E-6: `created_by` em `financial_recurrences` está sendo passado como `NULL` pela `close_deal_as_won`.** A coluna tem FK para `auth.users(id)`, mas a RPC só dispõe do `actor_id` do owner do deal (FK para `actors(id)`) — domínios distintos. Patch aplicado em 27/04/2026 para destravar o fluxo. Avaliar mapeamento `actors ↔ humans.auth_user_id` em prompt futuro para preencher corretamente o campo de auditoria.
 
 ---
 
