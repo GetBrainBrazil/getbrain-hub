@@ -31,6 +31,19 @@ type NavItem = {
 const navItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   {
+    title: "CRM",
+    url: "/crm",
+    icon: Handshake,
+    children: [
+      { title: "Dashboard", url: "/crm/dashboard" },
+      { title: "Pipeline", url: "/crm/pipeline" },
+      { title: "Leads", url: "/crm/leads" },
+      { title: "Empresas", url: "/crm/empresas" },
+      { title: "Calendário", url: "/crm/calendario" },
+    ],
+  },
+  { title: "Projetos", url: "/projetos", icon: FolderKanban },
+  {
     title: "Financeiro",
     url: "/financeiro",
     icon: DollarSign,
@@ -45,19 +58,7 @@ const navItems: NavItem[] = [
       { title: "Configurações", url: "/financeiro/configuracoes" },
     ],
   },
-  { title: "Projetos", url: "/projetos", icon: FolderKanban },
-  {
-    title: "CRM",
-    url: "/crm",
-    icon: Handshake,
-    children: [
-      { title: "Dashboard", url: "/crm/dashboard" },
-      { title: "Pipeline", url: "/crm/pipeline" },
-      { title: "Leads", url: "/crm/leads" },
-      { title: "Empresas", url: "/crm/empresas" },
-      { title: "Calendário", url: "/crm/calendario" },
-    ],
-  },
+  { title: "Clientes", url: "/clientes", icon: Users },
   {
     title: "Área Dev",
     url: "/dev",
@@ -69,7 +70,6 @@ const navItems: NavItem[] = [
       { title: "Backlog", url: "/dev/backlog" },
     ],
   },
-  { title: "Clientes", url: "/clientes", icon: Users },
 ];
 
 const itemClasses = (active: boolean) =>
