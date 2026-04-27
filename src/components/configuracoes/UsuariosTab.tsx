@@ -10,9 +10,8 @@ import { Plus, Search, MoreVertical, Pencil, Trash2, Mail, Phone } from "lucide-
 import { toast } from "sonner";
 import { useUsuarios, useDeleteUsuario, Usuario } from "@/hooks/useUsuarios";
 import { UsuarioDialog } from "./UsuarioDialog";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
 
 export function UsuariosTab() {
   const { user } = useAuth();
