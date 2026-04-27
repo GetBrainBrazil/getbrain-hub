@@ -272,20 +272,20 @@ export default function Projetos() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Projetos</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Projetos</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Gerencie todos os projetos da GetBrain em um só lugar.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-1">
+        <Button onClick={() => setCreateOpen(true)} className="gap-1 min-h-11 sm:min-h-9 w-full sm:w-auto">
           <Plus className="h-4 w-4" /> Novo Projeto
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <KPICard title="Projetos Ativos" value={kpis.ativos} icon={PlayCircle} isCurrency={false} />
         <KPICard title="Em Manutenção" value={kpis.manut} icon={Wrench} variant="success" isCurrency={false} />
         <KPICard title="Valor Contratado Total" value={kpis.contratado} icon={DollarSign} />
