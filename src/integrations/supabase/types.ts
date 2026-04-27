@@ -2070,10 +2070,21 @@ export type Database = {
         Row: {
           ativo: boolean
           avatar_url: string | null
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          contato_emergencia_nome: string | null
+          contato_emergencia_telefone: string | null
           created_at: string | null
           email: string | null
+          endereco: string | null
+          estado: string | null
           full_name: string
           id: string
+          numero: string | null
+          pais: string | null
+          plano_saude: string | null
           telefone: string | null
           ultimo_acesso: string | null
           updated_at: string | null
@@ -2081,10 +2092,21 @@ export type Database = {
         Insert: {
           ativo?: boolean
           avatar_url?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          contato_emergencia_nome?: string | null
+          contato_emergencia_telefone?: string | null
           created_at?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           full_name: string
           id: string
+          numero?: string | null
+          pais?: string | null
+          plano_saude?: string | null
           telefone?: string | null
           ultimo_acesso?: string | null
           updated_at?: string | null
@@ -2092,10 +2114,21 @@ export type Database = {
         Update: {
           ativo?: boolean
           avatar_url?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          contato_emergencia_nome?: string | null
+          contato_emergencia_telefone?: string | null
           created_at?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           full_name?: string
           id?: string
+          numero?: string | null
+          pais?: string | null
+          plano_saude?: string | null
           telefone?: string | null
           ultimo_acesso?: string | null
           updated_at?: string | null
@@ -2942,6 +2975,51 @@ export type Database = {
         }
         Relationships: []
       }
+      system_audit_logs: {
+        Row: {
+          acao: string
+          created_at: string
+          id: string
+          ip: string | null
+          metadata: Json | null
+          modulo: string | null
+          registro_id: string | null
+          resumo: string | null
+          tabela: string | null
+          user_agent: string | null
+          user_id: string | null
+          user_nome: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json | null
+          modulo?: string | null
+          registro_id?: string | null
+          resumo?: string | null
+          tabela?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          user_nome?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json | null
+          modulo?: string | null
+          registro_id?: string | null
+          resumo?: string | null
+          tabela?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          user_nome?: string | null
+        }
+        Relationships: []
+      }
       task_assignees: {
         Row: {
           actor_id: string
@@ -3155,6 +3233,57 @@ export type Database = {
           },
         ]
       }
+      tenant_settings: {
+        Row: {
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          created_at: string
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          iata: string | null
+          id: string
+          logo_url: string | null
+          nome_fantasia: string | null
+          razao_social: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          iata?: string | null
+          id?: string
+          logo_url?: string | null
+          nome_fantasia?: string | null
+          razao_social?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          iata?: string | null
+          id?: string
+          logo_url?: string | null
+          nome_fantasia?: string | null
+          razao_social?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -3204,6 +3333,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      usuario_contratos: {
+        Row: {
+          anexo_url: string | null
+          cargo: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          id: string
+          observacoes: string | null
+          salario: number | null
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          anexo_url?: string | null
+          cargo?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          id?: string
+          observacoes?: string | null
+          salario?: number | null
+          tipo?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          anexo_url?: string | null
+          cargo?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          observacoes?: string | null
+          salario?: number | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       vendas: {
         Row: {
