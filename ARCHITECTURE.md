@@ -1270,3 +1270,46 @@ Para evitar escopo inflado, o adendo não inclui:
 - DT-09C1A-3: Linters de segurança pré-existentes (já em v1.6)
 
 **Próximo:** 09C-1B (sub-aba `/financeiro/recorrencias` com UI completa)
+
+### v1.8 — 27/04/2026
+
+**Origem:** Preparação 09D (campos de descoberta no CRM)
+
+**Mudanças:**
+
+- 17 campos novos em `deals` para suportar fase de descoberta comercial.
+  Detalhamento na seção 4.16.
+- Constraint `deals_budget_range_check` (min ≤ max).
+- Index `idx_deals_next_step_date`.
+
+**Próximo:** 09D (corrige divergência de tipos em projects).
+
+### v1.9 — 27/04/2026
+
+**Origem:** 09D (Tipos estruturados em projects)
+
+**Mudanças:**
+
+- Migração de 5 campos de escopo em `projects` de `TEXT` (markdown livre) para
+  tipos estruturados (`JSONB` checklist + 4× `TEXT[]`). Detalhamento na seção 4.17.
+- Conserta divergência banco↔`types.ts` (campos já tipados como estruturados no
+  front, mas armazenados como TEXT no banco).
+- Backup integral em `_backup_projects_text_fields_pre_v1_9` (drop liberado em 27/05/2026).
+- Refactor de 3 arquivos UI (`AbaEscopo.tsx`, `ProjetoDetalhe.tsx`,
+  `ProjetoDrawer.tsx`) substituindo `RichTextEditor` markdown por componentes estruturados.
+- 2 componentes novos em `src/components/shared/`:
+  - `StringListEditor`: edição inline de array de strings.
+  - `AcceptanceCriteriaEditor`: checklist JSONB com toggle/edit/remove.
+- Tipos centralizados em `src/types/projects.ts` e `src/types/shared.ts`.
+
+**Dívidas técnicas registradas:**
+
+- **DT-09D-1: Avaliar promoção de componentes shared para `ui/`.**
+  Os componentes `StringListEditor` e `AcceptanceCriteriaEditor` foram criados
+  em `src/components/shared/`. Avaliar em 30 dias (até 27/05/2026) se devem
+  migrar para `src/components/ui/` como primitivos da design system.
+- **DT-09D-2: Drop do backup `_backup_projects_text_fields_pre_v1_9`** após
+  validação em produção (>30 dias, liberado 27/05/2026).
+
+**Próximo:** 09E (redesign do CrmDealDetail consumindo os campos de descoberta).
+
