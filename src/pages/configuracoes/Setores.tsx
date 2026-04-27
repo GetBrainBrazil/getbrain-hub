@@ -58,7 +58,7 @@ export default function Setores() {
     const ok = await confirm({
       title: `Desativar "${s.name}"?`,
       description: 'Setores desativados deixam de aparecer em filtros e formulários, mas as empresas vinculadas continuam intactas. Você pode reativar a qualquer momento.',
-      confirmText: 'Desativar',
+      confirmLabel: 'Desativar',
       variant: 'destructive',
     });
     if (!ok) return;
