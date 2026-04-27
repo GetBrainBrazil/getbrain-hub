@@ -111,6 +111,7 @@ import { getDiscountInfo, getEffectiveMrr } from "@/lib/maintenance";
 import { CurrencyInput, IntegerInput, PercentInput } from "@/components/ui/currency-input";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { AbaEscopo } from "@/components/projetos/AbaEscopo";
+import { AcceptanceCriteriaEditor } from "@/components/shared/AcceptanceCriteriaEditor";
 import { RichTextEditor, RichTextView } from "@/components/ui/rich-text-editor";
 import { AbaMarcos } from "@/components/projetos/AbaMarcos";
 import { AbaRiscos } from "@/components/projetos/AbaRiscos";
@@ -131,32 +132,8 @@ import {
 // -----------------------------------------------------------
 // Tipagem leve
 // -----------------------------------------------------------
-type Project = {
-  id: string;
-  code: string;
-  name: string;
-  status: ProjectStatus;
-  project_type: ProjectType;
-  company_id: string;
-  contract_value: number | null;
-  installments_count: number | null;
-  start_date: string | null;
-  estimated_delivery_date: string | null;
-  actual_delivery_date: string | null;
-  description: string | null;
-  acceptance_criteria: string | null;
-  notes: string | null;
-  token_budget_brl: number | null;
-  business_context: string | null;
-  scope_in: string | null;
-  scope_out: string | null;
-  premises: string | null;
-  deliverables: string | null;
-  technical_stack: string | null;
-  identified_risks: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import type { Project } from "@/types/projects";
+import type { AcceptanceCriterion } from "@/types/shared";
 
 // Pipeline visual: ordem dos estágios não-terminais
 const PIPELINE_STAGES: ProjectStatus[] = [
@@ -474,7 +451,7 @@ export default function ProjetoDetalhe() {
     setDraftEstimated(source.estimated_delivery_date ?? null);
     setDraftActual(source.actual_delivery_date ?? null);
     setDraftDescription(source.description ?? "");
-    setDraftCriteria(source.acceptance_criteria ?? "");
+    // acceptance_criteria agora é JSONB estruturado, gerenciado pelo AcceptanceCriteriaEditor (sem draft).
     setDraftNotes(source.notes ?? "");
     setDraftCompanyId((source as any).company_id ?? "");
   }
@@ -577,8 +554,8 @@ export default function ProjetoDetalhe() {
       setLoading(false);
       return;
     }
-    setProject(p as Project);
-    syncDrafts(p as Project);
+    setProject(p as unknown as Project);
+    syncDrafts(p as unknown as Project);
 
     const { data: c } = await supabase
       .from("companies")
@@ -1898,83 +1875,21 @@ export default function ProjetoDetalhe() {
                 </CardBlock>
 
                 {/* Critérios de Aceite */}
-                <CardBlock
-                  title="Critérios de Aceite"
-                  icon={ListChecks}
-                  action={
-                    editing === "criteria" ? (
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={async () => {
-                            const next = draftCriteria || null;
-                            if (next !== (project.acceptance_criteria ?? null)) {
-                              await patchProject(
-                                { acceptance_criteria: next } as any,
-                                {
-                                  acceptance_criteria: {
-                                    before: project.acceptance_criteria,
-                                    after: next,
-                                  },
-                                },
-                              );
-                            }
-                            setEditing(null);
-                          }}
-                        >
-                          <Save className="mr-1 h-3.5 w-3.5" /> Salvar
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={closeEditor}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button size="sm" variant="ghost" onClick={() => openEditor("criteria")}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
-                      </Button>
-                    )
-                  }
-                >
-                  {editing === "criteria" ? (
-                    <RichTextEditor
-                      value={draftCriteria}
-                      onChange={setDraftCriteria}
-                      placeholder="- [ ] Entrega A&#10;- [ ] Entrega B"
-                      onSave={async (v) => {
-                        const next = v || null;
-                        if (next !== (project.acceptance_criteria ?? null)) {
-                          await patchProject(
-                            { acceptance_criteria: next } as any,
-                            {
-                              acceptance_criteria: {
-                                before: project.acceptance_criteria,
-                                after: next,
-                              },
-                            },
-                          );
-                        }
-                      }}
-                      onCancel={closeEditor}
-                    />
-                  ) : project.acceptance_criteria ? (
-                    <RichTextView
-                      text={project.acceptance_criteria}
-                      onToggle={async (newText) => {
-                        await patchProject(
-                          { acceptance_criteria: newText } as any,
-                          {
-                            acceptance_criteria: {
-                              before: project.acceptance_criteria,
-                              after: newText,
-                            },
+                <CardBlock title="Critérios de Aceite" icon={ListChecks}>
+                  <AcceptanceCriteriaEditor
+                    value={project.acceptance_criteria}
+                    onChange={async (next) => {
+                      await patchProject(
+                        { acceptance_criteria: next as never } as any,
+                        {
+                          acceptance_criteria: {
+                            before: project.acceptance_criteria,
+                            after: next,
                           },
-                        );
-                      }}
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">—</p>
-                  )}
+                        },
+                      );
+                    }}
+                  />
                 </CardBlock>
 
                 {/* Observações */}

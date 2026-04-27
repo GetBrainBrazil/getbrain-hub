@@ -27,6 +27,8 @@ import { NovoContratoDialog } from "./NovoContratoDialog";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { AcceptanceCriteriaEditor } from "@/components/shared/AcceptanceCriteriaEditor";
+import type { AcceptanceCriterion } from "@/types/shared";
 
 interface Props {
   projectId: string | null;
@@ -59,7 +61,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
   const [estimated, setEstimated] = useState("");
   const [actual, setActual] = useState("");
   const [description, setDescription] = useState("");
-  const [criteria, setCriteria] = useState("");
+  const [criteria, setCriteria] = useState<AcceptanceCriterion[]>([]);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -83,7 +85,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
     setEstimated(p.estimated_delivery_date ?? "");
     setActual(p.actual_delivery_date ?? "");
     setDescription(p.description ?? "");
-    setCriteria(p.acceptance_criteria ?? "");
+    setCriteria(Array.isArray(p.acceptance_criteria) ? (p.acceptance_criteria as unknown as AcceptanceCriterion[]) : []);
     setNotes(p.notes ?? "");
 
     const { data: c } = await supabase
@@ -225,8 +227,9 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
     if (description !== (project.description ?? "")) {
       updates.description = description || null;
     }
-    if (criteria !== (project.acceptance_criteria ?? "")) {
-      updates.acceptance_criteria = criteria || null;
+    const currentAc = Array.isArray(project.acceptance_criteria) ? project.acceptance_criteria : [];
+    if (JSON.stringify(criteria) !== JSON.stringify(currentAc)) {
+      updates.acceptance_criteria = criteria as never;
     }
     if (notes !== (project.notes ?? "")) {
       updates.notes = notes || null;
@@ -355,13 +358,7 @@ export function ProjetoDrawer({ projectId, open, onOpenChange, onChanged }: Prop
             </div>
             <div>
               <Label>Critérios de Aceite</Label>
-              <RichTextEditor
-                value={criteria}
-                onChange={setCriteria}
-                rows={3}
-                autoFocus={false}
-                placeholder="- [ ] Entrega A&#10;- [ ] Entrega B"
-              />
+              <AcceptanceCriteriaEditor value={criteria} onChange={setCriteria} />
             </div>
             <div>
               <Label>Observações</Label>

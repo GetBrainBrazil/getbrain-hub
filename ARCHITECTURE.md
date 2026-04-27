@@ -3,7 +3,7 @@
 > **Documento-mãe do sistema interno da GetBrain.**
 > Toda decisão de arquitetura, modelagem, UI e padrões deste projeto segue o que está escrito aqui.
 > Sempre que um prompt for executado no Lovable, este documento é o primeiro a ser lido.
-> **Versão atual: v1.8 — 27/04/2026**
+> **Versão atual: v1.9 — 27/04/2026**
 
 ---
 
@@ -500,6 +500,50 @@ identified_at date default current_date
 resolved_at date
 notes text
 ```
+
+### 4.16 Campos de descoberta em `deals` (v1.8)
+
+> Adicionada em 09D-prep (27/04/2026). 17 campos novos em `deals` para suportar
+> a fase de descoberta comercial e pré-preencher projetos no fechamento.
+
+Agrupados por finalidade:
+
+- **Escopo (transferidos para o projeto no `close_deal_as_won`):**
+  `business_context TEXT`, `scope_in TEXT`, `scope_out TEXT`,
+  `deliverables TEXT[]`, `premises TEXT[]`, `identified_risks TEXT[]`,
+  `technical_stack TEXT[]`, `acceptance_criteria JSONB` (formato
+  `[{id, text, checked, checked_at, checked_by}]`).
+- **Datas sugeridas (pré-preenchem o projeto, editáveis no dialog):**
+  `desired_start_date date`, `desired_delivery_date date`.
+- **Comerciais (permanecem só no deal):** `pricing_rationale TEXT`,
+  `decision_makers TEXT`, `competitors TEXT`,
+  `budget_range_min numeric`, `budget_range_max numeric`,
+  `next_step TEXT`, `next_step_date date`.
+
+Constraint: `deals_budget_range_check` garante `budget_range_min <= budget_range_max`.
+Index: `idx_deals_next_step_date` para próximas ações na timeline.
+
+### 4.17 Tipos estruturados em campos de escopo de `projects` (v1.9)
+
+> Adicionada em 09D (27/04/2026). Conserta divergência entre `projects.acceptance_criteria` e os 4 arrays de escopo, que estavam tipados como `JSONB`/`TEXT[]` em `src/integrations/supabase/types.ts` mas eram `TEXT` no banco.
+
+5 colunas migradas:
+
+- `acceptance_criteria`: `TEXT` → `JSONB` (default `'[]'::jsonb`, NOT NULL).
+  Mesmo formato de `tasks.acceptance_criteria`: `[{id, text, checked, checked_at, checked_by}]`.
+- `deliverables`: `TEXT` → `TEXT[]` (default `ARRAY[]::TEXT[]`, NOT NULL).
+- `premises`: `TEXT` → `TEXT[]` (idem).
+- `identified_risks`: `TEXT` → `TEXT[]` (idem).
+- `technical_stack`: `TEXT` → `TEXT[]` (idem).
+
+**Justificativa:**
+1. Conserta divergência banco↔types.ts (front compilava como estruturado, banco devolvia string).
+2. Alinha `projects.acceptance_criteria` com o já-estruturado `tasks.acceptance_criteria`.
+3. Alinha com os arrays equivalentes em `deals` (v1.8 / 4.16), permitindo que o `close_deal_as_won` copie arrays nativos sem stringify.
+
+**Backup:** `_backup_projects_text_fields_pre_v1_9` (snapshot dos 5 campos antes do ALTER).
+Pode ser dropado após 30 dias de validação em produção.
+
 
 ### 4.Z `financial_recurrences` — Entidade canônica de séries financeiras (v1.7)
 
@@ -1226,3 +1270,46 @@ Para evitar escopo inflado, o adendo não inclui:
 - DT-09C1A-3: Linters de segurança pré-existentes (já em v1.6)
 
 **Próximo:** 09C-1B (sub-aba `/financeiro/recorrencias` com UI completa)
+
+### v1.8 — 27/04/2026
+
+**Origem:** Preparação 09D (campos de descoberta no CRM)
+
+**Mudanças:**
+
+- 17 campos novos em `deals` para suportar fase de descoberta comercial.
+  Detalhamento na seção 4.16.
+- Constraint `deals_budget_range_check` (min ≤ max).
+- Index `idx_deals_next_step_date`.
+
+**Próximo:** 09D (corrige divergência de tipos em projects).
+
+### v1.9 — 27/04/2026
+
+**Origem:** 09D (Tipos estruturados em projects)
+
+**Mudanças:**
+
+- Migração de 5 campos de escopo em `projects` de `TEXT` (markdown livre) para
+  tipos estruturados (`JSONB` checklist + 4× `TEXT[]`). Detalhamento na seção 4.17.
+- Conserta divergência banco↔`types.ts` (campos já tipados como estruturados no
+  front, mas armazenados como TEXT no banco).
+- Backup integral em `_backup_projects_text_fields_pre_v1_9` (drop liberado em 27/05/2026).
+- Refactor de 3 arquivos UI (`AbaEscopo.tsx`, `ProjetoDetalhe.tsx`,
+  `ProjetoDrawer.tsx`) substituindo `RichTextEditor` markdown por componentes estruturados.
+- 2 componentes novos em `src/components/shared/`:
+  - `StringListEditor`: edição inline de array de strings.
+  - `AcceptanceCriteriaEditor`: checklist JSONB com toggle/edit/remove.
+- Tipos centralizados em `src/types/projects.ts` e `src/types/shared.ts`.
+
+**Dívidas técnicas registradas:**
+
+- **DT-09D-1: Avaliar promoção de componentes shared para `ui/`.**
+  Os componentes `StringListEditor` e `AcceptanceCriteriaEditor` foram criados
+  em `src/components/shared/`. Avaliar em 30 dias (até 27/05/2026) se devem
+  migrar para `src/components/ui/` como primitivos da design system.
+- **DT-09D-2: Drop do backup `_backup_projects_text_fields_pre_v1_9`** após
+  validação em produção (>30 dias, liberado 27/05/2026).
+
+**Próximo:** 09E (redesign do CrmDealDetail consumindo os campos de descoberta).
+
