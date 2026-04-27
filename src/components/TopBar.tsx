@@ -29,6 +29,8 @@ import { useCargos } from "@/hooks/useCargos";
 import { useUsuarios } from "@/hooks/useUsuarios";
 import { useViewAs } from "@/hooks/useViewAs";
 
+const cnActive = (active: boolean) => active ? "font-semibold" : "font-medium";
+
 const routeNames: Record<string, string> = {
   "/": "Dashboard",
   "/financeiro": "Financeiro › Dashboard",
