@@ -48,6 +48,7 @@ export function OrcamentoTabela({ rows, loading, onAction, onRowClick }: Props) 
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>

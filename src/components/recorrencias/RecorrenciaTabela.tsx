@@ -143,6 +143,7 @@ export function RecorrenciaTabela({ rows, loading, onRowClick, onAction }: Props
             ))}
           </TableBody>
         </Table>
+        </div>
       </div>
       {totalPages > 1 && (
         <div className="flex justify-end items-center gap-2 text-xs text-muted-foreground">
