@@ -1,64 +1,41 @@
 ## Objetivo
 
-Transformar a visualização de **Cards** em `/projetos` num **Kanban por etapa (status)**, com uma coluna para cada status do projeto, contendo os cards dos projetos daquela etapa. A visualização de Tabela permanece intocada.
+Adicionar **drag-and-drop** ao Kanban da aba Cards de `/projetos`, permitindo arrastar um card de uma coluna (etapa) para outra e atualizar o status do projeto no banco. Hoje as colunas existem mas os cards não são arrastáveis.
 
-## O que muda
+## Como vai funcionar
 
-Na aba **Cards** (desktop ≥ md), em vez de um grid uniforme `grid-cols-2 lg:grid-cols-4`, exibir colunas horizontais — uma por status de projeto — com os respectivos cards empilhados verticalmente dentro de cada coluna.
+- Biblioteca: **`@dnd-kit/core`** (já instalada e usada no Kanban de Orçamentos — mesmo padrão).
+- Cada **card** vira `useDraggable` (id = project id, data = row).
+- Cada **coluna** vira `useDroppable` (id = status).
+- Sensor: `PointerSensor` com `activationConstraint: { distance: 6 }` — assim o `onClick` que abre o detalhe do projeto continua funcionando sem disparar drag.
+- `DragOverlay` mostra um clone "fantasma" do card seguindo o cursor, com leve rotação (igual Orçamentos).
+- Ao soltar em outra coluna: abrir `useConfirm` ("Mover X para Y?"). Se confirmar, `UPDATE projects.status` e recarregar.
+- Soltar na própria coluna ou fora: ignora.
+- Feedback visual: coluna alvo recebe `ring-2 ring-primary/30 bg-primary/5` enquanto está sendo "hovered".
+- Card durante drag: `opacity: 0.35` no original, cursor `grabbing`, `touchAction: none`.
 
-Cada coluna terá:
-- **Header** com o nome do status (usando `getStatusLabel` de `projetos-helpers`), uma cor/borda superior usando `getStatusBadgeClass` para identidade visual, e um contador `(N)` de projetos.
-- **Lista vertical** de cards (mesmo card visual já existente: código, nome, cliente, tipo, valor, progresso, atores, prazo). O `StatusBadge` interno do card pode ser removido nessa visão (redundante, pois a coluna já indica), deixando o card mais limpo.
-- **Empty state** sutil ("Nenhum projeto") quando a coluna não tiver itens.
+## Arquivos
 
-O container das colunas usa **scroll horizontal** (`overflow-x-auto`) com colunas de largura fixa (~ `w-72`/`w-80`), padrão Kanban — igual ao já usado em CRM/Orçamentos do projeto.
+**Novo**: `src/components/projetos/ProjetosKanban.tsx`
+- Componente isolado com toda a lógica D&D (DndContext, colunas, cards, overlay).
+- Recebe `rows`, `visibleStatuses`, `onCardClick`, `onChanged` (callback de reload) por props.
+- Usa `useConfirm` interno para o diálogo de mudança de status.
+- Usa `supabase.from("projects").update({ status })` direto.
 
-## Filtros e ordem das colunas
-
-- Apenas status presentes em `statusFilter` (filtro persistido) viram coluna. Assim o usuário continua controlando o que vê via filtros existentes.
-- Ordem das colunas segue `PROJECT_STATUS_OPTIONS` (proposta → aceito → em_desenvolvimento → em_homologacao → entregue → em_manutencao → pausado → cancelado → arquivado).
-- Os demais filtros (tipo, cliente, busca) continuam funcionando normalmente — o `filtered` já aplica tudo, basta agrupar por `status`.
-
-## Paginação
-
-Na visão Kanban a paginação atual (`paginated`) não faz sentido (cada coluna tem volume próprio). Solução:
-- Na visão Kanban, ignorar `pageSize` e usar `filtered` direto. Esconder o rodapé de paginação nessa visão.
-- Tabela e Cards-mobile mantêm a paginação atual.
-
-## Mobile
-
-A visão mobile (`md:hidden`) **não muda** — segue como grid vertical de cards (Kanban horizontal não funciona bem em mobile pequeno e a memória de responsividade pede mobile-first sem perda de função).
+**Editado**: `src/pages/Projetos.tsx`
+- Remove o JSX inline da grade de colunas Kanban (~80 linhas atuais).
+- Substitui por `<ProjetosKanban rows={filtered} visibleStatuses={statusFilter} onCardClick={openDrawer} onChanged={load} />`.
+- Mantém todo o resto (KPIs, filtros, Tabela, mobile cards, paginação) intocado.
 
 ## Detalhes técnicos
 
-Arquivo afetado: `src/pages/Projetos.tsx` (apenas o bloco `view === "cards"` no `hidden md:block`).
-
-Estrutura nova:
-```text
-<div className="overflow-x-auto pb-2">
-  <div className="flex gap-4 min-w-max">
-    {PROJECT_STATUS_OPTIONS
-      .filter(o => statusFilter.includes(o.value))
-      .map(o => {
-        const items = filtered.filter(r => r.status === o.value);
-        return (
-          <div className="w-80 shrink-0 flex flex-col gap-3">
-            <ColumnHeader status={o.value} count={items.length} />
-            {items.length === 0 ? <EmptyHint/> : items.map(r => <ProjectCard ... />)}
-          </div>
-        );
-      })}
-  </div>
-</div>
-```
-
-- `ColumnHeader`: usa `getStatusLabel` + classe de borda/topo derivada de `getStatusBadgeClass` (apenas a cor de borda) para faixa colorida no topo.
-- `ProjectCard`: extrair o JSX do card já existente para função interna (`renderProjectCard(r)`) e reusar tanto na coluna do Kanban quanto na grid mobile, evitando duplicação.
-- Manter `onClick={() => openDrawer(r.id)}`, `cursor-pointer`, `hover:shadow-md` e `animate-fade-slide`.
-- Sem drag-and-drop nesta entrega (apenas visualização agrupada). Mudança de status segue acontecendo dentro do drawer/detalhe do projeto.
+- O `onClick` do card (abrir detalhe) é preservado dentro do wrapper draggable — graças à `activationConstraint.distance: 6`, clicks simples não viram drag.
+- Mobile (`md:hidden`) **não usa** o componente Kanban, segue como grid vertical de cards (drag horizontal não faz sentido em telas pequenas).
+- Status `"arquivado"` e `"cancelado"` continuam sendo colunas válidas se o usuário marcá-los no filtro — soltar lá funciona como mover para essa etapa (substituindo a ação "arquivar" do menu, mas o menu segue existindo).
+- Sem reordenação dentro da mesma coluna nesta entrega (a ordenação do banco é por `code`).
 
 ## Fora do escopo
 
-- Drag-and-drop entre colunas (pode ser uma próxima iteração se desejado).
-- Mudanças na visão Tabela.
-- Mudanças nos filtros, KPIs ou na tela mobile.
+- Reordenação manual dentro da coluna.
+- Salvar uma "ordem" customizada por status.
+- D&D no mobile.
