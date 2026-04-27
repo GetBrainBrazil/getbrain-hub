@@ -16,7 +16,7 @@ import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
 import { OrcamentoKPICards } from "@/components/orcamentos/OrcamentoKPICards";
 import { OrcamentoTabela } from "@/components/orcamentos/OrcamentoTabela";
 import { OrcamentoKanban } from "@/components/orcamentos/OrcamentoKanban";
-import { OrcamentoDrawer } from "@/components/orcamentos/OrcamentoDrawer";
+
 import { NovoOrcamentoModal } from "@/components/orcamentos/NovoOrcamentoModal";
 import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
@@ -49,7 +49,6 @@ export default function Orcamentos() {
   );
   const [novoOpen, setNovoOpen] = useState(false);
   const [pdfRow, setPdfRow] = useState<any | null>(null);
-  const [drawerId, setDrawerId] = useState<string | null>(null);
 
   // No Kanban ignoramos o filtro de status (Kanban mostra tudo, dividido por coluna).
   // O filtro só age na tabela.
@@ -232,25 +231,19 @@ export default function Orcamentos() {
       ) : viewMode === "kanban" ? (
         <OrcamentoKanban
           rows={data}
-          onCardClick={(r) => setDrawerId(r.id)}
+          onCardClick={(r) => navigate(`/financeiro/orcamentos/${r.id}/editar`)}
         />
       ) : (
         <OrcamentoTabela
           rows={data}
           loading={isLoading}
           onAction={handleAction}
-          onRowClick={(r) => setDrawerId(r.id)}
+          onRowClick={(r) => navigate(`/financeiro/orcamentos/${r.id}/editar`)}
         />
       )}
 
       <NovoOrcamentoModal open={novoOpen} onOpenChange={setNovoOpen} />
       {confirmDialog}
-
-      <OrcamentoDrawer
-        proposalId={drawerId}
-        onClose={() => setDrawerId(null)}
-      />
-
       {/* Render off-screen template for PDF generation */}
       {pdfRow && (
         <div
