@@ -476,152 +476,196 @@ export default function Projetos() {
             Nenhum projeto encontrado com os filtros atuais.
           </CardContent>
         </Card>
-      ) : view === "table" ? (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {[
-                    ["code", "Código"],
-                    ["name", "Nome"],
-                    ["company_name", "Cliente"],
-                    ["project_type", "Tipo"],
-                    ["status", "Status"],
-                    ["contract_value", "Valor Contratado"],
-                    ["estimated_delivery_date", "Entrega Estimada"],
-                  ].map(([k, label]) => (
-                    <TableHead
-                      key={k}
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort(k as keyof ProjectRow)}
-                    >
-                      {label} {sortKey === k && (sortDir === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                  ))}
-                  <TableHead>Atores</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginated.map((r) => {
-                  const atrasado =
-                    r.estimated_delivery_date &&
-                    new Date(r.estimated_delivery_date) < new Date() &&
-                    !["entregue", "em_manutencao", "cancelado", "arquivado"].includes(r.status);
-                  return (
-                    <TableRow
-                      key={r.id}
-                      onClick={() => openDrawer(r.id)}
-                      className="cursor-pointer hover:bg-muted/40 transition-colors"
-                    >
-                      <TableCell>
-                        <span className="text-accent font-mono font-medium">
-                          {r.code}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <ActorAvatar name={r.company_name} size="sm" />
-                          <span className="text-sm">{r.company_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <TypeBadge type={r.project_type} />
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={r.status} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {r.contract_value ? formatCurrency(r.contract_value) : "—"}
-                      </TableCell>
-                      <TableCell className={cn(atrasado && "text-destructive font-medium")}>
-                        {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {r.actors.length > 0 ? (
-                          <ActorAvatarStack actors={r.actors} />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            <div className="flex items-center justify-between p-4 text-sm text-muted-foreground border-t">
-              <span>
-                {filtered.length} projeto(s) • Página {page} de {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
+      ) : (
+        <>
+          {/* Mobile: sempre cards */}
+          <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {paginated.map((r) => {
+              const prog = progress(r.start_date, r.estimated_delivery_date);
+              return (
+                <Card
+                  key={r.id}
+                  className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]"
+                  onClick={() => openDrawer(r.id)}
                 >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-accent font-mono text-xs font-semibold">{r.code}</span>
+                      <StatusBadge status={r.status} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <h3 className="font-semibold text-sm leading-tight line-clamp-2">{r.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <ActorAvatar name={r.company_name} size="sm" />
+                      <span className="text-xs text-muted-foreground truncate">{r.company_name}</span>
+                    </div>
+                    <TypeBadge type={r.project_type} />
+                    {r.contract_value && (
+                      <p className="text-sm font-bold">{formatCurrency(r.contract_value)}</p>
+                    )}
+                    {prog !== null && (
+                      <div>
+                        <Progress value={prog} className="h-1.5" />
+                        <p className="text-[10px] text-muted-foreground mt-1">{Math.round(prog)}% do prazo</p>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between pt-1">
+                      {r.actors.length > 0 ? <ActorAvatarStack actors={r.actors} /> : <span />}
+                      <span className="text-[10px] text-muted-foreground">
+                        {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "Sem prazo"}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+              <span>{filtered.length} projeto(s)</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>
                   Anterior
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page === totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
+                <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
                   Próxima
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {paginated.map((r) => {
-            const prog = progress(r.start_date, r.estimated_delivery_date);
-            return (
-              <Card
-                key={r.id}
-                className="hover:shadow-md transition-shadow cursor-pointer animate-fade-slide"
-                onClick={() => openDrawer(r.id)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-accent font-mono text-sm font-semibold">{r.code}</span>
-                    <StatusBadge status={r.status} />
+          </div>
+
+          {/* Desktop ≥md: respeita view (table/cards) */}
+          <div className="hidden md:block">
+            {view === "table" ? (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {[
+                            ["code", "Código"],
+                            ["name", "Nome"],
+                            ["company_name", "Cliente"],
+                            ["project_type", "Tipo"],
+                            ["status", "Status"],
+                            ["contract_value", "Valor Contratado"],
+                            ["estimated_delivery_date", "Entrega Estimada"],
+                          ].map(([k, label]) => (
+                            <TableHead
+                              key={k}
+                              className="cursor-pointer select-none"
+                              onClick={() => toggleSort(k as keyof ProjectRow)}
+                            >
+                              {label} {sortKey === k && (sortDir === "asc" ? "↑" : "↓")}
+                            </TableHead>
+                          ))}
+                          <TableHead>Atores</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginated.map((r) => {
+                          const atrasado =
+                            r.estimated_delivery_date &&
+                            new Date(r.estimated_delivery_date) < new Date() &&
+                            !["entregue", "em_manutencao", "cancelado", "arquivado"].includes(r.status);
+                          return (
+                            <TableRow
+                              key={r.id}
+                              onClick={() => openDrawer(r.id)}
+                              className="cursor-pointer hover:bg-muted/40 transition-colors"
+                            >
+                              <TableCell>
+                                <span className="text-accent font-mono font-medium">{r.code}</span>
+                              </TableCell>
+                              <TableCell className="font-medium">{r.name}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <ActorAvatar name={r.company_name} size="sm" />
+                                  <span className="text-sm">{r.company_name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell><TypeBadge type={r.project_type} /></TableCell>
+                              <TableCell><StatusBadge status={r.status} /></TableCell>
+                              <TableCell className="text-right">
+                                {r.contract_value ? formatCurrency(r.contract_value) : "—"}
+                              </TableCell>
+                              <TableCell className={cn(atrasado && "text-destructive font-medium")}>
+                                {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {r.actors.length > 0 ? (
+                                  <ActorAvatarStack actors={r.actors} />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <h3 className="font-semibold leading-tight line-clamp-2">{r.name}</h3>
-                  <div className="flex items-center gap-2">
-                    <ActorAvatar name={r.company_name} size="sm" />
-                    <span className="text-sm text-muted-foreground truncate">{r.company_name}</span>
-                  </div>
-                  <TypeBadge type={r.project_type} />
-                  {r.contract_value && (
-                    <p className="text-sm font-bold">{formatCurrency(r.contract_value)}</p>
-                  )}
-                  {prog !== null && (
-                    <div>
-                      <Progress value={prog} className="h-1.5" />
-                      <p className="text-xs text-muted-foreground mt-1">{Math.round(prog)}% do prazo</p>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-1">
-                    {r.actors.length > 0 ? (
-                      <ActorAvatarStack actors={r.actors} />
-                    ) : (
-                      <span />
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "Sem prazo"}
+                  <div className="flex items-center justify-between p-4 text-sm text-muted-foreground border-t">
+                    <span>
+                      {filtered.length} projeto(s) • Página {page} de {totalPages}
                     </span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>
+                        Anterior
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+                        Próxima
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {paginated.map((r) => {
+                  const prog = progress(r.start_date, r.estimated_delivery_date);
+                  return (
+                    <Card
+                      key={r.id}
+                      className="hover:shadow-md transition-shadow cursor-pointer animate-fade-slide"
+                      onClick={() => openDrawer(r.id)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-accent font-mono text-sm font-semibold">{r.code}</span>
+                          <StatusBadge status={r.status} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <h3 className="font-semibold leading-tight line-clamp-2">{r.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <ActorAvatar name={r.company_name} size="sm" />
+                          <span className="text-sm text-muted-foreground truncate">{r.company_name}</span>
+                        </div>
+                        <TypeBadge type={r.project_type} />
+                        {r.contract_value && (
+                          <p className="text-sm font-bold">{formatCurrency(r.contract_value)}</p>
+                        )}
+                        {prog !== null && (
+                          <div>
+                            <Progress value={prog} className="h-1.5" />
+                            <p className="text-xs text-muted-foreground mt-1">{Math.round(prog)}% do prazo</p>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-1">
+                          {r.actors.length > 0 ? <ActorAvatarStack actors={r.actors} /> : <span />}
+                          <span className="text-xs text-muted-foreground">
+                            {r.estimated_delivery_date ? formatDate(r.estimated_delivery_date) : "Sem prazo"}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <NovoProjetoDialog
