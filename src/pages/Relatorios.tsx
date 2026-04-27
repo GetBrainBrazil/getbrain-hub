@@ -591,14 +591,14 @@ export default function Relatorios() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Relatórios</h1>
+    <div className="space-y-4 md:space-y-6">
+      <h1 className="text-xl md:text-2xl font-bold">Relatórios</h1>
 
       <Tabs value={relTab} onValueChange={setRelTab}>
-        <TabsList>
-          <TabsTrigger value="dre"><BarChart3 className="h-4 w-4 mr-1.5" />DRE</TabsTrigger>
-          <TabsTrigger value="fluxo"><TrendingUp className="h-4 w-4 mr-1.5" />Fluxo de Caixa</TabsTrigger>
-          <TabsTrigger value="inadimplencia"><AlertTriangle className="h-4 w-4 mr-1.5" />Análise de Inadimplência</TabsTrigger>
+        <TabsList className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0 max-w-full justify-start w-max md:w-auto">
+          <TabsTrigger value="dre" className="whitespace-nowrap"><BarChart3 className="h-4 w-4 mr-1.5" />DRE</TabsTrigger>
+          <TabsTrigger value="fluxo" className="whitespace-nowrap"><TrendingUp className="h-4 w-4 mr-1.5" />Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="inadimplencia" className="whitespace-nowrap"><AlertTriangle className="h-4 w-4 mr-1.5" />Inadimplência</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dre" className="space-y-6 mt-4">
@@ -607,9 +607,9 @@ export default function Relatorios() {
             <HelpTooltip content="O Demonstrativo de Resultado do Exercício mostra a saúde financeira da empresa: quanto entrou, quanto saiu e qual o resultado final no período selecionado." />
           </div>
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48 h-10 md:h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -653,8 +653,8 @@ export default function Relatorios() {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" onClick={exportDRECSV} disabled={dreLines.length === 0}>
-                <Download className="h-4 w-4 mr-2" />Exportar CSV
+              <Button variant="outline" onClick={exportDRECSV} disabled={dreLines.length === 0} className="h-10 md:h-9">
+                <Download className="h-4 w-4 mr-2" /><span className="hidden sm:inline">Exportar </span>CSV
               </Button>
               <HelpTooltip content="Baixe o DRE em PDF para compartilhar com sócios ou contador, ou em Excel para análises personalizadas." />
             </div>
