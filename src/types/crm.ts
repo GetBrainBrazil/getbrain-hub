@@ -48,12 +48,9 @@ export interface CompanyContactRole {
   created_at?: string;
 }
 
-// AcceptanceCriterion compartilhado com projects (mesma forma JSONB)
-export interface AcceptanceCriterion {
-  id: string;
-  text: string;
-  checked: boolean;
-}
+// AcceptanceCriterion compartilhado com projects/tasks (mesma forma JSONB)
+export type { AcceptanceCriterion } from "./shared";
+import type { AcceptanceCriterion } from "./shared";
 
 export interface CrmCompany { id: string; legal_name: string; trade_name: string | null; relationship_status?: CompanyRelationshipStatus; }
 export interface CrmPerson { id: string; full_name: string; email: string | null; phone?: string | null; role_in_company?: string | null; }
