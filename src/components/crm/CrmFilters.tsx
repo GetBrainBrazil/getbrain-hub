@@ -14,7 +14,7 @@ export function MultiFilter({ label, selected, options, onChange }: { label: str
           {label}{selected.length > 0 && <span className="ml-1 rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-mono text-accent">{selected.length}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] p-2">
+      <PopoverContent align="start" sideOffset={6} collisionPadding={12} className="w-[min(20rem,calc(100vw-1.5rem))] p-2">
         <div className="max-h-72 space-y-1 overflow-y-auto">
           {options.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">Sem opções</p>}
           {options.map((o) => (
