@@ -67,6 +67,17 @@ export const DEPENDENCY_TYPE_LABEL: Record<DealDependencyType, string> = {
   autorizacao_legal: 'Autorização legal',
   outro: 'Outro',
 };
+export const DEPENDENCY_TYPE_OPTIONS: DealDependencyType[] = [
+  'acesso_sistema', 'dado', 'pessoa', 'hardware', 'autorizacao_legal', 'outro',
+];
+export const DEPENDENCY_TYPE_COLOR: Record<DealDependencyType, string> = {
+  acesso_sistema: 'bg-accent/15 text-accent border-accent/30',
+  dado: 'bg-chart-5/15 text-chart-5 border-chart-5/30',
+  pessoa: 'bg-warning/15 text-warning border-warning/30',
+  hardware: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
+  autorizacao_legal: 'bg-destructive/15 text-destructive border-destructive/30',
+  outro: 'bg-muted text-muted-foreground border-border',
+};
 
 export const DEPENDENCY_STATUS_LABEL: Record<DealDependencyStatus, string> = {
   aguardando_combinar: 'Aguardando combinar',
@@ -74,6 +85,9 @@ export const DEPENDENCY_STATUS_LABEL: Record<DealDependencyStatus, string> = {
   liberado: 'Liberado',
   atrasado: 'Atrasado',
 };
+export const DEPENDENCY_STATUS_OPTIONS: DealDependencyStatus[] = [
+  'aguardando_combinar', 'combinado', 'liberado', 'atrasado',
+];
 export const DEPENDENCY_STATUS_COLOR: Record<DealDependencyStatus, string> = {
   aguardando_combinar: 'bg-muted text-muted-foreground border-border',
   combinado: 'bg-accent/15 text-accent border-accent/30',
