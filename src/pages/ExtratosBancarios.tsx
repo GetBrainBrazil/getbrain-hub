@@ -103,15 +103,15 @@ export default function ExtratosBancarios() {
   const divergencias = movimentacoes.filter((m: any) => !m.conciliado);
 
   return (
-    <div className="space-y-6 animate-fade-slide">
+    <div className="space-y-4 md:space-y-6 animate-fade-slide">
       <div>
-        <h1 className="text-2xl font-bold font-heading">Extratos Bancários</h1>
-        <p className="text-muted-foreground text-sm">Conciliação e controle de extratos por conta bancária</p>
+        <h1 className="text-xl md:text-2xl font-bold font-heading">Extratos Bancários</h1>
+        <p className="text-muted-foreground text-xs md:text-sm">Conciliação e controle de extratos por conta bancária</p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
         <Select value={contaId} onValueChange={setContaId}>
-          <SelectTrigger className="w-[260px]"><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[260px] h-10 md:h-9"><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as contas</SelectItem>
             {contas.map((c) => (
@@ -120,12 +120,12 @@ export default function ExtratosBancarios() {
           </SelectContent>
         </Select>
         <PeriodFilter preset={preset as PeriodPreset} customRange={customRange} onPresetChange={setPreset} onCustomRangeChange={setCustomRange} />
-        <div className="flex-1" />
-        <Button onClick={() => setImportOpen(true)} className="gap-2">
-          <Upload className="h-4 w-4" /> Importar Extrato
+        <div className="hidden md:block flex-1" />
+        <Button onClick={() => setImportOpen(true)} className="gap-2 h-10 md:h-9 flex-1 md:flex-none">
+          <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Importar </span>Extrato
         </Button>
-        <Button variant="outline" onClick={() => setComprovanteOpen(true)} className="gap-2">
-          <Camera className="h-4 w-4" /> Registrar Comprovante
+        <Button variant="outline" onClick={() => setComprovanteOpen(true)} className="gap-2 h-10 md:h-9 flex-1 md:flex-none">
+          <Camera className="h-4 w-4" /> <span className="hidden sm:inline">Registrar </span>Comprovante
         </Button>
       </div>
 
