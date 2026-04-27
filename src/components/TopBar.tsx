@@ -1,13 +1,18 @@
-import { useLocation } from "react-router-dom";
-import { Bell, Search, Moon, Sun, LogOut } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Bell, Search, Moon, Sun, LogOut, User as UserIcon, Shield, Eye } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -19,6 +24,7 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const routeNames: Record<string, string> = {
   "/": "Dashboard",
@@ -30,21 +36,40 @@ const routeNames: Record<string, string> = {
   "/financeiro/relatorios": "Financeiro › Relatórios",
   "/projetos": "Projetos",
   "/clientes": "Clientes",
-  "/configuracoes": "Configurações",
+  "/perfil": "Meu Perfil",
+  "/admin/usuarios": "Admin › Usuários",
+  "/admin/permissoes": "Admin › Permissões",
+  "/admin/agencia": "Admin › Agência",
+  "/admin/logs": "Admin › Logs",
 };
 
 export function TopBar() {
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { user, signOut, isAdmin } = useAuth();
   const [dark, setDark] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  const breadcrumb = routeNames[location.pathname] || "Página";
-  const initials = user?.email?.substring(0, 2).toUpperCase() || "GB";
+  useEffect(() => {
+    if (!user) { setProfile(null); return; }
+    supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle()
+      .then(({ data }) => setProfile(data ?? null));
+  }, [user?.id]);
+
+  // dynamic breadcrumb (handles /admin/usuarios/:id, etc.)
+  const path = location.pathname;
+  const breadcrumb =
+    routeNames[path] ||
+    (path.startsWith("/admin/usuarios/") ? "Admin › Usuário" :
+     path.startsWith("/admin") ? "Admin" : "Página");
+
+  const initials = (profile?.full_name || user?.email || "GB").substring(0, 2).toUpperCase();
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "Usuário";
 
   return (
     <header className="h-14 border-b bg-card flex items-center px-2 sm:px-4 gap-1 sm:gap-2 md:gap-4 sticky top-0 z-10">
@@ -54,13 +79,11 @@ export function TopBar() {
       </span>
       <div className="flex-1" />
 
-      {/* Desktop search */}
       <div className="relative hidden md:block">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Buscar..." className="pl-9 w-64 h-9 bg-muted/50" />
       </div>
 
-      {/* Mobile search trigger */}
       <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" aria-label="Buscar">
@@ -68,16 +91,10 @@ export function TopBar() {
           </Button>
         </SheetTrigger>
         <SheetContent side="top" className="h-auto">
-          <SheetHeader>
-            <SheetTitle>Buscar</SheetTitle>
-          </SheetHeader>
+          <SheetHeader><SheetTitle>Buscar</SheetTitle></SheetHeader>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              autoFocus
-              placeholder="Buscar..."
-              className="pl-9 h-11 bg-muted/50"
-            />
+            <Input autoFocus placeholder="Buscar..." className="pl-9 h-11 bg-muted/50" />
           </div>
         </SheetContent>
       </Sheet>
@@ -96,23 +113,52 @@ export function TopBar() {
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
+          <Button variant="ghost" className="rounded-full h-10 gap-2 px-1.5 sm:px-2">
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-accent text-accent-foreground text-xs font-semibold">
+              <AvatarImage src={profile?.avatar_url ?? undefined} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                 {initials}
               </AvatarFallback>
             </Avatar>
+            <span className="hidden md:inline text-sm font-medium max-w-[160px] truncate">
+              {displayName}
+            </span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem className="text-xs text-muted-foreground">{user?.email}</DropdownMenuItem>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="font-normal">
+            <div className="text-sm font-semibold truncate">{displayName}</div>
+            <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => navigate("/perfil")}>
+            <UserIcon className="h-4 w-4 mr-2" /> Meu Perfil
+          </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem onClick={() => navigate("/admin/usuarios")}>
+              <Shield className="h-4 w-4 mr-2" /> Admin
+            </DropdownMenuItem>
+          )}
+          {isAdmin && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Eye className="h-4 w-4 mr-2" /> Ver como…
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem disabled>Administrador (atual)</DropdownMenuItem>
+                <DropdownMenuItem disabled>Gerente</DropdownMenuItem>
+                <DropdownMenuItem disabled>Agente de Vendas</DropdownMenuItem>
+                <DropdownMenuItem disabled>Operações</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
           <DropdownMenuItem onClick={() => setDark(!dark)} className="sm:hidden">
             {dark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
             {dark ? "Tema claro" : "Tema escuro"}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={signOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
+            <LogOut className="h-4 w-4 mr-2" /> Sair
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
