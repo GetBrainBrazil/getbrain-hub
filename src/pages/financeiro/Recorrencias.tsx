@@ -85,39 +85,39 @@ export default function Recorrencias() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/15 text-primary flex items-center justify-center">
+    <div className="space-y-4 md:space-y-6 max-w-[1400px] mx-auto">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
             <Repeat className="h-5 w-5" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Recorrências</h1>
-            <p className="text-sm text-muted-foreground">Séries financeiras: assinaturas, contratos e parcelamentos.</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold truncate">Recorrências</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">Séries financeiras: assinaturas, contratos e parcelamentos.</p>
           </div>
         </div>
-        <Button onClick={() => setNovaOpen(true)}>
+        <Button onClick={() => setNovaOpen(true)} className="h-10 md:h-9 w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" /> Nova Recorrência
         </Button>
       </header>
 
       <RecorrenciaKPICards />
 
-      <Tabs value={filters.status || "todas"} onValueChange={(v) => setFilter("status", v as any)}>
-        <TabsList>
-          <TabsTrigger value="todas">Todas ({counts.todas})</TabsTrigger>
-          <TabsTrigger value="ativa">Ativas ({counts.ativa})</TabsTrigger>
-          <TabsTrigger value="pausada">Pausadas ({counts.pausada})</TabsTrigger>
-          <TabsTrigger value="encerrada">Encerradas ({counts.encerrada})</TabsTrigger>
-          <TabsTrigger value="cancelada">Canceladas ({counts.cancelada})</TabsTrigger>
+      <Tabs value={filters.status || "todas"} onValueChange={(v) => setFilter("status", v as any)} className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+        <TabsList className="w-max">
+          <TabsTrigger value="todas" className="whitespace-nowrap">Todas ({counts.todas})</TabsTrigger>
+          <TabsTrigger value="ativa" className="whitespace-nowrap">Ativas ({counts.ativa})</TabsTrigger>
+          <TabsTrigger value="pausada" className="whitespace-nowrap">Pausadas ({counts.pausada})</TabsTrigger>
+          <TabsTrigger value="encerrada" className="whitespace-nowrap">Encerradas ({counts.encerrada})</TabsTrigger>
+          <TabsTrigger value="cancelada" className="whitespace-nowrap">Canceladas ({counts.cancelada})</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-40">
+      <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-end gap-3">
+        <div className="md:w-40">
           <Label className="text-xs">Tipo</Label>
           <Select value={filters.type || "todas"} onValueChange={(v) => setFilter("type", v as any)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 md:h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas</SelectItem>
               <SelectItem value="recurrence">Recorrência</SelectItem>
@@ -125,10 +125,10 @@ export default function Recorrencias() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-40">
+        <div className="md:w-40">
           <Label className="text-xs">Direção</Label>
           <Select value={filters.direction || "todas"} onValueChange={(v) => setFilter("direction", v as any)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 md:h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas</SelectItem>
               <SelectItem value="receita">Receita</SelectItem>
@@ -136,15 +136,16 @@ export default function Recorrencias() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex-1 min-w-[200px]">
+        <div className="col-span-2 md:flex-1 md:min-w-[200px]">
           <Label className="text-xs">Buscar</Label>
           <Input
             placeholder="Descrição ou código (REC-…)"
             value={filters.search || ""}
             onChange={(e) => setFilter("search", e.target.value)}
+            className="h-10 md:h-9"
           />
         </div>
-        <div className="flex items-center gap-2 pb-2">
+        <div className="col-span-2 flex items-center gap-2 md:pb-2">
           <Switch
             checked={!!filters.showDeleted}
             onCheckedChange={(v) => setFilter("showDeleted", v)}

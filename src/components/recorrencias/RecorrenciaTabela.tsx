@@ -64,6 +64,7 @@ export function RecorrenciaTabela({ rows, loading, onRowClick, onAction }: Props
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-border overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
@@ -142,6 +143,7 @@ export function RecorrenciaTabela({ rows, loading, onRowClick, onAction }: Props
             ))}
           </TableBody>
         </Table>
+        </div>
       </div>
       {totalPages > 1 && (
         <div className="flex justify-end items-center gap-2 text-xs text-muted-foreground">

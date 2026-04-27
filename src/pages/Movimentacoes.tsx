@@ -33,6 +33,7 @@ import { Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
+import { MovimentacaoMobileCard } from "@/components/MovimentacaoMobileCard";
 
 type TabType = "pagar" | "receber";
 
@@ -960,27 +961,29 @@ export default function Movimentacoes() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Movimentações</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Movimentações</h1>
           <div className="flex items-center gap-1.5">
-            <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
+            <p className="text-muted-foreground text-xs md:text-sm">Gerencie suas contas e liquidações financeiras</p>
             <HelpTooltip content="Aqui você registra todas as entradas e saídas financeiras da empresa. Use 'Conta a Pagar' para despesas e 'Conta a Receber' para receitas." />
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 md:flex md:gap-2">
           <Button
             variant="outline"
-            className="gap-1.5 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
+            className="gap-1.5 h-10 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
             onClick={() => navigate("/financeiro/movimentacoes/novo/pagar")}
           >
-            <ArrowDown className="h-4 w-4 text-destructive" /> Conta a Pagar
+            <ArrowDown className="h-4 w-4 text-destructive" />
+            <span className="hidden sm:inline">Conta a </span>Pagar
           </Button>
           <Button
-            className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="gap-1.5 h-10 bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => navigate("/financeiro/movimentacoes/novo/receber")}
           >
-            <ArrowUp className="h-4 w-4 text-primary-foreground" /> Conta a Receber
+            <ArrowUp className="h-4 w-4 text-primary-foreground" />
+            <span className="hidden sm:inline">Conta a </span>Receber
           </Button>
         </div>
       </div>
@@ -1028,16 +1031,16 @@ export default function Movimentacoes() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-border">
+      <div className="flex items-center gap-4 md:gap-6 border-b border-border overflow-x-auto">
         <button
           onClick={() => setTab("pagar")}
-          className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`pb-2.5 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-11 md:min-h-0 ${tab === "pagar" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Pagar
         </button>
         <button
           onClick={() => setTab("receber")}
-          className={`pb-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`pb-2.5 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap min-h-11 md:min-h-0 ${tab === "receber" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           A Receber
         </button>
@@ -1063,36 +1066,37 @@ export default function Movimentacoes() {
             </div>
           );
         })()}
-        <div className="flex gap-3 flex-wrap items-center">
-          <div className="relative flex-1 min-w-[240px] max-w-md">
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative flex-1 min-w-[200px] md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por descrição, vinculado, categoria, projeto, conta..."
+              placeholder="Buscar..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-10 md:h-9"
             />
           </div>
           <PeriodFilter preset={periodPreset as PeriodPreset} customRange={periodCustom} onPresetChange={setPeriodPreset} onCustomRangeChange={setPeriodCustom} />
-          <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <label className="hidden lg:flex ml-auto items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <Switch checked={hideRecurringFuture} onCheckedChange={setHideRecurringFuture} />
             Ocultar parcelas futuras de recorrências
             <HelpTooltip content="Esconde parcelas de recorrências com vencimento após o fim do mês atual." />
           </label>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <label className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
             Exibir Saldos Parciais
             <HelpTooltip content="Quando ativado, mostra o saldo parcial de movimentações que tiveram pagamento parcial registrado." />
           </label>
           {hasActiveFilters && (
-            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="h-9 gap-1 text-xs">
+            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="h-10 md:h-9 gap-1 text-xs">
               <X className="h-3.5 w-3.5" />
-              Limpar filtros
+              <span className="hidden sm:inline">Limpar filtros</span>
             </Button>
           )}
         </div>
 
-        <div className="flex gap-2 flex-wrap items-center">
+        {/* Filtros avançados — scroll horizontal no mobile */}
+        <div className="flex gap-2 items-center overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0 md:flex-wrap md:overflow-visible scrollbar-thin">
           <MultiSelectFilter title="Status" selected={statusFilter} onChange={setStatusFilter} options={statusOptions} placeholder="Buscar status..." />
           <MultiSelectFilter title={isPagar ? "Vinculado" : "Cliente"} selected={vinculadoFilter} onChange={setVinculadoFilter} options={vinculadoOptions} placeholder={isPagar ? "Buscar fornecedor ou colaborador..." : "Buscar cliente..."} />
           <MultiSelectFilter title="Categoria" selected={categoriaFilter} onChange={setCategoriaFilter} options={categoriaOptions} placeholder="Buscar categoria..." />
@@ -1102,7 +1106,7 @@ export default function Movimentacoes() {
           <MultiSelectFilter title="Recorrência" selected={recorrenciaFilter} onChange={setRecorrenciaFilter} options={recorrenciaOptions} placeholder="Buscar recorrência..." />
           <MultiSelectFilter title="Conciliação" selected={conciliacaoFilter} onChange={setConciliacaoFilter} options={conciliacaoOptions} placeholder="Buscar conciliação..." />
           <Select value={lancamentoOrder} onValueChange={(v) => setLancamentoOrder(v as "none" | "recent" | "old")}>
-            <SelectTrigger className="h-8 w-auto gap-1.5 px-2.5 text-xs font-normal">
+            <SelectTrigger className="h-8 w-auto gap-1.5 px-2.5 text-xs font-normal shrink-0">
               <SelectValue placeholder="Lançamentos" />
             </SelectTrigger>
             <SelectContent>
@@ -1112,10 +1116,60 @@ export default function Movimentacoes() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Toggles que ficam escondidos em telas < lg, exibidos abaixo em mobile/tablet */}
+        <div className="flex flex-col gap-2 lg:hidden">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <Switch checked={hideRecurringFuture} onCheckedChange={setHideRecurringFuture} />
+            Ocultar parcelas futuras de recorrências
+          </label>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <Switch checked={showSaldosParciais} onCheckedChange={setShowSaldosParciais} />
+            Exibir Saldos Parciais
+          </label>
+        </div>
       </div>
 
+      {/* Mobile: lista de cards */}
+      <Card className="md:hidden overflow-hidden">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-4 space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : ordered.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              Nenhuma movimentação encontrada com os filtros atuais.
+            </p>
+          ) : (
+            ordered.map((m: any) => {
+              const v = getVinculado(m);
+              return (
+                <MovimentacaoMobileCard
+                  key={m.id}
+                  m={m}
+                  isPagar={isPagar}
+                  selected={selectedIds.has(m.id)}
+                  onSelect={() => toggleSelect(m.id)}
+                  onClick={() => navigate(`/financeiro/movimentacoes/${m.id}`)}
+                  onLiquidar={() => openDarBaixa(m)}
+                  onEditar={() => openEditModal(m)}
+                  onDuplicar={() => handleDuplicate(m)}
+                  onExcluir={() => handleDelete(m.id)}
+                  vinculadoNome={v.nome}
+                  vinculadoBadge={v.badge}
+                />
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Desktop: tabela tradicional */}
       {/* Table */}
-      <Card className="overflow-hidden">
+      <Card className="hidden md:block overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -1306,7 +1360,7 @@ export default function Movimentacoes() {
 
       {/* Baixa / Registrar Pagamento Dialog */}
       <Dialog open={openBaixa} onOpenChange={setOpenBaixa}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-7">
+        <DialogContent className="sm:max-w-[760px] w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto p-4 sm:p-7">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-success flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
@@ -1336,7 +1390,7 @@ export default function Movimentacoes() {
             />
 
             {/* Linha 1: Data, Forma, Conta */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="text-[12px] font-medium text-foreground mb-1.5 block">
                   Data do {isPagar ? "Pagamento" : "Recebimento"}
@@ -1365,7 +1419,7 @@ export default function Movimentacoes() {
 
             {/* Bloco Valor + ajustes */}
             <div className="rounded-lg border border-border p-4 space-y-3">
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 <div>
                   <Label className="text-[11px] font-medium text-foreground mb-1.5 block">
                     Valor Base (R$) *
@@ -1401,7 +1455,7 @@ export default function Movimentacoes() {
             {/* Impostos retidos */}
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
               <p className="text-[11px] font-semibold text-destructive uppercase tracking-widest">Impostos Retidos</p>
-              <div className="grid grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {(["pis", "cofins", "csll", "iss", "ir", "inss"] as const).map(k => (
                   <div key={k}>
                     <Label className="text-[11px] font-medium text-muted-foreground mb-1.5 block uppercase">{k}</Label>
@@ -1412,7 +1466,7 @@ export default function Movimentacoes() {
             </div>
 
             {/* Resumo */}
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 grid grid-cols-6 gap-3 text-center">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Previsão Original</p>
                 <p className="text-xs font-semibold text-foreground">{selectedMov?.data_vencimento ? formatDate(selectedMov.data_vencimento) : "—"}</p>

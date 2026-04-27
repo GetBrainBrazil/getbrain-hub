@@ -124,18 +124,18 @@ export default function ContratosManutencao() {
     : null;
 
   return (
-    <div className="space-y-6 p-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6">
+      <header className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <Wrench className="h-5 w-5 text-accent" />
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Contratos de Manutenção</h1>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">Contratos de Manutenção</h1>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground">
             Mensalidades recorrentes geram automaticamente Contas a Receber pendentes.
           </p>
         </div>
-        <Button onClick={() => setOpenNew(true)}>
+        <Button onClick={() => setOpenNew(true)} className="h-10 md:h-9 w-full md:w-auto">
           <Plus className="mr-1.5 h-4 w-4" /> Novo Contrato
         </Button>
       </header>

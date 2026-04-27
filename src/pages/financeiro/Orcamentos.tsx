@@ -161,42 +161,44 @@ export default function Orcamentos() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 md:space-y-6">
+      <header className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Orçamentos</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-semibold">Orçamentos</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">
             Crie, edite e gere PDFs de propostas comerciais
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           <ToggleGroup
             type="single"
             value={viewMode}
             onValueChange={(v) => v && setViewMode(v as ViewMode)}
-            className="border border-border rounded-md p-0.5"
+            className="border border-border rounded-md p-0.5 flex-1 md:flex-none"
           >
-            <ToggleGroupItem value="kanban" size="sm" aria-label="Visão Kanban">
-              <LayoutGrid className="h-4 w-4" /> Kanban
+            <ToggleGroupItem value="kanban" size="sm" aria-label="Visão Kanban" className="flex-1 md:flex-none h-9">
+              <LayoutGrid className="h-4 w-4" /> <span className="hidden sm:inline">Kanban</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="table" size="sm" aria-label="Visão Tabela">
-              <Table2 className="h-4 w-4" /> Tabela
+            <ToggleGroupItem value="table" size="sm" aria-label="Visão Tabela" className="flex-1 md:flex-none h-9">
+              <Table2 className="h-4 w-4" /> <span className="hidden sm:inline">Tabela</span>
             </ToggleGroupItem>
           </ToggleGroup>
-          <Button onClick={() => setNovoOpen(true)}>
-            <Plus className="h-4 w-4" /> Novo Orçamento
+          <Button onClick={() => setNovoOpen(true)} className="h-10 md:h-9 shrink-0">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Novo Orçamento</span>
+            <span className="sm:hidden">Novo</span>
           </Button>
         </div>
       </header>
 
       <OrcamentoKPICards />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         {viewMode === "table" ? (
-          <Tabs value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
-            <TabsList>
+          <Tabs value={status} onValueChange={(v) => setStatus(v as StatusFilter)} className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+            <TabsList className="w-max">
               {STATUS_TABS.map((t) => (
-                <TabsTrigger key={t.v} value={t.v}>
+                <TabsTrigger key={t.v} value={t.v} className="whitespace-nowrap">
                   {t.label}
                 </TabsTrigger>
               ))}
@@ -205,13 +207,13 @@ export default function Orcamentos() {
         ) : (
           <div />
         )}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Código ou cliente…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-10 md:h-9"
           />
         </div>
       </div>
