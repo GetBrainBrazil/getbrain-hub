@@ -213,7 +213,7 @@ export function AppSidebar() {
                   <CollapsibleContent>
                     <div className="mt-1 ml-[1.6rem] pl-3 border-l border-sidebar-border/40 space-y-0.5">
                       {item.children!.map((sub) => {
-                        const subActive = isExactActive(sub.url);
+                        const subActive = activeChild?.url === sub.url;
                         return (
                           <NavLink
                             key={sub.title}
