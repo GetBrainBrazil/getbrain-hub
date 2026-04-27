@@ -49,7 +49,6 @@ export default function Orcamentos() {
   );
   const [novoOpen, setNovoOpen] = useState(false);
   const [pdfRow, setPdfRow] = useState<any | null>(null);
-  const [drawerId, setDrawerId] = useState<string | null>(null);
 
   // No Kanban ignoramos o filtro de status (Kanban mostra tudo, dividido por coluna).
   // O filtro só age na tabela.
