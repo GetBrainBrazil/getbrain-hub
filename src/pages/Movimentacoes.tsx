@@ -960,27 +960,29 @@ export default function Movimentacoes() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Movimentações</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Movimentações</h1>
           <div className="flex items-center gap-1.5">
-            <p className="text-muted-foreground text-sm">Gerencie suas contas e liquidações financeiras</p>
+            <p className="text-muted-foreground text-xs md:text-sm">Gerencie suas contas e liquidações financeiras</p>
             <HelpTooltip content="Aqui você registra todas as entradas e saídas financeiras da empresa. Use 'Conta a Pagar' para despesas e 'Conta a Receber' para receitas." />
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 md:flex md:gap-2">
           <Button
             variant="outline"
-            className="gap-1.5 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
+            className="gap-1.5 h-10 bg-background border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
             onClick={() => navigate("/financeiro/movimentacoes/novo/pagar")}
           >
-            <ArrowDown className="h-4 w-4 text-destructive" /> Conta a Pagar
+            <ArrowDown className="h-4 w-4 text-destructive" />
+            <span className="hidden sm:inline">Conta a </span>Pagar
           </Button>
           <Button
-            className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="gap-1.5 h-10 bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => navigate("/financeiro/movimentacoes/novo/receber")}
           >
-            <ArrowUp className="h-4 w-4 text-primary-foreground" /> Conta a Receber
+            <ArrowUp className="h-4 w-4 text-primary-foreground" />
+            <span className="hidden sm:inline">Conta a </span>Receber
           </Button>
         </div>
       </div>
