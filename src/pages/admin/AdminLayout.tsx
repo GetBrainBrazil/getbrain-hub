@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getPreAdminRoute } from "@/components/RouteTracker";
 
 const TABS = [
   { key: "usuarios", label: "Usuários", path: "/admin/usuarios" },
@@ -18,7 +19,7 @@ export default function AdminLayout({ children }: { children?: ReactNode }) {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-10 w-10 -ml-2 mt-1" aria-label="Sair do Admin">
+        <Button variant="ghost" size="icon" onClick={() => navigate(getPreAdminRoute() ?? "/")} className="h-10 w-10 -ml-2 mt-1" aria-label="Voltar">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
