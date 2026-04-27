@@ -23,8 +23,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCargos } from "@/hooks/useCargos";
+import { useUsuarios } from "@/hooks/useUsuarios";
+import { useViewAs } from "@/hooks/useViewAs";
 
 const routeNames: Record<string, string> = {
   "/": "Dashboard",
@@ -50,6 +53,18 @@ export function TopBar() {
   const [dark, setDark] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
+  const [userSearch, setUserSearch] = useState("");
+
+  const { data: cargos = [] } = useCargos();
+  const { data: usuarios = [] } = useUsuarios();
+  const { mode: viewAsMode, setViewAs } = useViewAs();
+
+  const orderedCargos = useMemo(() => [...cargos].sort((a, b) => b.nivel - a.nivel), [cargos]);
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    const list = q ? usuarios.filter(u => (u.full_name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q)) : usuarios;
+    return list.slice(0, 10);
+  }, [usuarios, userSearch]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
