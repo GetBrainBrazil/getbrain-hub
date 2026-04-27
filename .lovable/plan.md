@@ -1,102 +1,121 @@
-## Área de Usuários e Cargos (Configurações → Usuários)
+## Reorganização: Admin no dropdown do perfil
 
-Adicionar uma nova aba **"Usuários e Permissões"** dentro de `/configuracoes`, com gestão completa de membros da equipe e cargos customizáveis com níveis de acesso.
+A área "Configurações" sai da sidebar. O acesso passa a ser pelo **menu do avatar (TopBar)**, com 3 itens: **Meu Perfil**, **Admin**, **Sair** (mantendo "Ver como…" como placeholder visual). Internamente unificamos tudo na nova rota `/admin` com 4 abas (Usuários, Permissões, Logs) e uma rota separada `/perfil` (e `/admin/usuarios/:id`) que reproduz exatamente o layout dos prints — header com avatar grande + sub-tabs (Dados Pessoais, Endereço & Emergência, Contratos, Senha) e zona de perigo.
 
----
+A identidade visual atual (serif para títulos, navy `--primary` 222 84% 11%, ciano `--accent` 187 82% 55%) é preservada — apenas reaplicada nos novos componentes.
 
-### 1. Modelo de Dados (migration)
+### Estrutura de rotas
 
-Hoje o sistema tem `app_role` enum fixo (`admin`, `member`) e `user_roles (user_id, role)`. Vou estender para suportar **cargos customizáveis com permissões granulares**, sem quebrar o que já existe.
+```text
+/perfil                       → ficha do usuário logado (4 sub-tabs)
+/admin                        → redireciona para /admin/usuarios
+/admin/usuarios               → lista (replica print 84)
+/admin/usuarios/:id           → ficha completa (replicas prints 85-88)
+/admin/permissoes             → matriz de permissões (replica prints 89-90)
+/admin/logs                   → auditoria (replica print 91)
+```
 
-**Novas tabelas:**
+A rota antiga `/configuracoes` é redirecionada para `/admin/usuarios` (mantém compatibilidade) e o item da sidebar é removido.
 
-- `cargos` — cargos criados pelo admin
-  - `id`, `nome` (ex: "Gerente Financeiro"), `descricao`, `nivel` (1-5, ranking visual), `cor` (badge), `is_system` (bool, protege admin/member nativos), `created_at`, `updated_at`
-- `cargo_permissoes` — permissões de cada cargo
-  - `id`, `cargo_id`, `modulo` (financeiro, projetos, crm, dev, configuracoes, vendas, usuarios), `acao` (view, create, edit, delete, admin)
-- `usuario_cargos` — vínculo usuário ↔ cargo (substitui uso direto de `user_roles` para cargos custom; mantemos `user_roles` para compatibilidade com `has_role()`)
-  - `id`, `user_id`, `cargo_id`, `assigned_at`, `assigned_by`
+### Mudanças no banco (migrations)
 
-**Extensão de `profiles`:**
-- adicionar colunas: `email` (text, sincronizado de auth), `telefone` (text), `cargo_principal` (text, denormalizado para listagem rápida), `ativo` (bool default true), `ultimo_acesso` (timestamp)
-- `avatar_url` já existe — usado para foto
+1. **Estender `profiles**` com campos pessoais e de RH dos prints:
+  `cep, pais, endereco, numero, complemento, bairro, cidade, estado, contato_emergencia_nome, contato_emergencia_telefone, plano_saude`.
+2. **Nova tabela `usuario_contratos**` (`id, user_id, tipo, cargo, data_inicio, data_fim, salario, observacoes, anexo_url, created_at`) com RLS: dono lê/escreve o próprio; admin lê/escreve todos.
+3. **Nova tabela `audit_logs**` (`id, user_id, user_nome, acao, modulo, tabela, registro_id, resumo, metadata jsonb, ip, user_agent, created_at`). RLS: insert por qualquer autenticado (edge function), select apenas admin.
+4. **Trigger de login**: registrar evento `Login` em `audit_logs` via edge function chamada no `signIn` (não há trigger nativo confiável em `auth.users` para esse caso; faremos pelo cliente após login bem-sucedido).
+  &nbsp;
 
-**Funções/Triggers:**
-- `has_permission(_user_id uuid, _modulo text, _acao text)` — security definer, verifica via `usuario_cargos` + `cargo_permissoes`
-- `sync_profile_email()` — trigger em `auth.users` para popular `profiles.email` no signup
-- Seed: cria cargos de sistema "Administrador" (todas permissões) e "Membro" (view em tudo)
+### Mudanças de UI
 
-**RLS:**
-- `cargos`, `cargo_permissoes`, `usuario_cargos`: SELECT autenticado; INSERT/UPDATE/DELETE só `has_role(auth.uid(), 'admin')`
-- `profiles`: manter SELECT autenticado; UPDATE próprio OU admin; DELETE só admin
+**TopBar** (`src/components/TopBar.tsx`)
 
----
+- Dropdown do avatar passa a mostrar: nome + email no topo, depois itens **Meu Perfil** (`/perfil`), **Admin** (`/admin/usuarios`, visível só se `has_role admin`), **Ver como…** (submenu placeholder com lista de cargos para impersonation visual futura), separator, **Sair**.
 
-### 2. Edge Functions
+**AppSidebar** (`src/components/AppSidebar.tsx`)
 
-Criar/excluir usuário exige Admin API do Supabase (não dá pelo client). Duas funções:
+- Remove o item "Configurações" da navegação principal.
 
-- **`admin-create-user`** — recebe `{email, password, full_name, telefone, cargo_id}`, valida que o caller é admin via JWT, cria usuário com `supabase.auth.admin.createUser`, popula profile, vincula cargo.
-- **`admin-delete-user`** — recebe `{user_id}`, valida admin, chama `supabase.auth.admin.deleteUser`.
-- **`admin-update-user`** — atualiza email/senha de outro usuário (admin only).
+**Nova rota wrapper `/admin**` (`src/pages/admin/AdminLayout.tsx`)
 
-Ambas com CORS, validação Zod, verificação de admin via `has_role`.
+- Header com seta voltar + título serif "Admin" + subtítulo "Usuários, permissões, agência e logs".
+- Tabs: Usuários | Permissões | Agência | Logs (persistido via `usePersistedState`).
+- Renderiza `<Outlet/>` baseado na rota.
 
----
+`**/admin/usuarios**` (`AdminUsuariosList.tsx`)
 
-### 3. UI — Nova aba em Configurações
+- Botão `+ Novo Usuário` (navy) abre `UsuarioDialog` existente.
+- Tabela: Foto | Nome | E-mail | Celular | Função (badge colorida por cargo) → linha inteira clicável vai para `/admin/usuarios/:id`.
+- Mobile: cards.
 
-**`src/pages/Configuracoes.tsx`**: adicionar 2 novas abas → `Usuários` e `Cargos`.
+`**/admin/usuarios/:id` e `/perfil**` (`UsuarioFichaPage.tsx`)
 
-**`src/components/configuracoes/UsuariosTab.tsx`** (novo):
-- Header: busca + botão "Novo Usuário" (full-width no mobile)
-- **Desktop**: tabela com colunas Avatar, Nome, Email, Telefone, Cargo (badge colorido), Último acesso, Status (switch ativo), Ações (editar/excluir)
-- **Mobile**: cards (`md:hidden`) com avatar grande, nome, email, cargo, ações em menu dropdown
-- Dialog "Novo/Editar Usuário": foto (upload pra Supabase Storage bucket `avatars`), nome completo, email, telefone (mask BR), senha (só create), cargo (select), switch ativo
-- Confirm dialog para exclusão
-- Bloqueio: admin não pode se auto-excluir nem se rebaixar do último cargo admin
+- Header card grande: avatar 80px com botão câmera (upload), nome serif, email, badge cargo, texto "JPG ou PNG. Máx 2MB.".
+- Sub-tabs (`usePersistedState`): **Dados Pessoais**, **Endereço & Emergência**, **Contratos**, **Senha**.
+  - Dados Pessoais: nome completo, e-mail (admin pode editar; usuário comum não), celular, função (select de cargos — só admin edita).
+  - Endereço & Emergência: CEP (busca ViaCEP via fetch), país, endereço, número, complemento, bairro, cidade, estado + nome/telefone emergência + plano de saúde.
+  - Contratos: lista de `usuario_contratos` + diálogo "Novo Contrato".
+  - Senha: nova senha + confirmar (admin altera de outros via edge `admin-update-user`; o próprio usuário usa `supabase.auth.updateUser`).
+- Card "Zona de perigo" com botão "Excluir usuário" (oculto para o próprio usuário e quando único admin) — chama `admin-delete-user`.
+- Em `/perfil`: a aba **Função** fica em modo somente-leitura e a Zona de Perigo some.
 
-**`src/components/configuracoes/CargosTab.tsx`** (novo):
-- Lista de cargos em cards com nome, descrição, cor, contagem de usuários, badge "Sistema" (não editável)
-- Botão "Novo Cargo" → dialog com nome, descrição, cor, nível, **matriz de permissões** (tabela módulos × ações com checkboxes; ex: linha "Financeiro" × colunas View/Create/Edit/Delete/Admin)
-- Editar cargo: mesmo dialog. Excluir só permitido se nenhum usuário vinculado.
+`**/admin/permissoes**` (`AdminPermissoesPage.tsx`)
 
-**`src/hooks/useUsuarios.ts` e `src/hooks/useCargos.ts`** (novos): React Query para CRUD.
+- Card "Matriz de Permissões": tabela com coluna "Página" + uma coluna por cargo + ✓ / — / "Editar" (abre `CargoDialog` existente, agora ampliado para receber a página específica e marcar/desmarcar todas as ações).
+- Card "Permissões de Funcionalidades": linhas para `aba_milhas_ficha_cliente` e `dados_acesso_milhas` (extensão de `cargo_permissoes` com `modulo='funcionalidade'`, ação como key).
+- Resumo inferior: 4 cards (um por cargo) listando páginas habilitadas (ativas em navy, desabilitadas em cinza claro) + contador "X/Y".
 
-**`src/hooks/usePermissions.ts`** (novo): expõe `can(modulo, acao)` baseado no cargo do usuário logado, para uso futuro em sidebar/rotas.
+`**/admin/agencia**` (`AdminAgenciaPage.tsx`)
 
----
+- Form simples: razão social, CNPJ, logo upload, endereço, telefone, e-mail, IATA — salvo em nova `tenant_settings` (jsonb única linha).
 
-### 4. Storage
+`**/admin/logs**` (`AdminLogsPage.tsx`)
 
-Criar bucket `avatars` (público) com policies: anyone read; insert/update só pelo dono ou admin.
+- Filtros: busca textual, select usuário, select tabela/módulo, select ação, seletor de datas (presets via `usePersistedState`).
+- Tabela ordenável: Data/Hora | Usuário | Ação (badge) | Módulo | Resumo. Paginação 50/pg.
+- Logs gravados por:
+  - Login (chamada após `signInWithPassword`).
+  - Edge functions `admin-create-user` / `admin-update-user` / `admin-delete-user` (já passam pelo backend — adicionar insert em `audit_logs`).
+  - Hook utilitário `logAction(acao, modulo, resumo, metadata?)` chamado em pontos chave (criação/edição/exclusão de cargo, usuário, contrato).
 
----
+### Componentes / hooks novos
 
-### 5. Responsividade
+```text
+src/pages/admin/AdminLayout.tsx
+src/pages/admin/AdminUsuariosList.tsx
+src/pages/admin/UsuarioFichaPage.tsx        (compartilhada com /perfil)
+src/pages/admin/AdminPermissoesPage.tsx
+src/pages/admin/AdminAgenciaPage.tsx
+src/pages/admin/AdminLogsPage.tsx
+src/components/admin/UserHeaderCard.tsx
+src/components/admin/DangerZoneCard.tsx
+src/components/admin/PermissionsMatrix.tsx
+src/components/admin/PermissionsSummaryCards.tsx
+src/components/admin/NovoContratoDialog.tsx
+src/hooks/useUsuarioFicha.ts
+src/hooks/useContratos.ts
+src/hooks/useAuditLogs.ts
+src/hooks/useAgencia.ts
+src/hooks/useLogAction.ts
+src/lib/cep.ts                              (helper ViaCEP)
+```
 
-Toda a UI segue o padrão do sistema (já memorizado): tabela em desktop / cards em mobile, botões 40px+, dialogs full-width em mobile, matriz de permissões com scroll horizontal em telas pequenas.
+### Preservação / remoção
 
----
+- `Configuracoes.tsx` antigo é **removido**; aba "Minha Conta" desaparece (substituída por `/perfil`).
+- `MeiosPagamentoTab` é movida para dentro de **Configurações Financeiras** (`/financeiro/configuracoes`) como nova aba, já que é tema financeiro — assim nada se perde.
+- `UsuariosTab` e `CargosTab` existentes são reaproveitados internamente pela nova `/admin` (refatorados para o visual exato dos prints).
+- Edge functions `admin-create-user/update/delete` recebem inserts em `audit_logs` (sem mudança de contrato).
 
-### Detalhes técnicos
+### Ordem de execução
 
-- Módulos disponíveis: `financeiro`, `projetos`, `crm`, `dev`, `vendas`, `configuracoes`, `usuarios`, `relatorios`
-- Ações: `view`, `create`, `edit`, `delete`, `admin`
-- `usuario_cargos` permite múltiplos cargos por usuário (mas UI v1 só atribui 1 — facilita evolução)
-- Sincronização: ao atribuir cargo "Administrador" também insere em `user_roles` com `'admin'` para manter `has_role()` funcionando em RLS legado
-- Email do auth.users é replicado em `profiles.email` via trigger para evitar consultar `auth.users` no client
-- A primeira execução faz seed: usuário logado vira admin (cargo "Administrador") se ninguém tiver cargo ainda
+1. Migration: estender `profiles`, criar `usuario_contratos`, `audit_logs`, `tenant_settings`; pré-popular permissões.
+2. Edge functions: ajustar 3 admin-* para gravar log + criar `admin-log-action` simples (insert seguro).
+3. TopBar: novo dropdown.
+4. Sidebar: remover item Configurações.
+5. Rotas em `App.tsx`: adicionar `/perfil`, `/admin/*`; redirect `/configuracoes` → `/admin/usuarios`.
+6. Páginas e componentes novos.
+7. Mover `MeiosPagamentoTab` para Configurações Financeiras.
+8. QA visual em desktop e mobile.
 
----
-
-### Roadmap de implementação
-
-1. Migration: tabelas, funções, triggers, seed, RLS, bucket
-2. 3 edge functions admin-*
-3. Hooks (`useUsuarios`, `useCargos`, `usePermissions`)
-4. `UsuariosTab` + dialogs
-5. `CargosTab` + matriz de permissões
-6. Plug nas tabs de `Configuracoes.tsx`
-
-Pronto para implementar?
+Tudo permanece responsivo (regra de memória) — tabelas viram cards no mobile, sub-tabs com `overflow-x-auto`.
