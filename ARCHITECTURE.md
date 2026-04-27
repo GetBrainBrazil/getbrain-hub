@@ -1419,7 +1419,7 @@ Ordenações alternativas: próxima ação (default), valor, probabilidade, fech
 - **`close_deal_as_won` RPC atualizada** copia escopo estruturado completo + dependências + baseline + `source_deal_id` para o projeto.
 - Reuso integral de `StringListEditor` e `AcceptanceCriteriaEditor` (v1.9) e dos componentes 2A/2B (`SectorPicker`, `CompanyContactsManager`, `ChipGroup`).
 
-**Dívidas técnicas registradas:** DT-09E-1 a DT-09E-5 (ver seção 12 atualizada).
+**Dívidas técnicas registradas:** DT-09E-1 a DT-09E-6 (ver seção 12 atualizada).
 
 **Próximo:** v2.1 — migrar auto-flag de atrasado para trigger SQL (DT-09E-2) + estruturar `responsible_person_role` em projetos (DT-09E-4).
 
