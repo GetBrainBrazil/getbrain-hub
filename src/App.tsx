@@ -43,7 +43,12 @@ import CrmCalendar from "./pages/crm/CrmCalendar";
 import CrmLeads from "./pages/crm/CrmLeads";
 import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
 import Clientes from "./pages/Clientes";
-import Configuracoes from "./pages/Configuracoes";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
+import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
+import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
+import AdminAgenciaPage from "./pages/admin/AdminAgenciaPage";
+import AdminLogsPage from "./pages/admin/AdminLogsPage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
@@ -130,7 +135,16 @@ const App = () => (
               <Route path="calendario" element={<CrmCalendar />} />
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+            <Route path="/configuracoes" element={<Navigate to="/admin/usuarios" replace />} />
+            <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="usuarios" replace />} />
+              <Route path="usuarios" element={<AdminUsuariosList />} />
+              <Route path="permissoes" element={<AdminPermissoesPage />} />
+              <Route path="agencia" element={<AdminAgenciaPage />} />
+              <Route path="logs" element={<AdminLogsPage />} />
+            </Route>
+            <Route path="/admin/usuarios/:id" element={<ProtectedRoute><UsuarioFichaPage mode="admin" /></ProtectedRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
             <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

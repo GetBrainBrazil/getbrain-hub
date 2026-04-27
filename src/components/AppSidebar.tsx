@@ -4,7 +4,6 @@ import {
   DollarSign,
   FolderKanban,
   Users,
-  Settings,
   Code2,
   Handshake,
   ChevronDown,
@@ -71,7 +70,6 @@ const navItems: NavItem[] = [
     ],
   },
   { title: "Clientes", url: "/clientes", icon: Users },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
 const itemClasses = (active: boolean) =>
