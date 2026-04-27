@@ -46,24 +46,25 @@ export default function DevLayout() {
   }, [sprints, selectedSprintId, setSelectedSprintId]);
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 px-1 pb-12 animate-fade-in">
+    <div className="mx-auto max-w-[1600px] space-y-4 px-1 pb-12 sm:space-y-6 animate-fade-in">
       {/* Header do hub */}
-      <header className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <header className="space-y-3 sm:space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold font-display tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground">
               Área Dev
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Cockpit de engenharia GetBrain
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled title="Disponível em breve">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <Button variant="outline" size="sm" disabled title="Disponível em breve" className="min-h-10 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Nova Sprint
             </Button>
             <Button
               size="sm"
+              className="min-h-10 w-full sm:w-auto"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("dev:open-new-task"));
               }}
@@ -73,14 +74,14 @@ export default function DevLayout() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
             <Label className="text-xs text-muted-foreground">Sprint</Label>
             <Select
               value={selectedSprintId ?? ""}
               onValueChange={(v) => setSelectedSprintId(v || null)}
             >
-              <SelectTrigger className="h-9 w-[320px] text-sm">
+              <SelectTrigger className="h-10 w-full text-sm sm:h-9 sm:w-[320px]">
                 <SelectValue placeholder="Selecionar sprint" />
               </SelectTrigger>
               <SelectContent>
@@ -113,12 +114,12 @@ export default function DevLayout() {
           onValueChange={(v) => navigate(`/dev/${v}`)}
           className="w-full"
         >
-          <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
+          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border bg-transparent p-0 scrollbar-thin">
             {TABS.map((t) => (
               <TabsTrigger
                 key={t.value}
                 value={t.value}
-                className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2.5 text-sm font-medium text-muted-foreground shadow-none sm:px-4 data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 {t.label}
               </TabsTrigger>
