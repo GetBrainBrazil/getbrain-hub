@@ -45,13 +45,15 @@ interface ProposalRow {
 
 // ---------- Bloco 1: Proposta ----------
 
-function PropostaCard({ deal, proposal, onChanged }: {
+function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   deal: Deal;
   proposal: ProposalRow;
   onChanged: () => void;
+  onRequestClose?: () => void;
 }) {
   const navigate = useNavigate();
   const { confirm, dialog } = useConfirm();
+  const updateDeal = useUpdateDealField(deal.code);
   const [items, setItems] = useState<ScopeItem[]>(proposal.scope_items ?? []);
   const [maintenance, setMaintenance] = useState<string>(
     proposal.maintenance_monthly_value ? String(proposal.maintenance_monthly_value) : ''
@@ -68,6 +70,11 @@ function PropostaCard({ deal, proposal, onChanged }: {
   const total = calculateScopeTotal(items);
   const eff = effectiveStatus(proposal.status, validUntil);
   const monthlyNum = maintenance.trim() === '' ? null : Number(maintenance);
+
+  // Divergência de valor: total da proposta vs estimated_value do deal
+  const dealValue = Number(deal.estimated_value ?? 0);
+  const valueDiverges = total > 0 && dealValue > 0 && Math.abs(total - dealValue) > 0.01;
+  const noDealValue = total > 0 && dealValue === 0;
 
   async function persist(extra: Record<string, any> = {}) {
     setSaving(true);
@@ -108,6 +115,15 @@ function PropostaCard({ deal, proposal, onChanged }: {
   async function handleAccept() {
     await persist({ status: 'aceito', accepted_at: new Date().toISOString() });
     toast.success('Proposta aceita');
+    // Oferece fechar o deal como ganho na sequência
+    if (onRequestClose && deal.stage !== 'fechado_ganho' && deal.stage !== 'fechado_perdido') {
+      const ok = await confirm({
+        title: 'Fechar o deal como ganho?',
+        description: 'A proposta foi aceita. Você quer fechar o deal agora — criando o projeto e gerando as parcelas financeiras?',
+        confirmLabel: 'Sim, fechar agora',
+      });
+      if (ok) onRequestClose();
+    }
   }
 
   async function handleReject() {
@@ -120,6 +136,33 @@ function PropostaCard({ deal, proposal, onChanged }: {
     if (!ok) return;
     await persist({ status: 'recusado', rejected_at: new Date().toISOString() });
     toast.success('Proposta recusada');
+  }
+
+  async function handleSyncValue() {
+    if (total <= 0) return;
+    updateDeal.mutate(
+      { id: deal.id, updates: { estimated_value: total } },
+      {
+        onSuccess: () => toast.success(`Valor do deal atualizado pra ${formatBRL(total)}`),
+        onError: (e: any) => toast.error(`Erro: ${e?.message ?? 'tente novamente'}`),
+      },
+    );
+  }
+
+  function handleImportFromDiscovery() {
+    const deliverables = deal.deliverables ?? [];
+    if (deliverables.length === 0) {
+      toast.error('Nenhum entregável na descoberta. Liste os entregáveis na aba Descoberta primeiro.');
+      return;
+    }
+    const imported: ScopeItem[] = deliverables.map((d) => ({
+      id: Math.random().toString(36).slice(2, 10),
+      title: d,
+      value: 0,
+    } as ScopeItem));
+    // Preserva os itens já existentes (evita perda acidental)
+    setItems((prev) => [...prev, ...imported]);
+    toast.success(`${imported.length} item(ns) importado(s) da descoberta — ajuste os valores e salve`);
   }
 
   return (
