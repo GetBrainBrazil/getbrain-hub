@@ -119,15 +119,17 @@ function MaturityScale({ value, onSave }: { value: number | null; onSave: (v: nu
 }
 
 function ClientTypeCards<T extends string>({
-  options, value, onChange, labels, descriptions,
+  options, value, onChange, labels, descriptions, colors,
 }: {
   options: T[]; value: T | null; onChange: (v: T | null) => void;
-  labels: Record<T, string>; descriptions: Record<T, string>; colors?: Record<T, string>;
+  labels: Record<T, string>; descriptions: Record<T, string>;
+  colors?: Record<T, { active: string; idle: string; descActive: string }>;
 }) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       {options.map((o) => {
         const active = value === o;
+        const c = colors?.[o];
         return (
           <button
             key={o}
@@ -137,14 +139,14 @@ function ClientTypeCards<T extends string>({
             className={cn(
               'flex flex-col items-start gap-0.5 rounded-md border px-3 py-2.5 text-left transition-all',
               active
-                ? 'border-accent bg-accent text-accent-foreground shadow-sm ring-2 ring-accent/40 ring-offset-1 ring-offset-background'
-                : 'border-border bg-muted/10 text-foreground hover:border-accent/40 hover:bg-muted/30',
+                ? (c?.active ?? 'border-accent bg-accent text-accent-foreground shadow-sm ring-2 ring-accent/40 ring-offset-1 ring-offset-background')
+                : (c?.idle ?? 'border-border bg-muted/10 text-foreground hover:border-accent/40 hover:bg-muted/30'),
             )}
           >
             <span className="text-sm font-bold">
               {labels[o]}
             </span>
-            <span className={cn('text-[11px] leading-snug', active ? 'text-accent-foreground/80' : 'text-muted-foreground')}>
+            <span className={cn('text-[11px] leading-snug', active ? (c?.descActive ?? 'text-accent-foreground/80') : 'text-muted-foreground')}>
               {descriptions[o]}
             </span>
           </button>
