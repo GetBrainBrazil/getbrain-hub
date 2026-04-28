@@ -1774,6 +1774,214 @@ export type Database = {
           },
         ]
       }
+      integration_connections: {
+        Row: {
+          access_token_expires_at: string | null
+          access_token_secret_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          enabled_capabilities: string[]
+          external_account_id: string
+          external_account_label: string | null
+          granted_scopes: string[]
+          id: string
+          last_refresh_at: string | null
+          last_used_at: string | null
+          organization_id: string
+          owner_actor_id: string
+          provider_id: string
+          refresh_token_secret_id: string | null
+          scope_type: Database["public"]["Enums"]["integration_scope_type"]
+          status: Database["public"]["Enums"]["integration_status"]
+          status_message: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          access_token_expires_at?: string | null
+          access_token_secret_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          enabled_capabilities?: string[]
+          external_account_id: string
+          external_account_label?: string | null
+          granted_scopes?: string[]
+          id?: string
+          last_refresh_at?: string | null
+          last_used_at?: string | null
+          organization_id: string
+          owner_actor_id: string
+          provider_id: string
+          refresh_token_secret_id?: string | null
+          scope_type: Database["public"]["Enums"]["integration_scope_type"]
+          status?: Database["public"]["Enums"]["integration_status"]
+          status_message?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          access_token_expires_at?: string | null
+          access_token_secret_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          enabled_capabilities?: string[]
+          external_account_id?: string
+          external_account_label?: string | null
+          granted_scopes?: string[]
+          id?: string
+          last_refresh_at?: string | null
+          last_used_at?: string | null
+          organization_id?: string
+          owner_actor_id?: string
+          provider_id?: string
+          refresh_token_secret_id?: string | null
+          scope_type?: Database["public"]["Enums"]["integration_scope_type"]
+          status?: Database["public"]["Enums"]["integration_status"]
+          status_message?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_connections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_connections_owner_actor_id_fkey"
+            columns: ["owner_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_connections_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "integration_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_connections_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_events: {
+        Row: {
+          capability: string | null
+          connection_id: string
+          created_at: string
+          created_by: string | null
+          details: Json | null
+          event_type: Database["public"]["Enums"]["integration_event_type"]
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          capability?: string | null
+          connection_id: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json | null
+          event_type: Database["public"]["Enums"]["integration_event_type"]
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          capability?: string | null
+          connection_id?: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json | null
+          event_type?: Database["public"]["Enums"]["integration_event_type"]
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_events_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_providers: {
+        Row: {
+          available_capabilities: string[]
+          code: string
+          created_at: string
+          description: string | null
+          icon_url: string | null
+          id: string
+          is_active: boolean
+          name: string
+          oauth_authorize_url: string | null
+          oauth_revoke_url: string | null
+          oauth_token_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          available_capabilities?: string[]
+          code: string
+          created_at?: string
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          oauth_authorize_url?: string | null
+          oauth_revoke_url?: string | null
+          oauth_token_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          available_capabilities?: string[]
+          code?: string
+          created_at?: string
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          oauth_authorize_url?: string | null
+          oauth_revoke_url?: string | null
+          oauth_token_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           code: string
@@ -4381,6 +4589,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      integration_delete_token: {
+        Args: { p_secret_id: string }
+        Returns: undefined
+      }
+      integration_get_token: { Args: { p_secret_id: string }; Returns: string }
+      integration_save_token: {
+        Args: { p_label: string; p_token: string }
+        Returns: string
+      }
+      integration_update_token: {
+        Args: { p_new_token: string; p_secret_id: string }
+        Returns: undefined
+      }
       update_status_atrasado: { Args: never; Returns: undefined }
       vendas_cancelar: { Args: { p_venda_id: string }; Returns: undefined }
       vendas_dashboard: {
@@ -4479,6 +4700,17 @@ export type Database = {
         | "commercial"
         | "support"
         | "manager"
+      integration_event_type:
+        | "connected"
+        | "token_refreshed"
+        | "refresh_failed"
+        | "used"
+        | "rate_limited"
+        | "revoked"
+        | "reconnected"
+        | "error"
+      integration_scope_type: "per_user" | "per_organization"
+      integration_status: "connected" | "expired" | "revoked" | "error"
       lead_status:
         | "novo"
         | "triagem_agendada"
@@ -4777,6 +5009,18 @@ export const Constants = {
         "support",
         "manager",
       ],
+      integration_event_type: [
+        "connected",
+        "token_refreshed",
+        "refresh_failed",
+        "used",
+        "rate_limited",
+        "revoked",
+        "reconnected",
+        "error",
+      ],
+      integration_scope_type: ["per_user", "per_organization"],
+      integration_status: ["connected", "expired", "revoked", "error"],
       lead_status: [
         "novo",
         "triagem_agendada",
