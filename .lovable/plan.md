@@ -1,152 +1,139 @@
-# Plano — "Hub Comercial" dentro do card do deal
 
-## Visão geral
+## Diagnóstico do problema
 
-Hoje o detalhe do deal (`/crm/deals/:code`) é um scroll vertical com 5 zonas (Cliente, Dor, Solução, Dependências, Comercial). Você quer poder controlar **proposta**, **organograma** e **mockup beta** sem sair desse card.
+Você lançou um Conta a Receber em `/financeiro/contas-receber` (ou `Movimentacoes` / `MovimentacaoDetalhe`), mas a tela `/projetos/:id/financeiro` continuou mostrando os dados antigos.
 
-Solução: reorganizar o detalhe em **abas** e criar uma aba nova chamada **"Proposta & Anexos"** que vira o hub comercial completo do deal. Faseado em 3 prompts.
+A causa é arquitetural — não é específica desse caso:
 
-A rota `/financeiro/orcamentos/:id/editar` continua viva (quem entra pelo módulo financeiro não perde fluxo). É o **mesmo conteúdo, dois pontos de entrada**.
+- As páginas de **lançamento financeiro** (`ContasReceber.tsx`, `ContasPagar.tsx`, `Movimentacoes.tsx`, `MovimentacaoDetalhe.tsx`) escrevem direto em `supabase.from("movimentacoes")` e depois chamam um `loadData()` **local** (refetch só da própria página).
+- Elas **não invalidam** as queries do React Query usadas por outros módulos:
+  - `["project-finance-detail", projectId]` — usado em `/projetos/:id/financeiro`
+  - `["project-metrics", projectId]` — usado em todos os cards/headers de projeto
+  - `["financeiro_dashboard_kpis", ...]`, `["finance_projection", ...]`, `["finance", "project_profitability", ...]` — dashboards
+  - `["movimentacoes"]` — várias listas
+- Hoje só `useVendas`, `useUpdateRecurrence`, `NovaRecorrenciaModal`, `RegistrarComprovanteWizard` e `ImportExtratoWizard` invalidam — e mesmo assim só algumas chaves.
 
----
+Resultado: cada tela vive numa "ilha" de cache. Atualizações só aparecem em outros módulos depois de F5 ou de o `staleTime` (30s) expirar.
 
-## Fase 1 — Abas + Proposta embutida (este loop)
+## Estratégia: regra global do sistema
 
-### O que muda na navegação do deal
-
-Substitui o scroll vertical atual por 2 abas no topo do card (logo abaixo do `DealHeader`):
+Criar **um único helper** que sabe quais caches dependem de cada entidade e invalida tudo de uma vez. Toda mutação financeira passa a chamar esse helper. Mesmo padrão se estende para CRM, projetos, propostas, etc.
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ DEAL-004 — Sistema X — Empresa Y          [Won]│  ← DealHeader (fica)
-├─────────────────────────────────────────────────┤
-│ [ Descoberta ]  [ Proposta & Anexos ]          │  ← Tabs novas
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  conteúdo da aba ativa                          │
-│                                                 │
-└─────────────────────────────────────────────────┘
+mutação em movimentacoes
+        │
+        ▼
+invalidateFinanceCaches(qc, { projectId?, recurrenceId? })
+        │
+        ├─► ["movimentacoes"]               (listas)
+        ├─► ["project-finance-detail", id]  (card operacional do projeto)
+        ├─► ["project-metrics", id]         (header do projeto + projetos kanban)
+        ├─► ["financeiro_dashboard_kpis"]   (dashboard financeiro)
+        ├─► ["finance_projection"]
+        ├─► ["finance", *]                  (lucratividade, evolução, etc.)
+        ├─► ["financeiro_serie_mensal"]
+        ├─► ["financeiro_fluxo_projetado"]
+        ├─► ["extrato_movimentacoes"]       (conciliação)
+        └─► ["recorrencia*"]                (se tocar recurrence_id)
 ```
 
-- **Aba "Descoberta"**: Cliente + Dor + Solução + Dependências + Comercial (as 5 zonas que existem hoje, intactas). Default ao abrir.
-- **Aba "Proposta & Anexos"**: hub novo (descrito abaixo).
+E **regra do sistema** registrada na memória: toda mutação cross-módulo usa o helper correspondente, nunca um `loadData()` solitário.
 
-Sidebar direita (`DealSidebarRich`) fica visível em ambas as abas.
+## Etapas
 
-Persistência: aba ativa salva via `usePersistedState` (regra do projeto) + querystring `?tab=proposta` pra deep link.
+### 1. Criar `src/lib/cacheInvalidation.ts`
+Helpers centralizados, um por domínio:
 
-### Conteúdo da aba "Proposta & Anexos" (Fase 1)
+- `invalidateFinanceCaches(qc, opts?: { projectId?, recurrenceId?, clientId?, supplierId? })`
+- `invalidateProjectCaches(qc, projectId)`
+- `invalidateCrmCaches(qc, opts?: { dealId?, leadId?, companyId? })`
+- `invalidateProposalCaches(qc, opts?: { proposalId?, dealId?, projectId? })`
 
-Estrutura em 3 blocos verticais:
+Cada helper conhece TODAS as `queryKey` do sistema que dependem daquela entidade (lista acima). Refatorações futuras só mexem aqui.
 
-**Bloco 1 — Proposta comercial ativa**
+### 2. Plugar nas páginas/hooks de mutação financeira
 
-- Se **não existe** proposta: card vazio com botão grande "Criar proposta deste deal" (gera proposta `rascunho` puxando empresa, deal_id e abre o editor inline embaixo).
-- Se **existe** proposta(s): mostra a mais recente expandida + lista colapsável das anteriores (versões).
+Adicionar `useQueryClient()` + chamada ao helper logo após cada `insert/update/delete` em `movimentacoes`:
 
-A proposta ativa renderiza **inline** (não redireciona) com:
-- Header: código, status badge, valor total calculado, validade, botões `Enviar` / `Aceitar` / `Rejeitar` / `Baixar PDF` / `Gerar PDF`.
-- Editor de escopo (`ScopeItemsEditor` que já existe) com autosave on blur.
-- Campo manutenção mensal (já existe).
-- Considerações (já existe).
+- `src/pages/ContasReceber.tsx` (5 mutações: create, update, delete, baixa)
+- `src/pages/ContasPagar.tsx` (idem)
+- `src/pages/Movimentacoes.tsx` (insert, update, delete, baixa, estorno)
+- `src/pages/MovimentacaoDetalhe.tsx` (insert, update, delete, baixa, estorno)
+- `src/pages/ExtratoMovimentacaoDetalhe.tsx` (já invalida `extrato_movimentacoes`, falta finance)
+- `src/components/RegistrarComprovanteWizard.tsx`
+- `src/components/ImportExtratoWizard.tsx`
+- `src/hooks/useVendas.ts` (já tem 2 chaves, expandir para o helper)
+- `src/hooks/recorrencias/useUpdateRecurrence.ts`
+- `src/components/recorrencias/NovaRecorrenciaModal.tsx` e `EditarRecorrenciaModal.tsx`
 
-Reusa **100% dos componentes existentes** de `src/components/orcamentos/` (ScopeItemsEditor, ConsiderationsEditor, OrcamentoStatusBadge, useGeneratePDF, useUpdateProposal). Não duplica lógica.
+Quando o registro tiver `projeto_id`, o helper recebe e invalida também as caches do projeto específico.
 
-**Bloco 2 — Organograma do cliente** (placeholder na Fase 1)
+### 3. Reduzir `staleTime` perigosos
+Hoje `useProjectFinanceDetail` e `useProjectMetrics` usam `staleTime: 30_000`. Como vamos invalidar explicitamente, manter os 30s está OK para a navegação normal — sem mudança aqui. Garantir que nenhum hook crítico use `staleTime: Infinity`.
 
-Card com mensagem: "Organograma chega na Fase 2. Por enquanto, suba o PNG do Draw.io aqui:" + um único upload de imagem que salva em `deal.organograma_url` (campo novo). Já resolve 80% do uso.
+### 4. Cobrir outros módulos (mesma regra)
+Aplicar o mesmo padrão (sem refazer fluxo, só plugar o helper) em:
 
-**Bloco 3 — Mockup BETA** (placeholder na Fase 1)
+- **CRM ↔ Projetos**: `close_deal_as_won` já dispara um RPC; o `DealWonDialog` precisa invalidar `["projects"]`, `["project-metrics"]`, `["deals"]`, `["proposals"]` via `invalidateProjectCaches` + `invalidateCrmCaches`.
+- **Propostas ↔ Deal**: `useUpdateProposal` invalida proposta; deve invalidar também `["deals", dealId]` e `["project-finance-detail", projectId]` quando o `project_id` da proposta existir.
+- **Contratos de manutenção**: `NovoContratoDialog` → invalidar finance + project caches.
 
-Card com 2 campos:
-- Link do Lovable preview (URL).
-- Galeria de prints (upload múltiplo de PNG).
+### 5. Memória do sistema
+Adicionar memória `mem://preference/cache-invalidation` documentando a regra: "Toda mutação que afeta dados visíveis em outro módulo DEVE chamar o helper de `cacheInvalidation.ts` correspondente. `loadData()` local nunca é suficiente."
 
-Salvos em `deal.mockup_url` + `deal.mockup_screenshots[]` (campos novos).
+Atualizar `mem://index.md` Core com:
+> Toda mutação cross-módulo deve invalidar caches via helpers de `src/lib/cacheInvalidation.ts`. Nunca confiar só em refetch local.
 
-### Mudanças técnicas (Fase 1)
+### 6. Realtime (opcional, fase 2)
+Para deixar verdadeiramente "instantâneo entre abas/usuários", podemos depois habilitar Supabase Realtime em `movimentacoes` e fazer um `useEffect` global no `AppLayout` que escuta mudanças e dispara o mesmo helper. **Não incluído nesta fase** — a invalidação por React Query já resolve 100% do caso de um único usuário/aba (que é o seu cenário hoje).
 
-**Schema (migration):**
-```sql
-ALTER TABLE deals ADD COLUMN organograma_url text;
-ALTER TABLE deals ADD COLUMN mockup_url text;
-ALTER TABLE deals ADD COLUMN mockup_screenshots text[] DEFAULT '{}';
--- bucket de storage 'deal-attachments' (private, RLS por organization_id)
+## Detalhes técnicos
+
+**Exemplo do helper:**
+```ts
+// src/lib/cacheInvalidation.ts
+import type { QueryClient } from "@tanstack/react-query";
+
+export function invalidateFinanceCaches(
+  qc: QueryClient,
+  opts: { projectId?: string | null; recurrenceId?: string | null } = {},
+) {
+  // Listas e dashboards globais — predicate pega todas as variantes de filtro
+  qc.invalidateQueries({ queryKey: ["movimentacoes"] });
+  qc.invalidateQueries({ queryKey: ["financeiro_dashboard_kpis"] });
+  qc.invalidateQueries({ queryKey: ["financeiro_serie_mensal"] });
+  qc.invalidateQueries({ queryKey: ["financeiro_fluxo_projetado"] });
+  qc.invalidateQueries({ queryKey: ["finance_projection"] });
+  qc.invalidateQueries({ queryKey: ["finance"] }); // pega ["finance", "project_profitability", ...] etc
+  qc.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
+
+  if (opts.projectId) {
+    qc.invalidateQueries({ queryKey: ["project-finance-detail", opts.projectId] });
+    qc.invalidateQueries({ queryKey: ["project-metrics", opts.projectId] });
+  }
+  if (opts.recurrenceId) {
+    qc.invalidateQueries({ queryKey: ["recorrencia", opts.recurrenceId] });
+    qc.invalidateQueries({ queryKey: ["recorrencias"] });
+  }
+}
 ```
 
-**Componentes novos:**
-- `src/components/crm/DealTabs.tsx` — wrapper com Tabs (Descoberta / Proposta).
-- `src/components/crm/proposta/PropostaTabContent.tsx` — orquestra os 3 blocos.
-- `src/components/crm/proposta/PropostaInlineEditor.tsx` — editor de proposta inline (extrai lógica de `OrcamentoEditarDetalhe.tsx` num componente reusável; ambos passam a usar).
-- `src/components/crm/proposta/AnexoUploader.tsx` — upload genérico pro storage.
+**Uso:**
+```ts
+// Em ContasReceber.tsx
+const qc = useQueryClient();
+const { error } = await supabase.from("movimentacoes").insert({ ... projeto_id });
+if (!error) {
+  invalidateFinanceCaches(qc, { projectId: form.projeto_id });
+  toast.success("Lançamento criado");
+}
+```
 
-**Refatoração:**
-- `src/pages/crm/CrmDealDetail.tsx` passa o conteúdo das 5 zonas pra um componente `DescobertaTabContent.tsx` e renderiza o `DealTabs`.
-- `src/pages/financeiro/OrcamentoEditarDetalhe.tsx` passa a renderizar `PropostaInlineEditor` (mesma UI dos dois lados).
+## Resultado esperado
 
-**Sem mudanças em:**
-- `DealHeader`, `DealSidebarRich`, hooks de CRM existentes, fluxo de close_deal_as_won, módulo `/financeiro/orcamentos` (lista).
+1. Lançar um conta a receber com `projeto_id` em qualquer tela → o card `/projetos/:id/financeiro` reflete a parcela em < 1 segundo, sem F5.
+2. Mesmo comportamento se vier de baixa, estorno, edição ou exclusão.
+3. Mesma garantia se a mutação vier de Recorrências, Vendas, Comprovante, Importação de extrato ou Conciliação.
+4. Regra documentada na memória do projeto, então futuras telas que mexem em movimentações vão herdar o padrão automaticamente.
 
-### Validação Fase 1
-
-Antes de declarar pronto:
-1. Abrir DEAL-004 → vê aba "Descoberta" ativa com as 5 zonas iguais ao que era antes.
-2. Clicar "Proposta & Anexos" → vê estado vazio.
-3. Criar proposta → editor abre inline, edita escopo, valor recalcula.
-4. Refresh da página com `?tab=proposta` → cai direto na aba.
-5. Abrir mesma proposta por `/financeiro/orcamentos/:id/editar` → mesma UI, edita do mesmo jeito.
-6. Subir PNG no organograma → aparece. Mockup link/screenshots → idem.
-7. Mobile (375px): tabs viram bottom-sheet ou scroll horizontal, blocos empilham.
-
----
-
-## Fase 2 — Organograma estruturado (próximo prompt)
-
-Decisão **adiada** pra depois de você sentir o uso real do upload simples na Fase 1. Quando voltar, escolho entre:
-- Manter só upload de PNG do Draw.io (se atender).
-- Tabela enriquecida de contatos (papel na decisão, influência 1-5, relação).
-- Embed de Draw.io (se eles tiverem viewer público) ou geração via mermaid a partir da tabela.
-
-Não compro essa decisão agora porque ela depende de quanto a galera **vai usar de verdade** o organograma no fluxo de vendas.
-
----
-
-## Fase 3 — Mockup BETA estruturado (próximo prompt)
-
-Mesma lógica. Fase 1 já entrega link Lovable + galeria. Se for suficiente, encerra. Se quiser estruturar telas (nome + propósito + screenshot) ou checklist de funcionalidades pra mostrar pro cliente, vira prompt próprio.
-
----
-
-## Detalhes técnicos consolidados (Fase 1)
-
-| Item | Decisão |
-|---|---|
-| Tabs | `Tabs` do shadcn, persistido por `usePersistedState` + querystring |
-| Proposta inline | Mesmo componente em 2 rotas (CRM e Financeiro) |
-| Storage | Bucket `deal-attachments`, private, RLS por `organization_id` |
-| Auto-save | On blur (regra do projeto, igual descoberta) |
-| Audit | Já existe trigger em `proposals` e `deals` — nada a fazer |
-| Soft delete | Proposta usa `deleted_at` (já existe) |
-| Mobile | Tabs scroll-x, blocos full-width empilhados |
-| Sem mock data | Tudo vem do banco real; estados vazios são empty states de verdade |
-
----
-
-## O que NÃO está no escopo da Fase 1
-
-- Editor visual de organograma (drag-and-drop nós/edges).
-- Editor visual de mockup/wireframe.
-- Embed live do Lovable preview (vai ser link clicável + thumbnail).
-- Versionamento de organograma/mockup (só substitui).
-- Comparar versões de proposta lado-a-lado (já existe `useProposalVersions`, basta listar; comparação visual fica pra depois se precisar).
-- Mover ou esconder a rota `/financeiro/orcamentos` (continua igual).
-
----
-
-## Entrega Fase 1
-
-- Migration SQL (3 colunas + bucket de storage com RLS).
-- 4 componentes novos + 2 refatorados.
-- Tipos TS regenerados.
-- Resumo no chat: queries de validação rodadas, screenshots das 2 abas em desktop e mobile, dívidas técnicas registradas.
-- Aguarda seu OK antes de começar Fase 2.
+Posso prosseguir?
