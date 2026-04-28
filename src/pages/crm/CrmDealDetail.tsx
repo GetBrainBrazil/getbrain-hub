@@ -473,6 +473,18 @@ export default function CrmDealDetail() {
   const { code } = useParams<{ code: string }>();
   const { data: deal, isLoading } = useDealByCode(code);
   const save = useDealAutosave(deal);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [persistedTab, setPersistedTab] = usePersistedState<string>('crm-deal-active-tab', 'descoberta');
+  const activeTab = tabFromUrl ?? persistedTab;
+
+  const handleTabChange = (next: string) => {
+    setPersistedTab(next);
+    const sp = new URLSearchParams(searchParams);
+    if (next === 'descoberta') sp.delete('tab');
+    else sp.set('tab', next);
+    setSearchParams(sp, { replace: true });
+  };
 
   const handleCloseRequest = (kind: 'won' | 'lost') => {
     if (kind === 'won') {
@@ -525,14 +537,27 @@ export default function CrmDealDetail() {
         onCloseRequest={handleCloseRequest}
       />
 
-      {/* Layout 70/30 com âncoras */}
+      {/* Layout 70/30 com tabs */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <main className="min-w-0 space-y-6">
-          <ZoneCliente deal={deal} />
-          <ZoneDor deal={deal} save={save} />
-          <ZoneSolucao deal={deal} save={save} />
-          <ZoneDependencias dealId={deal.id} />
-          <ZoneComercial deal={deal} />
+        <main className="min-w-0">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="mb-4 grid w-full grid-cols-2 sm:w-auto sm:inline-flex">
+              <TabsTrigger value="descoberta">Descoberta</TabsTrigger>
+              <TabsTrigger value="proposta">Proposta &amp; Anexos</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="descoberta" className="space-y-6 mt-0">
+              <ZoneCliente deal={deal} />
+              <ZoneDor deal={deal} save={save} />
+              <ZoneSolucao deal={deal} save={save} />
+              <ZoneDependencias dealId={deal.id} />
+              <ZoneComercial deal={deal} />
+            </TabsContent>
+
+            <TabsContent value="proposta" className="mt-0">
+              <PropostaTabContent deal={deal} />
+            </TabsContent>
+          </Tabs>
         </main>
 
         <DealSidebarRich deal={deal} />
