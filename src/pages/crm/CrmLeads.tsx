@@ -369,7 +369,12 @@ export default function CrmLeads() {
                       </div>
                       <p className="text-sm font-semibold text-foreground line-clamp-2">{lead.title}</p>
                       {(lead.company?.trade_name || lead.company?.legal_name) && (
-                        <p className="text-xs text-accent truncate mt-1">{lead.company?.trade_name || lead.company?.legal_name}</p>
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
+                          <p className="text-xs text-accent truncate">{lead.company?.trade_name || lead.company?.legal_name}</p>
+                          {lead.company?.relationship_status && (
+                            <span className={companyStatusClass(lead.company.relationship_status)}>{COMPANY_STATUS_LABEL[lead.company.relationship_status]}</span>
+                          )}
+                        </div>
                       )}
                       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                         <span>{formatCurrency(Number(lead.estimated_value ?? 0))}</span>
