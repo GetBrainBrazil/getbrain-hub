@@ -413,9 +413,9 @@ export function RegistrarComprovanteWizard({ open, onOpenChange, contas }: Props
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_importacoes"] });
+      invalidateFinanceCaches(queryClient);
 
       toast.success("Transação registrada com sucesso a partir do comprovante");
       handleClose();

@@ -170,8 +170,8 @@ export default function ExtratoMovimentacaoDetalhe() {
       return;
     }
     toast.success("Lançamento atualizado com sucesso");
-    queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
     queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
+    invalidateFinanceCaches(queryClient, { projectId: (mov as any)?.projeto_id || null });
     navigate("/financeiro/extratos");
   }
 
@@ -185,8 +185,8 @@ export default function ExtratoMovimentacaoDetalhe() {
         .eq("id", (extrato as any).id);
     }
     queryClient.invalidateQueries({ queryKey: ["extrato_mov_detalhe", id] });
-    queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
     queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
+    invalidateFinanceCaches(queryClient, { projectId: (mov as any)?.projeto_id || null });
     toast.success("Conciliação desfeita.");
     setConfirmDesfazer(false);
     navigate("/financeiro/extratos");

@@ -188,10 +188,10 @@ export function ImportExtratoWizard({ open, onOpenChange, contas }: Props) {
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_importacoes"] });
       queryClient.invalidateQueries({ queryKey: ["conciliacao_stats"] });
+      invalidateFinanceCaches(queryClient);
 
       toast.success(`Conciliação concluída: ${conciliadoCount} transações conciliadas.`);
       handleClose();

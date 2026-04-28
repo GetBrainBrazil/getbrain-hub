@@ -143,7 +143,7 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
       toast.success("Recorrência criada com sucesso");
       qc.invalidateQueries({ queryKey: ["financial_recurrences"] });
       qc.invalidateQueries({ queryKey: ["financial_recurrences_kpis"] });
-      qc.invalidateQueries({ queryKey: ["movimentacoes"] });
+      invalidateFinanceCaches(qc, { projectId: (parsed.data as any).projeto_id || null });
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao criar recorrência");
