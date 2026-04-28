@@ -105,29 +105,45 @@ export default function CrmLeads() {
   const navigate = useNavigate();
   const { data: leads = [] } = useAllLeads();
   const { data: metrics } = useCrmMetrics();
+  const { data: companyAggregates = {} } = useAllCompaniesAggregates();
   const updateLead = useUpdateLeadField();
   const bulkDelete = useBulkDeleteLeads();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const store = useCrmHubStore();
   const [view, setView] = usePersistedState<'table' | 'kanban'>('crm-leads-view', 'table');
   const [statusFilter, setStatusFilter] = usePersistedState<LeadStatus[]>('crm-leads-status-filter', []);
+  const [companyStatusFilter, setCompanyStatusFilter] = usePersistedState<CompanyRelationshipStatus[]>('crm-leads-company-status-filter', []);
+  const [industryFilter, setIndustryFilter] = usePersistedState<string[]>('crm-leads-industry-filter', []);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [discardLead, setDiscardLead] = useState<Lead | null>(null);
   const [discardReason, setDiscardReason] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  // Lista de indústrias derivada (precisamos puxar de companies, mas leads.company só traz nome/status).
+  // Para evitar query extra, mostramos filtro sem indústria por ora — pode ser estendido depois.
+  // Reaproveitamos store apenas para owner/source/value/search globais.
+
   const filtered = useMemo(() => leads.filter((lead) => {
     if (statusFilter.length && !statusFilter.includes(lead.status)) return false;
+    if (companyStatusFilter.length) {
+      const cs = lead.company?.relationship_status;
+      if (!cs || !companyStatusFilter.includes(cs)) return false;
+    }
     if (store.ownerFilter.length && (!lead.owner_actor_id || !store.ownerFilter.includes(lead.owner_actor_id))) return false;
     if (store.sourceFilter.length && !store.sourceFilter.includes(lead.source || 'direto')) return false;
     if (store.valueRange && ((lead.estimated_value ?? 0) < store.valueRange[0] || (lead.estimated_value ?? 0) > store.valueRange[1])) return false;
     const q = store.search.trim().toLowerCase();
     return !q || [lead.code, lead.title, lead.source ?? '', lead.company?.legal_name ?? '', lead.company?.trade_name ?? '', lead.owner?.display_name ?? ''].join(' ').toLowerCase().includes(q);
-  }), [leads, statusFilter, store.ownerFilter, store.sourceFilter, store.valueRange, store.search]);
+  }), [leads, statusFilter, companyStatusFilter, store.ownerFilter, store.sourceFilter, store.valueRange, store.search]);
 
   const grouped = useMemo(() => new Map(LEAD_STATUS.map((s) => [s, filtered.filter((lead) => lead.status === s)])), [filtered]);
   const openLeads = (metrics?.leads_novos ?? 0) + (metrics?.leads_triagem_agendada ?? 0) + (metrics?.leads_triagem_feita ?? 0);
+
+  // KPIs adicionais vindos da agregação de empresas (filtrados pelas empresas presentes em filtered)
+  const visibleCompanyIds = useMemo(() => Array.from(new Set(filtered.map((l) => l.company_id).filter(Boolean))), [filtered]);
+  const activeClientsVisible = useMemo(() => filtered.filter((l) => l.company?.relationship_status === 'active_client').length, [filtered]);
+  const revenueWonVisible = useMemo(() => visibleCompanyIds.reduce((s, id) => s + (companyAggregates[id]?.revenueWon ?? 0), 0), [visibleCompanyIds, companyAggregates]);
 
   // Poda seleção quando filtros removem itens, ou quando muda para kanban
   useEffect(() => {
