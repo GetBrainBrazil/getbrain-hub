@@ -52,6 +52,16 @@ import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
 import Setores from "./pages/configuracoes/Setores";
+import ConfiguracoesLayout from "./pages/configuracoes/ConfiguracoesLayout";
+import PapeisContatoPage from "./pages/configuracoes/pessoas/PapeisContatoPage";
+import OrigensLeadPage from "./pages/configuracoes/pessoas/OrigensLeadPage";
+import CargosPage from "./pages/configuracoes/pessoas/CargosPage";
+import FinContasPage from "./pages/configuracoes/financeiro/FinContasPage";
+import FinCategoriasPage from "./pages/configuracoes/financeiro/FinCategoriasPage";
+import FinCentrosPage from "./pages/configuracoes/financeiro/FinCentrosPage";
+import FinClientesPage from "./pages/configuracoes/financeiro/FinClientesPage";
+import FinFornecedoresPage from "./pages/configuracoes/financeiro/FinFornecedoresPage";
+import FinColaboradoresPage from "./pages/configuracoes/financeiro/FinColaboradoresPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
