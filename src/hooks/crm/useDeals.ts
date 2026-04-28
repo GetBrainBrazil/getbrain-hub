@@ -139,11 +139,31 @@ export class DealDeleteBlockedError extends Error {
   }
 }
 
+/**
+ * Apaga o deal. Dois modos:
+ *  - mode: 'safe' (default) — falha se houver projeto vinculado (proteção).
+ *  - mode: 'cascade' — chama RPC que apaga o projeto + manutenção + contas +
+ *    recorrências + propostas + atividades + dependências + deal numa
+ *    transação atômica. Use só quando o usuário confirmar explicitamente.
+ */
 export function useDeleteDeal() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      // Defesa em profundidade: bloquear se ainda houver projeto vinculado.
+    mutationFn: async ({ id, mode = 'safe' }: { id: string; mode?: 'safe' | 'cascade' }) => {
+      if (mode === 'cascade') {
+        const { data, error } = await sb.rpc('cascade_delete_deal', { p_deal_id: id });
+        if (error) throw error;
+        return data as {
+          project_deleted: boolean;
+          project_id: string | null;
+          movimentacoes_deleted: number;
+          recurrences_deleted: number;
+          contracts_deleted: number;
+          proposals_deleted: number;
+        };
+      }
+
+      // SAFE MODE — bloqueia se houver projeto vinculado.
       const { data: linkedProject } = await sb
         .from('projects')
         .select('id, code')
@@ -151,23 +171,18 @@ export function useDeleteDeal() {
         .maybeSingle();
       if (linkedProject) {
         throw new DealDeleteBlockedError(
-          `Existe projeto vinculado (${linkedProject.code}). Exclua o projeto primeiro.`,
+          `Existe projeto vinculado (${linkedProject.code}). Use a exclusão em cascata ou apague o projeto primeiro.`,
           'has_project',
         );
       }
 
-      // Cascata manual para dependentes que não têm FK ON DELETE CASCADE.
-      // (deal_activities e deal_dependencies já são CASCADE no banco, mas
-      // chamamos explicitamente também para invalidar caches dependentes.)
       await sb.from('deal_activities').delete().eq('deal_id', id);
       await sb.from('deal_dependencies').delete().eq('deal_id', id);
-
-      // proposals.deal_id e leads.converted_to_deal_id agora são SET NULL,
-      // o trigger lead_revert_on_deal_delete cuida de voltar o lead pra "novo".
       const { error } = await sb.from('deals').delete().eq('id', id);
       if (error) throw error;
+      return null;
     },
-    onSettled: (_d, _e, id) => {
+    onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['crm-deals'] });
       qc.invalidateQueries({ queryKey: ['crm-deal-code'] });
       qc.invalidateQueries({ queryKey: ['crm-metrics'] });
@@ -176,7 +191,11 @@ export function useDeleteDeal() {
       qc.invalidateQueries({ queryKey: ['crm-leads'] });
       qc.invalidateQueries({ queryKey: ['crm-leads-full'] });
       qc.invalidateQueries({ queryKey: ['proposals'] });
-      if (id) qc.invalidateQueries({ queryKey: ['crm-deal', id] });
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      qc.invalidateQueries({ queryKey: ['projetos'] });
+      qc.invalidateQueries({ queryKey: ['movimentacoes'] });
+      qc.invalidateQueries({ queryKey: ['recorrencias'] });
+      if (vars?.id) qc.invalidateQueries({ queryKey: ['crm-deal', vars.id] });
     },
   });
 }
