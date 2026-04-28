@@ -25,10 +25,13 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type ComprovanteAIResult } from "@/components/ComprovanteUploadField";
 import { Sparkles } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 export default function ContasPagar() {
   const { user } = useAuth();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+  const qc = useQueryClient();
   const [movs, setMovs] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -180,6 +183,7 @@ export default function ContasPagar() {
     }
 
     setOpenNew(false);
+    invalidateFinanceCaches(qc, { projectId: form.projeto_id || null });
     setForm({ descricao: "", fornecedor_id: "", conta_bancaria_id: "", projeto_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", recorrente: false, frequencia_recorrencia: "mensal", observacoes: "" });
     setFornecedorSearch("");
     loadAll();
@@ -238,6 +242,7 @@ export default function ContasPagar() {
 
     toast.success("Pagamento registrado!");
     setOpenPag(false);
+    invalidateFinanceCaches(qc, { projectId: selectedMov.projeto_id || null });
     loadAll();
   }
 
@@ -258,6 +263,7 @@ export default function ContasPagar() {
     if (!ok) return;
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
+    invalidateFinanceCaches(qc, { projectId: mov?.projeto_id || null });
     loadAll();
   }
 

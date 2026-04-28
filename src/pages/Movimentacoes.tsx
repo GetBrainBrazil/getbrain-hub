@@ -34,6 +34,8 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
 import { MovimentacaoMobileCard } from "@/components/MovimentacaoMobileCard";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 type TabType = "pagar" | "receber";
 
