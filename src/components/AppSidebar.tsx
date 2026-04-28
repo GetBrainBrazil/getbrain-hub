@@ -55,7 +55,6 @@ const navItems: NavItem[] = [
       { title: "Orçamentos", url: "/financeiro/orcamentos" },
       { title: "Relatórios", url: "/financeiro/relatorios" },
       { title: "Extratos Bancários", url: "/financeiro/extratos" },
-      { title: "Configurações", url: "/financeiro/configuracoes" },
     ],
   },
   {
@@ -71,10 +70,12 @@ const navItems: NavItem[] = [
   },
   {
     title: "Configurações",
-    url: "/configuracoes/setores",
+    url: "/configuracoes",
     icon: Settings,
     children: [
-      { title: "Setores", url: "/configuracoes/setores" },
+      { title: "Pessoas & Empresas", url: "/configuracoes/pessoas/setores" },
+      { title: "Financeiro", url: "/configuracoes/financeiro/contas" },
+      { title: "Sistema", url: "/configuracoes/sistema/usuarios" },
     ],
   },
 ];
