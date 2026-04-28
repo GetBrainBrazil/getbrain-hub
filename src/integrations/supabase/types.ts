@@ -1234,6 +1234,8 @@ export type Database = {
           desired_start_date: string | null
           estimated_complexity: number | null
           estimated_hours_total: number | null
+          estimated_implementation_value: number | null
+          estimated_mrr_value: number | null
           estimated_value: number | null
           estimation_confidence:
             | Database["public"]["Enums"]["estimation_confidence"]
@@ -1297,6 +1299,8 @@ export type Database = {
           desired_start_date?: string | null
           estimated_complexity?: number | null
           estimated_hours_total?: number | null
+          estimated_implementation_value?: number | null
+          estimated_mrr_value?: number | null
           estimated_value?: number | null
           estimation_confidence?:
             | Database["public"]["Enums"]["estimation_confidence"]
@@ -1360,6 +1364,8 @@ export type Database = {
           desired_start_date?: string | null
           estimated_complexity?: number | null
           estimated_hours_total?: number | null
+          estimated_implementation_value?: number | null
+          estimated_mrr_value?: number | null
           estimated_value?: number | null
           estimation_confidence?:
             | Database["public"]["Enums"]["estimation_confidence"]
