@@ -746,6 +746,7 @@ export default function Movimentacoes() {
     );
     setOpenNew(false);
     resetForm();
+    invalidateFinanceCaches(qc, { projectId: form.projeto_id || null });
     void refreshTabs([tab as TabType]);
   }
 
@@ -809,6 +810,7 @@ export default function Movimentacoes() {
     }
     toast.success("Conta reaberta com sucesso");
     setOpenBaixa(false);
+    invalidateFinanceCaches(qc, { projectId: selectedMov.projeto_id || null });
     void refreshTabs([tab as TabType], { silent: true });
   }
 
@@ -894,6 +896,7 @@ export default function Movimentacoes() {
         : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
     );
     setOpenBaixa(false);
+    invalidateFinanceCaches(qc, { projectId: selectedMov.projeto_id || null });
     void refreshTabs([tab as TabType], { silent: true });
   }
 
@@ -926,6 +929,7 @@ export default function Movimentacoes() {
       return;
     }
     toast.success("Movimentação excluída com sucesso");
+    invalidateFinanceCaches(qc, { projectId: mov?.projeto_id || null });
   }
 
   async function handleDuplicate(m: any) {
@@ -953,6 +957,7 @@ export default function Movimentacoes() {
     });
     if (error) { toast.error("Erro ao duplicar"); return; }
     toast.success("Movimentação duplicada!");
+    invalidateFinanceCaches(qc, { projectId: m.projeto_id || null });
     void refreshTabs([tab as TabType]);
   }
 
