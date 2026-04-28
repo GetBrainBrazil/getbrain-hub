@@ -377,6 +377,7 @@ export default function CrmLeads() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }
