@@ -47,7 +47,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
 import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
-import AdminLogsPage from "./pages/admin/AdminLogsPage";
+import AdminAuditoriaPage from "./pages/admin/AdminAuditoriaPage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
@@ -162,7 +162,8 @@ const App = () => (
               <Route path="financeiro/colaboradores" element={<FinColaboradoresPage />} />
               <Route path="sistema/usuarios" element={<AdminUsuariosList />} />
               <Route path="sistema/permissoes" element={<AdminPermissoesPage />} />
-              <Route path="sistema/logs" element={<AdminLogsPage />} />
+              <Route path="sistema/logs" element={<Navigate to="/admin/auditoria" replace />} />
+              <Route path="sistema/auditoria" element={<AdminAuditoriaPage />} />
             </Route>
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
@@ -172,7 +173,8 @@ const App = () => (
               <Route path="usuarios" element={<AdminUsuariosList />} />
               <Route path="permissoes" element={<AdminPermissoesPage />} />
               <Route path="agencia" element={<Navigate to="/admin/usuarios" replace />} />
-              <Route path="logs" element={<AdminLogsPage />} />
+              <Route path="auditoria" element={<AdminAuditoriaPage />} />
+              <Route path="logs" element={<Navigate to="/admin/auditoria" replace />} />
             </Route>
             <Route path="/admin/usuarios/:id" element={<ProtectedRoute><UsuarioFichaPage mode="admin" /></ProtectedRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
