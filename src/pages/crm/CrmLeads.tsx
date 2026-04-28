@@ -94,12 +94,15 @@ export default function CrmLeads() {
   const { data: leads = [] } = useAllLeads();
   const { data: metrics } = useCrmMetrics();
   const updateLead = useUpdateLeadField();
+  const bulkDelete = useBulkDeleteLeads();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const store = useCrmHubStore();
   const [view, setView] = usePersistedState<'table' | 'kanban'>('crm-leads-view', 'table');
   const [statusFilter, setStatusFilter] = usePersistedState<LeadStatus[]>('crm-leads-status-filter', []);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [discardLead, setDiscardLead] = useState<Lead | null>(null);
   const [discardReason, setDiscardReason] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const filtered = useMemo(() => leads.filter((lead) => {
@@ -114,6 +117,62 @@ export default function CrmLeads() {
   const grouped = useMemo(() => new Map(LEAD_STATUS.map((s) => [s, filtered.filter((lead) => lead.status === s)])), [filtered]);
   const openLeads = (metrics?.leads_novos ?? 0) + (metrics?.leads_triagem_agendada ?? 0) + (metrics?.leads_triagem_feita ?? 0);
 
+  // Poda seleção quando filtros removem itens, ou quando muda para kanban
+  useEffect(() => {
+    if (view !== 'table') { if (selected.size) setSelected(new Set()); return; }
+    const visibleIds = new Set(filtered.map((l) => l.id));
+    let changed = false;
+    const next = new Set<string>();
+    selected.forEach((id) => { if (visibleIds.has(id)) next.add(id); else changed = true; });
+    if (changed) setSelected(next);
+  }, [filtered, view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedLeads = useMemo(() => filtered.filter((l) => selected.has(l.id)), [filtered, selected]);
+  const hasSelection = selected.size > 0;
+  const allFilteredSelected = filtered.length > 0 && filtered.every((l) => selected.has(l.id));
+  const someSelected = hasSelection && !allFilteredSelected;
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    setSelected((prev) => {
+      if (filtered.every((l) => prev.has(l.id))) return new Set();
+      return new Set(filtered.map((l) => l.id));
+    });
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const handleBulkDelete = async () => {
+    const ids = [...selected];
+    if (!ids.length) return;
+    const ok = await confirm({
+      title: `Excluir ${ids.length} lead${ids.length > 1 ? 's' : ''}?`,
+      description: 'Esta ação não pode ser desfeita. Leads já convertidos em deals serão ignorados para preservar o histórico.',
+      confirmLabel: 'Excluir',
+      variant: 'destructive',
+    });
+    if (!ok) return;
+    try {
+      const res = await bulkDelete.mutateAsync(ids);
+      clearSelection();
+      if (res.deleted && res.skipped) {
+        toast.success(`${res.deleted} lead(s) excluído(s). ${res.skipped} ignorado(s) por já estarem convertidos.`);
+      } else if (res.deleted) {
+        toast.success(`${res.deleted} lead(s) excluído(s).`);
+      } else {
+        toast.warning('Nenhum lead pôde ser excluído (todos já convertidos).');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao excluir leads.';
+      toast.error(msg);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const lead = leads.find((item) => item.id === String(event.active.id));
     const status = event.over?.id as LeadStatus | undefined;
@@ -123,12 +182,26 @@ export default function CrmLeads() {
     updateLead.mutate({ id: lead.id, updates: { status } });
   };
 
+  const selectedValueSum = selectedLeads.reduce((s, l) => s + Number(l.estimated_value ?? 0), 0);
+  const selectedConverted = selectedLeads.filter((l) => l.status === 'convertido').length;
+  const selectedConversionPct = selectedLeads.length ? (selectedConverted / selectedLeads.length) * 100 : 0;
+
   return (
     <div className="space-y-4 sm:space-y-5">
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
-        <Kpi label="Leads abertos" value={String(openLeads)} />
-        <Kpi label="Taxa conversão" value={`${Number(metrics?.conversion_rate_pct ?? 0).toFixed(0)}%`} />
-        <Kpi label="Valor" value={formatCurrency(filtered.reduce((sum, lead) => sum + Number(lead.estimated_value ?? 0), 0))} />
+        {hasSelection ? (
+          <>
+            <Kpi highlight label={`Leads selecionados (${selected.size})`} value={String(selectedLeads.length)} />
+            <Kpi highlight label="Conversão da seleção" value={`${selectedConversionPct.toFixed(0)}%`} />
+            <Kpi highlight label="Valor selecionado" value={formatCurrency(selectedValueSum)} />
+          </>
+        ) : (
+          <>
+            <Kpi label="Leads abertos" value={String(openLeads)} />
+            <Kpi label="Taxa conversão" value={`${Number(metrics?.conversion_rate_pct ?? 0).toFixed(0)}%`} />
+            <Kpi label="Valor" value={formatCurrency(filtered.reduce((sum, lead) => sum + Number(lead.estimated_value ?? 0), 0))} />
+          </>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 rounded-lg border border-border bg-card/50 p-2 sm:p-3">
@@ -146,6 +219,21 @@ export default function CrmLeads() {
         </div>
       </div>
 
+      {hasSelection && view === 'table' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2 sticky top-0 z-10 backdrop-blur">
+          <p className="text-sm">
+            <span className="font-semibold text-foreground">{selected.size}</span>
+            <span className="text-muted-foreground"> lead{selected.size > 1 ? 's' : ''} selecionado{selected.size > 1 ? 's' : ''}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={clearSelection}><X className="h-4 w-4" /> Limpar</Button>
+            <Button variant="destructive" size="sm" disabled={bulkDelete.isPending} onClick={handleBulkDelete}>
+              <Trash2 className="h-4 w-4" /> Excluir selecionados
+            </Button>
+          </div>
+        </div>
+      )}
+
       {view === 'table' ? (
         <>
           {/* Desktop table */}
@@ -153,6 +241,13 @@ export default function CrmLeads() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allFilteredSelected ? true : someSelected ? 'indeterminate' : false}
+                      onCheckedChange={toggleAll}
+                      aria-label="Selecionar todos"
+                    />
+                  </TableHead>
                   <TableHead>Code</TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Empresa</TableHead>
@@ -165,46 +260,82 @@ export default function CrmLeads() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((lead) => (
-                  <TableRow key={lead.id} className="cursor-pointer" onClick={() => navigate(`/crm/leads/${lead.code}`)}>
-                    <TableCell className="font-mono text-xs">{lead.code}</TableCell>
-                    <TableCell className="font-medium">{lead.title}</TableCell>
-                    <TableCell>{lead.company?.trade_name || lead.company?.legal_name}</TableCell>
-                    <TableCell><span className={statusClass(lead.status)}>{LEAD_LABEL[lead.status]}</span></TableCell>
-                    <TableCell>{lead.source ?? '-'}</TableCell>
-                    <TableCell>{formatCurrency(Number(lead.estimated_value ?? 0))}</TableCell>
-                    <TableCell>{lead.owner?.display_name ?? '-'}</TableCell>
-                    <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                    <TableCell>{lead.triagem_scheduled_at ? new Date(lead.triagem_scheduled_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                  </TableRow>
-                ))}
+                {filtered.map((lead) => {
+                  const isSel = selected.has(lead.id);
+                  return (
+                    <TableRow
+                      key={lead.id}
+                      data-state={isSel ? 'selected' : undefined}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/crm/leads/${lead.code}`)}
+                    >
+                      <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox checked={isSel} onCheckedChange={() => toggleOne(lead.id)} aria-label={`Selecionar ${lead.code}`} />
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{lead.code}</TableCell>
+                      <TableCell className="font-medium">{lead.title}</TableCell>
+                      <TableCell>{lead.company?.trade_name || lead.company?.legal_name}</TableCell>
+                      <TableCell><span className={statusClass(lead.status)}>{LEAD_LABEL[lead.status]}</span></TableCell>
+                      <TableCell>{lead.source ?? '-'}</TableCell>
+                      <TableCell>{formatCurrency(Number(lead.estimated_value ?? 0))}</TableCell>
+                      <TableCell>{lead.owner?.display_name ?? '-'}</TableCell>
+                      <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                      <TableCell>{lead.triagem_scheduled_at ? new Date(lead.triagem_scheduled_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
 
           {/* Mobile cards */}
           <div className="md:hidden space-y-2">
-            {filtered.map((lead) => (
-              <button
-                key={lead.id}
-                type="button"
-                onClick={() => navigate(`/crm/leads/${lead.code}`)}
-                className="w-full rounded-lg border border-border bg-card p-3 text-left shadow-sm active:scale-[0.99] transition"
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="font-mono text-[11px] text-muted-foreground">{lead.code}</span>
-                  <span className={statusClass(lead.status)}>{LEAD_LABEL[lead.status]}</span>
-                </div>
-                <p className="text-sm font-semibold text-foreground line-clamp-2">{lead.title}</p>
-                {(lead.company?.trade_name || lead.company?.legal_name) && (
-                  <p className="text-xs text-accent truncate mt-1">{lead.company?.trade_name || lead.company?.legal_name}</p>
+            {filtered.length > 0 && (
+              <div className="flex items-center justify-between px-1">
+                <button type="button" onClick={toggleAll} className="text-xs text-accent font-medium">
+                  {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+                </button>
+                {hasSelection && (
+                  <span className="text-xs text-muted-foreground">{selected.size} selecionado(s)</span>
                 )}
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{formatCurrency(Number(lead.estimated_value ?? 0))}</span>
-                  <span className="truncate ml-2">{lead.owner?.display_name ?? '-'}</span>
+              </div>
+            )}
+            {filtered.map((lead) => {
+              const isSel = selected.has(lead.id);
+              return (
+                <div
+                  key={lead.id}
+                  className={cn(
+                    'w-full rounded-lg border bg-card p-3 shadow-sm transition',
+                    isSel ? 'border-accent/60 bg-accent/5' : 'border-border',
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={isSel} onCheckedChange={() => toggleOne(lead.id)} aria-label={`Selecionar ${lead.code}`} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/crm/leads/${lead.code}`)}
+                      className="flex-1 text-left active:scale-[0.99] transition"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-mono text-[11px] text-muted-foreground">{lead.code}</span>
+                        <span className={statusClass(lead.status)}>{LEAD_LABEL[lead.status]}</span>
+                      </div>
+                      <p className="text-sm font-semibold text-foreground line-clamp-2">{lead.title}</p>
+                      {(lead.company?.trade_name || lead.company?.legal_name) && (
+                        <p className="text-xs text-accent truncate mt-1">{lead.company?.trade_name || lead.company?.legal_name}</p>
+                      )}
+                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{formatCurrency(Number(lead.estimated_value ?? 0))}</span>
+                        <span className="truncate ml-2">{lead.owner?.display_name ?? '-'}</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </button>
-            ))}
+              );
+            })}
             {filtered.length === 0 && (
               <p className="text-center text-sm text-muted-foreground py-8">Nenhum lead encontrado</p>
             )}
