@@ -84,25 +84,34 @@ type CrmOpts = {
  * Invalida caches do CRM (deals, leads, empresas, dashboard, KPIs).
  */
 export function invalidateCrmCaches(qc: QueryClient, opts: CrmOpts = {}) {
-  qc.invalidateQueries({ queryKey: ["deals"] });
-  qc.invalidateQueries({ queryKey: ["leads"] });
-  qc.invalidateQueries({ queryKey: ["companies"] });
+  // Listas e métricas globais (queryKeys reais usadas no projeto)
+  qc.invalidateQueries({ queryKey: ["crm-deals"] });
+  qc.invalidateQueries({ queryKey: ["crm-leads"] });
+  qc.invalidateQueries({ queryKey: ["crm-leads-full"] });
+  qc.invalidateQueries({ queryKey: ["crm-companies-full"] });
   qc.invalidateQueries({ queryKey: ["crm-dashboard"] });
   qc.invalidateQueries({ queryKey: ["crm-dashboard-exec"] });
   qc.invalidateQueries({ queryKey: ["crm-metrics"] });
-  qc.invalidateQueries({ queryKey: ["deals-indicators"] });
+  qc.invalidateQueries({ queryKey: ["crm-deals-indicators"] });
+  qc.invalidateQueries({ queryKey: ["crm-activities"] });
+  qc.invalidateQueries({ queryKey: ["crm-calendar"] });
 
   if (opts.dealId) {
-    qc.invalidateQueries({ queryKey: ["deal", opts.dealId] });
-    qc.invalidateQueries({ queryKey: ["deal-activities", opts.dealId] });
-    qc.invalidateQueries({ queryKey: ["deal-dependencies", opts.dealId] });
+    qc.invalidateQueries({ queryKey: ["crm-deal", opts.dealId] });
+    qc.invalidateQueries({ queryKey: ["crm-deal-code"] });
+    qc.invalidateQueries({ queryKey: ["crm-deal-dependencies", opts.dealId] });
   }
   if (opts.leadId) {
-    qc.invalidateQueries({ queryKey: ["lead", opts.leadId] });
+    qc.invalidateQueries({ queryKey: ["crm-lead", opts.leadId] });
+    qc.invalidateQueries({ queryKey: ["crm-lead-code"] });
   }
   if (opts.companyId) {
-    qc.invalidateQueries({ queryKey: ["company", opts.companyId] });
-    qc.invalidateQueries({ queryKey: ["company-contacts", opts.companyId] });
+    qc.invalidateQueries({ queryKey: ["crm-company-detail", opts.companyId] });
+    qc.invalidateQueries({ queryKey: ["crm-company-contacts", opts.companyId] });
+    qc.invalidateQueries({ queryKey: ["crm-company-leads", opts.companyId] });
+    qc.invalidateQueries({ queryKey: ["crm-company-deals", opts.companyId] });
+    qc.invalidateQueries({ queryKey: ["crm-company-projects", opts.companyId] });
+    qc.invalidateQueries({ queryKey: ["crm-company-stats", opts.companyId] });
   }
 }
 
