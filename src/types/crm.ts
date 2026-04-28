@@ -93,6 +93,11 @@ export interface Deal {
   estimated_complexity: number | null;
   estimation_confidence: EstimationConfidence | null;
 
+  // Anexos comerciais (Hub Comercial — Fase 1)
+  organograma_url: string | null;
+  mockup_url: string | null;
+  mockup_screenshots: string[];
+
   // Comercial
   budget_range_min: number | null;
   budget_range_max: number | null;
