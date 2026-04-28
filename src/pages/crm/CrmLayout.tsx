@@ -64,38 +64,40 @@ export default function CrmLayout() {
           </div>
         </div>
 
-        {/* Filters bar */}
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2 sm:p-3">
-          <div className="flex-1 min-w-0">
-            <SearchBox value={store.search} onChange={store.setSearch} placeholder="Buscar no CRM..." />
-          </div>
+        {/* Filters bar — apenas no Pipeline */}
+        {currentTab === 'pipeline' && (
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2 sm:p-3">
+            <div className="flex-1 min-w-0">
+              <SearchBox value={store.search} onChange={store.setSearch} placeholder="Buscar no CRM..." />
+            </div>
 
-          {/* Mobile: Sheet */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="md:hidden h-10 gap-1 shrink-0">
-                <SlidersHorizontal className="h-4 w-4" /> Filtros
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
-              <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {filterControls}
-              </div>
-              <Button variant="ghost" size="sm" className="mt-4 w-full" onClick={store.resetFilters}>
-                Limpar filtros
-              </Button>
-            </SheetContent>
-          </Sheet>
+            {/* Mobile: Sheet */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="md:hidden h-10 gap-1 shrink-0">
+                  <SlidersHorizontal className="h-4 w-4" /> Filtros
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
+                <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {filterControls}
+                </div>
+                <Button variant="ghost" size="sm" className="mt-4 w-full" onClick={store.resetFilters}>
+                  Limpar filtros
+                </Button>
+              </SheetContent>
+            </Sheet>
 
-          {/* Desktop: inline */}
-          <div className="hidden md:flex items-center gap-2 flex-wrap">
-            {filterControls}
-            <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={store.resetFilters}>
-              Limpar
-            </Button>
+            {/* Desktop: inline */}
+            <div className="hidden md:flex items-center gap-2 flex-wrap">
+              {filterControls}
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={store.resetFilters}>
+                Limpar
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={currentTab} onValueChange={(v) => navigate(`/crm/${v}`)}>
