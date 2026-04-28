@@ -29,7 +29,6 @@ export default function CrmLayout() {
   const store = useCrmHubStore();
   const currentTab = TABS.find((t) => location.pathname.startsWith(`/crm/${t.value}`))?.value ?? 'pipeline';
   const showNewLead = SHOW_NEW_LEAD.has(currentTab);
-  const showNewDeal = SHOW_NEW_DEAL.has(currentTab);
   const hasActions = showNewLead || showNewDeal;
 
   const filterControls = (
