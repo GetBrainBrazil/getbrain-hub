@@ -43,7 +43,7 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
     const ok = await confirm({
       title: `Remover origem "${s.name}"?`,
       description: "Leads que já usam esta origem mantêm o valor histórico, mas ela não estará mais disponível para seleção.",
-      confirmText: "Remover",
+      confirmLabel: "Remover",
       variant: "destructive",
     });
     if (ok) remove.mutate(s.id);
