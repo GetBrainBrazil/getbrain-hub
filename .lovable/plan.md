@@ -1,36 +1,45 @@
-## Problema
+# Melhorias na sidebar do Deal
 
-1. Ao marcar um contato como **principal**, há atraso visível porque o `useUpdateDealField` invalida cache só no `onSettled` (espera o round-trip do banco) — não há optimistic update.
-2. Não existe forma de **desmarcar** o contato principal: a estrela só "ativa" e o botão "Definir como principal" no form some quando já está principal.
-3. O ícone de estrela no card já é renderizado como label visual (não-clicável após a refatoração para "card clicável"), então o usuário não tem alvo direto.
+Refinar a sidebar do detalhe do deal (`DealSidebarRich.tsx`) para deixar mais claro o propósito de cada zona de navegação, melhorar o feedback visual no hover e renomear o campo Owner.
 
-## Solução
+## O que muda
 
-### A. Resposta instantânea (`src/hooks/crm/useCrmDetails.ts`)
-Adicionar **optimistic update** ao `useUpdateDealField` (mesmo padrão já aplicado em `useUpdateCompanyField`):
-- `onMutate`: cancela queries do deal, salva snapshot anterior, aplica `{...previous, ...updates}` na cache imediatamente.
-- `onError`: rollback para o snapshot.
-- `onSettled`: mantém invalidação atual.
+### 1. Tooltips explicativos em cada item de navegação
+Cada zona da navegação (Cliente, Dor, Solução, Dependências, Comercial) ganha um tooltip ao passar o mouse, explicando o que se preenche ali. Conteúdo proposto:
 
-Resultado: a estrela "Principal" muda instantaneamente ao clicar.
+- **Cliente** — "Dados da empresa, contatos e tipo de cliente (B2B/B2C)."
+- **Dor** — "Dor identificada, categoria, custo mensal e solução atual."
+- **Solução** — "Escopo, entregáveis, critérios de aceite, premissas e estimativa."
+- **Dependências** — "Acessos, dados, pessoas e autorizações necessárias para iniciar."
+- **Comercial** — "Valores, orçamento, decisores, concorrentes e próximos passos."
 
-### B. Toggle do principal (`src/components/shared/CompanyContactsPanel.tsx`)
-1. **`handleTogglePrimary`**: se o contato já é o principal e está em modo CRM (`onMakePrimary` definido), chamar `onMakePrimary(null as any)` para limpar. Ajustar tipo de `onMakePrimary` para aceitar `string | null`.
-2. **No form de edição** (rodapé): quando `isAlreadyPrimary` for `true`, mostrar botão "**Remover como principal**" (ícone `StarOff`) em vez de esconder. Continua chamando `onMakePrimary` — o consumidor decide entre setar/limpar via `isAlreadyPrimary`.
-3. **Card colapsado**: tornar o badge "Principal" clicável (com `e.stopPropagation()`) para alternar direto sem precisar abrir o form. Adicionar `title="Clique para remover como principal"` e cursor pointer.
+Implementação: usar o componente `Tooltip` já existente do shadcn (`@/components/ui/tooltip`), envelopando cada `<a>` da nav.
 
-### C. Consumer no CRM (`src/components/crm/ZoneCliente.tsx` + `CompanyContactsManager.tsx`)
-- Mudar assinatura de `onMakePrimary` para `(personId: string | null) => void`.
-- Em `setPrimaryContact`: salva `contact_person_id: personId` (passa `null` para limpar).
+### 2. Hover mais destacado e legível
+Hoje o hover usa `hover:bg-muted/40`, que fica fraco. Trocar por um destaque com a cor de acento mas mantendo o texto totalmente legível:
 
-## Arquivos editados
+- Item ativo no hover: `hover:bg-accent/15 hover:text-foreground hover:border-l-2 hover:border-accent hover:pl-2` (uma barrinha lateral cyan + leve fundo translúcido).
+- O número (01, 02…) passa a `hover:text-accent` para reforçar.
+- Transição suave já existente (`transition-colors`) — manter, e adicionar `transition-all` para a borda lateral.
+- Garantir contraste: o texto continua usando `text-foreground` (não vira neon sobre neon).
 
-- `src/hooks/crm/useCrmDetails.ts` — optimistic update no `useUpdateDealField`.
-- `src/components/shared/CompanyContactsPanel.tsx` — toggle do principal (handler, botão "Remover como principal" no form, badge clicável no card).
-- `src/components/crm/CompanyContactsManager.tsx` — propaga novo tipo `string | null`.
-- `src/components/crm/ZoneCliente.tsx` — `setPrimaryContact` aceita `null`.
+### 3. Renomear "Owner" → "Responsável"
+Confirmado: é o responsável pelo deal/projeto no CRM.
 
-## Não escopo
+- Título do bloco: `Responsável` (em vez de `Owner`).
+- Placeholder do select: `Sem responsável`.
+- Item "sem owner" do dropdown: `— sem responsável —`.
 
-- Não mexo no fluxo de "principal" no módulo de Projetos (lá é `is_primary_contact` na tabela `company_people`, comportamento diferente — usuário só reclamou do CRM).
-- Não mudo o ícone de estrela visual do card além de torná-lo um botão de toggle.
+Escopo desta renomeação: apenas a sidebar (`DealSidebarRich.tsx`). Outras telas (kanban, listagem, header) continuam como estão para não estourar o escopo — se quiser propagar, é só pedir num próximo passo.
+
+## Arquivo afetado
+
+- `src/components/crm/DealSidebarRich.tsx` (única edição).
+
+## Detalhes técnicos
+
+- Importar `Tooltip`, `TooltipContent`, `TooltipProvider`, `TooltipTrigger` de `@/components/ui/tooltip`.
+- Adicionar campo `hint: string` em cada item do array `ZONES`.
+- Envolver a `<nav>` com um `<TooltipProvider delayDuration={300}>`.
+- Cada `<a>` vira `<TooltipTrigger asChild>` dentro de um `<Tooltip>`, com `<TooltipContent side="left">` mostrando o hint.
+- Classes de hover ajustadas conforme descrito acima, mantendo o estilo "loop" mais discreto para Dependências (badge 2C).
