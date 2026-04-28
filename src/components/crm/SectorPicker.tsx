@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, ChevronDown, Plus, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSectors } from '@/hooks/crm/useSectors';
+import { useCreateSector, useSectors } from '@/hooks/crm/useSectors';
 import { cn } from '@/lib/utils';
 
 interface SectorPickerProps {
@@ -16,6 +17,7 @@ interface SectorPickerProps {
 
 export function SectorPicker({ value, onChange, placeholder = 'Selecione um setor' }: SectorPickerProps) {
   const { data: tree, isLoading } = useSectors();
+  const createSector = useCreateSector();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -37,6 +39,28 @@ export function SectorPicker({ value, onChange, placeholder = 'Selecione um seto
       s.label.toLowerCase().includes(q) || s.rootName.toLowerCase().includes(q),
     );
   }, [flat, query]);
+
+  const trimmedQuery = query.trim();
+  const exactMatch = trimmedQuery
+    ? flat.some((s) => s.label.toLowerCase() === trimmedQuery.toLowerCase())
+    : false;
+  const canCreate = trimmedQuery.length >= 2 && !exactMatch && !createSector.isPending;
+
+  const handleCreate = () => {
+    if (!canCreate) return;
+    createSector.mutate(
+      { name: trimmedQuery, parent_sector_id: null },
+      {
+        onSuccess: (sector) => {
+          toast.success(`Setor "${sector.name}" criado`);
+          onChange(sector.id);
+          setQuery('');
+          setOpen(false);
+        },
+        onError: (e: any) => toast.error(e?.message ?? 'Erro ao criar setor'),
+      },
+    );
+  };
 
   const current = flat.find((s) => s.id === value);
   const currentLabel = current
@@ -66,7 +90,13 @@ export function SectorPicker({ value, onChange, placeholder = 'Selecione um seto
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar setor..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && canCreate) {
+                e.preventDefault();
+                handleCreate();
+              }
+            }}
+            placeholder="Buscar ou criar setor..."
             className="h-7 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
           />
           {value && (
@@ -87,8 +117,6 @@ export function SectorPicker({ value, onChange, placeholder = 'Selecione um seto
               <Skeleton className="h-7 w-full" />
               <Skeleton className="h-7 w-full" />
             </div>
-          ) : filtered.length === 0 ? (
-            <p className="p-4 text-center text-xs text-muted-foreground">Nenhum setor encontrado.</p>
           ) : (
             <ul className="p-1">
               {filtered.map((s) => {
@@ -113,6 +141,24 @@ export function SectorPicker({ value, onChange, placeholder = 'Selecione um seto
                   </li>
                 );
               })}
+              {filtered.length === 0 && !canCreate && (
+                <li className="px-2 py-4 text-center text-xs text-muted-foreground">
+                  {trimmedQuery ? 'Digite ao menos 2 caracteres para criar.' : 'Nenhum setor cadastrado.'}
+                </li>
+              )}
+              {canCreate && (
+                <li className="border-t border-border mt-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCreate}
+                    disabled={createSector.isPending}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span className="truncate">Criar setor "{trimmedQuery}"</span>
+                  </button>
+                </li>
+              )}
             </ul>
           )}
         </ScrollArea>

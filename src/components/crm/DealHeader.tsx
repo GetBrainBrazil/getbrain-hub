@@ -10,7 +10,7 @@ import {
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_COLOR,
 } from '@/constants/dealEnumLabels';
 import { useUpdateDealField } from '@/hooks/crm/useCrmDetails';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Deal, DealStage } from '@/types/crm';
 
@@ -73,8 +73,10 @@ function EditableKPI({ icon: Icon, label, display, accent, renderEditor }: Edita
 /* Generic editors                                                     */
 /* ------------------------------------------------------------------ */
 
+type NumberKind = 'number' | 'currency' | 'percent' | 'hours';
+
 function NumberEditor({
-  initial, onSave, done, min, max, step = '1', suffix,
+  initial, onSave, done, min, max, step = '1', suffix, kind = 'number',
 }: {
   initial: number | null;
   onSave: (v: number | null) => void;
@@ -83,30 +85,50 @@ function NumberEditor({
   max?: number;
   step?: string;
   suffix?: string;
+  kind?: NumberKind;
 }) {
-  const [val, setVal] = useState(initial == null ? '' : String(initial));
+  const formatInitial = (v: number | null): string => {
+    if (v == null) return '';
+    if (kind === 'currency') return maskCurrencyBRL(String(Math.round(v * 100)));
+    return String(v);
+  };
+  const [val, setVal] = useState(formatInitial(initial));
+
+  const handleChange = (raw: string) => {
+    if (kind === 'currency') {
+      setVal(maskCurrencyBRL(raw));
+    } else {
+      // permite só dígitos + vírgula/ponto
+      setVal(raw.replace(/[^\d.,]/g, ''));
+    }
+  };
+
   const commit = () => {
     const trimmed = val.trim();
     if (trimmed === '') { onSave(null); done(); return; }
-    let n = Number(trimmed.replace(',', '.'));
-    if (Number.isNaN(n)) { done(); return; }
+    let n: number | null;
+    if (kind === 'currency') {
+      n = parseCurrencyBRL(trimmed);
+    } else {
+      const parsed = Number(trimmed.replace(/\./g, '').replace(',', '.'));
+      n = Number.isNaN(parsed) ? null : parsed;
+    }
+    if (n == null) { done(); return; }
     if (min != null) n = Math.max(min, n);
     if (max != null) n = Math.min(max, n);
     onSave(n);
     done();
   };
+
   return (
     <div className="flex items-center gap-1">
       <Input
         autoFocus
-        type="number"
-        inputMode="decimal"
+        inputMode={kind === 'currency' || kind === 'percent' ? 'numeric' : 'decimal'}
         value={val}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(e) => setVal(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         onBlur={commit}
+        onFocus={(e) => e.currentTarget.select()}
         onKeyDown={(e) => {
           if (e.key === 'Enter') commit();
           if (e.key === 'Escape') done();
@@ -327,9 +349,9 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
           display={<span className="font-mono">{formatCurrency(Number(deal.estimated_value ?? 0))}</span>}
           renderEditor={(done) => (
             <NumberEditor
+              kind="currency"
               initial={deal.estimated_value}
               min={0}
-              step="100"
               onSave={(v) => saveField({ estimated_value: v }, 'Valor estimado')}
               done={done}
             />
@@ -341,10 +363,10 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
           display={<span className="font-mono">{deal.probability_pct}%</span>}
           renderEditor={(done) => (
             <NumberEditor
+              kind="percent"
               initial={deal.probability_pct}
               min={0}
               max={100}
-              step="5"
               suffix="%"
               onSave={(v) => saveField({ probability_pct: v ?? 0 }, 'Probabilidade')}
               done={done}
@@ -369,9 +391,9 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
           display={deal.estimated_hours_total ? `${deal.estimated_hours_total} h` : '—'}
           renderEditor={(done) => (
             <NumberEditor
+              kind="hours"
               initial={deal.estimated_hours_total}
               min={0}
-              step="1"
               suffix="h"
               onSave={(v) => saveField({ estimated_hours_total: v }, 'Estimativa')}
               done={done}
