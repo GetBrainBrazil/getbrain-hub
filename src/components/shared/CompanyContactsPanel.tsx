@@ -15,7 +15,7 @@
  * `crm_contact_roles`, `company_contact_roles`) usadas no CRM,
  * garantindo paridade de dados entre módulos.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -248,6 +248,27 @@ function ContactForm({
 }) {
   const [form, setForm] = useState<FormState>(initial ?? emptyForm);
   const [isPrimary, setIsPrimary] = useState(!!initialIsPrimary);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initialRef = useRef<FormState>(initial ?? emptyForm);
+  const initialPrimaryRef = useRef<boolean>(!!initialIsPrimary);
+  // Refs sempre atualizadas para uso dentro do listener global
+  const formRef = useRef(form);
+  const isPrimaryRef = useRef(isPrimary);
+  const submittingRef = useRef(submitting);
+  useEffect(() => { formRef.current = form; }, [form]);
+  useEffect(() => { isPrimaryRef.current = isPrimary; }, [isPrimary]);
+  useEffect(() => { submittingRef.current = submitting; }, [submitting]);
+
+  const isDirty = (f: FormState, p: boolean) => {
+    const i = initialRef.current;
+    return (
+      f.full_name !== i.full_name ||
+      f.role_in_company !== i.role_in_company ||
+      f.email !== i.email ||
+      f.phone !== i.phone ||
+      p !== initialPrimaryRef.current
+    );
+  };
 
   const handle = () => {
     const parsed = contactSchema.safeParse(form);
@@ -258,8 +279,34 @@ function ContactForm({
     onSubmit(form, isPrimary);
   };
 
+  // Click-fora: salva se válido+modificado, senão cancela.
+  useEffect(() => {
+    const handler = (ev: MouseEvent) => {
+      const target = ev.target as Node | null;
+      if (!target || !containerRef.current) return;
+      if (containerRef.current.contains(target)) return;
+      // Ignora cliques em portais de Popover/Command/Dialog (Radix usa data-radix-portal/popper)
+      const el = target as HTMLElement;
+      if (el.closest?.("[data-radix-popper-content-wrapper], [role='dialog'], [data-sonner-toaster]")) return;
+      if (submittingRef.current) return;
+
+      const f = formRef.current;
+      const p = isPrimaryRef.current;
+      if (!isDirty(f, p)) { onCancel(); return; }
+      const parsed = contactSchema.safeParse(f);
+      if (!parsed.success) {
+        toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos");
+        return;
+      }
+      onSubmit(f, p);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div className="rounded-md border border-accent/30 bg-accent/5 p-3">
+    <div ref={containerRef} className="rounded-md border border-accent/30 bg-accent/5 p-3">
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label className="text-xs">Nome *</Label>
