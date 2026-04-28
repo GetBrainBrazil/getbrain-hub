@@ -215,24 +215,31 @@ export default function CrmLeads() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-5">
         {hasSelection ? (
           <>
-            <Kpi highlight label={`Leads selecionados (${selected.size})`} value={String(selectedLeads.length)} />
+            <Kpi highlight label={`Selecionados (${selected.size})`} value={String(selectedLeads.length)} />
             <Kpi highlight label="Conversão da seleção" value={`${selectedConversionPct.toFixed(0)}%`} />
             <Kpi highlight label="Valor selecionado" value={formatCurrency(selectedValueSum)} />
+            <Kpi highlight label="Clientes ativos / sel." value={String(selectedLeads.filter((l) => l.company?.relationship_status === 'active_client').length)} />
+            <Kpi highlight label="Receita ganha / sel." value={formatCurrency(Array.from(new Set(selectedLeads.map((l) => l.company_id))).reduce((s, id) => s + (companyAggregates[id]?.revenueWon ?? 0), 0))} />
           </>
         ) : (
           <>
             <Kpi label="Leads abertos" value={String(openLeads)} />
             <Kpi label="Taxa conversão" value={`${Number(metrics?.conversion_rate_pct ?? 0).toFixed(0)}%`} />
-            <Kpi label="Valor" value={formatCurrency(filtered.reduce((sum, lead) => sum + Number(lead.estimated_value ?? 0), 0))} />
+            <Kpi label="Valor pipeline" value={formatCurrency(filtered.reduce((sum, lead) => sum + Number(lead.estimated_value ?? 0), 0))} />
+            <Kpi label="Clientes ativos" value={String(activeClientsVisible)} />
+            <Kpi label="Receita ganha" value={formatCurrency(revenueWonVisible)} />
           </>
         )}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 rounded-lg border border-border bg-card/50 p-2 sm:p-3">
-        <MultiFilter label="Status" selected={statusFilter} onChange={(v) => setStatusFilter(v as LeadStatus[])} options={LEAD_STATUS.map((status) => ({ value: status, label: LEAD_LABEL[status] }))} />
+        <div className="flex flex-wrap items-center gap-2">
+          <MultiFilter label="Status lead" selected={statusFilter} onChange={(v) => setStatusFilter(v as LeadStatus[])} options={LEAD_STATUS.map((status) => ({ value: status, label: LEAD_LABEL[status] }))} />
+          <MultiFilter label="Status empresa" selected={companyStatusFilter} onChange={(v) => setCompanyStatusFilter(v as CompanyRelationshipStatus[])} options={COMPANY_STATUS.map((s) => ({ value: s, label: COMPANY_STATUS_LABEL[s] }))} />
+        </div>
         <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto">
           <Tabs value={view} onValueChange={(v) => setView(v as 'table' | 'kanban')} className="flex-1 sm:flex-none">
             <TabsList className="w-full sm:w-auto">
