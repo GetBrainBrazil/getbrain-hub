@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Mail, Phone, Plus, Star, Trash2, Save, X, User,
+  Mail, Phone, Plus, Star, StarOff, Trash2, Save, X, User,
   Building2, UserPlus, Check, ChevronsUpDown, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -333,10 +333,17 @@ function ContactForm({
       )}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1">
-          {onMakePrimary && !isAlreadyPrimary && (
-            <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting} className="text-xs">
-              <Star className="mr-1 h-3.5 w-3.5" /> Definir como principal
-            </Button>
+          {onMakePrimary && (
+            isAlreadyPrimary ? (
+              <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting}
+                className="text-xs text-muted-foreground hover:text-foreground">
+                <StarOff className="mr-1 h-3.5 w-3.5" /> Remover como principal
+              </Button>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting} className="text-xs">
+                <Star className="mr-1 h-3.5 w-3.5" /> Definir como principal
+              </Button>
+            )
           )}
           {onRemove && (
             <Button size="sm" variant="ghost" onClick={onRemove} disabled={submitting}
@@ -368,7 +375,7 @@ interface PanelProps {
    * Se fornecido, a estrela controla esta callback ao invés de gravar em `company_people.is_primary_contact`.
    */
   primaryContactPersonId?: string | null;
-  onMakePrimary?: (personId: string) => void;
+  onMakePrimary?: (personId: string | null) => void;
 }
 
 export function CompanyContactsPanel({
@@ -436,8 +443,9 @@ export function CompanyContactsPanel({
 
   const handleTogglePrimary = (c: ProjectContact) => {
     if (onMakePrimary) {
-      // Modo CRM/Deal: não mexe no flag da empresa, só notifica o pai.
-      onMakePrimary(c.person_id);
+      // Modo CRM/Deal: alterna entre setar como principal ou limpar.
+      const isCurrent = c.person_id === primaryContactPersonId;
+      onMakePrimary(isCurrent ? null : c.person_id);
       return;
     }
     if (c.is_primary_contact) return;
