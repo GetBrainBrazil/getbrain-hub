@@ -269,7 +269,7 @@ export default function CrmPipeline() {
                 deals={grouped.get(stage) ?? []}
                 onOpen={(deal) => navigate(`/crm/deals/${deal.code}`)}
                 onCompanyOpen={(deal) => navigate(`/crm/empresas/${deal.company_id}`)}
-                onAdd={(s) => { setCreateStage(s); setCreateOpen(true); }}
+                onAdd={() => setCreateOpen(true)}
               />
             ))}
           </div>
