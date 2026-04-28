@@ -16,19 +16,19 @@ export const CLIENT_TYPE_OPTIONS: CompanyClientType[] = ['b2b', 'b2c', 'b2b_b2c'
 
 export const CLIENT_TYPE_COLOR: Record<CompanyClientType, { active: string; idle: string; descActive: string }> = {
   b2b: {
-    active: 'border-accent bg-accent text-accent-foreground shadow-sm ring-2 ring-accent/40 ring-offset-1 ring-offset-background',
-    idle: 'border-border bg-muted/10 text-foreground hover:border-accent/50 hover:bg-accent/10',
-    descActive: 'text-accent-foreground/80',
+    active: 'border-accent bg-accent/5 text-accent shadow-sm ring-2 ring-accent/30',
+    idle: 'border-border bg-transparent text-foreground hover:border-accent/50 hover:bg-accent/5 hover:text-accent',
+    descActive: 'text-accent/80',
   },
   b2c: {
-    active: 'border-success bg-success text-success-foreground shadow-sm ring-2 ring-success/40 ring-offset-1 ring-offset-background',
-    idle: 'border-border bg-muted/10 text-foreground hover:border-success/50 hover:bg-success/10',
-    descActive: 'text-success-foreground/80',
+    active: 'border-success bg-success/5 text-success shadow-sm ring-2 ring-success/30',
+    idle: 'border-border bg-transparent text-foreground hover:border-success/50 hover:bg-success/5 hover:text-success',
+    descActive: 'text-success/80',
   },
   b2b_b2c: {
-    active: 'border-warning bg-warning text-warning-foreground shadow-sm ring-2 ring-warning/40 ring-offset-1 ring-offset-background',
-    idle: 'border-border bg-muted/10 text-foreground hover:border-warning/50 hover:bg-warning/10',
-    descActive: 'text-warning-foreground/80',
+    active: 'border-warning bg-warning/5 text-warning shadow-sm ring-2 ring-warning/30',
+    idle: 'border-border bg-transparent text-foreground hover:border-warning/50 hover:bg-warning/5 hover:text-warning',
+    descActive: 'text-warning/80',
   },
 };
 
