@@ -1,2 +1,5 @@
 import ContasBancariasTab from "@/components/config-financeiras/ContasBancariasTab";
-export default function FinContasPage() { return <ContasBancariasTab search="" />; }
+import FinTabWithSearch from "./FinTabWithSearch";
+export default function FinContasPage() {
+  return <FinTabWithSearch Component={ContasBancariasTab} placeholder="Buscar contas…" />;
+}

@@ -1,2 +1,5 @@
 import CategoriasTab from "@/components/config-financeiras/CategoriasTab";
-export default function FinCategoriasPage() { return <CategoriasTab search="" />; }
+import FinTabWithSearch from "./FinTabWithSearch";
+export default function FinCategoriasPage() {
+  return <FinTabWithSearch Component={CategoriasTab} placeholder="Buscar categorias…" />;
+}

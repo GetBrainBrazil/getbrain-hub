@@ -1,2 +1,5 @@
 import ColaboradoresTab from "@/components/config-financeiras/ColaboradoresTab";
-export default function FinColaboradoresPage() { return <ColaboradoresTab search="" />; }
+import FinTabWithSearch from "./FinTabWithSearch";
+export default function FinColaboradoresPage() {
+  return <FinTabWithSearch Component={ColaboradoresTab} placeholder="Buscar colaboradores…" />;
+}
