@@ -15,6 +15,10 @@ import { DetailBreadcrumb, DetailShell, InfoBadge } from '@/components/crm/CrmDe
 import { MarkdownSplitEditor } from '@/components/dev/MarkdownComposer';
 import { DEAL_STAGE_LABEL, DEAL_STAGES, PROJECT_TYPE_LABEL, PROJECT_TYPE_OPTIONS } from '@/constants/dealStages';
 import { useActivitiesForEntity, useConvertLeadToDealFull, useEntityAudit, useLeadByCode, useUpdateLeadField } from '@/hooks/crm/useCrmDetails';
+import { useDeleteLead } from '@/hooks/crm/useLeads';
+import { DangerZone } from '@/components/crm/DangerZone';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateCrmCaches } from '@/lib/cacheInvalidation';
 import { useCrmActors, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
 import { formatCurrency } from '@/lib/formatters';
 import type { DealStage, Lead, LeadStatus } from '@/types/crm';
