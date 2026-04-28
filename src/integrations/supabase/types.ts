@@ -806,7 +806,8 @@ export type Database = {
           deleted_at: string | null
           id: string
           organization_id: string
-          role: Database["public"]["Enums"]["contact_role"]
+          role: Database["public"]["Enums"]["contact_role"] | null
+          role_id: string
         }
         Insert: {
           company_person_id: string
@@ -815,7 +816,8 @@ export type Database = {
           deleted_at?: string | null
           id?: string
           organization_id: string
-          role: Database["public"]["Enums"]["contact_role"]
+          role?: Database["public"]["Enums"]["contact_role"] | null
+          role_id: string
         }
         Update: {
           company_person_id?: string
@@ -824,7 +826,8 @@ export type Database = {
           deleted_at?: string | null
           id?: string
           organization_id?: string
-          role?: Database["public"]["Enums"]["contact_role"]
+          role?: Database["public"]["Enums"]["contact_role"] | null
+          role_id?: string
         }
         Relationships: [
           {
@@ -846,6 +849,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_contact_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contact_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -943,6 +953,42 @@ export type Database = {
           saldo_inicial?: number | null
           tipo?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      crm_contact_roles: {
+        Row: {
+          color: string | null
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }

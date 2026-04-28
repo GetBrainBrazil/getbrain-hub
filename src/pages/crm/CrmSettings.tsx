@@ -1,12 +1,25 @@
-import { Settings2, Tag, Workflow, XCircle } from "lucide-react";
+import { Lock, Settings2, Tag, Users, Workflow, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LeadSourcesManager } from "@/components/crm/settings/LeadSourcesManager";
+import { ContactRolesManager } from "@/components/crm/settings/ContactRolesManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 
 export default function CrmSettings() {
   const { isAdmin } = useAuth();
   const [tab, setTab] = usePersistedState("crm-settings-tab", "sources");
+
+  if (!isAdmin) {
+    return (
+      <div className="mx-auto max-w-md rounded-lg border border-border bg-card/40 p-8 text-center">
+        <Lock className="mx-auto mb-3 h-6 w-6 text-warning" />
+        <h2 className="text-base font-semibold">Acesso restrito</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          As configurações do CRM controlam variáveis usadas em todo o módulo comercial e estão disponíveis somente para administradores.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -23,6 +36,9 @@ export default function CrmSettings() {
           <TabsTrigger value="sources" className="gap-1.5 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2 text-sm data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold">
             <Tag className="h-4 w-4" /> Origens de leads
           </TabsTrigger>
+          <TabsTrigger value="contact-roles" className="gap-1.5 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2 text-sm data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:font-semibold">
+            <Users className="h-4 w-4" /> Papéis de contato
+          </TabsTrigger>
           <TabsTrigger value="stages" disabled className="gap-1.5 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2 text-sm">
             <Workflow className="h-4 w-4" /> Etapas
           </TabsTrigger>
@@ -33,6 +49,10 @@ export default function CrmSettings() {
 
         <TabsContent value="sources" className="mt-5">
           <LeadSourcesManager canEdit={isAdmin} />
+        </TabsContent>
+
+        <TabsContent value="contact-roles" className="mt-5">
+          <ContactRolesManager canEdit={isAdmin} />
         </TabsContent>
 
         <TabsContent value="stages" className="mt-5">

@@ -40,11 +40,22 @@ export interface DealDependency {
   updated_at?: string;
 }
 
+export interface ContactRoleRef {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+}
+
 export interface CompanyContactRole {
   id: string;
   company_person_id: string;
   organization_id: string;
-  role: ContactRole;
+  role_id: string;
+  /** Slug legacy (mantido para compat — pode ser null para papéis customizados) */
+  role: ContactRole | null;
+  /** Catálogo embarcado via join */
+  role_ref?: ContactRoleRef | null;
   created_at?: string;
 }
 
