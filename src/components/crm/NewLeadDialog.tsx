@@ -41,7 +41,7 @@ export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     contact_person_id: form.contact_person_id || null,
     source: form.source || null,
     pain_description: form.pain_description || null,
-    estimated_value: form.estimated_value ? Number(form.estimated_value) : null,
+    estimated_value: parseCurrencyBRL(form.estimated_value),
     owner_actor_id: form.owner_actor_id || null,
   }, { onSuccess: (lead) => { toast.success(`Lead ${lead.code} criado com sucesso`); onOpenChange(false); navigate('/crm/leads'); } });
 
