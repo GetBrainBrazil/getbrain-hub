@@ -368,6 +368,79 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           </div>
         </div>
 
+        {/* Configuração financeira (opcional) */}
+        <Collapsible open={finOpen} onOpenChange={setFinOpen} className="rounded-lg border border-border bg-muted/10">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between p-3 text-left"
+            >
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Settings2 className="h-3.5 w-3.5" />
+                Configuração financeira (opcional)
+              </div>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${finOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-3 pb-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Categoria de receita</Label>
+                <Select value={categoriaId || 'none'} onValueChange={(v) => setCategoriaId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem categoria —</SelectItem>
+                    {categorias.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Centro de custo</Label>
+                <Select value={centroId || 'none'} onValueChange={(v) => setCentroId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem centro —</SelectItem>
+                    {centros.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Conta bancária</Label>
+                <Select value={contaId || 'none'} onValueChange={(v) => setContaId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem conta —</SelectItem>
+                    {contas.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Meio de pagamento</Label>
+                <Select value={meioId || 'none'} onValueChange={(v) => setMeioId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem meio —</SelectItem>
+                    {meios.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Aplicado a todas as parcelas geradas. Sua escolha fica salva pra próxima conversão.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Parcelas */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
