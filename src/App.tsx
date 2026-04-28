@@ -52,6 +52,16 @@ import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
 import Setores from "./pages/configuracoes/Setores";
+import ConfiguracoesLayout from "./pages/configuracoes/ConfiguracoesLayout";
+import PapeisContatoPage from "./pages/configuracoes/pessoas/PapeisContatoPage";
+import OrigensLeadPage from "./pages/configuracoes/pessoas/OrigensLeadPage";
+import CargosPage from "./pages/configuracoes/pessoas/CargosPage";
+import FinContasPage from "./pages/configuracoes/financeiro/FinContasPage";
+import FinCategoriasPage from "./pages/configuracoes/financeiro/FinCategoriasPage";
+import FinCentrosPage from "./pages/configuracoes/financeiro/FinCentrosPage";
+import FinClientesPage from "./pages/configuracoes/financeiro/FinClientesPage";
+import FinFornecedoresPage from "./pages/configuracoes/financeiro/FinFornecedoresPage";
+import FinColaboradoresPage from "./pages/configuracoes/financeiro/FinColaboradoresPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -106,7 +116,7 @@ const App = () => (
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
             <Route path="/financeiro/extratos" element={<ProtectedRoute><ExtratosBancarios /></ProtectedRoute>} />
             <Route path="/financeiro/extratos/movimentacao/:id" element={<ProtectedRoute><ExtratoMovimentacaoDetalhe /></ProtectedRoute>} />
-            <Route path="/financeiro/configuracoes" element={<ProtectedRoute><ConfiguracoesFinanceiras /></ProtectedRoute>} />
+            <Route path="/financeiro/configuracoes" element={<Navigate to="/configuracoes/financeiro/contas" replace />} />
             <Route path="/financeiro/contratos" element={<ProtectedRoute><ContratosManutencao /></ProtectedRoute>} />
             <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
             <Route path="/projetos/:id" element={<ProtectedRoute><ProjetoDetalhe /></ProtectedRoute>} />
@@ -137,8 +147,25 @@ const App = () => (
               <Route path="configuracoes" element={<CrmSettings />} />
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<Navigate to="/admin/usuarios" replace />} />
-            <Route path="/configuracoes/setores" element={<ProtectedRoute><Setores /></ProtectedRoute>} />
+            {/* Centro de Configurações Gerais (admin-only) */}
+            <Route path="/configuracoes" element={<ProtectedRoute><ConfiguracoesLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="pessoas/setores" replace />} />
+              <Route path="pessoas/setores" element={<Setores />} />
+              <Route path="pessoas/papeis-contato" element={<PapeisContatoPage />} />
+              <Route path="pessoas/origens" element={<OrigensLeadPage />} />
+              <Route path="pessoas/cargos" element={<CargosPage />} />
+              <Route path="financeiro/contas" element={<FinContasPage />} />
+              <Route path="financeiro/categorias" element={<FinCategoriasPage />} />
+              <Route path="financeiro/centros" element={<FinCentrosPage />} />
+              <Route path="financeiro/clientes" element={<FinClientesPage />} />
+              <Route path="financeiro/fornecedores" element={<FinFornecedoresPage />} />
+              <Route path="financeiro/colaboradores" element={<FinColaboradoresPage />} />
+              <Route path="sistema/usuarios" element={<AdminUsuariosList />} />
+              <Route path="sistema/permissoes" element={<AdminPermissoesPage />} />
+              <Route path="sistema/logs" element={<AdminLogsPage />} />
+            </Route>
+            {/* Compat: rota antiga /configuracoes/setores */}
+            <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="usuarios" replace />} />
