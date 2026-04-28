@@ -308,7 +308,7 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   );
 }
 
-function PropostaBlock({ deal }: { deal: Deal }) {
+function PropostaBlock({ deal, onRequestClose }: { deal: Deal; onRequestClose?: () => void }) {
   const navigate = useNavigate();
   const [rows, setRows] = useState<ProposalRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -385,7 +385,7 @@ function PropostaBlock({ deal }: { deal: Deal }) {
         </div>
       ) : (
         <div className="space-y-3">
-          <PropostaCard deal={deal} proposal={active} onChanged={load} />
+          <PropostaCard deal={deal} proposal={active} onChanged={load} onRequestClose={onRequestClose} />
 
           {previous.length > 0 && (
             <details className="rounded-lg border border-border bg-card/20">
@@ -516,10 +516,10 @@ function MockupBlock({ deal }: { deal: Deal }) {
 
 // ---------- Container ----------
 
-export function PropostaTabContent({ deal }: Props) {
+export function PropostaTabContent({ deal, onRequestClose }: Props) {
   return (
     <div className="space-y-8">
-      <PropostaBlock deal={deal} />
+      <PropostaBlock deal={deal} onRequestClose={onRequestClose} />
       <div className="border-t border-border/60" />
       <OrganogramaBlock deal={deal} />
       <div className="border-t border-border/60" />
