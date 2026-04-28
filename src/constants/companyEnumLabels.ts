@@ -14,10 +14,22 @@ export const CLIENT_TYPE_DESCRIPTION: Record<CompanyClientType, string> = {
 
 export const CLIENT_TYPE_OPTIONS: CompanyClientType[] = ['b2b', 'b2c', 'b2b_b2c'];
 
-export const CLIENT_TYPE_COLOR: Record<CompanyClientType, string> = {
-  b2b: 'bg-accent/15 text-accent border-accent/30',
-  b2c: 'bg-success/15 text-success border-success/30',
-  b2b_b2c: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
+export const CLIENT_TYPE_COLOR: Record<CompanyClientType, { active: string; idle: string; descActive: string }> = {
+  b2b: {
+    active: 'border-accent bg-accent text-accent-foreground shadow-sm ring-2 ring-accent/40 ring-offset-1 ring-offset-background',
+    idle: 'border-border bg-muted/10 text-foreground hover:border-accent/50 hover:bg-accent/10',
+    descActive: 'text-accent-foreground/80',
+  },
+  b2c: {
+    active: 'border-success bg-success text-success-foreground shadow-sm ring-2 ring-success/40 ring-offset-1 ring-offset-background',
+    idle: 'border-border bg-muted/10 text-foreground hover:border-success/50 hover:bg-success/10',
+    descActive: 'text-success-foreground/80',
+  },
+  b2b_b2c: {
+    active: 'border-warning bg-warning text-warning-foreground shadow-sm ring-2 ring-warning/40 ring-offset-1 ring-offset-background',
+    idle: 'border-border bg-muted/10 text-foreground hover:border-warning/50 hover:bg-warning/10',
+    descActive: 'text-warning-foreground/80',
+  },
 };
 
 export const REVENUE_RANGE_LABEL: Record<CompanyRevenueRange, string> = {
