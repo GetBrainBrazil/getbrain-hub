@@ -13,7 +13,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateScopeTotal, formatBRL, type ScopeItem } from '@/lib/orcamentos/calculateTotal';
-import { PROJECT_TYPE_OPTIONS, PROJECT_TYPE_LABEL } from '@/types/crm';
+import { PROJECT_TYPE_OPTIONS, PROJECT_TYPE_LABEL } from '@/constants/dealStages';
 import type { Deal } from '@/types/crm';
 
 const sb = supabase as any;
@@ -21,7 +21,8 @@ const sb = supabase as any;
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  deal: Deal;
+  deal: Deal | null;
+  onSuccess?: (projectId: string) => void;
 }
 
 interface ProposalLite {
