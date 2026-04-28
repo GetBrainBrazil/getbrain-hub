@@ -64,15 +64,27 @@ function ChipGroup<T extends string>({
   );
 }
 
+/** Paleta termômetro: vermelho → laranja → amarelo → verde → ciano (accent). */
+const MATURITY_COLORS: Record<number, { bar: string; text: string; border: string; soft: string }> = {
+  1: { bar: 'bg-destructive', text: 'text-destructive', border: 'border-destructive', soft: 'bg-destructive/10' },
+  2: { bar: 'bg-warning',     text: 'text-warning',     border: 'border-warning',     soft: 'bg-warning/10' },
+  3: { bar: 'bg-chart-4',     text: 'text-chart-4',     border: 'border-chart-4',     soft: 'bg-chart-4/10' },
+  4: { bar: 'bg-success',     text: 'text-success',     border: 'border-success',     soft: 'bg-success/10' },
+  5: { bar: 'bg-accent',      text: 'text-accent',      border: 'border-accent',      soft: 'bg-accent/10' },
+};
+
 function MaturityScale({ value, onSave }: { value: number | null; onSave: (v: number) => void }) {
   const [local, setLocal] = useState<number>(value ?? 0);
   useEffect(() => { setLocal(value ?? 0); }, [value]);
   const current = local || 1;
+  const palette = MATURITY_COLORS[current];
   return (
     <div className="rounded-md border border-input bg-background/60 px-3 py-3">
       <div className="flex items-center gap-1.5">
         {[1, 2, 3, 4, 5].map((n) => {
           const filled = local >= n;
+          const isCurrent = local === n;
+          const c = MATURITY_COLORS[n];
           return (
             <button
               key={n}
@@ -80,10 +92,10 @@ function MaturityScale({ value, onSave }: { value: number | null; onSave: (v: nu
               onClick={() => { setLocal(n); onSave(n); }}
               aria-label={`Nível ${n}: ${DIGITAL_MATURITY_LABEL[n]}`}
               className={cn(
-                'flex h-9 flex-1 items-center justify-center rounded-md border text-xs font-semibold transition-all',
+                'flex h-9 flex-1 items-center justify-center rounded-md border text-xs font-bold transition-all',
                 filled
-                  ? 'border-accent/60 bg-accent/15 text-accent shadow-sm'
-                  : 'border-border bg-muted/20 text-muted-foreground hover:border-accent/40 hover:text-foreground',
+                  ? cn(c.bar, 'border-transparent text-background shadow-sm', isCurrent && 'ring-2 ring-offset-1 ring-offset-background', isCurrent && c.border.replace('border-', 'ring-'))
+                  : 'border-border bg-muted/20 text-muted-foreground hover:border-foreground/40 hover:text-foreground',
               )}
             >
               {n}
@@ -92,7 +104,7 @@ function MaturityScale({ value, onSave }: { value: number | null; onSave: (v: nu
         })}
       </div>
       <div className="mt-2 flex items-baseline justify-between gap-2">
-        <span className="text-xs font-semibold text-foreground">
+        <span className={cn('text-xs font-semibold', local > 0 ? palette.text : 'text-foreground')}>
           {local > 0 ? DIGITAL_MATURITY_LABEL[current] : 'Selecione um nível'}
         </span>
         <span className="text-[10px] text-muted-foreground">{local > 0 ? `${current}/5` : '—'}</span>
@@ -107,7 +119,7 @@ function MaturityScale({ value, onSave }: { value: number | null; onSave: (v: nu
 }
 
 function ClientTypeCards<T extends string>({
-  options, value, onChange, labels, descriptions, colors,
+  options, value, onChange, labels, descriptions,
 }: {
   options: T[]; value: T | null; onChange: (v: T | null) => void;
   labels: Record<T, string>; descriptions: Record<T, string>; colors?: Record<T, string>;
@@ -125,14 +137,14 @@ function ClientTypeCards<T extends string>({
             className={cn(
               'flex flex-col items-start gap-0.5 rounded-md border px-3 py-2.5 text-left transition-all',
               active
-                ? cn(colors?.[o] ?? 'bg-accent/15 text-accent border-accent/40', 'ring-2 ring-accent/30 shadow-sm')
-                : 'border-border bg-muted/10 hover:border-accent/40 hover:bg-muted/30',
+                ? 'border-accent bg-accent text-accent-foreground shadow-sm ring-2 ring-accent/40 ring-offset-1 ring-offset-background'
+                : 'border-border bg-muted/10 text-foreground hover:border-accent/40 hover:bg-muted/30',
             )}
           >
-            <span className={cn('text-sm font-semibold', !active && 'text-foreground')}>
+            <span className="text-sm font-bold">
               {labels[o]}
             </span>
-            <span className={cn('text-[11px] leading-snug', active ? 'opacity-80' : 'text-muted-foreground')}>
+            <span className={cn('text-[11px] leading-snug', active ? 'text-accent-foreground/80' : 'text-muted-foreground')}>
               {descriptions[o]}
             </span>
           </button>
