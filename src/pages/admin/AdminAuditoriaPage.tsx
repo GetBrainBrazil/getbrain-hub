@@ -10,7 +10,8 @@ import { useUsuarios } from "@/hooks/useUsuarios";
 import { useUnifiedAudit, UnifiedAuditEntry } from "@/hooks/admin/useUnifiedAudit";
 import { AuditFeedItem } from "@/components/admin/auditoria/AuditFeedItem";
 import { AuditDetailDrawer } from "@/components/admin/auditoria/AuditDetailDrawer";
-import { MODULE_LABEL } from "@/lib/audit/formatters";
+import { MODULE_LABEL, ACTION_LEGEND, ACTION_COLORS } from "@/lib/audit/formatters";
+import { cn } from "@/lib/utils";
 
 function dayLabel(iso: string): string {
   const d = new Date(iso);
