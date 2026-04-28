@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
+
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { SectorPicker } from './SectorPicker';
 import { CompanyContactsManager } from './CompanyContactsManager';
 import {
-  CLIENT_TYPE_LABEL, CLIENT_TYPE_OPTIONS, CLIENT_TYPE_COLOR,
-  REVENUE_RANGE_LABEL, REVENUE_RANGE_OPTIONS, DIGITAL_MATURITY_LABEL,
+  CLIENT_TYPE_LABEL, CLIENT_TYPE_OPTIONS, CLIENT_TYPE_COLOR, CLIENT_TYPE_DESCRIPTION,
+  REVENUE_RANGE_LABEL, REVENUE_RANGE_OPTIONS,
+  DIGITAL_MATURITY_LABEL, DIGITAL_MATURITY_DESCRIPTION,
 } from '@/constants/companyEnumLabels';
 import {
   useCompanyDetail, useUpdateCompanyField, useUpdateDealField,
@@ -63,21 +64,80 @@ function ChipGroup<T extends string>({
   );
 }
 
-function MaturitySlider({ value, onSave }: { value: number | null; onSave: (v: number) => void }) {
-  const [local, setLocal] = useState<number>(value ?? 3);
-  useEffect(() => { setLocal(value ?? 3); }, [value]);
+function MaturityScale({ value, onSave }: { value: number | null; onSave: (v: number) => void }) {
+  const [local, setLocal] = useState<number>(value ?? 0);
+  useEffect(() => { setLocal(value ?? 0); }, [value]);
+  const current = local || 1;
   return (
-    <div className="rounded-md border border-input bg-background/60 px-3 py-2.5">
-      <div className="mb-2 flex items-baseline justify-between">
-        <span className="font-mono text-lg font-semibold text-accent">{local}</span>
-        <span className="text-[11px] text-muted-foreground">{DIGITAL_MATURITY_LABEL[local]}</span>
+    <div className="rounded-md border border-input bg-background/60 px-3 py-3">
+      <div className="flex items-center gap-1.5">
+        {[1, 2, 3, 4, 5].map((n) => {
+          const filled = local >= n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => { setLocal(n); onSave(n); }}
+              aria-label={`Nível ${n}: ${DIGITAL_MATURITY_LABEL[n]}`}
+              className={cn(
+                'flex h-9 flex-1 items-center justify-center rounded-md border text-xs font-semibold transition-all',
+                filled
+                  ? 'border-accent/60 bg-accent/15 text-accent shadow-sm'
+                  : 'border-border bg-muted/20 text-muted-foreground hover:border-accent/40 hover:text-foreground',
+              )}
+            >
+              {n}
+            </button>
+          );
+        })}
       </div>
-      <Slider
-        min={1} max={5} step={1}
-        value={[local]}
-        onValueChange={([v]) => setLocal(v)}
-        onValueCommit={([v]) => onSave(v)}
-      />
+      <div className="mt-2 flex items-baseline justify-between gap-2">
+        <span className="text-xs font-semibold text-foreground">
+          {local > 0 ? DIGITAL_MATURITY_LABEL[current] : 'Selecione um nível'}
+        </span>
+        <span className="text-[10px] text-muted-foreground">{local > 0 ? `${current}/5` : '—'}</span>
+      </div>
+      {local > 0 && (
+        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+          {DIGITAL_MATURITY_DESCRIPTION[current]}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ClientTypeCards<T extends string>({
+  options, value, onChange, labels, descriptions, colors,
+}: {
+  options: T[]; value: T | null; onChange: (v: T | null) => void;
+  labels: Record<T, string>; descriptions: Record<T, string>; colors?: Record<T, string>;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      {options.map((o) => {
+        const active = value === o;
+        return (
+          <button
+            key={o}
+            type="button"
+            onClick={() => onChange(active ? null : o)}
+            aria-pressed={active}
+            className={cn(
+              'flex flex-col items-start gap-0.5 rounded-md border px-3 py-2.5 text-left transition-all',
+              active
+                ? cn(colors?.[o] ?? 'bg-accent/15 text-accent border-accent/40', 'ring-2 ring-accent/30 shadow-sm')
+                : 'border-border bg-muted/10 hover:border-accent/40 hover:bg-muted/30',
+            )}
+          >
+            <span className={cn('text-sm font-semibold', !active && 'text-foreground')}>
+              {labels[o]}
+            </span>
+            <span className={cn('text-[11px] leading-snug', active ? 'opacity-80' : 'text-muted-foreground')}>
+              {descriptions[o]}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -156,19 +216,20 @@ export function ZoneCliente({ deal }: Props) {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel>Tipo de cliente</FieldLabel>
-          <ChipGroup<CompanyClientType>
+          <FieldLabel hint="quem compra do cliente">Tipo de cliente</FieldLabel>
+          <ClientTypeCards<CompanyClientType>
             options={CLIENT_TYPE_OPTIONS}
             value={company.client_type}
             onChange={(v) => saveCompany({ client_type: v })}
             labels={CLIENT_TYPE_LABEL}
+            descriptions={CLIENT_TYPE_DESCRIPTION}
             colors={CLIENT_TYPE_COLOR}
           />
         </div>
 
         <div className="space-y-2">
-          <FieldLabel hint="1 = inicial · 5 = líder digital">Maturidade digital</FieldLabel>
-          <MaturitySlider
+          <FieldLabel hint="o quanto a empresa já usa tecnologia">Maturidade digital</FieldLabel>
+          <MaturityScale
             value={company.digital_maturity}
             onSave={(v) => saveCompany({ digital_maturity: v })}
           />

@@ -3,7 +3,13 @@ import type { CompanyClientType, CompanyRevenueRange } from '@/types/crm';
 export const CLIENT_TYPE_LABEL: Record<CompanyClientType, string> = {
   b2b: 'B2B',
   b2c: 'B2C',
-  b2b_b2c: 'B2B + B2C',
+  b2b_b2c: 'Híbrido',
+};
+
+export const CLIENT_TYPE_DESCRIPTION: Record<CompanyClientType, string> = {
+  b2b: 'Vende para outras empresas',
+  b2c: 'Vende para o consumidor final',
+  b2b_b2c: 'Vende para empresas e pessoas',
 };
 
 export const CLIENT_TYPE_OPTIONS: CompanyClientType[] = ['b2b', 'b2c', 'b2b_b2c'];
@@ -31,4 +37,12 @@ export const DIGITAL_MATURITY_LABEL: Record<number, string> = {
   3: 'Intermediária',
   4: 'Avançada',
   5: 'Líder digital',
+};
+
+export const DIGITAL_MATURITY_DESCRIPTION: Record<number, string> = {
+  1: 'Processos manuais, pouco ou nenhum sistema',
+  2: 'Usa planilhas e ferramentas isoladas',
+  3: 'Tem sistemas, mas pouco integrados',
+  4: 'Sistemas integrados e automações ativas',
+  5: 'Cultura data-driven, IA e automação avançada',
 };
