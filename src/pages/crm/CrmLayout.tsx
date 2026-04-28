@@ -17,8 +17,9 @@ const TABS = [
   { value: 'configuracoes', label: 'Configurações' },
 ];
 
-// Botões "Novo Lead" / "Novo Deal" só aparecem nas abas onde fazem sentido
-const SHOW_NEW_LEAD = new Set(['pipeline', 'leads']);
+// Botão "Novo Lead" só aparece em "Leads & Empresas".
+// No Pipeline, a criação acontece via "+ Novo Deal" dentro da própria página.
+const SHOW_NEW_LEAD = new Set(['leads']);
 
 export default function CrmLayout() {
   const navigate = useNavigate();

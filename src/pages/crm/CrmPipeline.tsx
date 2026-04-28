@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
-import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
+import { NewDealQuickDialog } from '@/components/crm/NewDealQuickDialog';
 import { MultiFilter } from '@/components/crm/CrmFilters';
 import {
   DEAL_STAGE_LABEL,
@@ -108,11 +108,17 @@ export default function CrmPipeline() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createStage, setCreateStage] = useState<DealStage>('presencial_agendada');
   const [lost, setLost] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [lostReason, setLostReason] = useState('');
   const [valueRequired, setValueRequired] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [requiredValue, setRequiredValue] = useState('');
   const [won, setWon] = useState<{ deal: Deal; stage: DealStage } | null>(null);
+
+  const openCreateDialog = (stage: DealStage = 'presencial_agendada') => {
+    setCreateStage(stage);
+    setCreateOpen(true);
+  };
 
   // Deals filtrados (estágio + tipo)
   const filteredDeals = useMemo(() => {
@@ -205,6 +211,13 @@ export default function CrmPipeline() {
             </Button>
           )}
           <div className="flex-1" />
+          <Button
+            size="sm"
+            onClick={() => openCreateDialog()}
+            className="h-9 gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Novo Deal
+          </Button>
           {viewMode === 'lista' && (
             <Select value={sort} onValueChange={(v) => setSort(v as DealsListSort)}>
               <SelectTrigger className="h-9 w-[180px] text-xs">
@@ -269,7 +282,7 @@ export default function CrmPipeline() {
                 deals={grouped.get(stage) ?? []}
                 onOpen={(deal) => navigate(`/crm/deals/${deal.code}`)}
                 onCompanyOpen={(deal) => navigate(`/crm/empresas/${deal.company_id}`)}
-                onAdd={() => setCreateOpen(true)}
+                onAdd={(stage) => openCreateDialog(stage)}
               />
             ))}
           </div>
@@ -277,7 +290,7 @@ export default function CrmPipeline() {
         </DndContext>
       )}
 
-      <NewLeadDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <NewDealQuickDialog open={createOpen} onOpenChange={setCreateOpen} initialStage={createStage} />
 
       <Dialog open={!!lost} onOpenChange={(v) => !v && setLost(null)}>
         <DialogContent>
