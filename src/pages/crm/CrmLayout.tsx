@@ -68,7 +68,7 @@ export default function CrmLayout() {
                 </Button>
               )}
               {showNewDeal && (
-                <Button size="sm" onClick={() => setDealOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
+                <Button size="sm" onClick={() => setLeadOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
                   <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Deal
                 </Button>
               )}
