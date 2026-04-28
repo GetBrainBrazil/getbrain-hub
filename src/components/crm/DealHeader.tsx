@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, CalendarDays, Clock, Pencil, Percent, TrendingUp, Wallet } from 'lucide-react';
+import { Building2, CalendarDays, Clock, Pencil, Percent, Repeat, TrendingUp, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
