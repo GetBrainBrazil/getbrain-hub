@@ -286,7 +286,13 @@ export default function CrmPipeline() {
               />
             ))}
           </div>
-          <DragOverlay>{activeDeal && <DealCard deal={activeDeal} dragging />}</DragOverlay>
+          <DragOverlay dropAnimation={null}>
+            {activeDeal && (
+              <div className="rotate-2 cursor-grabbing shadow-2xl ring-2 ring-accent/40 rounded-lg">
+                <DealCard deal={activeDeal} />
+              </div>
+            )}
+          </DragOverlay>
         </DndContext>
       )}
 
