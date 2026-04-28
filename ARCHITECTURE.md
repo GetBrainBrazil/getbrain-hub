@@ -1423,3 +1423,37 @@ Ordenações alternativas: próxima ação (default), valor, probabilidade, fech
 
 **Próximo:** v2.1 — migrar auto-flag de atrasado para trigger SQL (DT-09E-2) + estruturar `responsible_person_role` em projetos (DT-09E-4).
 
+
+---
+
+## Atualização v2.1 — 28/04/2026
+
+**Origem:** 09F-1 — Dashboard executivo do CRM.
+
+### Padrão: views SQL agregadas para telas de dashboard executivo
+
+Reafirmando a Seção 2.15: toda tela de dashboard executivo (uma tela "diária" que responde a uma pergunta primária) deve consumir **views SQL pré-agregadas escopadas por `organization_id`**, com `security_invoker = true` para herdar RLS das tabelas-base. O frontend nunca calcula KPIs a partir de listas brutas.
+
+Padrão de nomenclatura: `<modulo>_dashboard_metrics`, `<modulo>_dashboard_sparklines`, `<modulo>_<dimensao>_breakdown` (ex: `crm_pipeline_by_stage`).
+
+### Views adicionadas no 09F-1
+
+- **`crm_dashboard_metrics`** — 1 linha por organização. KPIs: deals em aberto, valor total do pipeline, deals parados há 7+ dias sem atividade, atividades agendadas nos próximos 7 dias, ganhos/fechados nos últimos 30 dias e ganhos no período anterior (30–60 dias) para cálculo de delta.
+- **`crm_pipeline_by_stage`** — 1 linha por (organização, estágio aberto). Contagem, valor somado e dias médios desde a última mudança de estágio (`stage_changed_at`).
+- **`crm_dashboard_sparklines`** — 1 linha por (organização, dia) nos últimos 30 dias. Série de `deals_parados` e `pipeline_value` para alimentar minigráficos.
+
+Decisões técnicas:
+
+- Campo de valor: `deals.estimated_value` (o prompt original referenciava `budget_estimated`, que não existe no schema — usado o campo real para evitar refatoração ampla).
+- "Atividade não concluída": `deal_activities.happened_at IS NULL` (a coluna `completed_at` proposta não foi criada — semanticamente já temos `scheduled_at` × `happened_at`).
+- `stage_changed_at` já existia em `deals` (criado em 04A) — reaproveitado, sem nova trigger.
+- Filtros do dashboard (período/owner/tipo) persistidos na URL como query params, sobrevivem a F5, **não** persistem entre sessões (decisão deliberada — URL é fonte da verdade na v1).
+
+### Nova dívida técnica
+
+- **DT-09F-1: `crm_dashboard_sparklines` pode degradar com volume.** A view executa um `CROSS JOIN` de 30 dias × organizações + subqueries por dia em `deals` e `deal_activities`. Volume realista atual (<50 deals, <500 atividades) executa abaixo de 50ms. Quando a base passar de **500 deals abertos** ou **5k atividades**, migrar para *materialized view* com `REFRESH` agendado a cada 1h via pg_cron. Não refatorar antes — overhead de manutenção não compensa com volume baixo (Seção 2.15).
+
+### Atualização de contadores
+
+- Total de DTs ativas: **6** (DT-09E-1 a 6) + **1** nova (DT-09F-1) = **7**.
+
