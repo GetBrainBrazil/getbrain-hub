@@ -25,11 +25,11 @@ interface Props {
 }
 
 const ZONES = [
-  { id: 'zona-cliente', n: 1, label: 'Cliente' },
-  { id: 'zona-dor', n: 2, label: 'Dor' },
-  { id: 'zona-solucao', n: 3, label: 'Solução' },
-  { id: 'zona-dependencias', n: 4, label: 'Dependências', loop: '2C' as const },
-  { id: 'zona-comercial', n: 5, label: 'Comercial' },
+  { id: 'zona-cliente', n: 1, label: 'Cliente', hint: 'Dados da empresa, contatos e tipo de cliente (B2B/B2C).' },
+  { id: 'zona-dor', n: 2, label: 'Dor', hint: 'Dor identificada, categoria, custo mensal e solução atual.' },
+  { id: 'zona-solucao', n: 3, label: 'Solução', hint: 'Escopo, entregáveis, critérios de aceite, premissas e estimativa.' },
+  { id: 'zona-dependencias', n: 4, label: 'Dependências', loop: '2C' as const, hint: 'Acessos, dados, pessoas e autorizações necessárias para iniciar.' },
+  { id: 'zona-comercial', n: 5, label: 'Comercial', hint: 'Valores, orçamento, decisores, concorrentes e próximos passos.' },
 ];
 
 function useLeadOrigin(leadId: string | null) {
