@@ -37,8 +37,7 @@ const navItems: NavItem[] = [
     children: [
       { title: "Dashboard", url: "/crm/dashboard" },
       { title: "Pipeline", url: "/crm/pipeline" },
-      { title: "Leads", url: "/crm/leads" },
-      { title: "Empresas", url: "/crm/empresas" },
+      { title: "Leads & Empresas", url: "/crm/leads" },
       { title: "Clientes", url: "/clientes" },
       { title: "Calendário", url: "/crm/calendario" },
     ],
