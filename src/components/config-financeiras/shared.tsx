@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { formatPhoneBR } from "@/lib/formatters";
 
 export const ESTADOS_BR = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -15,10 +16,8 @@ export function applyCpfCnpjMask(value: string, tipo: "PF" | "PJ") {
 }
 export function applyCpfMask(v: string) { return applyCpfCnpjMask(v, "PF"); }
 export function applyPhoneMask(value: string) {
-  const d = value.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d.replace(/(\d{1,2})/, "($1");
-  if (d.length <= 7) return d.replace(/(\d{2})(\d{1,5})/, "($1) $2");
-  return d.replace(/(\d{2})(\d{5})(\d{1,4})/, "($1) $2-$3");
+  // Única fonte de verdade: detecta DDI +55 e formata progressivamente.
+  return formatPhoneBR(value);
 }
 export function applyCepMask(value: string) {
   const d = value.replace(/\D/g, "").slice(0, 8);
@@ -132,10 +131,7 @@ export function formatCpfCnpj(value: string | null | undefined, tipo?: string) {
 }
 export function formatPhone(value: string | null | undefined) {
   if (!value) return "—";
-  const d = value.replace(/\D/g, "");
-  if (d.length === 11) return d.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-  if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-  return value;
+  return formatPhoneBR(value) || "—";
 }
 export function formatDateBR(d: string | null | undefined) {
   if (!d) return "—";

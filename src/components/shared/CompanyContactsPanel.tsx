@@ -77,7 +77,7 @@ function PhoneInput({ value, onChange, placeholder }: { value: string; onChange:
   return (
     <Input
       value={formatPhoneBR(value)}
-      onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 15))}
       placeholder={placeholder ?? "(11) 99999-9999"}
     />
   );
