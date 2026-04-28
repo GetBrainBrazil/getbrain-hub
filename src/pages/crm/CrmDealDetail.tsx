@@ -28,6 +28,12 @@ import {
   COMPLEXITY_LABEL,
 } from '@/constants/dealEnumLabels';
 import { useDealByCode, useUpdateDealField } from '@/hooks/crm/useCrmDetails';
+import { useDeleteDeal } from '@/hooks/crm/useDeals';
+import { DangerZone } from '@/components/crm/DangerZone';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateCrmCaches } from '@/lib/cacheInvalidation';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
