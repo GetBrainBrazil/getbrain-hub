@@ -349,9 +349,9 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
           display={<span className="font-mono">{formatCurrency(Number(deal.estimated_value ?? 0))}</span>}
           renderEditor={(done) => (
             <NumberEditor
+              kind="currency"
               initial={deal.estimated_value}
               min={0}
-              step="100"
               onSave={(v) => saveField({ estimated_value: v }, 'Valor estimado')}
               done={done}
             />
@@ -363,10 +363,10 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
           display={<span className="font-mono">{deal.probability_pct}%</span>}
           renderEditor={(done) => (
             <NumberEditor
+              kind="percent"
               initial={deal.probability_pct}
               min={0}
               max={100}
-              step="5"
               suffix="%"
               onSave={(v) => saveField({ probability_pct: v ?? 0 }, 'Probabilidade')}
               done={done}
@@ -391,9 +391,9 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
           display={deal.estimated_hours_total ? `${deal.estimated_hours_total} h` : '—'}
           renderEditor={(done) => (
             <NumberEditor
+              kind="hours"
               initial={deal.estimated_hours_total}
               min={0}
-              step="1"
               suffix="h"
               onSave={(v) => saveField({ estimated_hours_total: v }, 'Estimativa')}
               done={done}
