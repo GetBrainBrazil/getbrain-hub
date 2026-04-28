@@ -28,6 +28,11 @@ import {
   COMPLEXITY_LABEL,
 } from '@/constants/dealEnumLabels';
 import { useDealByCode, useUpdateDealField } from '@/hooks/crm/useCrmDetails';
+import { useDeleteDeal } from '@/hooks/crm/useDeals';
+import { DangerZone } from '@/components/crm/DangerZone';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateCrmCaches } from '@/lib/cacheInvalidation';
 import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
@@ -570,8 +575,30 @@ export default function CrmDealDetail() {
         onOpenChange={setWonDialogOpen}
         deal={deal}
       />
+
+      <DangerZoneDeal deal={deal} />
     </DetailShell>
   );
 }
+
+function DangerZoneDeal({ deal }: { deal: Deal }) {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const deleteDeal = useDeleteDeal();
+  return (
+    <DangerZone
+      entityLabel="deal"
+      entityName={`${deal.code} — ${deal.title}`}
+      cascadeWarning="Atividades e dependências vinculadas a este deal serão removidas em cascata."
+      onDelete={async () => {
+        await deleteDeal.mutateAsync(deal.id);
+        invalidateCrmCaches(qc, { dealId: deal.id, companyId: deal.company_id });
+        toast.success('Deal excluído.');
+        navigate('/crm/pipeline');
+      }}
+    />
+  );
+}
+
 
 

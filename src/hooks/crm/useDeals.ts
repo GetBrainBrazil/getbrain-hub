@@ -136,9 +136,20 @@ export function useDeleteDeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await sb.from('deals').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+      // Hard delete: remove dependentes em cascata e depois o deal.
+      // Sem FKs declaradas no schema, fazemos a limpeza manual.
+      await sb.from('deal_activities').delete().eq('deal_id', id);
+      await sb.from('deal_dependencies').delete().eq('deal_id', id);
+      const { error } = await sb.from('deals').delete().eq('id', id);
       if (error) throw error;
     },
-    onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-deals'] }); qc.invalidateQueries({ queryKey: ['crm-metrics'] }); },
+    onSettled: (_d, _e, id) => {
+      qc.invalidateQueries({ queryKey: ['crm-deals'] });
+      qc.invalidateQueries({ queryKey: ['crm-deal-code'] });
+      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+      qc.invalidateQueries({ queryKey: ['crm-deals-indicators'] });
+      qc.invalidateQueries({ queryKey: ['crm-dashboard-exec'] });
+      if (id) qc.invalidateQueries({ queryKey: ['crm-deal', id] });
+    },
   });
 }
