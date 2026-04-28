@@ -71,6 +71,31 @@ export function useAllCompanies() {
   return useQuery({ queryKey: ['crm-companies-full'], queryFn: async (): Promise<CompanyDetail[]> => { const { data, error } = await sb.from('companies').select('id, legal_name, trade_name, relationship_status, cnpj, industry, employee_count_range, website, linkedin_url, notes, created_at, updated_at').is('deleted_at', null).order('legal_name'); if (error) throw error; return data ?? []; } });
 }
 
+export type CompanyAggregate = { dealsOpen: number; dealsWon: number; revenueWon: number; leadsOpen: number };
+export function useAllCompaniesAggregates() {
+  return useQuery({
+    queryKey: ['crm-companies-aggregates'],
+    queryFn: async (): Promise<Record<string, CompanyAggregate>> => {
+      const [{ data: deals, error: de }, { data: leads, error: le }] = await Promise.all([
+        sb.from('deals').select('company_id, stage, estimated_value').is('deleted_at', null),
+        sb.from('leads').select('company_id, status').is('deleted_at', null),
+      ]);
+      if (de) throw de; if (le) throw le;
+      const map: Record<string, CompanyAggregate> = {};
+      const get = (id: string) => (map[id] ||= { dealsOpen: 0, dealsWon: 0, revenueWon: 0, leadsOpen: 0 });
+      for (const d of (deals ?? []) as { company_id: string; stage: DealStage; estimated_value: number | null }[]) {
+        const a = get(d.company_id);
+        if (d.stage === 'fechado_ganho') { a.dealsWon += 1; a.revenueWon += Number(d.estimated_value ?? 0); }
+        else if (d.stage !== 'fechado_perdido') { a.dealsOpen += 1; }
+      }
+      for (const l of (leads ?? []) as { company_id: string; status: LeadStatus }[]) {
+        if (!['descartado', 'convertido'].includes(l.status)) get(l.company_id).leadsOpen += 1;
+      }
+      return map;
+    },
+  });
+}
+
 export function useCompanyDetail(id?: string) {
   return useQuery({ queryKey: ['crm-company-detail', id], enabled: !!id, queryFn: async (): Promise<CompanyDetail | null> => { const { data, error } = await sb.from('companies').select('id, legal_name, trade_name, relationship_status, cnpj, industry, employee_count_range, website, linkedin_url, notes, created_at, updated_at, sector_id, client_type, revenue_range, digital_maturity').eq('id', id).is('deleted_at', null).maybeSingle(); if (error) throw error; return data ?? null; } });
 }

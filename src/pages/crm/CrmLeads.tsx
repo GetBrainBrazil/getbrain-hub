@@ -14,13 +14,25 @@ import { MultiFilter } from '@/components/crm/CrmFilters';
 import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useCrmMetrics } from '@/hooks/crm/useCrmMetrics';
-import { useAllLeads, useUpdateLeadField } from '@/hooks/crm/useCrmDetails';
+import { useAllCompaniesAggregates, useAllLeads, useUpdateLeadField } from '@/hooks/crm/useCrmDetails';
 import { useBulkDeleteLeads } from '@/hooks/crm/useLeads';
 import { useCrmHubStore } from '@/hooks/useCrmHubStore';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
-import type { Lead, LeadStatus } from '@/types/crm';
+import type { CompanyRelationshipStatus, Lead, LeadStatus } from '@/types/crm';
+
+const COMPANY_STATUS: CompanyRelationshipStatus[] = ['prospect', 'lead', 'active_client', 'former_client', 'lost'];
+const COMPANY_STATUS_LABEL: Record<CompanyRelationshipStatus, string> = { prospect: 'Prospect', lead: 'Lead', active_client: 'Cliente ativo', former_client: 'Ex-cliente', lost: 'Perdida' };
+function companyStatusClass(status: CompanyRelationshipStatus) {
+  return cn('rounded border px-2 py-0.5 text-[11px] font-medium',
+    status === 'active_client' && 'border-success/30 bg-success/10 text-success',
+    status === 'lead' && 'border-warning/30 bg-warning/10 text-warning',
+    status === 'lost' && 'border-destructive/30 bg-destructive/10 text-destructive',
+    status === 'former_client' && 'border-accent/30 bg-accent/10 text-accent',
+    status === 'prospect' && 'border-border bg-muted/40 text-muted-foreground',
+  );
+}
 
 const LEAD_STATUS: LeadStatus[] = ['novo', 'triagem_agendada', 'triagem_feita', 'descartado', 'convertido'];
 const LEAD_LABEL: Record<LeadStatus, string> = { novo: 'Novo', triagem_agendada: 'Triagem Agendada', triagem_feita: 'Triagem Feita', descartado: 'Descartado', convertido: 'Convertido' };
@@ -93,29 +105,44 @@ export default function CrmLeads() {
   const navigate = useNavigate();
   const { data: leads = [] } = useAllLeads();
   const { data: metrics } = useCrmMetrics();
+  const { data: companyAggregates = {} } = useAllCompaniesAggregates();
   const updateLead = useUpdateLeadField();
   const bulkDelete = useBulkDeleteLeads();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const store = useCrmHubStore();
   const [view, setView] = usePersistedState<'table' | 'kanban'>('crm-leads-view', 'table');
   const [statusFilter, setStatusFilter] = usePersistedState<LeadStatus[]>('crm-leads-status-filter', []);
+  const [companyStatusFilter, setCompanyStatusFilter] = usePersistedState<CompanyRelationshipStatus[]>('crm-leads-company-status-filter', []);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [discardLead, setDiscardLead] = useState<Lead | null>(null);
   const [discardReason, setDiscardReason] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  // Lista de indústrias derivada (precisamos puxar de companies, mas leads.company só traz nome/status).
+  // Para evitar query extra, mostramos filtro sem indústria por ora — pode ser estendido depois.
+  // Reaproveitamos store apenas para owner/source/value/search globais.
+
   const filtered = useMemo(() => leads.filter((lead) => {
     if (statusFilter.length && !statusFilter.includes(lead.status)) return false;
+    if (companyStatusFilter.length) {
+      const cs = lead.company?.relationship_status;
+      if (!cs || !companyStatusFilter.includes(cs)) return false;
+    }
     if (store.ownerFilter.length && (!lead.owner_actor_id || !store.ownerFilter.includes(lead.owner_actor_id))) return false;
     if (store.sourceFilter.length && !store.sourceFilter.includes(lead.source || 'direto')) return false;
     if (store.valueRange && ((lead.estimated_value ?? 0) < store.valueRange[0] || (lead.estimated_value ?? 0) > store.valueRange[1])) return false;
     const q = store.search.trim().toLowerCase();
     return !q || [lead.code, lead.title, lead.source ?? '', lead.company?.legal_name ?? '', lead.company?.trade_name ?? '', lead.owner?.display_name ?? ''].join(' ').toLowerCase().includes(q);
-  }), [leads, statusFilter, store.ownerFilter, store.sourceFilter, store.valueRange, store.search]);
+  }), [leads, statusFilter, companyStatusFilter, store.ownerFilter, store.sourceFilter, store.valueRange, store.search]);
 
   const grouped = useMemo(() => new Map(LEAD_STATUS.map((s) => [s, filtered.filter((lead) => lead.status === s)])), [filtered]);
   const openLeads = (metrics?.leads_novos ?? 0) + (metrics?.leads_triagem_agendada ?? 0) + (metrics?.leads_triagem_feita ?? 0);
+
+  // KPIs adicionais vindos da agregação de empresas (filtrados pelas empresas presentes em filtered)
+  const visibleCompanyIds = useMemo(() => Array.from(new Set(filtered.map((l) => l.company_id).filter(Boolean))), [filtered]);
+  const activeClientsVisible = useMemo(() => filtered.filter((l) => l.company?.relationship_status === 'active_client').length, [filtered]);
+  const revenueWonVisible = useMemo(() => visibleCompanyIds.reduce((s, id) => s + (companyAggregates[id]?.revenueWon ?? 0), 0), [visibleCompanyIds, companyAggregates]);
 
   // Poda seleção quando filtros removem itens, ou quando muda para kanban
   useEffect(() => {
@@ -188,24 +215,31 @@ export default function CrmLeads() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-5">
         {hasSelection ? (
           <>
-            <Kpi highlight label={`Leads selecionados (${selected.size})`} value={String(selectedLeads.length)} />
+            <Kpi highlight label={`Selecionados (${selected.size})`} value={String(selectedLeads.length)} />
             <Kpi highlight label="Conversão da seleção" value={`${selectedConversionPct.toFixed(0)}%`} />
             <Kpi highlight label="Valor selecionado" value={formatCurrency(selectedValueSum)} />
+            <Kpi highlight label="Clientes ativos / sel." value={String(selectedLeads.filter((l) => l.company?.relationship_status === 'active_client').length)} />
+            <Kpi highlight label="Receita ganha / sel." value={formatCurrency(Array.from(new Set(selectedLeads.map((l) => l.company_id))).reduce((s, id) => s + (companyAggregates[id]?.revenueWon ?? 0), 0))} />
           </>
         ) : (
           <>
             <Kpi label="Leads abertos" value={String(openLeads)} />
             <Kpi label="Taxa conversão" value={`${Number(metrics?.conversion_rate_pct ?? 0).toFixed(0)}%`} />
-            <Kpi label="Valor" value={formatCurrency(filtered.reduce((sum, lead) => sum + Number(lead.estimated_value ?? 0), 0))} />
+            <Kpi label="Valor pipeline" value={formatCurrency(filtered.reduce((sum, lead) => sum + Number(lead.estimated_value ?? 0), 0))} />
+            <Kpi label="Clientes ativos" value={String(activeClientsVisible)} />
+            <Kpi label="Receita ganha" value={formatCurrency(revenueWonVisible)} />
           </>
         )}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3 rounded-lg border border-border bg-card/50 p-2 sm:p-3">
-        <MultiFilter label="Status" selected={statusFilter} onChange={(v) => setStatusFilter(v as LeadStatus[])} options={LEAD_STATUS.map((status) => ({ value: status, label: LEAD_LABEL[status] }))} />
+        <div className="flex flex-wrap items-center gap-2">
+          <MultiFilter label="Status lead" selected={statusFilter} onChange={(v) => setStatusFilter(v as LeadStatus[])} options={LEAD_STATUS.map((status) => ({ value: status, label: LEAD_LABEL[status] }))} />
+          <MultiFilter label="Status empresa" selected={companyStatusFilter} onChange={(v) => setCompanyStatusFilter(v as CompanyRelationshipStatus[])} options={COMPANY_STATUS.map((s) => ({ value: s, label: COMPANY_STATUS_LABEL[s] }))} />
+        </div>
         <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto">
           <Tabs value={view} onValueChange={(v) => setView(v as 'table' | 'kanban')} className="flex-1 sm:flex-none">
             <TabsList className="w-full sm:w-auto">
@@ -251,17 +285,21 @@ export default function CrmLeads() {
                   <TableHead>Code</TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Status empresa</TableHead>
+                  <TableHead>Status lead</TableHead>
                   <TableHead>Origem</TableHead>
-                  <TableHead>Valor</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-center">Deals</TableHead>
+                  <TableHead className="text-right">Receita ganha</TableHead>
                   <TableHead>Dono</TableHead>
                   <TableHead>Criação</TableHead>
-                  <TableHead>Triagem</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((lead) => {
                   const isSel = selected.has(lead.id);
+                  const agg = companyAggregates[lead.company_id];
+                  const cs = lead.company?.relationship_status;
                   return (
                     <TableRow
                       key={lead.id}
@@ -274,13 +312,19 @@ export default function CrmLeads() {
                       </TableCell>
                       <TableCell className="font-mono text-xs">{lead.code}</TableCell>
                       <TableCell className="font-medium">{lead.title}</TableCell>
-                      <TableCell>{lead.company?.trade_name || lead.company?.legal_name}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <button type="button" onClick={() => navigate(`/crm/empresas/${lead.company_id}`)} className="text-left text-accent hover:underline">
+                          {lead.company?.trade_name || lead.company?.legal_name}
+                        </button>
+                      </TableCell>
+                      <TableCell>{cs ? <span className={companyStatusClass(cs)}>{COMPANY_STATUS_LABEL[cs]}</span> : <span className="text-xs text-muted-foreground">-</span>}</TableCell>
                       <TableCell><span className={statusClass(lead.status)}>{LEAD_LABEL[lead.status]}</span></TableCell>
                       <TableCell>{lead.source ?? '-'}</TableCell>
-                      <TableCell>{formatCurrency(Number(lead.estimated_value ?? 0))}</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{formatCurrency(Number(lead.estimated_value ?? 0))}</TableCell>
+                      <TableCell className="text-center text-xs">{(agg?.dealsOpen ?? 0) + (agg?.dealsWon ?? 0)}</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{formatCurrency(agg?.revenueWon ?? 0)}</TableCell>
                       <TableCell>{lead.owner?.display_name ?? '-'}</TableCell>
                       <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                      <TableCell>{lead.triagem_scheduled_at ? new Date(lead.triagem_scheduled_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
                     </TableRow>
                   );
                 })}
@@ -325,7 +369,12 @@ export default function CrmLeads() {
                       </div>
                       <p className="text-sm font-semibold text-foreground line-clamp-2">{lead.title}</p>
                       {(lead.company?.trade_name || lead.company?.legal_name) && (
-                        <p className="text-xs text-accent truncate mt-1">{lead.company?.trade_name || lead.company?.legal_name}</p>
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
+                          <p className="text-xs text-accent truncate">{lead.company?.trade_name || lead.company?.legal_name}</p>
+                          {lead.company?.relationship_status && (
+                            <span className={companyStatusClass(lead.company.relationship_status)}>{COMPANY_STATUS_LABEL[lead.company.relationship_status]}</span>
+                          )}
+                        </div>
                       )}
                       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                         <span>{formatCurrency(Number(lead.estimated_value ?? 0))}</span>

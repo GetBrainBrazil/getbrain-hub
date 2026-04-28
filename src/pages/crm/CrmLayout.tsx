@@ -13,8 +13,7 @@ import { useCrmHubStore } from '@/hooks/useCrmHubStore';
 const TABS = [
   { value: 'dashboard', label: 'Dashboard' },
   { value: 'pipeline', label: 'Pipeline' },
-  { value: 'leads', label: 'Leads' },
-  { value: 'empresas', label: 'Empresas' },
+  { value: 'leads', label: 'Leads & Empresas' },
   { value: 'calendario', label: 'Calendário' },
 ];
 
