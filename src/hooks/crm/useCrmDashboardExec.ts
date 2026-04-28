@@ -179,9 +179,8 @@ export function useProximasAtividades(filters: DashboardFilters) {
       let q = sb
         .from('deal_activities')
         .select(
-          `id, type, title, scheduled_at, deal_id,
-           deal:deals!inner(code, title, owner_actor_id, project_type_v2, deleted_at),
-           owner:actors!deal_activities_owner_actor_id_fkey(display_name, avatar_url)`,
+          `id, type, title, scheduled_at, owner_actor_id, deal_id,
+           deal:deals!inner(code, title, owner_actor_id, project_type_v2, deleted_at)`,
         )
         .is('deleted_at', null)
         .is('happened_at', null)
