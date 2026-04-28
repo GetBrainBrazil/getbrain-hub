@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Plus, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,14 @@ import { MultiFilter, SearchBox, ValueRangeFilter } from '@/components/crm/CrmFi
 import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
 import { useCrmActors, useDistinctLeadSources } from '@/hooks/crm/useCrmReference';
 import { useCrmHubStore } from '@/hooks/useCrmHubStore';
+import { useAuth } from '@/contexts/AuthContext';
 
-const TABS = [
-  { value: 'dashboard', label: 'Dashboard' },
-  { value: 'pipeline', label: 'Pipeline' },
-  { value: 'leads', label: 'Leads & Empresas' },
-  { value: 'calendario', label: 'Calendário' },
-  { value: 'configuracoes', label: 'Configurações' },
+const ALL_TABS = [
+  { value: 'dashboard', label: 'Dashboard', adminOnly: false },
+  { value: 'pipeline', label: 'Pipeline', adminOnly: false },
+  { value: 'leads', label: 'Leads & Empresas', adminOnly: false },
+  { value: 'calendario', label: 'Calendário', adminOnly: false },
+  { value: 'configuracoes', label: 'Configurações', adminOnly: true },
 ];
 
 // Botão "Novo Lead" só aparece em "Leads & Empresas".
