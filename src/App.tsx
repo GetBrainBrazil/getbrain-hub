@@ -131,7 +131,7 @@ const App = () => (
               <Route path="dashboard" element={<CrmDashboard />} />
               <Route path="pipeline" element={<CrmPipeline />} />
               <Route path="leads" element={<CrmLeads />} />
-              <Route path="empresas" element={<CrmEmpresas />} />
+              <Route path="empresas" element={<Navigate to="/crm/leads" replace />} />
               <Route path="calendario" element={<CrmCalendar />} />
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
