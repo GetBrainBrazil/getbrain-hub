@@ -244,3 +244,17 @@ export function DealSidebarRich({ deal }: Props) {
     </aside>
   );
 }
+
+function AuditLink({ dealId }: { dealId: string }) {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return null;
+  return (
+    <Link
+      to={`/admin/auditoria?entity_type=deals&entity_id=${dealId}`}
+      className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
+    >
+      <History className="h-3 w-3" />
+      Ver auditoria completa →
+    </Link>
+  );
+}
