@@ -19,7 +19,6 @@ const TABS = [
 
 // Botões "Novo Lead" / "Novo Deal" só aparecem nas abas onde fazem sentido
 const SHOW_NEW_LEAD = new Set(['pipeline', 'leads']);
-const SHOW_NEW_DEAL = new Set(['pipeline']);
 
 export default function CrmLayout() {
   const navigate = useNavigate();
