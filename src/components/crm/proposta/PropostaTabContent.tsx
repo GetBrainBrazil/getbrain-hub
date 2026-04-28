@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, FileText, Loader2, ExternalLink, Download, Send, Check, X, Pencil,
+  Plus, FileText, Loader2, ExternalLink, Download, Send, Check, X, Pencil, AlertTriangle, ArrowDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ const sb = supabase as any;
 
 interface Props {
   deal: Deal;
+  onRequestClose?: () => void;
 }
 
 interface ProposalRow {
