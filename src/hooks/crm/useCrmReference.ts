@@ -69,6 +69,37 @@ export function useCreateCompany() {
   });
 }
 
+export function useBulkDeleteCompanies() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<{ deleted: number; skipped: number }> => {
+      if (!ids.length) return { deleted: 0, skipped: 0 };
+      const [{ data: leads }, { data: deals }, { data: projects }] = await Promise.all([
+        sb.from('leads').select('company_id').in('company_id', ids).is('deleted_at', null),
+        sb.from('deals').select('company_id').in('company_id', ids).is('deleted_at', null),
+        sb.from('projects').select('company_id').in('company_id', ids).is('deleted_at', null),
+      ]);
+      const blocked = new Set<string>();
+      (leads ?? []).forEach((r: { company_id: string }) => blocked.add(r.company_id));
+      (deals ?? []).forEach((r: { company_id: string }) => blocked.add(r.company_id));
+      (projects ?? []).forEach((r: { company_id: string }) => blocked.add(r.company_id));
+      const deletable = ids.filter((id) => !blocked.has(id));
+      const skipped = ids.length - deletable.length;
+      if (deletable.length) {
+        const { error } = await sb.from('companies').update({ deleted_at: new Date().toISOString() }).in('id', deletable);
+        if (error) throw error;
+      }
+      return { deleted: deletable.length, skipped };
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['crm-companies'] });
+      qc.invalidateQueries({ queryKey: ['crm-companies-full'] });
+      qc.invalidateQueries({ queryKey: ['crm-company-autocomplete'] });
+      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+    },
+  });
+}
+
 export function usePeopleByCompany(companyId: string | null) {
   return useQuery({
     queryKey: ['crm-people-by-company', companyId],
