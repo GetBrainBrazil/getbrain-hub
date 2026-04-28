@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -188,10 +189,10 @@ export function ImportExtratoWizard({ open, onOpenChange, contas }: Props) {
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_importacoes"] });
       queryClient.invalidateQueries({ queryKey: ["conciliacao_stats"] });
+      invalidateFinanceCaches(queryClient);
 
       toast.success(`Conciliação concluída: ${conciliadoCount} transações conciliadas.`);
       handleClose();

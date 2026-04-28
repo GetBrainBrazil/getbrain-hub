@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -413,9 +414,9 @@ export function RegistrarComprovanteWizard({ open, onOpenChange, contas }: Props
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
       queryClient.invalidateQueries({ queryKey: ["extrato_importacoes"] });
+      invalidateFinanceCaches(queryClient);
 
       toast.success("Transação registrada com sucesso a partir do comprovante");
       handleClose();

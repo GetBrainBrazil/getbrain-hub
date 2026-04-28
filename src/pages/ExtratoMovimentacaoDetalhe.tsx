@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 import { supabase } from "@/integrations/supabase/client";
 import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
 import CategoryPicker from "@/components/CategoryPicker";
@@ -170,8 +171,8 @@ export default function ExtratoMovimentacaoDetalhe() {
       return;
     }
     toast.success("Lançamento atualizado com sucesso");
-    queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
     queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
+    invalidateFinanceCaches(queryClient, { projectId: (mov as any)?.projeto_id || null });
     navigate("/financeiro/extratos");
   }
 
@@ -185,8 +186,8 @@ export default function ExtratoMovimentacaoDetalhe() {
         .eq("id", (extrato as any).id);
     }
     queryClient.invalidateQueries({ queryKey: ["extrato_mov_detalhe", id] });
-    queryClient.invalidateQueries({ queryKey: ["extrato_movimentacoes"] });
     queryClient.invalidateQueries({ queryKey: ["extrato_transacoes"] });
+    invalidateFinanceCaches(queryClient, { projectId: (mov as any)?.projeto_id || null });
     toast.success("Conciliação desfeita.");
     setConfirmDesfazer(false);
     navigate("/financeiro/extratos");

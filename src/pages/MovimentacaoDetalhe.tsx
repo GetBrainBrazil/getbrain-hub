@@ -62,6 +62,8 @@ import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type Comprovan
 import { Sparkles } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 const ANEXOS_BUCKET = "anexos-movimentacoes";
 
@@ -126,6 +128,7 @@ export default function MovimentacaoDetalhe() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+  const qc = useQueryClient();
 
   // Modos: create | edit | view
   const isCreate = !id && !!tipoParam;
@@ -490,6 +493,7 @@ export default function MovimentacaoDetalhe() {
     }
 
     toast.success(isPagar ? "Conta a pagar cadastrada com sucesso" : "Conta a receber cadastrada com sucesso");
+    invalidateFinanceCaches(qc, { projectId: (payload as any).projeto_id || null });
     clearDraft();
     navigate(backUrl);
   }
@@ -510,6 +514,7 @@ export default function MovimentacaoDetalhe() {
       return;
     }
     toast.success("Movimentação atualizada com sucesso");
+    invalidateFinanceCaches(qc, { projectId: (updated as any)?.projeto_id || mov?.projeto_id || null });
     navigate(backUrl);
   }
 
@@ -602,6 +607,7 @@ export default function MovimentacaoDetalhe() {
         : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
     );
     setOpenBaixa(false);
+    invalidateFinanceCaches(qc, { projectId: mov.projeto_id || null });
     void load();
   }
 
@@ -634,6 +640,7 @@ export default function MovimentacaoDetalhe() {
       return;
     }
     toast.success("Conta reaberta com sucesso");
+    invalidateFinanceCaches(qc, { projectId: mov.projeto_id || null });
     void load();
   }
 
@@ -645,6 +652,7 @@ export default function MovimentacaoDetalhe() {
       return;
     }
     toast.success("Movimentação excluída com sucesso");
+    invalidateFinanceCaches(qc, { projectId: mov.projeto_id || null });
     navigate(backUrl);
   }
 

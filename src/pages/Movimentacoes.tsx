@@ -34,6 +34,8 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { Lightbulb } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
 import { MovimentacaoMobileCard } from "@/components/MovimentacaoMobileCard";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 type TabType = "pagar" | "receber";
 
@@ -188,6 +190,7 @@ const tipoByTab: Record<TabType, "despesa" | "receita"> = {
 
 export default function Movimentacoes() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -743,6 +746,7 @@ export default function Movimentacoes() {
     );
     setOpenNew(false);
     resetForm();
+    invalidateFinanceCaches(qc, { projectId: form.projeto_id || null });
     void refreshTabs([tab as TabType]);
   }
 
@@ -806,6 +810,7 @@ export default function Movimentacoes() {
     }
     toast.success("Conta reaberta com sucesso");
     setOpenBaixa(false);
+    invalidateFinanceCaches(qc, { projectId: selectedMov.projeto_id || null });
     void refreshTabs([tab as TabType], { silent: true });
   }
 
@@ -891,6 +896,7 @@ export default function Movimentacoes() {
         : isPagar ? "Pagamento registrado!" : "Recebimento registrado!"
     );
     setOpenBaixa(false);
+    invalidateFinanceCaches(qc, { projectId: selectedMov.projeto_id || null });
     void refreshTabs([tab as TabType], { silent: true });
   }
 
@@ -923,6 +929,7 @@ export default function Movimentacoes() {
       return;
     }
     toast.success("Movimentação excluída com sucesso");
+    invalidateFinanceCaches(qc, { projectId: mov?.projeto_id || null });
   }
 
   async function handleDuplicate(m: any) {
@@ -950,6 +957,7 @@ export default function Movimentacoes() {
     });
     if (error) { toast.error("Erro ao duplicar"); return; }
     toast.success("Movimentação duplicada!");
+    invalidateFinanceCaches(qc, { projectId: m.projeto_id || null });
     void refreshTabs([tab as TabType]);
   }
 

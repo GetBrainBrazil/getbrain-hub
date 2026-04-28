@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 const invalidateAll = (qc: ReturnType<typeof useQueryClient>, id?: string) => {
   qc.invalidateQueries({ queryKey: ["financial_recurrences"] });
   qc.invalidateQueries({ queryKey: ["financial_recurrences_kpis"] });
-  qc.invalidateQueries({ queryKey: ["movimentacoes"] });
   if (id) qc.invalidateQueries({ queryKey: ["financial_recurrence", id] });
+  // Recorrência cria/altera movimentações → propaga para dashboards e cards de projeto.
+  invalidateFinanceCaches(qc, { recurrenceId: id ?? null });
 };
 
 export function useUpdateRecurrenceStatus() {

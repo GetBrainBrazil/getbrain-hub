@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 import { PreviewParcelas } from "./PreviewParcelas";
 import { FREQ_LABEL, type Frequency } from "@/lib/recorrencias/preview";
 import { z } from "zod";
@@ -143,7 +144,7 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
       toast.success("Recorrência criada com sucesso");
       qc.invalidateQueries({ queryKey: ["financial_recurrences"] });
       qc.invalidateQueries({ queryKey: ["financial_recurrences_kpis"] });
-      qc.invalidateQueries({ queryKey: ["movimentacoes"] });
+      invalidateFinanceCaches(qc, { projectId: (parsed.data as any).projeto_id || null });
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao criar recorrência");

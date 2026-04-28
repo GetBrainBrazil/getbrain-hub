@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 export type VendaStatus = "rascunho" | "confirmada" | "cancelada";
 export type TipoVenda = "implementacao" | "recorrente" | "avulso";
@@ -152,8 +153,8 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["vendas"] });
   qc.invalidateQueries({ queryKey: ["vendas_dashboard"] });
   qc.invalidateQueries({ queryKey: ["venda"] });
-  qc.invalidateQueries({ queryKey: ["movimentacoes"] });
-  qc.invalidateQueries({ queryKey: ["financeiro_dashboard_kpis"] });
+  // Vendas geram movimentações financeiras → propaga para dashboards/cards de projeto.
+  invalidateFinanceCaches(qc);
 }
 
 export function useCreateVenda() {
