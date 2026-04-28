@@ -285,17 +285,21 @@ export default function CrmLeads() {
                   <TableHead>Code</TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Status empresa</TableHead>
+                  <TableHead>Status lead</TableHead>
                   <TableHead>Origem</TableHead>
-                  <TableHead>Valor</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-center">Deals</TableHead>
+                  <TableHead className="text-right">Receita ganha</TableHead>
                   <TableHead>Dono</TableHead>
                   <TableHead>Criação</TableHead>
-                  <TableHead>Triagem</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((lead) => {
                   const isSel = selected.has(lead.id);
+                  const agg = companyAggregates[lead.company_id];
+                  const cs = lead.company?.relationship_status;
                   return (
                     <TableRow
                       key={lead.id}
@@ -308,13 +312,19 @@ export default function CrmLeads() {
                       </TableCell>
                       <TableCell className="font-mono text-xs">{lead.code}</TableCell>
                       <TableCell className="font-medium">{lead.title}</TableCell>
-                      <TableCell>{lead.company?.trade_name || lead.company?.legal_name}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <button type="button" onClick={() => navigate(`/crm/empresas/${lead.company_id}`)} className="text-left text-accent hover:underline">
+                          {lead.company?.trade_name || lead.company?.legal_name}
+                        </button>
+                      </TableCell>
+                      <TableCell>{cs ? <span className={companyStatusClass(cs)}>{COMPANY_STATUS_LABEL[cs]}</span> : <span className="text-xs text-muted-foreground">-</span>}</TableCell>
                       <TableCell><span className={statusClass(lead.status)}>{LEAD_LABEL[lead.status]}</span></TableCell>
                       <TableCell>{lead.source ?? '-'}</TableCell>
-                      <TableCell>{formatCurrency(Number(lead.estimated_value ?? 0))}</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{formatCurrency(Number(lead.estimated_value ?? 0))}</TableCell>
+                      <TableCell className="text-center text-xs">{(agg?.dealsOpen ?? 0) + (agg?.dealsWon ?? 0)}</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{formatCurrency(agg?.revenueWon ?? 0)}</TableCell>
                       <TableCell>{lead.owner?.display_name ?? '-'}</TableCell>
                       <TableCell>{lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                      <TableCell>{lead.triagem_scheduled_at ? new Date(lead.triagem_scheduled_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
                     </TableRow>
                   );
                 })}
