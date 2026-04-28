@@ -47,6 +47,7 @@ export default function CrmLeadDetail() {
   const update = useUpdateLeadField(code);
   const { data: actors = [] } = useCrmActors();
   const { data: contacts = [] } = usePeopleByCompany(lead?.company_id ?? null);
+  const { data: leadSources = [] } = useCrmLeadSources({ onlyActive: true });
   const [title, setTitle] = useState('');
   const [pain, setPain] = useState('');
   const [notes, setNotes] = useState('');
