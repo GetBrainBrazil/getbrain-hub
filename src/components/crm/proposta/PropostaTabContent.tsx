@@ -186,12 +186,40 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
         </div>
       </div>
 
+      {/* Aviso de divergência de valor com deal */}
+      {(valueDiverges || noDealValue) && (
+        <div className="border-b border-border/60 bg-warning/5 px-4 py-2.5 text-xs flex flex-wrap items-center gap-3">
+          <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
+          <span className="flex-1 min-w-[200px]">
+            {noDealValue
+              ? <>O deal está sem valor estimado. A proposta soma <strong className="font-mono">{formatBRL(total)}</strong>.</>
+              : <>Divergência: deal estima <strong className="font-mono">{formatBRL(dealValue)}</strong> · proposta soma <strong className="font-mono">{formatBRL(total)}</strong>.</>}
+            <span className="text-muted-foreground"> O dashboard CRM usa o valor do deal pra forecast.</span>
+          </span>
+          <Button size="sm" variant="outline" onClick={handleSyncValue} disabled={updateDeal.isPending}>
+            <ArrowDown className="h-3.5 w-3.5" /> Sincronizar valor do deal
+          </Button>
+        </div>
+      )}
+
       {/* Edição inline */}
       <div className="space-y-4 p-4">
         <div>
-          <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Itens da proposta
-          </Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Itens da proposta
+            </Label>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[11px]"
+              onClick={handleImportFromDiscovery}
+              title="Importa cada entregável da Descoberta como item de escopo (com valor zero)"
+            >
+              + Importar da descoberta ({deal.deliverables?.length ?? 0})
+            </Button>
+          </div>
           <div className="mt-2">
             <ScopeItemsEditor items={items} onChange={setItems} />
           </div>
