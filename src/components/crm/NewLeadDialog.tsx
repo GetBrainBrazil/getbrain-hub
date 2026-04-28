@@ -10,14 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateLead } from '@/hooks/crm/useLeads';
 import { useAllLeads } from '@/hooks/crm/useCrmDetails';
-import { useCompanies, useCreateCompany, useCreatePerson, useCrmActors, useDistinctLeadSources, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
+import { useCompanies, useCreateCompany, useCreatePerson, useCrmActors, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
+import { useCrmLeadSources } from '@/hooks/crm/useCrmLeadSources';
 
 export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const navigate = useNavigate();
   const { data: companies = [] } = useCompanies();
   const { data: allLeads = [] } = useAllLeads();
   const { data: actors = [] } = useCrmActors();
-  const { data: sources = [] } = useDistinctLeadSources();
+  const { data: leadSources = [] } = useCrmLeadSources({ onlyActive: true });
   const createLead = useCreateLead();
   const createCompany = useCreateCompany();
   const createPerson = useCreatePerson();
