@@ -551,9 +551,25 @@ export function CompanyContactsPanel({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate text-sm font-medium text-foreground">{c.full_name}</span>
                     {primary && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleTogglePrimary(c); }}
+                        title="Clique para remover como principal"
+                        className="inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent transition-colors hover:bg-accent/20"
+                      >
                         <Star className="h-2.5 w-2.5 fill-current" /> Principal
-                      </span>
+                      </button>
+                    )}
+                    {!primary && onMakePrimary && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleTogglePrimary(c); }}
+                        title="Definir como principal"
+                        aria-label="Definir como principal"
+                        className="inline-flex items-center gap-1 rounded-md border border-transparent px-1 py-0.5 text-[10px] text-muted-foreground opacity-0 transition-all hover:border-accent/30 hover:bg-accent/10 hover:text-accent group-hover/contact:opacity-100"
+                      >
+                        <Star className="h-3 w-3" />
+                      </button>
                     )}
                     {c.role_in_company && (
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
