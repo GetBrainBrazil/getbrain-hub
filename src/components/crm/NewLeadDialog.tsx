@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateLead } from '@/hooks/crm/useLeads';
+import { useAllLeads } from '@/hooks/crm/useCrmDetails';
 import { useCompanies, useCreateCompany, useCreatePerson, useCrmActors, useDistinctLeadSources, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
 
 export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
