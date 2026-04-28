@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { CurrencyInput, IntegerInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { DetailBreadcrumb, DetailShell } from '@/components/crm/CrmDetailShared';
 import { StringListEditor } from '@/components/shared/StringListEditor';
@@ -17,6 +18,8 @@ import { DealSidebarRich } from '@/components/crm/DealSidebarRich';
 import { ZoneCliente } from '@/components/crm/ZoneCliente';
 import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
+import { PropostaTabContent } from '@/components/crm/proposta/PropostaTabContent';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
   PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
