@@ -107,7 +107,6 @@ export default function CrmPipeline() {
   const updateStage = useUpdateDealStage();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [createStage, setCreateStage] = useState<DealStage>('presencial_agendada');
   const [createOpen, setCreateOpen] = useState(false);
   const [lost, setLost] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [lostReason, setLostReason] = useState('');
