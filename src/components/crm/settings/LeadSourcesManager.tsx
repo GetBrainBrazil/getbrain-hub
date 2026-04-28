@@ -23,7 +23,7 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
   const update = useUpdateLeadSource();
   const remove = useDeleteLeadSource();
   const reorder = useReorderLeadSource();
-  const confirm = useConfirm();
+  const { confirm, dialog } = useConfirm();
 
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
