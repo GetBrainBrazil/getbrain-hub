@@ -171,7 +171,7 @@ export function ZoneCliente({ deal }: Props) {
     );
   };
 
-  const setPrimaryContact = (personId: string) => {
+  const setPrimaryContact = (personId: string | null) => {
     updateDeal.mutate(
       { id: deal.id, updates: { contact_person_id: personId } },
       { onError: (err: any) => toast.error(`Erro: ${err?.message ?? 'falhou'}`) },
