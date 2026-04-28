@@ -34,7 +34,8 @@ interface Props {
   dealId: string;
   dealCode: string;
   dealTitle: string;
-  onConfirm: () => Promise<void>;
+  /** Recebe o modo escolhido pelo usuário (safe ou cascade). */
+  onConfirm: (mode: 'safe' | 'cascade') => Promise<void>;
 }
 
 function Row({
@@ -96,22 +97,29 @@ export function DeleteDealDialog({
   const { data: impact, isLoading } = useDealDeletionImpact(open ? dealId : null);
   const [confirmText, setConfirmText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [mode, setMode] = useState<'safe' | 'cascade'>('safe');
 
   useEffect(() => {
     if (!open) {
       setConfirmText("");
       setSubmitting(false);
+      setMode('safe');
     }
   }, [open]);
 
   const hasProjectBlock = !!impact?.project;
-  const canDelete = !hasProjectBlock && confirmText.trim().toUpperCase() === "EXCLUIR";
+  // No modo cascade, exigimos confirmação SEMPRE. No safe, só quando há algo a perder.
+  const expectedWord = mode === 'cascade' ? 'EXCLUIR TUDO' : 'EXCLUIR';
+  const needsTypeConfirm = mode === 'cascade' || !hasProjectBlock;
+  const typeOk = confirmText.trim().toUpperCase() === expectedWord;
+  const canDelete =
+    (mode === 'cascade' || !hasProjectBlock) && typeOk;
 
   const handleConfirm = async () => {
     if (!canDelete) return;
     try {
       setSubmitting(true);
-      await onConfirm();
+      await onConfirm(mode);
     } finally {
       setSubmitting(false);
     }
@@ -138,14 +146,65 @@ export function DeleteDealDialog({
           </div>
         ) : (
           <div className="space-y-1">
-            {/* BLOQUEIOS */}
+            {/* SELETOR DE MODO — só faz sentido quando há projeto vinculado */}
             {hasProjectBlock && (
               <>
-                <SectionTitle>⛔ Bloqueia a exclusão</SectionTitle>
+                <SectionTitle>Modo de exclusão</SectionTitle>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => { setMode('safe'); setConfirmText(''); }}
+                    className={cn(
+                      'rounded-md border p-3 text-left transition-colors',
+                      mode === 'safe'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                        : 'border-border hover:border-primary/40',
+                    )}
+                  >
+                    <div className="text-sm font-semibold flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Seguro
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Bloqueado: você precisa apagar o projeto antes.
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('cascade'); setConfirmText(''); }}
+                    className={cn(
+                      'rounded-md border p-3 text-left transition-colors',
+                      mode === 'cascade'
+                        ? 'border-destructive bg-destructive/10 ring-2 ring-destructive/40'
+                        : 'border-border hover:border-destructive/40',
+                    )}
+                  >
+                    <div className="text-sm font-semibold flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      Em cascata
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Apaga o deal, o projeto e tudo que está pendurado nele.
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* PROJETO VINCULADO + IMPACTO */}
+            {hasProjectBlock && (
+              <>
+                <SectionTitle>
+                  {mode === 'cascade' ? '🔥 Será apagado em cascata' : '⛔ Bloqueia a exclusão'}
+                </SectionTitle>
                 <Row
                   icon={Briefcase}
                   label={`Projeto vinculado: ${impact.project!.code}`}
-                  detail="Este deal já foi convertido em projeto. Exclua ou arquive o projeto primeiro — todos os contratos, contas e recorrências dele também serão removidos."
+                  detail={
+                    mode === 'cascade'
+                      ? 'O projeto inteiro será removido — incluindo marcos, riscos, atores, integrações e dependências.'
+                      : 'Este deal já foi convertido em projeto. Mude para "Em cascata" ou apague o projeto manualmente.'
+                  }
                   to={`/projetos/${impact.project!.id}`}
                   tone="danger"
                 />
@@ -155,32 +214,32 @@ export function DeleteDealDialog({
                       <Row
                         icon={Wrench}
                         label={`${impact.projectImpact.maintenanceContracts} contrato(s) de manutenção`}
-                        detail="Vinculado(s) ao projeto"
-                        tone="warning"
+                        detail={mode === 'cascade' ? 'Serão apagados' : 'Vinculado(s) ao projeto'}
+                        tone={mode === 'cascade' ? 'danger' : 'warning'}
                       />
                     )}
                     {impact.projectImpact.movimentacoesPendentes > 0 && (
                       <Row
                         icon={Receipt}
                         label={`${impact.projectImpact.movimentacoesPendentes} conta(s) pendente(s)`}
-                        detail="Contas a pagar/receber em aberto vinculadas ao projeto"
-                        tone="warning"
+                        detail={mode === 'cascade' ? 'Serão apagadas do contas a pagar/receber' : 'Em aberto vinculadas ao projeto'}
+                        tone={mode === 'cascade' ? 'danger' : 'warning'}
                       />
                     )}
                     {impact.projectImpact.movimentacoesPagas > 0 && (
                       <Row
                         icon={Receipt}
                         label={`${impact.projectImpact.movimentacoesPagas} conta(s) já liquidada(s)`}
-                        detail="Histórico financeiro do projeto"
-                        tone="warning"
+                        detail={mode === 'cascade' ? 'Histórico financeiro será apagado' : 'Histórico financeiro do projeto'}
+                        tone={mode === 'cascade' ? 'danger' : 'warning'}
                       />
                     )}
                     {impact.projectImpact.recurrencesActive > 0 && (
                       <Row
                         icon={RefreshCw}
                         label={`${impact.projectImpact.recurrencesActive} recorrência(s) ativa(s)`}
-                        detail="Continuam gerando movimentações"
-                        tone="warning"
+                        detail={mode === 'cascade' ? 'Serão apagadas (param de gerar)' : 'Continuam gerando movimentações'}
+                        tone={mode === 'cascade' ? 'danger' : 'warning'}
                       />
                     )}
                   </div>
@@ -188,17 +247,22 @@ export function DeleteDealDialog({
               </>
             )}
 
-            {/* DESVINCULAÇÃO */}
+            {/* PROPOSTAS / LEAD */}
             {(impact.proposals.length > 0 || impact.originLead) && (
               <>
-                <SectionTitle>🔗 Será desvinculado</SectionTitle>
+                <SectionTitle>
+                  {mode === 'cascade' && impact.proposals.length > 0
+                    ? '🔥 Propostas serão apagadas'
+                    : '🔗 Será desvinculado'}
+                </SectionTitle>
                 {impact.proposals.map((p) => (
                   <Row
                     key={p.id}
                     icon={FileText}
                     label={`Proposta ${p.code}`}
-                    detail="Continua existindo, mas vira proposta avulsa"
+                    detail={mode === 'cascade' ? 'Será apagada definitivamente' : 'Continua existindo, mas vira proposta avulsa'}
                     to={`/financeiro/orcamentos/${p.id}`}
+                    tone={mode === 'cascade' ? 'danger' : 'default'}
                   />
                 ))}
                 {impact.originLead && (
@@ -212,7 +276,7 @@ export function DeleteDealDialog({
               </>
             )}
 
-            {/* CASCATA */}
+            {/* CASCATA DO DEAL */}
             {(impact.activitiesCount > 0 || impact.dependenciesCount > 0) && (
               <>
                 <SectionTitle>🗑 Será removido em cascata</SectionTitle>
@@ -245,16 +309,23 @@ export function DeleteDealDialog({
               )}
 
             {/* CONFIRMAÇÃO POR TEXTO */}
-            {!hasProjectBlock && (
-              <div className="mt-4 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+            {needsTypeConfirm && (
+              <div
+                className={cn(
+                  'mt-4 space-y-2 rounded-md border p-3',
+                  mode === 'cascade'
+                    ? 'border-destructive bg-destructive/10'
+                    : 'border-destructive/40 bg-destructive/5',
+                )}
+              >
                 <Label htmlFor="confirm-delete" className="text-xs">
-                  Digite <strong className="text-destructive">EXCLUIR</strong> para confirmar:
+                  Digite <strong className="text-destructive">{expectedWord}</strong> para confirmar:
                 </Label>
                 <Input
                   id="confirm-delete"
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder="EXCLUIR"
+                  placeholder={expectedWord}
                   autoComplete="off"
                   disabled={submitting}
                 />
@@ -277,7 +348,11 @@ export function DeleteDealDialog({
             disabled={!canDelete || submitting || isLoading}
           >
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {hasProjectBlock ? "Resolva os bloqueios primeiro" : "Excluir definitivamente"}
+            {hasProjectBlock && mode === 'safe'
+              ? 'Selecione "Em cascata" para prosseguir'
+              : mode === 'cascade'
+              ? 'Excluir tudo em cascata'
+              : 'Excluir definitivamente'}
           </Button>
         </DialogFooter>
       </DialogContent>
