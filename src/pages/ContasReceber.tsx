@@ -19,10 +19,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 export default function ContasReceber() {
   const { user } = useAuth();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+  const qc = useQueryClient();
   const [movs, setMovs] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -118,6 +121,7 @@ export default function ContasReceber() {
     if (error) { toast.error("Erro ao salvar"); return; }
     toast.success("Conta a receber criada!");
     setOpenNew(false);
+    invalidateFinanceCaches(qc, { projectId: form.projeto_id || null });
     setForm({ descricao: "", cliente_id: "", projeto_id: "", categoria_id: "", conta_bancaria_id: "", valor_previsto: "", data_competencia: "", data_vencimento: "", observacoes: "" });
     loadAll();
   }
@@ -165,6 +169,7 @@ export default function ContasReceber() {
 
     toast.success("Baixa registrada!");
     setOpenBaixa(false);
+    invalidateFinanceCaches(qc, { projectId: selectedMov.projeto_id || null });
     loadAll();
   }
 
@@ -185,6 +190,7 @@ export default function ContasReceber() {
     if (!ok) return;
     await supabase.from("movimentacoes").delete().eq("id", id);
     toast.success("Movimentação excluída");
+    invalidateFinanceCaches(qc, { projectId: mov?.projeto_id || null });
     loadAll();
   }
 
