@@ -14,13 +14,25 @@ import { MultiFilter } from '@/components/crm/CrmFilters';
 import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useCrmMetrics } from '@/hooks/crm/useCrmMetrics';
-import { useAllLeads, useUpdateLeadField } from '@/hooks/crm/useCrmDetails';
+import { useAllCompaniesAggregates, useAllLeads, useUpdateLeadField } from '@/hooks/crm/useCrmDetails';
 import { useBulkDeleteLeads } from '@/hooks/crm/useLeads';
 import { useCrmHubStore } from '@/hooks/useCrmHubStore';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
-import type { Lead, LeadStatus } from '@/types/crm';
+import type { CompanyRelationshipStatus, Lead, LeadStatus } from '@/types/crm';
+
+const COMPANY_STATUS: CompanyRelationshipStatus[] = ['prospect', 'lead', 'active_client', 'former_client', 'lost'];
+const COMPANY_STATUS_LABEL: Record<CompanyRelationshipStatus, string> = { prospect: 'Prospect', lead: 'Lead', active_client: 'Cliente ativo', former_client: 'Ex-cliente', lost: 'Perdida' };
+function companyStatusClass(status: CompanyRelationshipStatus) {
+  return cn('rounded border px-2 py-0.5 text-[11px] font-medium',
+    status === 'active_client' && 'border-success/30 bg-success/10 text-success',
+    status === 'lead' && 'border-warning/30 bg-warning/10 text-warning',
+    status === 'lost' && 'border-destructive/30 bg-destructive/10 text-destructive',
+    status === 'former_client' && 'border-accent/30 bg-accent/10 text-accent',
+    status === 'prospect' && 'border-border bg-muted/40 text-muted-foreground',
+  );
+}
 
 const LEAD_STATUS: LeadStatus[] = ['novo', 'triagem_agendada', 'triagem_feita', 'descartado', 'convertido'];
 const LEAD_LABEL: Record<LeadStatus, string> = { novo: 'Novo', triagem_agendada: 'Triagem Agendada', triagem_feita: 'Triagem Feita', descartado: 'Descartado', convertido: 'Convertido' };
