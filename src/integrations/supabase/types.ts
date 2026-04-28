@@ -3108,9 +3108,12 @@ export type Database = {
           id: string
           identified_risks: string[]
           installments_count: number | null
+          mockup_screenshots: string[]
+          mockup_url: string | null
           name: string
           notes: string | null
           organization_id: string
+          organograma_url: string | null
           owner_actor_id: string | null
           premises: string[]
           project_type: Database["public"]["Enums"]["project_type"]
@@ -3142,9 +3145,12 @@ export type Database = {
           id?: string
           identified_risks?: string[]
           installments_count?: number | null
+          mockup_screenshots?: string[]
+          mockup_url?: string | null
           name: string
           notes?: string | null
           organization_id: string
+          organograma_url?: string | null
           owner_actor_id?: string | null
           premises?: string[]
           project_type: Database["public"]["Enums"]["project_type"]
@@ -3176,9 +3182,12 @@ export type Database = {
           id?: string
           identified_risks?: string[]
           installments_count?: number | null
+          mockup_screenshots?: string[]
+          mockup_url?: string | null
           name?: string
           notes?: string | null
           organization_id?: string
+          organograma_url?: string | null
           owner_actor_id?: string | null
           premises?: string[]
           project_type?: Database["public"]["Enums"]["project_type"]
