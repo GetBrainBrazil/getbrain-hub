@@ -277,7 +277,7 @@ export default function CrmPipeline() {
         </DndContext>
       )}
 
-      <NewDealDialog open={createOpen} onOpenChange={setCreateOpen} defaultStage={createStage} />
+      <NewLeadDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       <Dialog open={!!lost} onOpenChange={(v) => !v && setLost(null)}>
         <DialogContent>
