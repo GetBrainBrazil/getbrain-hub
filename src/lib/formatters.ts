@@ -27,6 +27,31 @@ export function formatPercent(value: number): string {
   }).format(value / 100);
 }
 
+/**
+ * Formata uma string de dígitos como valor monetário BRL para exibição em inputs.
+ * Ex.: "150000" -> "R$ 1.500,00"
+ */
+export function maskCurrencyBRL(input: string): string {
+  const digits = String(input ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  const cents = parseInt(digits, 10);
+  return (cents / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Converte uma string mascarada (R$ 1.500,00) ou número de volta para Number. */
+export function parseCurrencyBRL(input: string | number | null | undefined): number | null {
+  if (input == null || input === "") return null;
+  if (typeof input === "number") return input;
+  const digits = String(input).replace(/\D/g, "");
+  if (!digits) return null;
+  return parseInt(digits, 10) / 100;
+}
+
 export type StatusType = "pendente" | "pago" | "atrasado" | "cancelado";
 
 export function getStatusColor(status: StatusType) {

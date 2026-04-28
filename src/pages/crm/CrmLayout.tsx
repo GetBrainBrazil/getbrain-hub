@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { MultiFilter, SearchBox, ValueRangeFilter } from '@/components/crm/CrmFilters';
-import { NewDealDialog } from '@/components/crm/NewDealDialog';
 import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
 import { useCrmActors, useDistinctLeadSources } from '@/hooks/crm/useCrmReference';
 import { useCrmHubStore } from '@/hooks/useCrmHubStore';
@@ -20,20 +19,17 @@ const TABS = [
 
 // Botões "Novo Lead" / "Novo Deal" só aparecem nas abas onde fazem sentido
 const SHOW_NEW_LEAD = new Set(['pipeline', 'leads']);
-const SHOW_NEW_DEAL = new Set(['pipeline']);
 
 export default function CrmLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [leadOpen, setLeadOpen] = useState(false);
-  const [dealOpen, setDealOpen] = useState(false);
   const { data: actors = [] } = useCrmActors();
   const { data: sources = [] } = useDistinctLeadSources();
   const store = useCrmHubStore();
   const currentTab = TABS.find((t) => location.pathname.startsWith(`/crm/${t.value}`))?.value ?? 'pipeline';
   const showNewLead = SHOW_NEW_LEAD.has(currentTab);
-  const showNewDeal = SHOW_NEW_DEAL.has(currentTab);
-  const hasActions = showNewLead || showNewDeal;
+  const hasActions = showNewLead;
 
   const filterControls = (
     <>
@@ -67,11 +63,6 @@ export default function CrmLayout() {
               {showNewLead && (
                 <Button variant="outline" size="sm" onClick={() => setLeadOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
                   <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Lead
-                </Button>
-              )}
-              {showNewDeal && (
-                <Button size="sm" onClick={() => setDealOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
-                  <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Deal
                 </Button>
               )}
             </div>
@@ -132,7 +123,6 @@ export default function CrmLayout() {
       <Outlet />
 
       <NewLeadDialog open={leadOpen} onOpenChange={setLeadOpen} />
-      <NewDealDialog open={dealOpen} onOpenChange={setDealOpen} />
     </div>
   );
 }
