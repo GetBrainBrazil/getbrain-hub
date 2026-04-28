@@ -211,6 +211,13 @@ export default function CrmPipeline() {
             </Button>
           )}
           <div className="flex-1" />
+          <Button
+            size="sm"
+            onClick={() => openCreateDialog()}
+            className="h-9 gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Novo Deal
+          </Button>
           {viewMode === 'lista' && (
             <Select value={sort} onValueChange={(v) => setSort(v as DealsListSort)}>
               <SelectTrigger className="h-9 w-[180px] text-xs">
@@ -275,7 +282,7 @@ export default function CrmPipeline() {
                 deals={grouped.get(stage) ?? []}
                 onOpen={(deal) => navigate(`/crm/deals/${deal.code}`)}
                 onCompanyOpen={(deal) => navigate(`/crm/empresas/${deal.company_id}`)}
-                onAdd={() => setCreateOpen(true)}
+                onAdd={(stage) => openCreateDialog(stage)}
               />
             ))}
           </div>
@@ -283,7 +290,7 @@ export default function CrmPipeline() {
         </DndContext>
       )}
 
-      <NewLeadDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <NewDealQuickDialog open={createOpen} onOpenChange={setCreateOpen} initialStage={createStage} />
 
       <Dialog open={!!lost} onOpenChange={(v) => !v && setLost(null)}>
         <DialogContent>
