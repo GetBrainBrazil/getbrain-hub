@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Mail, Phone, Plus, Star, Trash2, Save, X, User,
+  Mail, Phone, Plus, Star, StarOff, Trash2, Save, X, User,
   Building2, UserPlus, Check, ChevronsUpDown, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -333,10 +333,17 @@ function ContactForm({
       )}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1">
-          {onMakePrimary && !isAlreadyPrimary && (
-            <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting} className="text-xs">
-              <Star className="mr-1 h-3.5 w-3.5" /> Definir como principal
-            </Button>
+          {onMakePrimary && (
+            isAlreadyPrimary ? (
+              <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting}
+                className="text-xs text-muted-foreground hover:text-foreground">
+                <StarOff className="mr-1 h-3.5 w-3.5" /> Remover como principal
+              </Button>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting} className="text-xs">
+                <Star className="mr-1 h-3.5 w-3.5" /> Definir como principal
+              </Button>
+            )
           )}
           {onRemove && (
             <Button size="sm" variant="ghost" onClick={onRemove} disabled={submitting}
@@ -368,7 +375,7 @@ interface PanelProps {
    * Se fornecido, a estrela controla esta callback ao invés de gravar em `company_people.is_primary_contact`.
    */
   primaryContactPersonId?: string | null;
-  onMakePrimary?: (personId: string) => void;
+  onMakePrimary?: (personId: string | null) => void;
 }
 
 export function CompanyContactsPanel({
@@ -436,8 +443,9 @@ export function CompanyContactsPanel({
 
   const handleTogglePrimary = (c: ProjectContact) => {
     if (onMakePrimary) {
-      // Modo CRM/Deal: não mexe no flag da empresa, só notifica o pai.
-      onMakePrimary(c.person_id);
+      // Modo CRM/Deal: alterna entre setar como principal ou limpar.
+      const isCurrent = c.person_id === primaryContactPersonId;
+      onMakePrimary(isCurrent ? null : c.person_id);
       return;
     }
     if (c.is_primary_contact) return;
@@ -543,9 +551,25 @@ export function CompanyContactsPanel({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate text-sm font-medium text-foreground">{c.full_name}</span>
                     {primary && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleTogglePrimary(c); }}
+                        title="Clique para remover como principal"
+                        className="inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent transition-colors hover:bg-accent/20"
+                      >
                         <Star className="h-2.5 w-2.5 fill-current" /> Principal
-                      </span>
+                      </button>
+                    )}
+                    {!primary && onMakePrimary && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleTogglePrimary(c); }}
+                        title="Definir como principal"
+                        aria-label="Definir como principal"
+                        className="inline-flex items-center gap-1 rounded-md border border-transparent px-1 py-0.5 text-[10px] text-muted-foreground opacity-0 transition-all hover:border-accent/30 hover:bg-accent/10 hover:text-accent group-hover/contact:opacity-100"
+                      >
+                        <Star className="h-3 w-3" />
+                      </button>
                     )}
                     {c.role_in_company && (
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">

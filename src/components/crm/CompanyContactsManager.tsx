@@ -7,7 +7,7 @@ import { CompanyContactsPanel } from "@/components/shared/CompanyContactsPanel";
 interface Props {
   companyId: string;
   primaryContactId: string | null;
-  onMakePrimary?: (personId: string) => void;
+  onMakePrimary?: (personId: string | null) => void;
 }
 
 export function CompanyContactsManager({ companyId, primaryContactId, onMakePrimary }: Props) {
