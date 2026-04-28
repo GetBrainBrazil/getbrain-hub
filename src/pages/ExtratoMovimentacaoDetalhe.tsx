@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 import { supabase } from "@/integrations/supabase/client";
 import { getHierarchicalOptions } from "@/lib/categorias-hierarchy";
 import CategoryPicker from "@/components/CategoryPicker";

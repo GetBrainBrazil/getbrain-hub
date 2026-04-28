@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 import { PreviewParcelas } from "./PreviewParcelas";
 import { FREQ_LABEL, type Frequency } from "@/lib/recorrencias/preview";
 import { z } from "zod";
