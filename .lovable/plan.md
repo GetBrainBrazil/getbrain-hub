@@ -1,88 +1,57 @@
-# Botões contextuais + Origens cadastráveis + Configurações do CRM
+## O que muda
 
-## Problema
+A confusão acontece porque o pipeline só mostra `deals` (a tabela rica), mas o botão criava `leads` (tabela paralela invisível no funil). Vamos eliminar a barreira: o botão passa a criar **Deal** direto, e o card aparece imediatamente no pipeline.
 
-1. Botões "Novo Lead / Novo Deal" aparecem em todas as sub-abas, mesmo onde não fazem sentido (ex: Calendário, Dashboard).
-2. Campo **Origem** hoje é texto livre (`<Input list>` com datalist). Sem padrão, qualquer um digita "Instagram", "instagram", "IG" e vira bagunça.
-3. Não existe lugar para configurar as variáveis do CRM.
+A entidade `leads` continua existindo no banco (não vamos migrar ou apagar nada agora), mas o fluxo principal de captação passa a ser pelo Deal. Você ainda pode usar a aba "Leads & Empresas" para gerenciar os leads existentes.
 
-## Solução
+## Fluxo novo
 
-### 1. Botões contextuais por aba (`src/pages/crm/CrmLayout.tsx`)
+1. Você clica **"+ Deal"** (botão renomeado, posicionado abaixo dos KPIs, com destaque visual).
+2. Abre um diálogo enxuto: só **Empresa** (busca/cria inline com Enter, igual ao que já fizemos).
+3. Confirma → cria o Deal na coluna **"Reunião Agendada"** (primeira do pipeline atual) com título placeholder `"Novo deal — {Empresa}"` e probabilidade 20%.
+4. Navega imediatamente para a ficha do Deal (`/crm/deals/{code}`), onde tudo é editável inline (título, valor, contato, owner, escopo, dependências, próximas ações etc.).
+5. O card já está visível no Kanban quando você voltar.
 
-Mostrar botões só onde fazem sentido:
+## Mudanças de UI
 
-| Aba | Novo Lead | Novo Deal |
-|---|---|---|
-| Pipeline | sim | sim |
-| Leads & Empresas | sim | não |
-| Dashboard | não | não |
-| Calendário | não | não |
-| Configurações (nova) | não | não |
+- **Botão "+ Lead" no header → vira "+ Deal"** e some do header global do CRM.
+- **Novo botão "+ Novo Deal" abaixo dos KPIs do Pipeline**, com destaque (cor accent, ícone, tamanho `default`). Posicionado na toolbar de filtros, alinhado à direita, antes do toggle Lista/Kanban — assim fica perto do conteúdo e óbvio que cria um card.
+- **Botões "+" das colunas** continuam funcionando, mas agora criam Deal naquela coluna específica (não mais Lead).
+- **Botão "+ Novo deal" do estado vazio** das colunas: idem.
+- Na aba **"Leads & Empresas"**: o botão "+ Lead" continua existindo (lá ainda faz sentido capturar lead "puro" sem virar deal). Quem quiser converter, usa o fluxo atual de conversão lead→deal.
 
-Lógica: dois booleans derivados de `currentTab`, controlam render dos botões.
+## Mudanças técnicas
 
-### 2. Tabela de origens gerenciáveis (nova `crm_lead_sources`)
+- Novo componente `NewDealQuickDialog.tsx` (mini-modal só com Empresa + criar inline, reutilizando `ComboboxCreate`). Recebe opcionalmente `initialStage` para os botões "+" das colunas.
+- Usa o hook `useCreateDeal` existente (que já está pronto).
+- `CrmPipeline.tsx`: substitui `NewLeadDialog` por `NewDealQuickDialog`. Move o botão "+ Novo Deal" para dentro da toolbar de filtros do pipeline (mais perto dos KPIs/colunas). Após criar, navega para `/crm/deals/{code}`.
+- `CrmLayout.tsx`: remove o botão "+ Lead" do header quando a aba ativa é `pipeline`. Mantém na aba `leads`.
+- `NewLeadDialog` permanece intacto para a aba "Leads & Empresas".
 
-```sql
-create table public.crm_lead_sources (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,           -- ex: "Instagram", "Indicação", "LinkedIn"
-  slug text not null unique,    -- normalizado: "instagram"
-  icon text,                    -- nome de ícone lucide (opcional)
-  color text,                   -- hex/hsl para badge (opcional)
-  display_order int default 0,
-  is_active boolean default true,
-  is_system boolean default false, -- presets não deletáveis
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
+## Layout do botão (mockup ASCII)
+
+```text
+┌─ KPIs ─────────────────────────────────────────────┐
+│ Pipeline R$ 0  │ Forecast R$ 0  │ Ativos 0 │ Atras │
+└────────────────────────────────────────────────────┘
+┌─ Toolbar ──────────────────────────────────────────┐
+│ [Estágio] [Tipo]              [+ Novo Deal] [Lista│Kanban]
+└────────────────────────────────────────────────────┘
+┌─ Kanban ───────────────────────────────────────────┐
+│ Reunião Agendada │ Reunião Realizada │ ... │
+│ ┌──────────────┐ │                          │
+│ │ Card recém   │ │                          │
+│ │ criado aqui  │ │                          │
+│ └──────────────┘ │                          │
 ```
 
-- RLS: SELECT autenticado; INSERT/UPDATE/DELETE só admin (via `has_role`).
-- Trigger `updated_at`.
-- Seed de presets (`is_system=true`, deletes bloqueados via trigger):
-  - Instagram, LinkedIn, Indicação, Site/Formulário, WhatsApp, E-mail, Evento, Google Ads, Outbound (cold), Parceria.
-- Campo `leads.source` continua `text` (sem FK rígida) — guarda o `slug`. Migração soft: leads antigos mantêm string atual; UI passa a usar select.
+## Sobre adicionar coluna "Novo"
 
-### 3. Origem como Select em todos os pontos
+Não vou adicionar agora — você pediu para liberar a criação primeiro e depois avaliar. Os cards novos vão para "Reunião Agendada" (atual primeira coluna). Depois que você criar alguns e ver o funil rodando, decidimos se faz sentido adicionar uma coluna "Novo" antes.
 
-- `NewLeadDialog.tsx`: trocar `<Input list="crm-sources">` por `<Select>` populado por novo hook `useCrmLeadSources()` (só ativos). Última opção: "+ Nova origem" abre mini-form inline (apenas para admins).
-- `CrmLeadDetail.tsx` (aside): mesmo `<Select>` no lugar do `<Input>`.
-- Hook antigo `useDistinctLeadSources` continua existindo para os filtros (que ainda derivam de leads existentes), mas internamente passa a ler de `crm_lead_sources` (ativas) para garantir consistência.
+## Arquivos afetados
 
-### 4. Novo sub-módulo: Configurações do CRM
-
-- Rota: `/crm/configuracoes` (nova aba no `CrmLayout`).
-- Arquivo: `src/pages/crm/CrmSettings.tsx`.
-- Layout com Tabs internas (`usePersistedState` para a aba ativa):
-  - **Origens de leads** — CRUD (lista + drawer de edição). Reordenar (display_order via drag handle simples ou setas), ativar/desativar, criar nova, editar nome/cor/ícone. Presets `is_system=true` não podem ser deletados (só desativados).
-  - **(placeholders prontos para crescer)**: "Status / etapas", "Motivos de descarte", "Tags" — exibidos como cards "em breve" para deixar claro o caminho de evolução, sem implementar agora.
-- Acesso: apenas usuários com permissão de admin/CRM-admin (usar `has_role` ou checagem existente do projeto). Usuários sem permissão veem mensagem "Sem permissão".
-
-### 5. Cache & integrações
-
-- Após qualquer mutação em `crm_lead_sources`: invalidar `['crm-lead-sources']` e `['crm-leads']` (cor/label do badge muda).
-- Sem impacto em Pipeline / Dashboard / Deals — origem continua sendo string no `leads.source`.
-
-## Arquivos novos
-
-- `supabase/migrations/<timestamp>_crm_lead_sources.sql`
-- `src/pages/crm/CrmSettings.tsx`
-- `src/components/crm/settings/LeadSourcesManager.tsx`
-- `src/hooks/crm/useCrmLeadSources.ts` (list + create + update + delete + reorder)
-
-## Arquivos editados
-
-- `src/App.tsx` — rota `configuracoes`
-- `src/pages/crm/CrmLayout.tsx` — botões contextuais + nova tab "Configurações"
-- `src/components/crm/NewLeadDialog.tsx` — Select de origem
-- `src/pages/crm/CrmLeadDetail.tsx` — Select de origem
-- `src/hooks/crm/useCrmReference.ts` — `useDistinctLeadSources` lê da nova tabela
-
-## Garantias
-
-- Zero quebra: leads antigos com origem string livre continuam exibindo o valor; só novos cadastros usam o select.
-- Filtros do Pipeline (`Origem`) continuam funcionando.
-- Mobile: gestão de origens em sheet/drawer (regra de responsividade do projeto).
-- Confirmações via `useConfirm()`, notificações via `toast` (sonner).
+- **Criar**: `src/components/crm/NewDealQuickDialog.tsx`
+- **Editar**: `src/pages/crm/CrmPipeline.tsx` (trocar dialog, mover botão para toolbar)
+- **Editar**: `src/pages/crm/CrmLayout.tsx` (remover botão do header na aba pipeline)
+- Sem migration de banco. Sem impacto em leads existentes.
