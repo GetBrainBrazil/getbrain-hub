@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,8 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MultiFilter } from '@/components/crm/CrmFilters';
 import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { useCrmMetrics } from '@/hooks/crm/useCrmMetrics';
 import { useAllLeads, useUpdateLeadField } from '@/hooks/crm/useCrmDetails';
+import { useBulkDeleteLeads } from '@/hooks/crm/useLeads';
 import { useCrmHubStore } from '@/hooks/useCrmHubStore';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { formatCurrency } from '@/lib/formatters';
