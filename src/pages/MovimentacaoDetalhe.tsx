@@ -608,7 +608,7 @@ export default function MovimentacaoDetalhe() {
     );
     setOpenBaixa(false);
     invalidateFinanceCaches(qc, { projectId: mov.projeto_id || null });
-    void load();
+    navigate(backUrl);
   }
 
   async function handleReabrir() {
