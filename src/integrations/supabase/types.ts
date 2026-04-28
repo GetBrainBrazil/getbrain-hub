@@ -3843,6 +3843,44 @@ export type Database = {
       }
     }
     Views: {
+      crm_dashboard_metrics: {
+        Row: {
+          atividades_proximos_7d: number | null
+          deals_abertos_total: number | null
+          deals_parados_7d: number | null
+          fechados_30d: number | null
+          ganhos_30d: number | null
+          ganhos_30d_anterior: number | null
+          organization_id: string | null
+          pipeline_value_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_dashboard_sparklines: {
+        Row: {
+          deals_parados: number | null
+          dia: string | null
+          organization_id: string | null
+          pipeline_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_funnel_metrics: {
         Row: {
           avg_deal_cycle_days: number | null
@@ -3873,6 +3911,24 @@ export type Database = {
           revenue_won_90d: number | null
         }
         Relationships: []
+      }
+      crm_pipeline_by_stage: {
+        Row: {
+          avg_days_in_stage: number | null
+          deals_count: number | null
+          organization_id: string | null
+          stage: Database["public"]["Enums"]["deal_stage"] | null
+          stage_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_pipeline_metrics: {
         Row: {
