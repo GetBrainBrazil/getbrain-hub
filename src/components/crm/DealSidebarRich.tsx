@@ -122,38 +122,50 @@ export function DealSidebarRich({ deal }: Props) {
       {/* Navegação por zonas */}
       <div className="rounded-lg border border-border bg-card/30 p-4">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Navegação</h3>
-        <nav className="space-y-1">
-          {ZONES.map((z) => (
-            <a
-              key={z.id}
-              href={`#${z.id}`}
-              className={cn(
-                'flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm transition-colors',
-                z.loop ? 'text-muted-foreground hover:bg-muted/20' : 'text-foreground hover:bg-muted/40',
-              )}
-            >
-              <span className="flex items-center gap-2">
-                <span className="font-mono text-[10px] text-muted-foreground">0{z.n}</span>
-                {z.label}
-              </span>
-              {z.loop && (
-                <span className="rounded bg-muted/40 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
-                  {z.loop}
-                </span>
-              )}
-            </a>
-          ))}
-        </nav>
+        <TooltipProvider delayDuration={300}>
+          <nav className="space-y-1">
+            {ZONES.map((z) => (
+              <Tooltip key={z.id}>
+                <TooltipTrigger asChild>
+                  <a
+                    href={`#${z.id}`}
+                    className={cn(
+                      'group flex items-center justify-between rounded-md border-l-2 border-transparent px-2.5 py-1.5 text-sm transition-all',
+                      z.loop
+                        ? 'text-muted-foreground hover:border-accent hover:bg-accent/10 hover:text-foreground'
+                        : 'text-foreground hover:border-accent hover:bg-accent/15',
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] text-muted-foreground transition-colors group-hover:text-accent">
+                        0{z.n}
+                      </span>
+                      {z.label}
+                    </span>
+                    {z.loop && (
+                      <span className="rounded bg-muted/40 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
+                        {z.loop}
+                      </span>
+                    )}
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[240px] text-xs">
+                  {z.hint}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </nav>
+        </TooltipProvider>
       </div>
 
-      {/* Owner editável */}
+      {/* Responsável editável */}
       <div className="rounded-lg border border-border bg-card/30 p-4">
         <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <UserCircle2 className="h-3.5 w-3.5" /> Owner
+          <UserCircle2 className="h-3.5 w-3.5" /> Responsável
         </h3>
         <Select value={deal.owner_actor_id ?? '__none'} onValueChange={setOwner}>
           <SelectTrigger className="bg-background/60">
-            <SelectValue placeholder="Sem owner">
+            <SelectValue placeholder="Sem responsável">
               {deal.owner ? (
                 <span className="flex items-center gap-2">
                   <Avatar className="h-5 w-5">
@@ -168,7 +180,7 @@ export function DealSidebarRich({ deal }: Props) {
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none">— sem owner —</SelectItem>
+            <SelectItem value="__none">— sem responsável —</SelectItem>
             {(actors ?? []).map((a) => (
               <SelectItem key={a.id} value={a.id}>{a.display_name}</SelectItem>
             ))}
