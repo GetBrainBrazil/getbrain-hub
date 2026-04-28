@@ -16,6 +16,12 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -80,12 +86,22 @@ const navItems: NavItem[] = [
   },
 ];
 
-const itemClasses = (active: boolean) =>
+// Row used both expanded and collapsed. When collapsed: centered icon only.
+const itemClasses = (active: boolean, collapsed: boolean) =>
   cn(
-    "w-full flex items-center gap-3 px-3 py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-md text-sm font-medium transition-colors border-l-2",
+    "w-full flex items-center rounded-lg text-sm font-medium transition-colors border-l-2",
+    "min-h-11",
+    collapsed
+      ? "justify-center px-0 py-2.5 border-transparent"
+      : "gap-3 px-3 py-2.5 border-l-2",
     active
-      ? "bg-sidebar-accent text-accent border-accent"
-      : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+      ? collapsed
+        ? "bg-sidebar-accent text-accent"
+        : "bg-sidebar-accent text-accent border-accent"
+      : cn(
+          "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+          collapsed ? "" : "border-transparent"
+        )
   );
 
 export function AppSidebar() {
@@ -94,20 +110,17 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Match by prefix with path-boundary (avoids /foo matching /foobar).
   const isPathInside = (url: string) => {
     const path = location.pathname;
     if (path === url) return true;
     return path.startsWith(url + "/");
   };
 
-  // Exact match used only for leaf items like Dashboard.
   const isExactActive = (url: string) =>
     url === "/dashboard"
       ? location.pathname === "/dashboard" || location.pathname === "/"
       : location.pathname === url;
 
-  // Pick most specific child (longest url that is prefix of pathname).
   const getActiveChild = (item: NavItem) => {
     if (!item.children) return undefined;
     const matches = item.children.filter((c) => isPathInside(c.url));
@@ -136,90 +149,130 @@ export function AppSidebar() {
     setOpenMap(next);
   }, [location.pathname]);
 
+  // Wrap row in tooltip when collapsed for discoverability
+  const withTooltip = (label: string, node: React.ReactNode) => {
+    if (!collapsed) return node;
+    return (
+      <Tooltip delayDuration={150}>
+        <TooltipTrigger asChild>{node as any}</TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8} className="font-medium">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
+
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader className="p-4">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border/40">
+      <SidebarHeader className={cn("px-3 pt-4 pb-2", collapsed && "px-0 flex items-center justify-center")}>
         <div className="flex items-center gap-2">
-          <img src={logo} alt="GetBrain" className={collapsed ? "h-6" : "h-8"} />
+          <img
+            src={logo}
+            alt="GetBrain"
+            className={collapsed ? "h-7" : "h-8"}
+          />
         </div>
       </SidebarHeader>
-      <SidebarContent>
-        <nav className="px-2 space-y-1">
-          {navItems.map((item) => {
-            const hasChildren = !!item.children?.length;
-            const open = openMap[item.title] ?? false;
+      <SidebarContent className={cn("pt-2", collapsed ? "px-1" : "px-2")}>
+        <TooltipProvider disableHoverableContent>
+          <nav className="space-y-1.5">
+            {navItems.map((item) => {
+              const hasChildren = !!item.children?.length;
+              const open = openMap[item.title] ?? false;
 
-            // Item without children: simple NavLink (active when inside its url).
-            if (!hasChildren) {
-              const active =
-                item.url === "/dashboard" ? isExactActive(item.url) : isPathInside(item.url);
+              // Leaf
+              if (!hasChildren) {
+                const active =
+                  item.url === "/dashboard"
+                    ? isExactActive(item.url)
+                    : isPathInside(item.url);
+                const node = (
+                  <NavLink
+                    key={item.title}
+                    to={item.url}
+                    end={item.url === "/"}
+                    className={itemClasses(active, collapsed)}
+                    aria-label={item.title}
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {!collapsed && (
+                      <span className="truncate">{item.title}</span>
+                    )}
+                  </NavLink>
+                );
+                return (
+                  <div key={item.title}>{withTooltip(item.title, node)}</div>
+                );
+              }
+
+              // Parent w/ children
+              const activeChild = getActiveChild(item);
+              const parentActive = isGroupOpen(item);
+
+              // Collapsed: render as a simple icon button that navigates to item.url
+              if (collapsed) {
+                const node = (
+                  <button
+                    type="button"
+                    onClick={() => navigate(item.url)}
+                    className={itemClasses(parentActive, true)}
+                    aria-label={item.title}
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  </button>
+                );
+                return (
+                  <div key={item.title}>{withTooltip(item.title, node)}</div>
+                );
+              }
+
+              // Expanded: parent row + collapsible children
               return (
-                <NavLink
+                <Collapsible
                   key={item.title}
-                  to={item.url}
-                  end={item.url === "/"}
-                  className={itemClasses(active)}
+                  open={open}
+                  onOpenChange={(v) =>
+                    setOpenMap((m) => ({ ...m, [item.title]: v }))
+                  }
                 >
-                  <item.icon className="h-[18px] w-[18px] shrink-0" />
-                  {!collapsed && <span className="truncate">{item.title}</span>}
-                </NavLink>
-              );
-            }
-
-            // Item with children: parent navigates to first child / item.url, chevron toggles
-            const activeChild = getActiveChild(item);
-            const parentActive = isGroupOpen(item);
-
-            return (
-              <Collapsible
-                key={item.title}
-                open={collapsed ? false : open}
-                onOpenChange={(v) =>
-                  setOpenMap((m) => ({ ...m, [item.title]: v }))
-                }
-              >
-                <div className={cn(itemClasses(parentActive), "pr-1 cursor-pointer")}
-                  onClick={() => {
-                    navigate(item.url);
-                    if (!collapsed) setOpenMap((m) => ({ ...m, [item.title]: true }));
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
+                  <div
+                    className={cn(itemClasses(parentActive, false), "pr-1 cursor-pointer")}
+                    onClick={() => {
                       navigate(item.url);
-                      if (!collapsed) setOpenMap((m) => ({ ...m, [item.title]: true }));
-                    }
-                  }}
-                >
-                  <item.icon className="h-[18px] w-[18px] shrink-0" />
-                  {!collapsed && (
-                    <>
-                      <span className="truncate flex-1">{item.title}</span>
-                      <button
-                        type="button"
-                        aria-label={open ? "Recolher" : "Expandir"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMap((m) => ({ ...m, [item.title]: !open }));
-                        }}
-                        className="p-1 rounded hover:bg-sidebar-accent/60 opacity-60 hover:opacity-100 transition"
-                      >
-                        <ChevronDown
-                          className={cn(
-                            "h-4 w-4 transition-transform duration-200",
-                            open ? "" : "-rotate-90"
-                          )}
-                        />
-                      </button>
-                    </>
-                  )}
-                </div>
+                      setOpenMap((m) => ({ ...m, [item.title]: true }));
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigate(item.url);
+                        setOpenMap((m) => ({ ...m, [item.title]: true }));
+                      }
+                    }}
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    <span className="truncate flex-1">{item.title}</span>
+                    <button
+                      type="button"
+                      aria-label={open ? "Recolher" : "Expandir"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMap((m) => ({ ...m, [item.title]: !open }));
+                      }}
+                      className="p-1 rounded hover:bg-sidebar-accent/60 opacity-60 hover:opacity-100 transition"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform duration-200",
+                          open ? "" : "-rotate-90"
+                        )}
+                      />
+                    </button>
+                  </div>
 
-                {!collapsed && (
                   <CollapsibleContent>
-                    <div className="mt-1 ml-[1.6rem] pl-3 border-l border-sidebar-border/40 space-y-0.5">
+                    <div className="mt-1 mb-1 ml-[1.6rem] pl-3 border-l border-sidebar-border/40 space-y-0.5">
                       {item.children!.map((sub) => {
                         const subActive = activeChild?.url === sub.url;
                         return (
@@ -228,7 +281,7 @@ export function AppSidebar() {
                             to={sub.url}
                             end
                             className={cn(
-                              "block px-3 py-2 md:py-1.5 min-h-10 md:min-h-0 rounded-md text-sm transition-colors flex items-center",
+                              "block px-3 py-2 min-h-9 rounded-md text-sm transition-colors flex items-center",
                               subActive
                                 ? "text-accent font-medium bg-sidebar-accent/40"
                                 : "text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-accent/30"
@@ -240,11 +293,11 @@ export function AppSidebar() {
                       })}
                     </div>
                   </CollapsibleContent>
-                )}
-              </Collapsible>
-            );
-          })}
-        </nav>
+                </Collapsible>
+              );
+            })}
+          </nav>
+        </TooltipProvider>
       </SidebarContent>
     </Sidebar>
   );
