@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Star, X, UserPlus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Plus, Star, X, UserPlus, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
-import { CONTACT_ROLE_LABEL } from '@/constants/dealEnumLabels';
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from '@/components/ui/command';
 import {
   useCompanyContactsWithRoles,
   useCreateContactForCompany,
@@ -19,18 +21,8 @@ import {
 import {
   useAddContactRole, useRemoveContactRole,
 } from '@/hooks/crm/useCompanyContactRoles';
+import { useCrmContactRoles, useCreateContactRole } from '@/hooks/crm/useCrmContactRoles';
 import { cn } from '@/lib/utils';
-import type { ContactRole } from '@/types/crm';
-
-const ROLE_TONE: Record<ContactRole, string> = {
-  decisor: 'bg-success/15 text-success border-success/30',
-  usuario_final: 'bg-accent/15 text-accent border-accent/30',
-  tecnico: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
-  financeiro: 'bg-warning/15 text-warning border-warning/30',
-  outro: 'bg-muted/40 text-muted-foreground border-border',
-};
-
-const ALL_ROLES: ContactRole[] = ['decisor', 'usuario_final', 'tecnico', 'financeiro', 'outro'];
 
 interface Props {
   companyId: string;
@@ -38,11 +30,24 @@ interface Props {
   onMakePrimary?: (personId: string) => void;
 }
 
+const FALLBACK_COLOR = '#94A3B8';
+
+function badgeStyle(color?: string | null): React.CSSProperties {
+  const c = color || FALLBACK_COLOR;
+  return {
+    backgroundColor: `${c}26`, // ~15% alpha
+    color: c,
+    borderColor: `${c}4D`,     // ~30% alpha
+  };
+}
+
 export function CompanyContactsManager({ companyId, primaryContactId, onMakePrimary }: Props) {
   const { data: contacts, isLoading } = useCompanyContactsWithRoles(companyId);
+  const { data: catalog = [] } = useCrmContactRoles({ onlyActive: true });
   const createContact = useCreateContactForCompany();
   const addRole = useAddContactRole();
   const removeRole = useRemoveContactRole();
+  const createRole = useCreateContactRole();
   const [openNew, setOpenNew] = useState(false);
 
   if (isLoading) {
@@ -66,8 +71,8 @@ export function CompanyContactsManager({ companyId, primaryContactId, onMakePrim
         <ul className="space-y-1.5">
           {list.map((c) => {
             const isPrimary = c.person.id === primaryContactId;
-            const usedRoles = new Set(c.roles.map((r) => r.role));
-            const availableRoles = ALL_ROLES.filter((r) => !usedRoles.has(r));
+            const usedRoleIds = new Set(c.roles.map((r) => r.role_id));
+            const availableRoles = catalog.filter((r) => !usedRoleIds.has(r.id));
             return (
               <li
                 key={c.link_id}
@@ -107,54 +112,57 @@ export function CompanyContactsManager({ companyId, primaryContactId, onMakePrim
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1">
-                  {c.roles.map((r) => (
-                    <Badge
-                      key={r.id}
-                      variant="outline"
-                      className={cn('h-5 gap-1 px-1.5 text-[10px] font-medium', ROLE_TONE[r.role])}
-                    >
-                      {CONTACT_ROLE_LABEL[r.role]}
-                      <button
-                        type="button"
-                        aria-label={`Remover papel ${CONTACT_ROLE_LABEL[r.role]}`}
-                        onClick={() =>
-                          removeRole.mutate(
-                            { id: r.id, company_person_id: c.link_id },
-                            { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ''}`) },
-                          )
-                        }
-                        className="hover:opacity-70"
+                  {c.roles.map((r) => {
+                    const label = r.role_ref?.name ?? r.role ?? 'Papel';
+                    const color = r.role_ref?.color;
+                    return (
+                      <Badge
+                        key={r.id}
+                        variant="outline"
+                        className="h-5 gap-1 px-1.5 text-[10px] font-medium border"
+                        style={badgeStyle(color)}
                       >
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </Badge>
-                  ))}
-                  {availableRoles.length > 0 && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground">
-                          <Plus className="mr-0.5 h-2.5 w-2.5" /> papel
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-44 p-1" align="end">
-                        {availableRoles.map((r) => (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() =>
-                              addRole.mutate(
-                                { company_person_id: c.link_id, role: r },
-                                { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ''}`) },
-                              )
-                            }
-                            className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-muted/50"
-                          >
-                            {CONTACT_ROLE_LABEL[r]}
-                          </button>
-                        ))}
-                      </PopoverContent>
-                    </Popover>
-                  )}
+                        {label}
+                        <button
+                          type="button"
+                          aria-label={`Remover papel ${label}`}
+                          onClick={() =>
+                            removeRole.mutate(
+                              { id: r.id, company_person_id: c.link_id },
+                              { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ''}`) },
+                            )
+                          }
+                          className="hover:opacity-70"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+
+                  <RolePicker
+                    available={availableRoles}
+                    onPick={(roleId) =>
+                      addRole.mutate(
+                        { company_person_id: c.link_id, role_id: roleId },
+                        { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ''}`) },
+                      )
+                    }
+                    onCreate={(name) =>
+                      createRole.mutate(
+                        { name, color: FALLBACK_COLOR },
+                        {
+                          onSuccess: (created) => {
+                            addRole.mutate(
+                              { company_person_id: c.link_id, role_id: created.id },
+                              { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ''}`) },
+                            );
+                            toast.success(`Papel "${created.name}" criado`);
+                          },
+                        },
+                      )
+                    }
+                  />
                 </div>
               </li>
             );
@@ -189,6 +197,79 @@ export function CompanyContactsManager({ companyId, primaryContactId, onMakePrim
         loading={createContact.isPending}
       />
     </div>
+  );
+}
+
+function RolePicker({
+  available, onPick, onCreate,
+}: {
+  available: { id: string; name: string; color: string | null }[];
+  onPick: (roleId: string) => void;
+  onCreate: (name: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const trimmed = query.trim();
+  const exact = useMemo(
+    () => available.find((r) => r.name.toLowerCase() === trimmed.toLowerCase()),
+    [available, trimmed],
+  );
+  const showCreate = trimmed.length > 0 && !exact;
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQuery(''); }}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground">
+          <Plus className="mr-0.5 h-2.5 w-2.5" /> papel
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="end">
+        <Command shouldFilter>
+          <CommandInput
+            placeholder="Buscar ou criar…"
+            value={query}
+            onValueChange={setQuery}
+            className="h-8"
+          />
+          <CommandList>
+            <CommandEmpty className="py-2 text-center text-[11px] text-muted-foreground">
+              {showCreate ? 'Pressione Enter para criar' : 'Nenhum papel disponível'}
+            </CommandEmpty>
+            {available.length > 0 && (
+              <CommandGroup>
+                {available.map((r) => (
+                  <CommandItem
+                    key={r.id}
+                    value={r.name}
+                    onSelect={() => { onPick(r.id); setOpen(false); setQuery(''); }}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full border border-border"
+                      style={{ background: r.color ?? FALLBACK_COLOR }}
+                    />
+                    <span className="flex-1 truncate">{r.name}</span>
+                    <Check className="h-3 w-3 opacity-0" />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {showCreate && (
+              <CommandGroup heading="Criar">
+                <CommandItem
+                  value={`__create__${trimmed}`}
+                  onSelect={() => { onCreate(trimmed); setOpen(false); setQuery(''); }}
+                  className="flex items-center gap-2 text-xs text-accent"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span className="truncate">Criar "{trimmed}"</span>
+                </CommandItem>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
