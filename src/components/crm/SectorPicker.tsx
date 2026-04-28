@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, ChevronDown, Plus, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSectors } from '@/hooks/crm/useSectors';
+import { useCreateSector, useSectors } from '@/hooks/crm/useSectors';
 import { cn } from '@/lib/utils';
 
 interface SectorPickerProps {
@@ -16,6 +17,7 @@ interface SectorPickerProps {
 
 export function SectorPicker({ value, onChange, placeholder = 'Selecione um setor' }: SectorPickerProps) {
   const { data: tree, isLoading } = useSectors();
+  const createSector = useCreateSector();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -37,6 +39,28 @@ export function SectorPicker({ value, onChange, placeholder = 'Selecione um seto
       s.label.toLowerCase().includes(q) || s.rootName.toLowerCase().includes(q),
     );
   }, [flat, query]);
+
+  const trimmedQuery = query.trim();
+  const exactMatch = trimmedQuery
+    ? flat.some((s) => s.label.toLowerCase() === trimmedQuery.toLowerCase())
+    : false;
+  const canCreate = trimmedQuery.length >= 2 && !exactMatch && !createSector.isPending;
+
+  const handleCreate = () => {
+    if (!canCreate) return;
+    createSector.mutate(
+      { name: trimmedQuery, parent_sector_id: null },
+      {
+        onSuccess: (sector) => {
+          toast.success(`Setor "${sector.name}" criado`);
+          onChange(sector.id);
+          setQuery('');
+          setOpen(false);
+        },
+        onError: (e: any) => toast.error(e?.message ?? 'Erro ao criar setor'),
+      },
+    );
+  };
 
   const current = flat.find((s) => s.id === value);
   const currentLabel = current
