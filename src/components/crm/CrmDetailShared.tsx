@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Check, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,7 +12,33 @@ import type { DealStage } from '@/types/crm';
 const PROGRESS_STAGES: DealStage[] = ['presencial_agendada', 'presencial_feita', 'orcamento_enviado', 'em_negociacao'];
 
 export function DetailShell({ children }: { children: React.ReactNode }) { return <div className="mx-auto max-w-[1600px] px-1 pb-12 animate-fade-in">{children}</div>; }
-export function DetailBreadcrumb({ items, closeTo }: { items: { label: string; to?: string }[]; closeTo: string }) { return <div className="mb-3 flex items-center justify-between"><nav className="flex items-center gap-1.5 text-xs text-muted-foreground">{items.map((item, i) => <span key={`${item.label}-${i}`} className="flex items-center gap-1.5">{i > 0 && <ChevronRight className="h-3 w-3" />}{item.to ? <Link to={item.to} className="hover:text-foreground">{item.label}</Link> : <span className="font-mono text-foreground">{item.label}</span>}</span>)}</nav><Button asChild variant="ghost" size="icon" className="h-8 w-8"><Link to={closeTo}><X className="h-4 w-4" /></Link></Button></div>; }
+export function DetailBreadcrumb({ items, closeTo }: { items: { label: string; to?: string }[]; closeTo: string }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 min-w-0">
+        <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 shrink-0">
+          <Link to={closeTo} aria-label="Voltar">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Voltar</span>
+          </Link>
+        </Button>
+        <nav className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 overflow-hidden">
+          {items.map((item, i) => (
+            <span key={`${item.label}-${i}`} className="flex items-center gap-1.5 min-w-0">
+              {i > 0 && <ChevronRight className="h-3 w-3 shrink-0" />}
+              {item.to
+                ? <Link to={item.to} className="hover:text-foreground truncate">{item.label}</Link>
+                : <span className="font-mono text-foreground truncate">{item.label}</span>}
+            </span>
+          ))}
+        </nav>
+      </div>
+      <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0" title="Fechar">
+        <Link to={closeTo} aria-label="Fechar"><X className="h-4 w-4" /></Link>
+      </Button>
+    </div>
+  );
+}
 
 export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?: (stage: DealStage) => void }) {
   const isClosed = stage === 'fechado_ganho' || stage === 'fechado_perdido';
