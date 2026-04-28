@@ -19,6 +19,7 @@ import { ZoneCliente } from '@/components/crm/ZoneCliente';
 import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
 import { PropostaTabContent } from '@/components/crm/proposta/PropostaTabContent';
+import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
   PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
@@ -477,6 +478,7 @@ export default function CrmDealDetail() {
   const tabFromUrl = searchParams.get('tab');
   const [persistedTab, setPersistedTab] = usePersistedState<string>('crm-deal-active-tab', 'descoberta');
   const activeTab = tabFromUrl ?? persistedTab;
+  const [wonDialogOpen, setWonDialogOpen] = useState(false);
 
   const handleTabChange = (next: string) => {
     setPersistedTab(next);
@@ -488,9 +490,9 @@ export default function CrmDealDetail() {
 
   const handleCloseRequest = (kind: 'won' | 'lost') => {
     if (kind === 'won') {
-      toast.info('Fechamento como ganho com preview de transferência pro projeto chega no Loop 3 (DealWonDialog).');
+      setWonDialogOpen(true);
     } else {
-      toast.info('Fechamento como perdido (com motivo) chega no Loop 3.');
+      toast.info('Fechamento como perdido (com motivo) chega no próximo loop.');
     }
   };
 
@@ -555,13 +557,19 @@ export default function CrmDealDetail() {
             </TabsContent>
 
             <TabsContent value="proposta" className="mt-0">
-              <PropostaTabContent deal={deal} />
+              <PropostaTabContent deal={deal} onRequestClose={() => setWonDialogOpen(true)} />
             </TabsContent>
           </Tabs>
         </main>
 
         <DealSidebarRich deal={deal} />
       </div>
+
+      <DealWonDialog
+        open={wonDialogOpen}
+        onOpenChange={setWonDialogOpen}
+        deal={deal}
+      />
     </DetailShell>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, FileText, Loader2, ExternalLink, Download, Send, Check, X, Pencil,
+  Plus, FileText, Loader2, ExternalLink, Download, Send, Check, X, Pencil, AlertTriangle, ArrowDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ const sb = supabase as any;
 
 interface Props {
   deal: Deal;
+  onRequestClose?: () => void;
 }
 
 interface ProposalRow {
@@ -44,13 +45,15 @@ interface ProposalRow {
 
 // ---------- Bloco 1: Proposta ----------
 
-function PropostaCard({ deal, proposal, onChanged }: {
+function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   deal: Deal;
   proposal: ProposalRow;
   onChanged: () => void;
+  onRequestClose?: () => void;
 }) {
   const navigate = useNavigate();
   const { confirm, dialog } = useConfirm();
+  const updateDeal = useUpdateDealField(deal.code);
   const [items, setItems] = useState<ScopeItem[]>(proposal.scope_items ?? []);
   const [maintenance, setMaintenance] = useState<string>(
     proposal.maintenance_monthly_value ? String(proposal.maintenance_monthly_value) : ''
@@ -67,6 +70,11 @@ function PropostaCard({ deal, proposal, onChanged }: {
   const total = calculateScopeTotal(items);
   const eff = effectiveStatus(proposal.status, validUntil);
   const monthlyNum = maintenance.trim() === '' ? null : Number(maintenance);
+
+  // Divergência de valor: total da proposta vs estimated_value do deal
+  const dealValue = Number(deal.estimated_value ?? 0);
+  const valueDiverges = total > 0 && dealValue > 0 && Math.abs(total - dealValue) > 0.01;
+  const noDealValue = total > 0 && dealValue === 0;
 
   async function persist(extra: Record<string, any> = {}) {
     setSaving(true);
@@ -107,6 +115,15 @@ function PropostaCard({ deal, proposal, onChanged }: {
   async function handleAccept() {
     await persist({ status: 'aceito', accepted_at: new Date().toISOString() });
     toast.success('Proposta aceita');
+    // Oferece fechar o deal como ganho na sequência
+    if (onRequestClose && deal.stage !== 'fechado_ganho' && deal.stage !== 'fechado_perdido') {
+      const ok = await confirm({
+        title: 'Fechar o deal como ganho?',
+        description: 'A proposta foi aceita. Você quer fechar o deal agora — criando o projeto e gerando as parcelas financeiras?',
+        confirmLabel: 'Sim, fechar agora',
+      });
+      if (ok) onRequestClose();
+    }
   }
 
   async function handleReject() {
@@ -119,6 +136,33 @@ function PropostaCard({ deal, proposal, onChanged }: {
     if (!ok) return;
     await persist({ status: 'recusado', rejected_at: new Date().toISOString() });
     toast.success('Proposta recusada');
+  }
+
+  async function handleSyncValue() {
+    if (total <= 0) return;
+    updateDeal.mutate(
+      { id: deal.id, updates: { estimated_value: total } },
+      {
+        onSuccess: () => toast.success(`Valor do deal atualizado pra ${formatBRL(total)}`),
+        onError: (e: any) => toast.error(`Erro: ${e?.message ?? 'tente novamente'}`),
+      },
+    );
+  }
+
+  function handleImportFromDiscovery() {
+    const deliverables = deal.deliverables ?? [];
+    if (deliverables.length === 0) {
+      toast.error('Nenhum entregável na descoberta. Liste os entregáveis na aba Descoberta primeiro.');
+      return;
+    }
+    const imported: ScopeItem[] = deliverables.map((d) => ({
+      id: Math.random().toString(36).slice(2, 10),
+      title: d,
+      value: 0,
+    } as ScopeItem));
+    // Preserva os itens já existentes (evita perda acidental)
+    setItems((prev) => [...prev, ...imported]);
+    toast.success(`${imported.length} item(ns) importado(s) da descoberta — ajuste os valores e salve`);
   }
 
   return (
@@ -142,12 +186,40 @@ function PropostaCard({ deal, proposal, onChanged }: {
         </div>
       </div>
 
+      {/* Aviso de divergência de valor com deal */}
+      {(valueDiverges || noDealValue) && (
+        <div className="border-b border-border/60 bg-warning/5 px-4 py-2.5 text-xs flex flex-wrap items-center gap-3">
+          <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
+          <span className="flex-1 min-w-[200px]">
+            {noDealValue
+              ? <>O deal está sem valor estimado. A proposta soma <strong className="font-mono">{formatBRL(total)}</strong>.</>
+              : <>Divergência: deal estima <strong className="font-mono">{formatBRL(dealValue)}</strong> · proposta soma <strong className="font-mono">{formatBRL(total)}</strong>.</>}
+            <span className="text-muted-foreground"> O dashboard CRM usa o valor do deal pra forecast.</span>
+          </span>
+          <Button size="sm" variant="outline" onClick={handleSyncValue} disabled={updateDeal.isPending}>
+            <ArrowDown className="h-3.5 w-3.5" /> Sincronizar valor do deal
+          </Button>
+        </div>
+      )}
+
       {/* Edição inline */}
       <div className="space-y-4 p-4">
         <div>
-          <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Itens da proposta
-          </Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Itens da proposta
+            </Label>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[11px]"
+              onClick={handleImportFromDiscovery}
+              title="Importa cada entregável da Descoberta como item de escopo (com valor zero)"
+            >
+              + Importar da descoberta ({deal.deliverables?.length ?? 0})
+            </Button>
+          </div>
           <div className="mt-2">
             <ScopeItemsEditor items={items} onChange={setItems} />
           </div>
@@ -236,7 +308,7 @@ function PropostaCard({ deal, proposal, onChanged }: {
   );
 }
 
-function PropostaBlock({ deal }: { deal: Deal }) {
+function PropostaBlock({ deal, onRequestClose }: { deal: Deal; onRequestClose?: () => void }) {
   const navigate = useNavigate();
   const [rows, setRows] = useState<ProposalRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -313,7 +385,7 @@ function PropostaBlock({ deal }: { deal: Deal }) {
         </div>
       ) : (
         <div className="space-y-3">
-          <PropostaCard deal={deal} proposal={active} onChanged={load} />
+          <PropostaCard deal={deal} proposal={active} onChanged={load} onRequestClose={onRequestClose} />
 
           {previous.length > 0 && (
             <details className="rounded-lg border border-border bg-card/20">
@@ -444,10 +516,10 @@ function MockupBlock({ deal }: { deal: Deal }) {
 
 // ---------- Container ----------
 
-export function PropostaTabContent({ deal }: Props) {
+export function PropostaTabContent({ deal, onRequestClose }: Props) {
   return (
     <div className="space-y-8">
-      <PropostaBlock deal={deal} />
+      <PropostaBlock deal={deal} onRequestClose={onRequestClose} />
       <div className="border-t border-border/60" />
       <OrganogramaBlock deal={deal} />
       <div className="border-t border-border/60" />

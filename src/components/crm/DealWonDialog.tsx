@@ -1,450 +1,368 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addMonths, format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronRight, AlertTriangle, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PROJECT_TYPE_LABEL, PROJECT_TYPE_OPTIONS } from '@/constants/dealStages';
-import { PROJECT_TYPE_V2_LABEL, PAIN_CATEGORY_LABEL, ESTIMATION_CONFIDENCE_LABEL, COMPLEXITY_LABEL, DEPENDENCY_TYPE_LABEL } from '@/constants/dealEnumLabels';
-import { CLIENT_TYPE_LABEL } from '@/constants/companyEnumLabels';
-import { useCloseDealAsWon, useCompanyDetail } from '@/hooks/crm/useCrmDetails';
-import { useCrmActors } from '@/hooks/crm/useCrmReference';
-import { useCompanyContactsWithRoles } from '@/hooks/crm/useCompanyContacts';
-import { useDealDependencies } from '@/hooks/crm/useDealDependencies';
-import { useSectorsFlat } from '@/hooks/crm/useSectors';
-import { formatCurrency } from '@/lib/formatters';
-import { cn } from '@/lib/utils';
-import type { Deal, DealProjectType } from '@/types/crm';
+import { supabase } from '@/integrations/supabase/client';
+import { calculateScopeTotal, formatBRL, type ScopeItem } from '@/lib/orcamentos/calculateTotal';
+import { PROJECT_TYPE_OPTIONS, PROJECT_TYPE_LABEL } from '@/constants/dealStages';
+import type { Deal } from '@/types/crm';
 
-type Installment = { amount: number; due_date: string };
+const sb = supabase as any;
 
-function buildInstallments(total: number, count: number, firstDate: string): Installment[] {
-  const cents = Math.round(total * 100);
-  const safeCount = Math.max(1, count);
-  const base = Math.floor(cents / safeCount);
-  const remainder = cents - base * safeCount;
-  return Array.from({ length: safeCount }, (_, i) => ({
-    amount: (base + (i === safeCount - 1 ? remainder : 0)) / 100,
-    due_date: format(addMonths(new Date(`${firstDate}T12:00:00`), i), 'yyyy-MM-dd'),
-  }));
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  deal: Deal | null;
+  onSuccess?: (projectId: string) => void;
 }
 
-// Mapeia project_type_v2 (deals) → enum legacy project_type (projects)
-const PROJECT_TYPE_V2_TO_LEGACY: Record<DealProjectType, string> = {
-  whatsapp_chatbot: 'chatbot',
-  ai_sdr: 'chatbot',
-  sistema_gestao: 'sistema_personalizado',
-  automacao_processo: 'sistema_personalizado',
-  integracao_sistemas: 'sistema_personalizado',
-  outro: 'outro',
-};
-
-function truncate(s: string | null | undefined, max = 80): string {
-  if (!s) return '';
-  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+interface ProposalLite {
+  id: string;
+  code: string;
+  status: string;
+  scope_items: ScopeItem[];
+  maintenance_monthly_value: number | null;
 }
 
-function SectionRow({ label, value, ok }: { label: string; value: React.ReactNode; ok?: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-3 py-1.5 text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={cn('text-right font-medium', ok === false ? 'text-muted-foreground/70 italic' : 'text-foreground')}>{value}</span>
-    </div>
+interface InstallmentDraft {
+  id: string;
+  amount: string;
+  due_date: string;
+}
+
+function newId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function addMonths(date: Date, months: number) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+function fmtDateInput(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [acceptedProposal, setAcceptedProposal] = useState<ProposalLite | null>(null);
+  const [loadingProposal, setLoadingProposal] = useState(false);
+
+  const [projectName, setProjectName] = useState(deal?.title ?? '');
+  const [projectType, setProjectType] = useState<string>(deal?.project_type ?? '');
+  const [startDate, setStartDate] = useState<string>(
+    deal?.desired_start_date ?? fmtDateInput(new Date()),
   );
-}
+  const [estimatedDelivery, setEstimatedDelivery] = useState<string>(
+    deal?.desired_delivery_date ?? '',
+  );
+  const [installments, setInstallments] = useState<InstallmentDraft[]>([
+    { id: newId(), amount: '', due_date: fmtDateInput(addMonths(new Date(), 1)) },
+  ]);
+  const [submitting, setSubmitting] = useState(false);
 
-function CountValue({ n, label = 'itens', subtext }: { n: number; label?: string; subtext?: string }) {
-  if (n === 0) return <span className="text-muted-foreground/70 italic">vazio</span>;
-  return <span>{n} {label}{subtext ? ` ${subtext}` : ''}</span>;
-}
-
-export function DealWonDialog({ deal, open, onOpenChange, onSuccess }: { deal: Deal | null; open: boolean; onOpenChange: (v: boolean) => void; onSuccess: (projectId: string) => void }) {
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const firstDueDefault = format(addMonths(new Date(), 1), 'yyyy-MM-dd');
-
-  const [expanded, setExpanded] = useState(false);
-  const [name, setName] = useState('');
-  const [projectType, setProjectType] = useState<string>('sistema_personalizado');
-  const [startDate, setStartDate] = useState(today);
-  const [estimatedDelivery, setEstimatedDelivery] = useState<string>('');
-  const [owner, setOwner] = useState<string>('none');
-  const [total, setTotal] = useState('0');
-  const [count, setCount] = useState('1');
-  const [firstInstallmentDate, setFirstInstallmentDate] = useState(firstDueDefault);
-  const [custom, setCustom] = useState(false);
-  const [customRows, setCustomRows] = useState<Installment[]>([]);
-
-  const { data: actors = [] } = useCrmActors();
-  const { data: company } = useCompanyDetail(deal?.company_id);
-  const { data: contacts = [] } = useCompanyContactsWithRoles(deal?.company_id);
-  const { data: dependencies = [] } = useDealDependencies(deal?.id);
-  const { data: sectors = [] } = useSectorsFlat();
-  const closeWon = useCloseDealAsWon();
-
-  // Reset form sempre que abrir um novo deal
+  // Carrega proposta aceita (ou enviada mais recente) ao abrir
   useEffect(() => {
-    if (!deal || !open) return;
-    setExpanded(false);
-    setName(deal.title ?? '');
-    const mappedLegacy = deal.project_type_v2 ? PROJECT_TYPE_V2_TO_LEGACY[deal.project_type_v2] : (deal.project_type || 'sistema_personalizado');
-    setProjectType(mappedLegacy);
-    setStartDate(deal.desired_start_date || today);
-    setEstimatedDelivery(deal.desired_delivery_date || '');
-    setOwner(deal.owner_actor_id || 'none');
-    setTotal(String(deal.estimated_value ?? 0));
-    setCount('1');
-    setFirstInstallmentDate(firstDueDefault);
-    setCustom(false);
-    setCustomRows([]);
-  }, [deal?.id, open]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!open || !deal) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingProposal(true);
+      const { data } = await sb
+        .from('proposals')
+        .select('id, code, status, scope_items, maintenance_monthly_value')
+        .eq('deal_id', deal.id)
+        .is('deleted_at', null)
+        .in('status', ['aceito', 'enviado'])
+        .order('status', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (cancelled) return;
+      const row = (data ?? [])[0] ?? null;
+      setAcceptedProposal(row as ProposalLite | null);
+      setLoadingProposal(false);
+    })();
+    return () => { cancelled = true; };
+  }, [open, deal?.id]);
 
-  const sectorPath = useMemo(() => {
-    if (!company?.sector_id) return null;
-    const sector = sectors.find((s) => s.id === company.sector_id);
-    if (!sector) return null;
-    if (!sector.parent_sector_id) return sector.name;
-    const parent = sectors.find((s) => s.id === sector.parent_sector_id);
-    return parent ? `${parent.name} › ${sector.name}` : sector.name;
-  }, [company?.sector_id, sectors]);
-
-  const defaultRows = useMemo(
-    () => buildInstallments(Number(total || 0), Math.max(1, Number(count || 1)), firstInstallmentDate),
-    [total, count, firstInstallmentDate],
+  // Pré-preenche valor total das parcelas com valor da proposta (se houver)
+  const proposalTotal = useMemo(
+    () => (acceptedProposal ? calculateScopeTotal(acceptedProposal.scope_items ?? []) : 0),
+    [acceptedProposal],
   );
-  const rows = custom ? (customRows.length ? customRows : defaultRows) : defaultRows;
-  const rowsTotal = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-  const validParcelas = rows.length > 0 && rows.every((r) => Number(r.amount) > 0);
-  const validForm = !!deal && name.trim().length > 0 && owner !== 'none' && validParcelas;
-
-  // Diagnóstico de descoberta
-  const discoveryMissing: string[] = useMemo(() => {
-    if (!deal) return [];
-    const m: string[] = [];
-    if (!deal.pain_category) m.push('categoria de dor');
-    if (!deal.pain_description || deal.pain_description.length < 40) m.push('descrição da dor');
-    if (!deal.project_type_v2) m.push('tipo de projeto');
-    if (!deal.scope_summary || deal.scope_summary.length < 40) m.push('resumo do escopo');
-    if ((deal.deliverables?.length ?? 0) < 3 && (deal.acceptance_criteria?.length ?? 0) < 3) m.push('entregáveis/critérios');
-    return m;
-  }, [deal]);
-
-  const submit = () => {
-    if (!deal || !validForm) return;
-    closeWon.mutate(
+  useEffect(() => {
+    if (!open || !deal) return;
+    setProjectName(deal.title);
+    setProjectType(deal.project_type ?? '');
+    setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
+    setEstimatedDelivery(deal.desired_delivery_date ?? '');
+    const baseAmount = proposalTotal > 0 ? proposalTotal : Number(deal.estimated_value ?? 0);
+    setInstallments([
       {
-        dealId: deal.id,
-        projectData: {
-          name: name.trim(),
+        id: newId(),
+        amount: baseAmount > 0 ? String(baseAmount) : '',
+        due_date: fmtDateInput(addMonths(new Date(), 1)),
+      },
+    ]);
+  }, [open, deal?.id, proposalTotal]);
+
+  const totalInstallments = installments.reduce(
+    (sum, i) => sum + (Number(i.amount) || 0),
+    0,
+  );
+  const installmentsMatchProposal =
+    proposalTotal > 0 ? Math.abs(totalInstallments - proposalTotal) < 0.01 : true;
+
+  function addInstallment() {
+    const last = installments[installments.length - 1];
+    const lastDate = last?.due_date ? new Date(last.due_date) : new Date();
+    setInstallments((prev) => [
+      ...prev,
+      { id: newId(), amount: '', due_date: fmtDateInput(addMonths(lastDate, 1)) },
+    ]);
+  }
+
+  function removeInstallment(id: string) {
+    if (installments.length === 1) return;
+    setInstallments((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  function splitEvenly(n: number) {
+    const base = proposalTotal > 0 ? proposalTotal : Number(deal?.estimated_value ?? 0);
+    if (base <= 0) {
+      toast.error('Defina um valor de proposta ou estimativa do deal antes de dividir');
+      return;
+    }
+    const per = Math.round((base / n) * 100) / 100;
+    const remainder = Math.round((base - per * n) * 100) / 100;
+    const list: InstallmentDraft[] = [];
+    let baseDate = new Date();
+    for (let i = 0; i < n; i++) {
+      const amount = i === 0 ? per + remainder : per;
+      baseDate = addMonths(baseDate, 1);
+      list.push({ id: newId(), amount: String(amount), due_date: fmtDateInput(baseDate) });
+    }
+    setInstallments(list);
+  }
+
+  async function handleConfirm() {
+    if (!deal) return;
+    if (!projectName.trim()) {
+      toast.error('Informe o nome do projeto');
+      return;
+    }
+    if (!projectType) {
+      toast.error('Selecione o tipo de projeto');
+      return;
+    }
+    const cleaned = installments
+      .map((i) => ({ amount: Number(i.amount) || 0, due_date: i.due_date }))
+      .filter((i) => i.amount > 0 && i.due_date);
+    if (cleaned.length === 0) {
+      toast.error('Adicione ao menos uma parcela válida');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Se há proposta enviada e ainda não aceita, marca como aceita
+      if (acceptedProposal && acceptedProposal.status === 'enviado') {
+        await sb
+          .from('proposals')
+          .update({ status: 'aceito', accepted_at: new Date().toISOString() })
+          .eq('id', acceptedProposal.id);
+      }
+
+      const { data, error } = await sb.rpc('close_deal_as_won', {
+        p_deal_id: deal.id,
+        p_project_data: {
+          name: projectName.trim(),
           project_type: projectType,
-          start_date: startDate,
+          start_date: startDate || null,
           estimated_delivery_date: estimatedDelivery || null,
-          owner_actor_id: owner === 'none' ? null : owner,
         },
-        installments: rows,
-      },
-      {
-        onSuccess: (res) => {
-          toast.success(`Projeto ${res.project_code} criado com ${res.installments_created} parcela(s) no Financeiro.`);
-          onOpenChange(false);
-          onSuccess(res.project_id);
-        },
-        onError: (e: Error) => toast.error(e.message || 'Falha ao fechar deal'),
-      },
-    );
-  };
+        p_installments: cleaned,
+      });
+      if (error) throw error;
+
+      toast.success(
+        `Deal fechado · projeto ${data?.project_code ?? ''} criado · ${data?.installments_created ?? cleaned.length} parcela(s)`,
+      );
+      qc.invalidateQueries({ queryKey: ['deal', deal.code] });
+      qc.invalidateQueries({ queryKey: ['crm', 'deals'] });
+      qc.invalidateQueries({ queryKey: ['proposals'] });
+      onOpenChange(false);
+      if (data?.project_id) {
+        if (onSuccess) onSuccess(data.project_id);
+        else setTimeout(() => navigate(`/projetos/${data.project_id}`), 400);
+      }
+    } catch (e: any) {
+      toast.error(`Erro ao fechar deal: ${e?.message ?? 'tente novamente'}`);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (!deal) return null;
-
-  const acceptanceCount = deal.acceptance_criteria?.length ?? 0;
-  const acceptanceChecked = (deal.acceptance_criteria ?? []).filter((a: { checked?: boolean }) => a.checked).length;
-
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!closeWon.isPending) onOpenChange(v); }}>
-      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Fechar {deal.code} como Ganho</DialogTitle>
+          <DialogTitle>Fechar deal como ganho</DialogTitle>
           <DialogDescription>
-            Vai criar projeto novo com escopo herdado, parcelas no Financeiro, e marcar empresa como cliente ativo.
+            Vai criar um projeto, copiar a descoberta + anexos comerciais, gerar parcelas financeiras
+            e vincular a proposta aceita.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Seção colapsável: Dados que serão transferidos */}
-          <div className="rounded-lg border border-border bg-muted/10">
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-medium hover:bg-muted/20"
-            >
-              <span className="flex items-center gap-2">
-                {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                📋 Dados que serão transferidos do deal para o projeto
-              </span>
-              <span className="text-xs text-muted-foreground">{expanded ? 'recolher' : 'expandir'}</span>
-            </button>
-
-            {expanded && (
-              <div className="space-y-4 border-t border-border px-4 py-4">
-                {/* A — Cliente & Contatos */}
-                <div>
-                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-foreground">✅ Cliente & Contatos</h4>
-                  <SectionRow label="Empresa" value={company?.legal_name ?? deal.company?.legal_name ?? '—'} />
-                  <SectionRow label="Setor" value={sectorPath ?? <span className="text-muted-foreground/70 italic">não definido</span>} ok={!!sectorPath} />
-                  <SectionRow
-                    label="Tipo de cliente"
-                    value={company?.client_type ? CLIENT_TYPE_LABEL[company.client_type] : <span className="text-muted-foreground/70 italic">não definido</span>}
-                    ok={!!company?.client_type}
-                  />
-                  <div className="mt-2">
-                    <p className="mb-1 text-xs text-muted-foreground">Contatos vinculados ({contacts.length}):</p>
-                    {contacts.length === 0 ? (
-                      <p className="text-xs italic text-muted-foreground/70">Nenhum contato vinculado</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {contacts.map((c) => (
-                          <li key={c.link_id} className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="font-medium text-foreground">{c.person.full_name}</span>
-                            {c.is_primary_contact && <Badge variant="outline" className="h-4 px-1 text-[9px]">primário</Badge>}
-                            {c.roles.map((r) => (
-                              <Badge key={r.id} variant="secondary" className="h-4 px-1 text-[9px]">{r.role}</Badge>
-                            ))}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-
-                {/* B — Escopo proposto */}
-                <div>
-                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-foreground">✅ Escopo proposto</h4>
-                  <SectionRow label="Contexto de negócio" value={deal.business_context ? `${deal.business_context.length} caracteres` : <span className="text-muted-foreground/70 italic">vazio</span>} ok={!!deal.business_context} />
-                  <SectionRow label="Resumo do escopo" value={deal.scope_summary ? `${deal.scope_summary.length} caracteres` : <span className="text-muted-foreground/70 italic">vazio</span>} ok={!!deal.scope_summary} />
-                  <SectionRow label="Escopo IN" value={deal.scope_in ? `${deal.scope_in.length} caracteres` : <span className="text-muted-foreground/70 italic">vazio</span>} ok={!!deal.scope_in} />
-                  <SectionRow label="Escopo OUT" value={deal.scope_out ? `${deal.scope_out.length} caracteres` : <span className="text-muted-foreground/70 italic">vazio</span>} ok={!!deal.scope_out} />
-                  <SectionRow label="Critérios de aceite" value={acceptanceCount > 0 ? `${acceptanceCount} itens (${acceptanceChecked} marcados)` : <span className="text-muted-foreground/70 italic">vazio</span>} ok={acceptanceCount > 0} />
-                  <SectionRow label="Entregáveis" value={<CountValue n={deal.deliverables?.length ?? 0} />} />
-                  <SectionRow label="Premissas" value={<CountValue n={deal.premises?.length ?? 0} />} />
-                  <SectionRow label="Riscos identificados" value={<CountValue n={deal.identified_risks?.length ?? 0} />} />
-                  <SectionRow label="Stack técnica" value={<CountValue n={deal.technical_stack?.length ?? 0} />} />
-                </div>
-
-                {/* C — Dependências externas */}
-                <div>
-                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-foreground">✅ Dependências externas</h4>
-                  {dependencies.length === 0 ? (
-                    <p className="text-xs italic text-muted-foreground/70">Nenhuma dependência registrada</p>
-                  ) : (
-                    <>
-                      <p className="mb-1 text-xs text-muted-foreground">{dependencies.length} dependência(s) serão copiadas para o projeto:</p>
-                      <ul className="space-y-1">
-                        {dependencies.map((d) => (
-                          <li key={d.id} className="flex items-start gap-2 text-xs">
-                            <Badge variant="outline" className="h-4 shrink-0 px-1 text-[9px]">{DEPENDENCY_TYPE_LABEL[d.dependency_type]}</Badge>
-                            <span className="text-foreground">{truncate(d.description, 80)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-
-                {/* D — Estimativa baseline */}
-                <div>
-                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-foreground">✅ Estimativa baseline</h4>
-                  {(deal.estimated_hours_total || deal.estimated_complexity || deal.estimation_confidence) ? (
-                    <p className="text-xs text-foreground">
-                      {deal.estimated_hours_total ? `${deal.estimated_hours_total}h estimadas` : '— horas'}
-                      {' · '}
-                      {deal.estimated_complexity ? `complexidade ${deal.estimated_complexity}/5 (${COMPLEXITY_LABEL[deal.estimated_complexity] ?? '—'})` : '— complexidade'}
-                      {' · '}
-                      {deal.estimation_confidence ? `confiança ${ESTIMATION_CONFIDENCE_LABEL[deal.estimation_confidence]}` : '— confiança'}
-                    </p>
-                  ) : (
-                    <p className="text-xs italic text-muted-foreground/70">— não preenchido —</p>
-                  )}
-                </div>
-
-                {/* E — Histórico comercial (NÃO copiado) */}
-                <div className="rounded-md border border-border/60 bg-background/40 p-3">
-                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">❌ Histórico comercial (fica no deal, não vai pro projeto)</h4>
-                  <SectionRow
-                    label="Dor"
-                    value={
-                      deal.pain_category ? (
-                        <span>
-                          {PAIN_CATEGORY_LABEL[deal.pain_category]}
-                          {deal.pain_cost_brl_monthly ? ` · ${formatCurrency(deal.pain_cost_brl_monthly)}/mês` : ''}
-                          {deal.pain_hours_monthly ? ` · ${deal.pain_hours_monthly}h/mês` : ''}
-                        </span>
-                      ) : <span className="text-muted-foreground/70 italic">não definido</span>
-                    }
-                    ok={!!deal.pain_category}
-                  />
-                  {deal.pain_description && (
-                    <p className="ml-0 text-[11px] text-muted-foreground">↳ "{truncate(deal.pain_description, 100)}"</p>
-                  )}
-                  <SectionRow label="Justificativa de preço" value={deal.pricing_rationale ? truncate(deal.pricing_rationale, 60) : <span className="text-muted-foreground/70 italic">vazio</span>} ok={!!deal.pricing_rationale} />
-                  <SectionRow
-                    label="Faixa de orçamento"
-                    value={
-                      deal.budget_range_min || deal.budget_range_max
-                        ? `${formatCurrency(deal.budget_range_min ?? 0)} – ${formatCurrency(deal.budget_range_max ?? 0)}`
-                        : <span className="text-muted-foreground/70 italic">não definido</span>
-                    }
-                    ok={!!(deal.budget_range_min || deal.budget_range_max)}
-                  />
-                  <SectionRow label="Concorrentes" value={deal.competitors ? truncate(deal.competitors, 50) : <span className="text-muted-foreground/70 italic">vazio</span>} ok={!!deal.competitors} />
-                  <SectionRow label="Próxima ação atual" value={deal.next_step ? truncate(deal.next_step, 60) : <span className="text-muted-foreground/70 italic">vazio</span>} ok={!!deal.next_step} />
-                  <p className="mt-2 text-[11px] italic text-muted-foreground">
-                    Esses dados ficam preservados no deal. Você pode acessá-los depois pelo link "Deal de origem" na ficha do projeto.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Campos editáveis */}
-          <section className="grid gap-3 sm:grid-cols-2">
-            <h3 className="text-sm font-semibold text-foreground sm:col-span-2">Projeto</h3>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Nome do projeto</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do projeto" />
+        {/* Resumo do que vai ser transferido */}
+        <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
+          <div className="font-semibold text-foreground">O que será transferido pro projeto:</div>
+          <ul className="space-y-0.5 text-muted-foreground">
+            <li>• Descoberta (escopo, entregáveis, premissas, riscos, stack, critérios de aceite)</li>
+            <li>• Anexos comerciais (organograma, mockup, prints) — se houver</li>
+            <li>• Dependências do deal viram dependências do projeto</li>
+            <li>
+              • {loadingProposal
+                ? 'Verificando propostas…'
+                : acceptedProposal
+                  ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) ${acceptedProposal.status === 'enviado' ? '→ será marcada como aceita e' : ''} vinculada ao projeto`
+                  : 'Nenhuma proposta enviada/aceita encontrada (deal será fechado mesmo assim)'}
+            </li>
+          </ul>
+          {proposalTotal > 0 && !installmentsMatchProposal && (
+            <div className="mt-2 rounded border border-warning/40 bg-warning/10 p-2 text-warning-foreground">
+              ⚠️ Total das parcelas ({formatBRL(totalInstallments)}) ≠ valor da proposta ({formatBRL(proposalTotal)})
             </div>
-            <div className="space-y-1.5">
-              <Label>
-                Tipo de projeto
-                {deal.project_type_v2 && (
-                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                    (deal: {PROJECT_TYPE_V2_LABEL[deal.project_type_v2]})
-                  </span>
-                )}
-              </Label>
-              <Select value={projectType} onValueChange={setProjectType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PROJECT_TYPE_OPTIONS.map((p) => (
-                    <SelectItem key={p} value={p}>{PROJECT_TYPE_LABEL[p]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Owner</Label>
-              <Select value={owner} onValueChange={setOwner}>
-                <SelectTrigger><SelectValue placeholder="Selecionar owner" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Selecione —</SelectItem>
-                  {actors.map((a) => <SelectItem key={a.id} value={a.id}>{a.display_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Início</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Entrega estimada</Label>
-              <Input type="date" value={estimatedDelivery} onChange={(e) => setEstimatedDelivery(e.target.value)} />
-            </div>
-          </section>
-
-          <section className="grid gap-3 sm:grid-cols-3">
-            <h3 className="text-sm font-semibold text-foreground sm:col-span-3">Parcelas</h3>
-            <div className="space-y-1.5">
-              <Label>Valor total</Label>
-              <Input type="number" value={total} onChange={(e) => setTotal(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Nº parcelas</Label>
-              <Input
-                type="number"
-                min={1}
-                max={24}
-                value={count}
-                onChange={(e) => { setCount(e.target.value); setCustomRows([]); }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Data 1ª parcela</Label>
-              <Input
-                type="date"
-                value={firstInstallmentDate}
-                onChange={(e) => { setFirstInstallmentDate(e.target.value); setCustomRows([]); }}
-              />
-            </div>
-            <div className="rounded-lg border border-border sm:col-span-3">
-              <div className="border-b border-border px-3 py-2 text-sm font-medium">Prévia das parcelas</div>
-              {rows.map((r, i) => (
-                <div key={i} className="grid grid-cols-[48px_1fr_1fr] items-center gap-2 border-b border-border/60 px-3 py-2 text-sm last:border-0">
-                  <span>#{i + 1}</span>
-                  {custom ? (
-                    <Input
-                      type="number"
-                      value={r.amount}
-                      onChange={(e) => {
-                        const next = [...rows];
-                        next[i] = { ...next[i], amount: Number(e.target.value) };
-                        setCustomRows(next);
-                      }}
-                    />
-                  ) : (
-                    <span>{formatCurrency(r.amount)}</span>
-                  )}
-                  {custom ? (
-                    <Input
-                      type="date"
-                      value={r.due_date}
-                      onChange={(e) => {
-                        const next = [...rows];
-                        next[i] = { ...next[i], due_date: e.target.value };
-                        setCustomRows(next);
-                      }}
-                    />
-                  ) : (
-                    <span>{new Date(`${r.due_date}T12:00:00`).toLocaleDateString('pt-BR')}</span>
-                  )}
-                </div>
-              ))}
-              <div className="px-3 py-2 text-right text-xs text-muted-foreground">
-                Soma: {formatCurrency(rowsTotal)}
-              </div>
-            </div>
-            <label className="flex items-center gap-2 text-sm sm:col-span-3">
-              <Checkbox
-                checked={custom}
-                onCheckedChange={(v) => { setCustom(Boolean(v)); setCustomRows(defaultRows); }}
-              />
-              Customizar parcelas individualmente
-            </label>
-          </section>
-
-          {discoveryMissing.length > 0 && (
-            <p className="flex items-start gap-2 rounded-md bg-warning/10 px-3 py-2 text-xs text-muted-foreground">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-              <span>
-                <strong className="text-foreground">Descoberta incompleta</strong> — você pode fechar mesmo assim, mas o projeto vai herdar campos vazios ({discoveryMissing.join(', ')}).
-              </span>
-            </p>
           )}
         </div>
 
+        {/* Dados do projeto */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Nome do projeto
+            </Label>
+            <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Tipo
+            </Label>
+            <Select value={projectType} onValueChange={setProjectType}>
+              <SelectTrigger><SelectValue placeholder="Escolha…" /></SelectTrigger>
+              <SelectContent>
+                {PROJECT_TYPE_OPTIONS.map((p) => (
+                  <SelectItem key={p} value={p}>{PROJECT_TYPE_LABEL[p]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Início
+            </Label>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Entrega estimada (opcional)
+            </Label>
+            <Input
+              type="date"
+              value={estimatedDelivery}
+              onChange={(e) => setEstimatedDelivery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Parcelas */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Parcelas financeiras
+            </Label>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 6, 12].map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => splitEvenly(n)}
+                >
+                  {n}x
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            {installments.map((inst, idx) => (
+              <div key={inst.id} className="flex items-center gap-2">
+                <span className="w-6 text-center font-mono text-xs text-muted-foreground">
+                  {idx + 1}
+                </span>
+                <CurrencyInput
+                  value={inst.amount}
+                  onValueChange={(v) =>
+                    setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, amount: v } : i)))
+                  }
+                  withPrefix
+                  placeholder="R$ 0,00"
+                  className="flex-1"
+                />
+                <Input
+                  type="date"
+                  value={inst.due_date}
+                  onChange={(e) =>
+                    setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, due_date: e.target.value } : i)))
+                  }
+                  className="w-40"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive"
+                  disabled={installments.length === 1}
+                  onClick={() => removeInstallment(inst.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <Button type="button" size="sm" variant="outline" onClick={addInstallment}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar parcela
+            </Button>
+            <span className="font-mono text-sm font-bold tabular-nums">
+              Total: {formatBRL(totalInstallments)}
+            </span>
+          </div>
+        </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={closeWon.isPending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancelar
           </Button>
-          <Button disabled={!validForm || closeWon.isPending} onClick={submit}>
-            {closeWon.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Fechando…</>
-            ) : (
-              'Confirmar fechamento e criar projeto'
-            )}
+          <Button onClick={handleConfirm} disabled={submitting}>
+            {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Fechar deal e criar projeto <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </DialogFooter>
       </DialogContent>
