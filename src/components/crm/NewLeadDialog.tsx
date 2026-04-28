@@ -12,6 +12,7 @@ import { useCreateLead } from '@/hooks/crm/useLeads';
 import { useAllLeads } from '@/hooks/crm/useCrmDetails';
 import { useCompanies, useCreateCompany, useCreatePerson, useCrmActors, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
 import { useCrmLeadSources } from '@/hooks/crm/useCrmLeadSources';
+import { maskCurrencyBRL, parseCurrencyBRL } from '@/lib/formatters';
 
 export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const navigate = useNavigate();
