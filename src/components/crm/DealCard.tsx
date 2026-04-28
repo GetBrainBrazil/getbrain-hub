@@ -43,7 +43,7 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
           'w-full rounded-lg border border-border bg-card p-3 text-left shadow-sm transition hover:border-accent/50 hover:shadow-md',
           'border-l-4',
           DEAL_STAGE_TONE[deal.stage],
-          dragging && 'opacity-60',
+          dragging && 'opacity-0',
         )}
       >
         {/* Top row: code + project_type chip + discovery indicator */}
