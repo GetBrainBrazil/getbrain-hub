@@ -62,6 +62,8 @@ import { ComprovanteUploadField, uploadComprovanteToMovimentacao, type Comprovan
 import { Sparkles } from "lucide-react";
 import { applyMoneyMask, parseMoney, formatMoneyForInput } from "@/components/config-financeiras/shared";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinanceCaches } from "@/lib/cacheInvalidation";
 
 const ANEXOS_BUCKET = "anexos-movimentacoes";
 
