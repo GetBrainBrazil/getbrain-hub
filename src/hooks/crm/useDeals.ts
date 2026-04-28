@@ -34,6 +34,8 @@ async function hydrateDeals(rows: any[]): Promise<Deal[]> {
   return rows.map((d) => ({
     ...d,
     estimated_value: d.estimated_value === null ? null : Number(d.estimated_value),
+    estimated_implementation_value: d.estimated_implementation_value === null || d.estimated_implementation_value === undefined ? null : Number(d.estimated_implementation_value),
+    estimated_mrr_value: d.estimated_mrr_value === null || d.estimated_mrr_value === undefined ? null : Number(d.estimated_mrr_value),
     company: companyMap.get(d.company_id) ?? null,
     contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null,
     owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null,

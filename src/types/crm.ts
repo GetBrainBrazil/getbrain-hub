@@ -76,7 +76,7 @@ export interface Lead {
 
 export interface Deal {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null; origin_lead_id: string | null;
-  stage: DealStage; estimated_value: number | null; probability_pct: number; expected_close_date: string | null;
+  stage: DealStage; estimated_value: number | null; estimated_implementation_value: number | null; estimated_mrr_value: number | null; probability_pct: number; expected_close_date: string | null;
   project_type: string | null;          // legacy enum (compartilhado com projects)
   project_type_v2: DealProjectType | null;  // novo enum específico de deals (v2.0)
   project_type_custom: string | null;

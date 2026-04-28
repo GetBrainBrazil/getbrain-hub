@@ -164,15 +164,25 @@ export function ZoneComercial({ deal }: { deal: Deal }) {
 
       <div className="space-y-5">
         {/* Valores */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <FieldLabel hint="o que vamos cobrar">Valor estimado</FieldLabel>
+            <FieldLabel hint="cobrança única (one-time)">Valor de implementação</FieldLabel>
             <InlineMoney
-              value={deal.estimated_value === null ? null : Number(deal.estimated_value)}
-              onSave={(v) => save({ estimated_value: v })}
+              value={deal.estimated_implementation_value}
+              onSave={(v) => save({ estimated_implementation_value: v })}
               placeholder="R$ 0,00"
             />
           </div>
+          <div className="space-y-2">
+            <FieldLabel hint="receita recorrente mensal">Recorrência (MRR)</FieldLabel>
+            <InlineMoney
+              value={deal.estimated_mrr_value}
+              onSave={(v) => save({ estimated_mrr_value: v })}
+              placeholder="R$ 0,00"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <FieldLabel>Budget mínimo do cliente</FieldLabel>
             <InlineMoney
