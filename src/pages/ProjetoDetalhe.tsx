@@ -1251,6 +1251,12 @@ export default function ProjetoDetalhe() {
 
               {/* ----- OVERVIEW ----- */}
               <TabsContent value="overview" className="space-y-4">
+                {/* Contexto comercial herdado do CRM (só aparece se vier de um deal) */}
+                <CommercialContextCard
+                  sourceDealId={(project as any).source_deal_id}
+                  commercialContext={(project as any).commercial_context}
+                  originLeadSourceId={(project as any).origin_lead_source_id}
+                />
                 {/* Informações */}
                 <CardBlock
                   title="Informações do Projeto"
