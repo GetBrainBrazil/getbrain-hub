@@ -54,6 +54,23 @@ function fmtDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+type Option = { id: string; nome: string; tipo?: string | null };
+
+const FIN_DEFAULTS_KEY = 'crm.lastWonFinancialDefaults';
+
+function loadFinDefaults(): {
+  categoria_id?: string;
+  centro_custo_id?: string;
+  conta_bancaria_id?: string;
+  meio_pagamento_id?: string;
+} {
+  try {
+    return JSON.parse(localStorage.getItem(FIN_DEFAULTS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
 export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -72,6 +89,17 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     { id: newId(), amount: '', due_date: fmtDateInput(addMonths(new Date(), 1)) },
   ]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Configuração financeira (opcional, com defaults via localStorage)
+  const [categorias, setCategorias] = useState<Option[]>([]);
+  const [centros, setCentros] = useState<Option[]>([]);
+  const [contas, setContas] = useState<Option[]>([]);
+  const [meios, setMeios] = useState<Option[]>([]);
+  const [categoriaId, setCategoriaId] = useState<string>('');
+  const [centroId, setCentroId] = useState<string>('');
+  const [contaId, setContaId] = useState<string>('');
+  const [meioId, setMeioId] = useState<string>('');
+  const [finOpen, setFinOpen] = useState(true);
 
   // Carrega proposta aceita (ou enviada mais recente) ao abrir
   useEffect(() => {
