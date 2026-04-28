@@ -69,6 +69,7 @@ import {
   relativeTime,
 } from "@/lib/projetos-helpers";
 import { MaintenanceStatusBadge } from "@/components/projetos/ProjetoBadges";
+import { CommercialContextCard } from "@/components/projetos/CommercialContextCard";
 import { ActorAvatar } from "@/components/projetos/ActorAvatar";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import {
