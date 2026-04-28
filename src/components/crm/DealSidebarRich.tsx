@@ -129,12 +129,7 @@ export function DealSidebarRich({ deal }: Props) {
                 <TooltipTrigger asChild>
                   <a
                     href={`#${z.id}`}
-                    className={cn(
-                      'group flex items-center justify-between rounded-md border-l-2 border-transparent px-2.5 py-1.5 text-sm transition-all',
-                      z.loop
-                        ? 'text-muted-foreground hover:border-accent hover:bg-accent/10 hover:text-foreground'
-                        : 'text-foreground hover:border-accent hover:bg-accent/15',
-                    )}
+                    className="group flex items-center rounded-md border-l-2 border-transparent px-2.5 py-1.5 text-sm text-foreground transition-all hover:border-accent hover:bg-accent/15"
                   >
                     <span className="flex items-center gap-2">
                       <span className="font-mono text-[10px] text-muted-foreground transition-colors group-hover:text-accent">
@@ -142,11 +137,6 @@ export function DealSidebarRich({ deal }: Props) {
                       </span>
                       {z.label}
                     </span>
-                    {z.loop && (
-                      <span className="rounded bg-muted/40 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
-                        {z.loop}
-                      </span>
-                    )}
                   </a>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-[240px] text-xs">
