@@ -406,7 +406,7 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
 
       <div className="rounded-md border border-border/60 bg-background/40 p-4">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estimativa grossa</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <FieldLabel>Horas totais</FieldLabel>
             <InlineInteger
@@ -421,16 +421,6 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
             <ComplexitySlider
               value={deal.estimated_complexity}
               onSave={(v) => save({ estimated_complexity: v })}
-            />
-          </div>
-          <div className="space-y-2">
-            <FieldLabel>Confiança</FieldLabel>
-            <ChipGroup<EstimationConfidence>
-              options={ESTIMATION_CONFIDENCE_OPTIONS}
-              value={deal.estimation_confidence}
-              onChange={(v) => save({ estimation_confidence: v })}
-              labels={ESTIMATION_CONFIDENCE_LABEL}
-              colors={ESTIMATION_CONFIDENCE_COLOR}
             />
           </div>
         </div>
