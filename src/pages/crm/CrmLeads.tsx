@@ -25,11 +25,14 @@ import type { Lead, LeadStatus } from '@/types/crm';
 const LEAD_STATUS: LeadStatus[] = ['novo', 'triagem_agendada', 'triagem_feita', 'descartado', 'convertido'];
 const LEAD_LABEL: Record<LeadStatus, string> = { novo: 'Novo', triagem_agendada: 'Triagem Agendada', triagem_feita: 'Triagem Feita', descartado: 'Descartado', convertido: 'Convertido' };
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="rounded-lg border border-border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3">
+    <div className={cn(
+      'rounded-lg border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3 transition-colors',
+      highlight ? 'border-accent/60 bg-accent/5' : 'border-border',
+    )}>
       <p className="text-[10px] sm:text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-base sm:text-lg font-semibold text-foreground">{value}</p>
+      <p className={cn('mt-1 text-base sm:text-lg font-semibold', highlight ? 'text-accent' : 'text-foreground')}>{value}</p>
     </div>
   );
 }
