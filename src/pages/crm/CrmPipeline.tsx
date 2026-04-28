@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
-import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
+import { NewDealQuickDialog } from '@/components/crm/NewDealQuickDialog';
 import { MultiFilter } from '@/components/crm/CrmFilters';
 import {
   DEAL_STAGE_LABEL,
