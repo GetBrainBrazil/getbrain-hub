@@ -190,6 +190,7 @@ const tipoByTab: Record<TabType, "despesa" | "receita"> = {
 
 export default function Movimentacoes() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
