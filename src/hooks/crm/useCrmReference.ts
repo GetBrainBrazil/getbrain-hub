@@ -142,11 +142,18 @@ export function useDistinctLeadSources() {
   return useQuery({
     queryKey: ['crm-lead-sources'],
     queryFn: async (): Promise<string[]> => {
-      const { data, error } = await sb.from('leads').select('source').not('source', 'is', null).is('deleted_at', null);
-      if (error) throw error;
-      return Array.from(
-        new Set<string>((data ?? []).map((r: any) => String(r.source)).filter(Boolean)),
-      ).sort();
+      // Lê origens ativas da tabela gerenciada + slugs históricos ainda em uso nos leads,
+      // para que filtros do Pipeline continuem funcionando para leads antigos.
+      const [managed, distinct] = await Promise.all([
+        sb.from('crm_lead_sources').select('slug').eq('is_active', true).order('display_order'),
+        sb.from('leads').select('source').not('source', 'is', null).is('deleted_at', null),
+      ]);
+      if (managed.error) throw managed.error;
+      if (distinct.error) throw distinct.error;
+      const set = new Set<string>();
+      (managed.data ?? []).forEach((r: any) => r.slug && set.add(String(r.slug)));
+      (distinct.data ?? []).forEach((r: any) => r.source && set.add(String(r.source)));
+      return Array.from(set).sort();
     },
     staleTime: 60_000,
   });

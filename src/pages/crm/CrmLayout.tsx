@@ -62,14 +62,20 @@ export default function CrmLayout() {
             <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground">CRM</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">Funil comercial e relacionamento com clientes</p>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={() => setLeadOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
-              <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Lead
-            </Button>
-            <Button size="sm" onClick={() => setDealOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
-              <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Deal
-            </Button>
-          </div>
+          {hasActions && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {showNewLead && (
+                <Button variant="outline" size="sm" onClick={() => setLeadOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
+                  <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Lead
+                </Button>
+              )}
+              {showNewDeal && (
+                <Button size="sm" onClick={() => setDealOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
+                  <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Deal
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Filters bar — apenas no Pipeline */}
