@@ -1,102 +1,54 @@
-## Problema
+## Objetivo
 
-A exclusão do deal não funciona porque existem **foreign keys com `NO ACTION`** apontando para `deals.id` que bloqueiam o `DELETE` no banco. O hook atual (`useDeleteDeal`) só remove `deal_activities` e `deal_dependencies`, mas o Postgres rejeita o delete por causa de:
+Adicionar seleção múltipla na tabela de Leads (incluindo "selecionar todos") com ações em lote (excluir em grupo) e fazer os KPIs do topo refletirem dinamicamente os leads selecionados.
 
-- `proposals.deal_id` → bloqueia
-- `projects.source_deal_id` → bloqueia (criado quando o deal é fechado como ganho)
-- `leads.converted_to_deal_id` → bloqueia (lead que originou o deal)
-- `deals.generated_project_id` (auto-ref via project) → indireto
+## Comportamento
 
-E quando o projeto existe, ele puxa atrás: contratos de manutenção, movimentações financeiras (contas a pagar/receber), recorrências, marcos, riscos, dependências, integrações, etc.
+**Seleção (apenas modo Tabela):**
+- Nova coluna inicial com `Checkbox` por linha + checkbox no header (selecionar todos os filtrados, com estado indeterminate quando seleção parcial)
+- Clicar no checkbox NÃO navega para o detalhe (stopPropagation)
+- Versão mobile (cards): toggle de "modo seleção" com checkbox no canto de cada card
+- Seleção persiste apenas em memória; é resetada ao trocar filtros que removam itens selecionados (limpa ids ausentes da lista filtrada) e ao trocar para Kanban
 
-Além disso, mesmo quando funcionar, hoje a tela do deal não fecha porque o `navigate('/crm/pipeline')` está dentro do `onDelete`, mas o erro silencioso do Supabase impede a chegada nessa linha.
+**Barra de ações em lote (aparece quando `selected.size > 0`):**
+- Mostra "N leads selecionados"
+- Botão "Limpar seleção"
+- Botão "Excluir selecionados" (destructive) → abre `ConfirmDialog` (`useConfirm` de `@/components/ConfirmDialog`) listando quantos serão excluídos. Após confirmar, executa exclusão em lote e mostra `toast` (sonner) de sucesso/erro
+- Posicionada acima da tabela (sticky no topo do conteúdo, abaixo da toolbar) para ficar sempre visível
 
-## O que vou entregar
+**KPIs dinâmicos:**
+- Quando há seleção: KPIs recalculam com base nos leads selecionados:
+  - "Leads selecionados" (substitui "Leads abertos") — total selecionado
+  - "Convertidos / Selecionados" — % de selecionados com status `convertido`
+  - "Valor selecionado" — soma de `estimated_value` dos selecionados
+- Quando não há seleção: comportamento atual (Leads abertos, Taxa conversão global, Valor dos filtrados)
+- Indicador visual sutil (badge "seleção") nos KPIs em modo seleção para deixar claro que o número mudou de contexto
 
-### 1. Pré-checagem de dependências (novo hook)
+## Implementação técnica
 
-`useDealDeletionImpact(dealId)` — varre o banco antes de abrir o modal e devolve:
+**Arquivo principal:** `src/pages/crm/CrmLeads.tsx`
+- Novo state: `const [selected, setSelected] = useState<Set<string>>(new Set())`
+- Effect que poda `selected` removendo ids fora de `filtered` quando os filtros mudam
+- Helpers: `toggleOne(id)`, `toggleAll()`, `clearSelection()`
+- Derivar `selectedLeads = filtered.filter(l => selected.has(l.id))`
+- Renderização condicional dos KPIs com base em `selected.size > 0`
 
-- propostas vinculadas (`proposals` por `deal_id`) — quantidade + códigos
-- projeto gerado (`projects` por `source_deal_id` ou `deals.generated_project_id`) — código do projeto
-- lead de origem (`leads` por `converted_to_deal_id`) — código do lead
-- atividades e dependências (informativo, são CASCADE)
-- **se há projeto**: contratos de manutenção ativos, movimentações financeiras (contas a pagar/receber pendentes e liquidadas), recorrências ativas — agrupadas por categoria
+**Hook de exclusão em lote:** estender `src/hooks/crm/useLeads.ts`
+- Novo hook `useBulkDeleteLeads()` que faz:
+  ```ts
+  await sb.from('deal_activities').delete().in('lead_id', ids);
+  await sb.from('leads').delete().in('id', ids);
+  ```
+- `onSettled`: invalidar `crm-leads`, `crm-leads-full`, `crm-metrics`, `crm-dashboard-exec` (mesmo padrão de `useDeleteLead`)
+- Considerar bloqueio: leads com `converted_to_deal_id` não devem ser excluídos diretamente — filtrar antes e avisar via toast quantos foram pulados (mantém consistência com regra atual de exclusão individual; a trigger `lead_revert_on_deal_delete` cuida do caso reverso)
 
-### 2. Novo modal de confirmação rico (substitui o `DangerZone` simples no deal)
+**UI:**
+- Usar `Checkbox` de `@/components/ui/checkbox` (já existente em shadcn)
+- `useConfirm()` de `@/components/ConfirmDialog` para confirmação destrutiva (regra do projeto: nunca usar `confirm()` nativo)
+- `toast` de `sonner` para feedback
+- Manter responsividade: barra de ações vira full-width no mobile; checkbox de seleção em cards mobile aparece apenas com botão "Selecionar" ativo na toolbar
 
-Componente `DeleteDealDialog` que mostra:
-
-- bloco vermelho de aviso
-- lista visual com ícones de **tudo** que será afetado/bloqueado (propostas, projeto, manutenção, contas, recorrências, lead)
-- separação clara entre:
-  - **"Será removido em cascata"** (atividades, dependências do deal)
-  - **"Bloqueia a exclusão"** (proposta, projeto vinculado, lead origem) — com botão "Ir para X" pra resolver
-  - **"Será desvinculado"** (caso a gente opte por `SET NULL` em alguns)
-- input "digite EXCLUIR pra confirmar" só quando há itens críticos
-- se há **bloqueios fortes** (projeto/proposta/lead), o botão de excluir fica **desabilitado** com mensagem clara: "remova/desvincule X primeiro"
-- se só tem itens em cascata, libera o delete normalmente
-
-### 3. Migração no banco para destravar o que faz sentido
-
-- `proposals.deal_id` → mudar pra `ON DELETE SET NULL` (proposta sobrevive ao deal, vira "órfã" na lista de orçamentos — comportamento esperado)
-- `leads.converted_to_deal_id` → `ON DELETE SET NULL` + voltar lead pra `status='novo'` via trigger (ou deixar como `convertido` mas sem deal — preciso da sua decisão)
-- `deals.generated_project_id` → `ON DELETE SET NULL` (já é, na prática, só desvinculação)
-- `projects.source_deal_id` → **manter como bloqueio**: se existe projeto gerado, **não** deixa apagar o deal direto. O usuário precisa apagar/arquivar o projeto primeiro (que já tem CASCADE pro resto do mundo). Isso é a regra de integridade mais segura.
-
-### 4. Hook de delete reescrito
-
-`useDeleteDeal` faz, em ordem:
-
-1. roda checagem de impacto novamente (defesa em profundidade)
-2. se há projeto gerado → aborta com erro tipado `{ kind: 'has_project', projectCode }`
-3. apaga `deal_activities`, `deal_dependencies`, `deal_documents` (cascade manual onde não há FK)
-4. roda o `DELETE FROM deals` — Postgres limpa via FKs ajustadas
-5. invalida caches: CRM, projetos, propostas, finance (caso o projeto existisse antes)
-
-### 5. Fechamento da tela
-
-Mover `navigate('/crm/pipeline')` para o `onSuccess` do `mutateAsync`, **com replace** pra não voltar pra tela do deal já apagado. Garantir que o `DangerZone` interno do deal não seja mais usado — substituído pelo novo dialog dedicado.
-
-## Como vai parecer
-
-```text
-┌─ Excluir deal DEAL-042 — "Sistema de gestão XYZ"? ────┐
-│ Esta ação NÃO pode ser desfeita.                       │
-│                                                        │
-│ Bloqueios (resolva primeiro):                          │
-│   ⛔ Projeto gerado: PRJ-018 → [Abrir projeto]         │
-│                                                        │
-│ Será desvinculado:                                     │
-│   🔗 1 proposta (ORC-007) — vira proposta avulsa       │
-│   🔗 Lead de origem (LEAD-031) — volta pra "novo"      │
-│                                                        │
-│ Será removido em cascata:                              │
-│   🗑 3 atividades                                       │
-│   🗑 2 dependências do deal                             │
-│                                                        │
-│ Digite EXCLUIR para confirmar: [________]              │
-│                       [Cancelar]  [Excluir definitivamente] │
-└────────────────────────────────────────────────────────┘
-```
-
-Quando há projeto, o botão fica desabilitado e aparece o atalho pra abrir/excluir o projeto.
-
-## Detalhes técnicos
-
-**Arquivos novos:**
-- `src/hooks/crm/useDealDeletionImpact.ts` — query que retorna `{ proposals, project, originLead, activitiesCount, dependenciesCount, finance }`
-- `src/components/crm/DeleteDealDialog.tsx` — modal rico com listas + bloqueios + confirmação por texto
-- `supabase/migrations/<ts>_deal_delete_relax_fks.sql` — ajusta FKs `proposals.deal_id` e `leads.converted_to_deal_id` para `ON DELETE SET NULL`
-
-**Arquivos editados:**
-- `src/hooks/crm/useDeals.ts` — `useDeleteDeal` reescrito com checagem + erros tipados
-- `src/pages/crm/CrmDealDetail.tsx` — substitui `DangerZone` por `DeleteDealDialog`, fecha a tela com `navigate(..., { replace: true })` no `onSuccess`
-- `src/lib/cacheInvalidation.ts` — `invalidateCrmCaches` já existe; adicionar invalidação de `projects` e `proposals` quando o deal é apagado (vai ser chamado a partir do hook)
-
-**Não vou tocar:** `DangerZone.tsx` continua existindo e em uso para Lead e Empresa (sem dependências cruzadas pesadas).
-
-**Pergunta de bloqueio (única):** quando o lead foi convertido em deal e o deal é excluído, o lead deve:
-(a) voltar pra status `novo` automaticamente (trigger), ou (b) ficar como `convertido` mas com `converted_to_deal_id = null` (vira "lead com deal apagado")?
-
-Vou seguir com **(a)** salvo orientação contrária — é o comportamento mais limpo pra UX.
+## Fora do escopo
+- Outras ações em lote (mudar status, atribuir dono) — apenas exclusão neste passo
+- Seleção persistida entre sessões
+- Modo Kanban (seleção só em Tabela/Cards)
