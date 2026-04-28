@@ -16,19 +16,19 @@ export const CLIENT_TYPE_OPTIONS: CompanyClientType[] = ['b2b', 'b2c', 'b2b_b2c'
 
 export const CLIENT_TYPE_COLOR: Record<CompanyClientType, { active: string; idle: string; descActive: string }> = {
   b2b: {
-    active: 'border-accent bg-accent/5 text-accent shadow-sm ring-2 ring-accent/30',
-    idle: 'border-border bg-transparent text-foreground hover:border-accent/50 hover:bg-accent/5 hover:text-accent',
-    descActive: 'text-accent/80',
+    active: 'border-accent bg-accent/5 text-[hsl(187_70%_32%)] shadow-sm ring-2 ring-accent/30',
+    idle: 'border-border bg-transparent text-foreground hover:border-accent/50 hover:bg-accent/5 hover:text-[hsl(187_70%_32%)]',
+    descActive: 'text-[hsl(187_45%_38%)]',
   },
   b2c: {
-    active: 'border-success bg-success/5 text-success shadow-sm ring-2 ring-success/30',
-    idle: 'border-border bg-transparent text-foreground hover:border-success/50 hover:bg-success/5 hover:text-success',
-    descActive: 'text-success/80',
+    active: 'border-success bg-success/5 text-[hsl(160_70%_28%)] shadow-sm ring-2 ring-success/30',
+    idle: 'border-border bg-transparent text-foreground hover:border-success/50 hover:bg-success/5 hover:text-[hsl(160_70%_28%)]',
+    descActive: 'text-[hsl(160_45%_34%)]',
   },
   b2b_b2c: {
-    active: 'border-warning bg-warning/5 text-warning shadow-sm ring-2 ring-warning/30',
-    idle: 'border-border bg-transparent text-foreground hover:border-warning/50 hover:bg-warning/5 hover:text-warning',
-    descActive: 'text-warning/80',
+    active: 'border-warning bg-warning/5 text-[hsl(28_85%_38%)] shadow-sm ring-2 ring-warning/30',
+    idle: 'border-border bg-transparent text-foreground hover:border-warning/50 hover:bg-warning/5 hover:text-[hsl(28_85%_38%)]',
+    descActive: 'text-[hsl(28_60%_42%)]',
   },
 };
 
