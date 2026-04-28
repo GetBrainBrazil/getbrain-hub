@@ -113,7 +113,6 @@ export default function CrmLeads() {
   const [view, setView] = usePersistedState<'table' | 'kanban'>('crm-leads-view', 'table');
   const [statusFilter, setStatusFilter] = usePersistedState<LeadStatus[]>('crm-leads-status-filter', []);
   const [companyStatusFilter, setCompanyStatusFilter] = usePersistedState<CompanyRelationshipStatus[]>('crm-leads-company-status-filter', []);
-  const [industryFilter, setIndustryFilter] = usePersistedState<string[]>('crm-leads-industry-filter', []);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [discardLead, setDiscardLead] = useState<Lead | null>(null);
   const [discardReason, setDiscardReason] = useState('');
