@@ -25,7 +25,6 @@ export default function CrmLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [leadOpen, setLeadOpen] = useState(false);
-  const [dealOpen, setDealOpen] = useState(false);
   const { data: actors = [] } = useCrmActors();
   const { data: sources = [] } = useDistinctLeadSources();
   const store = useCrmHubStore();
