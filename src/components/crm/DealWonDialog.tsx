@@ -74,7 +74,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   // Carrega proposta aceita (ou enviada mais recente) ao abrir
   useEffect(() => {
-    if (!open) return;
+    if (!open || !deal) return;
     let cancelled = false;
     (async () => {
       setLoadingProposal(true);
@@ -84,7 +84,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         .eq('deal_id', deal.id)
         .is('deleted_at', null)
         .in('status', ['aceito', 'enviado'])
-        .order('status', { ascending: true }) // aceito vem antes de enviado alfabeticamente
+        .order('status', { ascending: true })
         .order('created_at', { ascending: false })
         .limit(1);
       if (cancelled) return;
@@ -93,7 +93,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       setLoadingProposal(false);
     })();
     return () => { cancelled = true; };
-  }, [open, deal.id]);
+  }, [open, deal?.id]);
 
   // Pré-preenche valor total das parcelas com valor da proposta (se houver)
   const proposalTotal = useMemo(
@@ -102,7 +102,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !deal) return;
     setProjectName(deal.title);
     setProjectType(deal.project_type ?? '');
     setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
@@ -115,7 +115,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         due_date: fmtDateInput(addMonths(new Date(), 1)),
       },
     ]);
-  }, [open, deal.id, proposalTotal]);
+  }, [open, deal?.id, proposalTotal]);
 
   const totalInstallments = installments.reduce(
     (sum, i) => sum + (Number(i.amount) || 0),
@@ -139,7 +139,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   }
 
   function splitEvenly(n: number) {
-    const base = proposalTotal > 0 ? proposalTotal : Number(deal.estimated_value ?? 0);
+    const base = proposalTotal > 0 ? proposalTotal : Number(deal?.estimated_value ?? 0);
     if (base <= 0) {
       toast.error('Defina um valor de proposta ou estimativa do deal antes de dividir');
       return;
@@ -157,6 +157,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   }
 
   async function handleConfirm() {
+    if (!deal) return;
     if (!projectName.trim()) {
       toast.error('Informe o nome do projeto');
       return;
@@ -203,8 +204,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       qc.invalidateQueries({ queryKey: ['proposals'] });
       onOpenChange(false);
       if (data?.project_id) {
-        // Pequeno delay pra UX (toast aparece antes do navigate)
-        setTimeout(() => navigate(`/projetos/${data.project_id}`), 400);
+        if (onSuccess) onSuccess(data.project_id);
+        else setTimeout(() => navigate(`/projetos/${data.project_id}`), 400);
       }
     } catch (e: any) {
       toast.error(`Erro ao fechar deal: ${e?.message ?? 'tente novamente'}`);
@@ -213,6 +214,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     }
   }
 
+  if (!deal) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
