@@ -8,7 +8,7 @@ import { getAdminExitRoute } from "@/components/RouteTracker";
 const TABS = [
   { key: "usuarios", label: "Usuários", path: "/admin/usuarios" },
   { key: "permissoes", label: "Permissões", path: "/admin/permissoes" },
-  { key: "logs", label: "Logs", path: "/admin/logs" },
+  { key: "auditoria", label: "Auditoria", path: "/admin/auditoria" },
 ] as const;
 
 export default function AdminLayout({ children }: { children?: ReactNode }) {

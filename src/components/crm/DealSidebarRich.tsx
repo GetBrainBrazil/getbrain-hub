@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, FolderKanban, Sparkles, UserCircle2 } from 'lucide-react';
+import { ArrowUpRight, FolderKanban, Sparkles, UserCircle2, History } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -205,6 +206,7 @@ export function DealSidebarRich({ deal }: Props) {
         <div className="rounded-lg border border-border bg-card/30 p-4">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Histórico de stage</h3>
           <ul>{stageHistory.map((r: any) => <StageHistoryRow key={r.id} row={r} />)}</ul>
+          <AuditLink dealId={deal.id} />
         </div>
       )}
 
@@ -240,5 +242,19 @@ export function DealSidebarRich({ deal }: Props) {
         </Link>
       )}
     </aside>
+  );
+}
+
+function AuditLink({ dealId }: { dealId: string }) {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return null;
+  return (
+    <Link
+      to={`/admin/auditoria?entity_type=deals&entity_id=${dealId}`}
+      className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
+    >
+      <History className="h-3 w-3" />
+      Ver auditoria completa →
+    </Link>
   );
 }
