@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { formatPhoneBR } from "@/lib/formatters";
 
 export const ESTADOS_BR = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -15,10 +16,8 @@ export function applyCpfCnpjMask(value: string, tipo: "PF" | "PJ") {
 }
 export function applyCpfMask(v: string) { return applyCpfCnpjMask(v, "PF"); }
 export function applyPhoneMask(value: string) {
-  // Delegado para a única fonte de verdade: src/lib/formatters.ts
-  // Aceita digitação progressiva e detecta DDI +55 automaticamente.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require("@/lib/formatters").formatPhoneBR(value);
+  // Única fonte de verdade: detecta DDI +55 e formata progressivamente.
+  return formatPhoneBR(value);
 }
 export function applyCepMask(value: string) {
   const d = value.replace(/\D/g, "").slice(0, 8);
