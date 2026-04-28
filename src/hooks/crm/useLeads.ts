@@ -49,3 +49,22 @@ export function useConvertLeadToDeal() {
     onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-leads'] }); qc.invalidateQueries({ queryKey: ['crm-deals'] }); qc.invalidateQueries({ queryKey: ['crm-metrics'] }); },
   });
 }
+
+export function useDeleteLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Hard delete: remove atividades vinculadas ao lead antes
+      await sb.from('deal_activities').delete().eq('lead_id', id);
+      const { error } = await sb.from('leads').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['crm-leads'] });
+      qc.invalidateQueries({ queryKey: ['crm-leads-full'] });
+      qc.invalidateQueries({ queryKey: ['crm-lead-code'] });
+      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+      qc.invalidateQueries({ queryKey: ['crm-dashboard-exec'] });
+    },
+  });
+}
