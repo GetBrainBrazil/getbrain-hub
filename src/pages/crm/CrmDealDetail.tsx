@@ -587,14 +587,22 @@ function DangerZoneDeal({ deal }: { deal: Deal }) {
   const deleteDeal = useDeleteDeal();
   const [open, setOpen] = useState(false);
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (mode: 'safe' | 'cascade') => {
     try {
-      await deleteDeal.mutateAsync(deal.id);
+      const result = await deleteDeal.mutateAsync({ id: deal.id, mode });
       invalidateCrmCaches(qc, { dealId: deal.id, companyId: deal.company_id });
-      // Invalida caches de projetos/finance caso o deal tivesse vínculo desfeito
       qc.invalidateQueries({ queryKey: ['projects'] });
       qc.invalidateQueries({ queryKey: ['proposals'] });
-      toast.success(`Deal ${deal.code} excluído.`);
+      qc.invalidateQueries({ queryKey: ['movimentacoes'] });
+      qc.invalidateQueries({ queryKey: ['recorrencias'] });
+      if (mode === 'cascade' && result?.project_deleted) {
+        toast.success(
+          `Deal ${deal.code} e projeto vinculado excluídos. ` +
+          `(${result.movimentacoes_deleted} contas, ${result.contracts_deleted} contratos, ${result.recurrences_deleted} recorrências removidos)`,
+        );
+      } else {
+        toast.success(`Deal ${deal.code} excluído.`);
+      }
       setOpen(false);
       navigate('/crm/pipeline', { replace: true });
     } catch (err: any) {
