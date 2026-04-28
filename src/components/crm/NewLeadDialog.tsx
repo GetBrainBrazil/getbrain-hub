@@ -15,6 +15,7 @@ import { useCompanies, useCreateCompany, useCreatePerson, useCrmActors, useDisti
 export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const navigate = useNavigate();
   const { data: companies = [] } = useCompanies();
+  const { data: allLeads = [] } = useAllLeads();
   const { data: actors = [] } = useCrmActors();
   const { data: sources = [] } = useDistinctLeadSources();
   const createLead = useCreateLead();
