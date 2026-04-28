@@ -15,10 +15,10 @@ export function applyCpfCnpjMask(value: string, tipo: "PF" | "PJ") {
 }
 export function applyCpfMask(v: string) { return applyCpfCnpjMask(v, "PF"); }
 export function applyPhoneMask(value: string) {
-  const d = value.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d.replace(/(\d{1,2})/, "($1");
-  if (d.length <= 7) return d.replace(/(\d{2})(\d{1,5})/, "($1) $2");
-  return d.replace(/(\d{2})(\d{5})(\d{1,4})/, "($1) $2-$3");
+  // Delegado para a única fonte de verdade: src/lib/formatters.ts
+  // Aceita digitação progressiva e detecta DDI +55 automaticamente.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require("@/lib/formatters").formatPhoneBR(value);
 }
 export function applyCepMask(value: string) {
   const d = value.replace(/\D/g, "").slice(0, 8);

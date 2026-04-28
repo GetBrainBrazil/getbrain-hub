@@ -1,43 +1,49 @@
 ## Objetivo
 
-Remover os botões de ação visíveis no hover (estrela / lápis / lixeira) do card de contato e tornar **o card inteiro clicável** para abrir o modo de edição inline. As ações secundárias (definir principal, remover) ficam dentro do formulário de edição. Aplicar em **CRM e Projetos** (mesmo componente compartilhado), preservando o diferencial visual de cada módulo.
+Fazer todas as máscaras de telefone do sistema reconhecerem automaticamente o código do país. Quando o número tiver 12 ou 13 dígitos começando com `55`, exibir como `+55 (DD) NNNNN-NNNN`. Caso contrário, manter o formato nacional `(DD) NNNNN-NNNN`. Para DDIs estrangeiros (12+ dígitos não iniciando em 55), exibir `+CC NNNN NNNN…`.
 
-## Escopo
+## Comportamento esperado
 
-Arquivo único: `src/components/shared/CompanyContactsPanel.tsx` (usado pelos dois wrappers — `CardContatos` em Projetos e `CompanyContactsManager` no CRM).
+Exemplos de entrada → saída:
 
-## Mudanças no card (modo leitura)
+```text
+21987654321        → (21) 98765-4321        (BR sem DDI, 11 díg)
+2133334444         → (21) 3333-4444         (BR fixo, 10 díg)
+5521987654321      → +55 (21) 98765-4321    (BR com DDI)
+552133334444       → +55 (21) 3333-4444     (BR fixo com DDI)
+14155551234        → (14) 15555-1234        (ainda 11 díg → assume nacional)
+14155551234567     → +14 1555 5123 4567     (DDI estrangeiro)
+```
 
-1. **Remover** o bloco de ações no canto direito (estrela/lápis/lixeira com `opacity-0 group-hover`).
-2. **Card inteiro clicável** (`onClick` + `role="button"` + `tabIndex={0}` + Enter/Space) → abre modo edição (`setEditingPersonId(c.person_id)`).
-3. Manter `cursor-pointer` e um leve `hover:border-accent/30 hover:bg-accent/5` para indicar interatividade (estilo Projetos da image-115).
-4. **Estrela "Principal"** continua visível como badge informativo já existente (`PRINCIPAL` ao lado do nome) — não como botão de ação no card.
-5. Links `mailto:` / `tel:` recebem `e.stopPropagation()` para não disparar a edição quando o usuário clica em email/telefone.
-6. Badges de papéis comerciais (CRM) e o `CommercialRolePicker` também recebem `stopPropagation` (continuam editáveis sem abrir o form).
-7. Ícone de empresa (`Building2`) ao lado do cargo, igual ao mock do Projetos (image-115 mostra `COO`/`CEO` com ícone).
+A máscara aceita digitação progressiva: enquanto o usuário digita, o formato vai se ajustando. Ao chegar em 12+ dígitos com `55` no início, o `+55` aparece e o restante vira nacional.
 
-## Mudanças no formulário de edição
+## Arquivos afetados
 
-O `ContactForm` (modo edit de contato existente) ganha duas ações extras no rodapé, ao lado de Cancelar/Salvar:
+1. `src/lib/formatters.ts` — reescrever `formatPhoneBR` com a nova lógica e adicionar helper interno `formatBrNational`.
+2. `src/components/config-financeiras/shared.tsx` — substituir `applyPhoneMask` e `formatPhone` por wrappers que chamam `formatPhoneBR` (única fonte de verdade), removendo duplicação.
+3. `src/components/shared/CompanyContactsPanel.tsx` — o `PhoneInput` já chama `formatPhoneBR`; ajustar apenas o `slice` que limita entrada para `15` dígitos (hoje: 11).
 
-1. **Botão "Definir como principal"** (esquerda, `variant="ghost"`, ícone `Star`) — só aparece se ainda não for principal. Usa o mesmo `handleTogglePrimary` atual.
-2. **Botão "Remover contato"** (esquerda, `variant="ghost"` destrutivo, ícone `Trash2`) — usa o `handleUnlink` atual com confirmação.
+## Detalhe técnico do novo `formatPhoneBR`
 
-Assim, todas as ações continuam acessíveis, só que dentro do contexto de edição (consistente com o pedido: "clicar e abrir o modo de edição").
+```text
+1. Limpa não-dígitos, corta em 15.
+2. Se 12 ou 13 díg e começa com "55" → "+55 " + formato nacional dos restantes.
+3. Senão, se ≤ 11 díg → formato nacional progressivo.
+4. Senão (12+ não-BR) → "+CC " + agrupa restante em blocos de 4.
+```
 
-## Diferenciação visual entre módulos
+O helper `formatBrNational(d)` cobre os casos parciais já existentes:
+- ≤ 2 díg: `(D` / `(DD`
+- ≤ 6 díg: `(DD) NNNN`
+- ≤ 10 díg: `(DD) NNNN-NNNN`
+- 11 díg: `(DD) NNNNN-NNNN`
 
-- **Projetos** (`showRoles=false`): card limpo, sem linha de papéis comerciais — fica idêntico à image-115.
-- **CRM** (`showRoles=true`): mantém a linha de badges de papel + picker abaixo dos contatos; identidade visual cyan/accent do CRM preservada via tokens existentes (`bg-accent/15`, `text-accent`, `border-accent/30`). Sem mudanças em cores.
+## Pontos de uso já cobertos automaticamente
 
-## Acessibilidade
+Todos os componentes que importam `formatPhoneBR` ou `applyPhoneMask`/`formatPhone` (Clientes, Fornecedores, Colaboradores, CompanyContactsPanel) passam a usar a nova lógica sem necessidade de edição individual, porque os utilitários do `shared.tsx` vão delegar para `formatPhoneBR`.
 
-- `role="button"`, `tabIndex={0}`, `aria-label="Editar contato {nome}"`.
-- Handler de teclado: Enter/Space abre edição.
-- `stopPropagation` em todos os elementos interativos internos (mailto, tel, badge X, papel picker).
+## Não escopo
 
-## Arquivos tocados
-
-- `src/components/shared/CompanyContactsPanel.tsx` — única edição.
-
-Nenhuma migração, nenhum hook novo, nenhuma quebra de API dos wrappers.
+- Não vou normalizar dados já salvos no banco — apenas a exibição/entrada.
+- Não vou validar se o DDI estrangeiro existe; só formato visual.
+- Não vou adicionar seletor de país: o `+55` é detectado pelo prefixo digitado.

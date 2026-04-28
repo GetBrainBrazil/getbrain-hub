@@ -10,13 +10,37 @@ export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat("pt-BR").format(d);
 }
 
+/**
+ * Formata um número de telefone com detecção automática de DDI.
+ *
+ * Regras:
+ *  - 12 ou 13 dígitos começando com `55` → `+55 (DD) NNNNN-NNNN`.
+ *  - Até 11 dígitos → formato nacional BR progressivo.
+ *  - 12+ dígitos com outro DDI → `+CC NNNN NNNN…` (genérico).
+ */
 export function formatPhoneBR(value: string | null | undefined): string {
   if (!value) return "";
-  const digits = String(value).replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits.length ? `(${digits}` : "";
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  const raw = String(value).replace(/\D/g, "").slice(0, 15);
+  if (!raw) return "";
+
+  if ((raw.length === 12 || raw.length === 13) && raw.startsWith("55")) {
+    return `+55 ${formatBrNational(raw.slice(2))}`;
+  }
+  if (raw.length <= 11) {
+    return formatBrNational(raw);
+  }
+  // DDI estrangeiro (heurística: 2 dígitos de país)
+  const cc = raw.slice(0, 2);
+  const rest = raw.slice(2);
+  return `+${cc} ${rest.replace(/(\d{4})(?=\d)/g, "$1 ").trim()}`;
+}
+
+/** Formata até 11 dígitos no padrão nacional brasileiro (com digitação parcial). */
+function formatBrNational(d: string): string {
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
 export function formatPercent(value: number): string {
