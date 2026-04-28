@@ -50,6 +50,38 @@ export function useConvertLeadToDeal() {
   });
 }
 
+export function useBulkDeleteLeads() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<{ deleted: number; skipped: number }> => {
+      if (!ids.length) return { deleted: 0, skipped: 0 };
+      // Filtra leads já convertidos (têm deal vinculado) — preserva integridade
+      const { data: rows, error: fetchErr } = await sb
+        .from('leads')
+        .select('id, converted_to_deal_id')
+        .in('id', ids);
+      if (fetchErr) throw fetchErr;
+      const deletable = (rows ?? [])
+        .filter((r: { converted_to_deal_id: string | null }) => !r.converted_to_deal_id)
+        .map((r: { id: string }) => r.id);
+      const skipped = ids.length - deletable.length;
+      if (deletable.length) {
+        await sb.from('deal_activities').delete().in('lead_id', deletable);
+        const { error } = await sb.from('leads').delete().in('id', deletable);
+        if (error) throw error;
+      }
+      return { deleted: deletable.length, skipped };
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['crm-leads'] });
+      qc.invalidateQueries({ queryKey: ['crm-leads-full'] });
+      qc.invalidateQueries({ queryKey: ['crm-lead-code'] });
+      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+      qc.invalidateQueries({ queryKey: ['crm-dashboard-exec'] });
+    },
+  });
+}
+
 export function useDeleteLead() {
   const qc = useQueryClient();
   return useMutation({
