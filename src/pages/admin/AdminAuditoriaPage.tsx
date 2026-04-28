@@ -102,8 +102,8 @@ export default function AdminAuditoriaPage() {
         </Button>
       </div>
 
-      {/* Legenda das cores */}
-      <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground bg-muted/30 border border-border rounded-md px-3 py-2">
+      {/* Legenda das cores - sticky no topo */}
+      <div className="sticky top-0 z-30 -mx-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground bg-background/95 supports-[backdrop-filter]:bg-background/70 backdrop-blur border border-border rounded-md px-3 py-2 shadow-sm">
         <span className="font-medium text-foreground">Legenda:</span>
         {ACTION_LEGEND.map((l) => (
           <span key={l.action} className="inline-flex items-center gap-1.5">
