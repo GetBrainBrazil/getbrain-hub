@@ -31,13 +31,25 @@ export function useCompanyContactsWithRoles(companyId?: string) {
       const linkIds = linkRows.map((l) => l.id);
       const [{ data: people, error: pErr }, { data: roles, error: rErr }] = await Promise.all([
         sb.from('people').select('id, full_name, email, phone, role_in_company').in('id', personIds).is('deleted_at', null),
-        sb.from('company_contact_roles').select('*').in('company_person_id', linkIds).is('deleted_at', null),
+        sb.from('company_contact_roles')
+          .select(`id, company_person_id, organization_id, role, role_id, created_at, role_ref:crm_contact_roles!company_contact_roles_role_id_fkey ( id, name, slug, color )`)
+          .in('company_person_id', linkIds)
+          .is('deleted_at', null),
       ]);
       if (pErr) throw pErr;
       if (rErr) throw rErr;
       const personMap = new Map<string, CrmPerson>(((people ?? []) as CrmPerson[]).map((p) => [p.id, p]));
       const rolesMap = new Map<string, CompanyContactRole[]>();
-      for (const r of (roles ?? []) as CompanyContactRole[]) {
+      for (const raw of (roles ?? []) as any[]) {
+        const r: CompanyContactRole = {
+          id: raw.id,
+          company_person_id: raw.company_person_id,
+          organization_id: raw.organization_id,
+          role_id: raw.role_id,
+          role: raw.role ?? null,
+          role_ref: raw.role_ref ?? null,
+          created_at: raw.created_at,
+        };
         const list = rolesMap.get(r.company_person_id) ?? [];
         list.push(r);
         rolesMap.set(r.company_person_id, list);
