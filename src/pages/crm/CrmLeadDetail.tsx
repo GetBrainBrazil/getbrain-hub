@@ -20,6 +20,7 @@ import { DangerZone } from '@/components/crm/DangerZone';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateCrmCaches } from '@/lib/cacheInvalidation';
 import { useCrmActors, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
+import { useCrmLeadSources } from '@/hooks/crm/useCrmLeadSources';
 import { formatCurrency } from '@/lib/formatters';
 import type { DealStage, Lead, LeadStatus } from '@/types/crm';
 
