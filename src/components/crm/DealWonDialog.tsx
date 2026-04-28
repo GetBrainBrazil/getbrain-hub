@@ -275,6 +275,12 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       qc.invalidateQueries({ queryKey: ['deal', deal.code] });
       qc.invalidateQueries({ queryKey: ['crm', 'deals'] });
       qc.invalidateQueries({ queryKey: ['proposals'] });
+      // Cross-module: financeiro, projetos e clientes (pode ter sido auto-criado)
+      const { invalidateFinanceCaches, invalidateProject } = await import('@/lib/cacheInvalidation');
+      invalidateFinanceCaches(qc, { projectId: data?.project_id, clientId: data?.cliente_id });
+      if (data?.project_id) invalidateProject(qc, data.project_id);
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['projects'] });
       onOpenChange(false);
       if (data?.project_id) {
         if (onSuccess) onSuccess(data.project_id);
