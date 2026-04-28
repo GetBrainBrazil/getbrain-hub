@@ -53,19 +53,19 @@ function fmtDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-export function DealWonDialog({ open, onOpenChange, deal }: Props) {
+export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [acceptedProposal, setAcceptedProposal] = useState<ProposalLite | null>(null);
   const [loadingProposal, setLoadingProposal] = useState(false);
 
-  const [projectName, setProjectName] = useState(deal.title);
-  const [projectType, setProjectType] = useState<string>(deal.project_type ?? '');
+  const [projectName, setProjectName] = useState(deal?.title ?? '');
+  const [projectType, setProjectType] = useState<string>(deal?.project_type ?? '');
   const [startDate, setStartDate] = useState<string>(
-    deal.desired_start_date ?? fmtDateInput(new Date()),
+    deal?.desired_start_date ?? fmtDateInput(new Date()),
   );
   const [estimatedDelivery, setEstimatedDelivery] = useState<string>(
-    deal.desired_delivery_date ?? '',
+    deal?.desired_delivery_date ?? '',
   );
   const [installments, setInstallments] = useState<InstallmentDraft[]>([
     { id: newId(), amount: '', due_date: fmtDateInput(addMonths(new Date(), 1)) },
