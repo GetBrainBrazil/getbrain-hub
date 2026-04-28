@@ -15,7 +15,12 @@ const TABS = [
   { value: 'pipeline', label: 'Pipeline' },
   { value: 'leads', label: 'Leads & Empresas' },
   { value: 'calendario', label: 'Calendário' },
+  { value: 'configuracoes', label: 'Configurações' },
 ];
+
+// Botões "Novo Lead" / "Novo Deal" só aparecem nas abas onde fazem sentido
+const SHOW_NEW_LEAD = new Set(['pipeline', 'leads']);
+const SHOW_NEW_DEAL = new Set(['pipeline']);
 
 export default function CrmLayout() {
   const navigate = useNavigate();
@@ -26,6 +31,9 @@ export default function CrmLayout() {
   const { data: sources = [] } = useDistinctLeadSources();
   const store = useCrmHubStore();
   const currentTab = TABS.find((t) => location.pathname.startsWith(`/crm/${t.value}`))?.value ?? 'pipeline';
+  const showNewLead = SHOW_NEW_LEAD.has(currentTab);
+  const showNewDeal = SHOW_NEW_DEAL.has(currentTab);
+  const hasActions = showNewLead || showNewDeal;
 
   const filterControls = (
     <>
@@ -54,14 +62,20 @@ export default function CrmLayout() {
             <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground">CRM</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">Funil comercial e relacionamento com clientes</p>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={() => setLeadOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
-              <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Lead
-            </Button>
-            <Button size="sm" onClick={() => setDealOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
-              <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Deal
-            </Button>
-          </div>
+          {hasActions && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {showNewLead && (
+                <Button variant="outline" size="sm" onClick={() => setLeadOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
+                  <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Lead
+                </Button>
+              )}
+              {showNewDeal && (
+                <Button size="sm" onClick={() => setDealOpen(true)} className="flex-1 sm:flex-none min-h-10 sm:min-h-9">
+                  <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo </span>Deal
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Filters bar — apenas no Pipeline */}

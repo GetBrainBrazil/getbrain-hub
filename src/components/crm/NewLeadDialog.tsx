@@ -10,14 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateLead } from '@/hooks/crm/useLeads';
 import { useAllLeads } from '@/hooks/crm/useCrmDetails';
-import { useCompanies, useCreateCompany, useCreatePerson, useCrmActors, useDistinctLeadSources, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
+import { useCompanies, useCreateCompany, useCreatePerson, useCrmActors, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
+import { useCrmLeadSources } from '@/hooks/crm/useCrmLeadSources';
 
 export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const navigate = useNavigate();
   const { data: companies = [] } = useCompanies();
   const { data: allLeads = [] } = useAllLeads();
   const { data: actors = [] } = useCrmActors();
-  const { data: sources = [] } = useDistinctLeadSources();
+  const { data: leadSources = [] } = useCrmLeadSources({ onlyActive: true });
   const createLead = useCreateLead();
   const createCompany = useCreateCompany();
   const createPerson = useCreatePerson();
@@ -59,7 +60,7 @@ export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     )}
     <div className="grid grid-cols-[1fr_auto] gap-2"><div className="space-y-1.5"><Label>Contato</Label><Select value={form.contact_person_id || 'none'} onValueChange={(v) => setForm((f) => ({ ...f, contact_person_id: v === 'none' ? '' : v }))}><SelectTrigger><SelectValue placeholder="Selecionar contato" /></SelectTrigger><SelectContent><SelectItem value="none">Sem contato</SelectItem>{people.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent></Select></div><Button type="button" variant="outline" className="mt-6" disabled={!form.company_id} onClick={() => setNestedPerson((v) => !v)}><Plus className="h-4 w-4" /></Button></div>
     {nestedPerson && <div className="grid gap-2 rounded-lg border border-border bg-muted/20 p-3 md:grid-cols-2"><Input placeholder="Nome" value={personForm.full_name} onChange={(e) => setPersonForm((f) => ({ ...f, full_name: e.target.value }))} /><Input placeholder="E-mail" value={personForm.email} onChange={(e) => setPersonForm((f) => ({ ...f, email: e.target.value }))} /><Input placeholder="Telefone" value={personForm.phone} onChange={(e) => setPersonForm((f) => ({ ...f, phone: e.target.value }))} /><Input placeholder="Cargo" value={personForm.role_in_company} onChange={(e) => setPersonForm((f) => ({ ...f, role_in_company: e.target.value }))} /><Button className="md:col-span-2" onClick={addPerson} disabled={!personForm.full_name}>Criar contato</Button></div>}
-    <div className="grid gap-3 md:grid-cols-3"><div className="space-y-1.5"><Label>Origem</Label><Input list="crm-sources" value={form.source} onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))} /><datalist id="crm-sources">{sources.map((s) => <option key={s} value={s} />)}</datalist></div><div className="space-y-1.5"><Label>Valor estimado</Label><Input type="number" value={form.estimated_value} onChange={(e) => setForm((f) => ({ ...f, estimated_value: e.target.value }))} /></div><div className="space-y-1.5"><Label>Dono</Label><Select value={form.owner_actor_id} onValueChange={(v) => setForm((f) => ({ ...f, owner_actor_id: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{actors.map((a) => <SelectItem key={a.id} value={a.id}>{a.display_name}</SelectItem>)}</SelectContent></Select></div></div>
+    <div className="grid gap-3 md:grid-cols-3"><div className="space-y-1.5"><Label>Origem</Label><Select value={form.source || 'none'} onValueChange={(v) => setForm((f) => ({ ...f, source: v === 'none' ? '' : v }))}><SelectTrigger><SelectValue placeholder="Selecionar origem" /></SelectTrigger><SelectContent><SelectItem value="none">Sem origem</SelectItem>{leadSources.map((s) => <SelectItem key={s.id} value={s.slug}>{s.name}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1.5"><Label>Valor estimado</Label><Input type="number" value={form.estimated_value} onChange={(e) => setForm((f) => ({ ...f, estimated_value: e.target.value }))} /></div><div className="space-y-1.5"><Label>Dono</Label><Select value={form.owner_actor_id} onValueChange={(v) => setForm((f) => ({ ...f, owner_actor_id: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{actors.map((a) => <SelectItem key={a.id} value={a.id}>{a.display_name}</SelectItem>)}</SelectContent></Select></div></div>
     <div className="space-y-1.5"><Label>Dor/situação</Label><Textarea value={form.pain_description} onChange={(e) => setForm((f) => ({ ...f, pain_description: e.target.value }))} /></div>
   </div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={submit} disabled={!form.title || !form.company_id || createLead.isPending}>Criar lead</Button></DialogFooter></DialogContent></Dialog>;
 }
