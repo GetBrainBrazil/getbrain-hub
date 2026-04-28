@@ -149,3 +149,29 @@ export function useSoftDeleteDeal() {
 }
 
 export { DEAL_STAGE_PROBABILITY };
+
+export function useDeleteCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Pré-checagem: bloqueia se houver leads, deals ou projetos vinculados
+      const [{ data: leads }, { data: deals }, { data: projects }] = await Promise.all([
+        sb.from('leads').select('id').eq('company_id', id).is('deleted_at', null).limit(1),
+        sb.from('deals').select('id').eq('company_id', id).is('deleted_at', null).limit(1),
+        sb.from('projects').select('id').eq('company_id', id).is('deleted_at', null).limit(1),
+      ]);
+      if ((leads?.length || 0) + (deals?.length || 0) + (projects?.length || 0) > 0) {
+        throw new Error('Empresa possui leads, deals ou projetos vinculados. Exclua-os primeiro.');
+      }
+      // Limpa vínculos de contato e papéis de contato
+      await sb.from('company_people').delete().eq('company_id', id);
+      const { error } = await sb.from('companies').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['crm-companies-full'] });
+      qc.invalidateQueries({ queryKey: ['crm-company-detail'] });
+      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+    },
+  });
+}
