@@ -19,15 +19,15 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Mail, Phone, Plus, Star, StarOff, Trash2, Pencil, Save, X, User,
-  Briefcase, UserPlus, Check, ChevronsUpDown, Tag,
+  Mail, Phone, Plus, Star, Trash2, Save, X, User,
+  Building2, UserPlus, Check, ChevronsUpDown, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
@@ -231,6 +231,7 @@ function CommercialRolePicker({
 
 function ContactForm({
   initial, isPrimaryToggleable, initialIsPrimary, onCancel, onSubmit, submitting, submitLabel,
+  onMakePrimary, onRemove, isAlreadyPrimary,
 }: {
   initial?: FormState;
   isPrimaryToggleable?: boolean;
@@ -239,6 +240,11 @@ function ContactForm({
   onSubmit: (form: FormState, isPrimary: boolean) => void;
   submitting: boolean;
   submitLabel: string;
+  /** Quando presente, mostra botão "Definir como principal" no rodapé (modo edição). */
+  onMakePrimary?: () => void;
+  /** Quando presente, mostra botão "Remover contato" no rodapé (modo edição). */
+  onRemove?: () => void;
+  isAlreadyPrimary?: boolean;
 }) {
   const [form, setForm] = useState<FormState>(initial ?? emptyForm);
   const [isPrimary, setIsPrimary] = useState(!!initialIsPrimary);
@@ -253,7 +259,7 @@ function ContactForm({
   };
 
   return (
-    <div className="rounded-md border border-border bg-muted/20 p-3">
+    <div className="rounded-md border border-accent/30 bg-accent/5 p-3">
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label className="text-xs">Nome *</Label>
@@ -278,13 +284,28 @@ function ContactForm({
           Definir como contato principal
         </label>
       )}
-      <div className="mt-3 flex justify-end gap-2">
-        <Button size="sm" variant="ghost" onClick={onCancel} disabled={submitting}>
-          <X className="mr-1 h-3.5 w-3.5" /> Cancelar
-        </Button>
-        <Button size="sm" onClick={handle} disabled={submitting}>
-          <Save className="mr-1 h-3.5 w-3.5" /> {submitting ? "Salvando…" : submitLabel}
-        </Button>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1">
+          {onMakePrimary && !isAlreadyPrimary && (
+            <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting} className="text-xs">
+              <Star className="mr-1 h-3.5 w-3.5" /> Definir como principal
+            </Button>
+          )}
+          {onRemove && (
+            <Button size="sm" variant="ghost" onClick={onRemove} disabled={submitting}
+              className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive">
+              <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover contato
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={onCancel} disabled={submitting}>
+            <X className="mr-1 h-3.5 w-3.5" /> Cancelar
+          </Button>
+          <Button size="sm" onClick={handle} disabled={submitting}>
+            <Save className="mr-1 h-3.5 w-3.5" /> {submitting ? "Salvando…" : submitLabel}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -404,6 +425,7 @@ export function CompanyContactsPanel({
         <div className="-mx-2">
           {contacts.map((c) => {
             if (editingPersonId === c.person_id) {
+              const isPrimary = isPrimaryFor(c);
               return (
                 <div key={c.person_id} className="px-2 py-2">
                   <ContactForm
@@ -416,6 +438,12 @@ export function CompanyContactsPanel({
                     onCancel={() => setEditingPersonId(null)}
                     submitting={update.isPending}
                     submitLabel="Salvar"
+                    isAlreadyPrimary={isPrimary}
+                    onMakePrimary={() => handleTogglePrimary(c)}
+                    onRemove={async () => {
+                      await handleUnlink(c);
+                      setEditingPersonId(null);
+                    }}
                     onSubmit={(form) => {
                       update.mutate(
                         {
@@ -442,12 +470,23 @@ export function CompanyContactsPanel({
             const usedRoleIds = new Set(linkRoles.map((r) => r.id));
             const availableRoles = catalog.filter((r) => !usedRoleIds.has(r.id));
 
+            const openEdit = () => setEditingPersonId(c.person_id);
+            const stop = (e: React.MouseEvent | React.KeyboardEvent) => e.stopPropagation();
+
             return (
               <div
                 key={c.person_id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Editar contato ${c.full_name}`}
+                onClick={openEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEdit(); }
+                }}
                 className={cn(
-                  "group/contact flex items-start gap-3 rounded-md border px-2 py-2.5 transition-colors hover:bg-muted/30",
-                  primary ? "border-accent/40" : "border-transparent hover:border-border/60",
+                  "group/contact flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-all",
+                  "hover:border-accent/40 hover:bg-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                  primary ? "border-accent/40 bg-accent/[0.03]" : "border-transparent",
                 )}
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
@@ -463,19 +502,27 @@ export function CompanyContactsPanel({
                     )}
                     {c.role_in_company && (
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Briefcase className="h-3 w-3" />
+                        <Building2 className="h-3 w-3" />
                         {c.role_in_company}
                       </span>
                     )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                     {c.email && (
-                      <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 hover:text-foreground">
+                      <a
+                        href={`mailto:${c.email}`}
+                        onClick={stop}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
                         <Mail className="h-3 w-3" />{c.email}
                       </a>
                     )}
                     {c.phone && (
-                      <a href={`tel:${c.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
+                      <a
+                        href={`tel:${c.phone}`}
+                        onClick={stop}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
                         <Phone className="h-3 w-3" />{formatPhoneBR(c.phone)}
                       </a>
                     )}
@@ -483,7 +530,11 @@ export function CompanyContactsPanel({
                   </div>
 
                   {showRoles && (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    <div
+                      className="mt-1.5 flex flex-wrap items-center gap-1"
+                      onClick={stop}
+                      onKeyDown={stop}
+                    >
                       {linkRoles.map((r) => (
                         <Badge
                           key={r.role_link_id}
@@ -495,10 +546,13 @@ export function CompanyContactsPanel({
                           <button
                             type="button"
                             aria-label={`Remover papel ${r.name}`}
-                            onClick={() => removeRole.mutate(
-                              { id: r.role_link_id, company_person_id: c.link_id },
-                              { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ""}`) },
-                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeRole.mutate(
+                                { id: r.role_link_id, company_person_id: c.link_id },
+                                { onError: (e: any) => toast.error(`Falhou: ${e?.message ?? ""}`) },
+                              );
+                            }}
                             className="hover:opacity-70"
                           >
                             <X className="h-2.5 w-2.5" />
@@ -526,38 +580,6 @@ export function CompanyContactsPanel({
                       />
                     </div>
                   )}
-                </div>
-                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/contact:opacity-100 focus-within:opacity-100">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-7 w-7"
-                        onClick={() => handleTogglePrimary(c)}
-                        disabled={primary && !onMakePrimary}>
-                        {primary
-                          ? <Star className="h-3.5 w-3.5 fill-current text-accent" />
-                          : <StarOff className="h-3.5 w-3.5" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {primary ? "Já é principal" : "Marcar como principal"}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingPersonId(c.person_id)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Editar</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleUnlink(c)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Remover do vínculo</TooltipContent>
-                  </Tooltip>
                 </div>
               </div>
             );
