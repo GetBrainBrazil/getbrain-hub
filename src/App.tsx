@@ -38,7 +38,6 @@ import CrmPipeline from "./pages/crm/CrmPipeline";
 import CrmCompanyDetail from "./pages/crm/CrmCompanyDetail";
 import CrmDealDetail from "./pages/crm/CrmDealDetail";
 import CrmDashboard from "./pages/crm/CrmDashboard";
-import CrmEmpresas from "./pages/crm/CrmEmpresas";
 import CrmCalendar from "./pages/crm/CrmCalendar";
 import CrmLeads from "./pages/crm/CrmLeads";
 import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
