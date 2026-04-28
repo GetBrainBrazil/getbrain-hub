@@ -2,9 +2,13 @@ import { useState } from "react";
 import { ArrowDown, ArrowUp, Lock, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useConfirm } from "@/components/ConfirmDialog";
 import {
   CrmLeadSource,
@@ -49,89 +53,129 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
     if (ok) remove.mutate(s.id);
   };
 
+  const submit = () => {
+    if (!newName.trim()) return;
+    create.mutate({ name: newName.trim(), color: newColor }, { onSuccess: () => setNewName("") });
+  };
+
   if (isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-2xl space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold">Origens de leads</h3>
+          <p className="text-xs text-muted-foreground">Opções disponíveis ao cadastrar um lead.</p>
+        </div>
+        <span className="text-xs text-muted-foreground">{sources.length} {sources.length === 1 ? "origem" : "origens"}</span>
+      </div>
+
       {!canEdit && (
-        <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-          <Lock className="mr-1 inline h-3 w-3" /> Apenas administradores podem editar origens. Você pode visualizar a lista.
+        <div className="rounded-md border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-xs text-warning">
+          <Lock className="mr-1 inline h-3 w-3" /> Apenas administradores podem editar.
         </div>
       )}
 
-      {canEdit && (
-        <div className="rounded-lg border border-border bg-card/40 p-3 sm:p-4">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Adicionar origem</Label>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-1.5">
-              <Input
-                placeholder="Ex: TikTok, Webinar, RD Station..."
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newName.trim()) {
-                    create.mutate({ name: newName.trim(), color: newColor }, { onSuccess: () => setNewName("") });
-                  }
-                }}
-              />
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {PRESET_COLORS.map((c) => (
+      <div className="rounded-lg border border-border bg-card/30">
+        {/* Add row */}
+        {canEdit && (
+          <div className="flex items-center gap-2 border-b border-border px-2 py-2">
+            <Popover>
+              <PopoverTrigger asChild>
                 <button
-                  key={c}
                   type="button"
-                  onClick={() => setNewColor(c)}
-                  className={`h-7 w-7 rounded-full border-2 transition ${newColor === c ? "border-foreground scale-110" : "border-transparent"}`}
-                  style={{ background: c }}
-                  aria-label={`Cor ${c}`}
+                  className="h-6 w-6 shrink-0 rounded-full border border-border transition hover:scale-110"
+                  style={{ background: newColor }}
+                  aria-label="Escolher cor"
                 />
-              ))}
-            </div>
-            <Button
-              onClick={() => create.mutate({ name: newName.trim(), color: newColor }, { onSuccess: () => setNewName("") })}
-              disabled={!newName.trim() || create.isPending}
-              className="sm:w-auto"
-            >
-              <Plus className="h-4 w-4" /> Adicionar
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-2" align="start">
+                <div className="flex flex-wrap gap-1.5 max-w-[180px]">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewColor(c)}
+                      className={`h-6 w-6 rounded-full border-2 transition ${newColor === c ? "border-foreground scale-110" : "border-transparent"}`}
+                      style={{ background: c }}
+                      aria-label={`Cor ${c}`}
+                    />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Input
+              placeholder="Nova origem (ex: TikTok, Webinar...)"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+              className="h-8 flex-1 border-0 bg-transparent px-1 focus-visible:ring-0"
+            />
+            <Button size="sm" className="h-7" onClick={submit} disabled={!newName.trim() || create.isPending}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar
             </Button>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="space-y-2">
-        {sources.map((s, idx) => (
-          <div
-            key={s.id}
-            className="flex flex-col gap-2 rounded-lg border border-border bg-card/30 p-3 sm:flex-row sm:items-center sm:gap-3"
-          >
-            <div className="flex items-center gap-2 sm:w-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                disabled={!canEdit || idx === 0}
-                onClick={() => move(idx, -1)}
-                aria-label="Subir"
-              >
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                disabled={!canEdit || idx === sources.length - 1}
-                onClick={() => move(idx, 1)}
-                aria-label="Descer"
-              >
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-              <span
-                className="ml-1 inline-block h-4 w-4 rounded-full border border-border"
-                style={{ background: s.color ?? "transparent" }}
-              />
-            </div>
+        {/* List */}
+        <div className="divide-y divide-border">
+          {sources.map((s, idx) => (
+            <div key={s.id} className="group flex items-center gap-2 px-2 py-1.5">
+              <div className="flex shrink-0 flex-col">
+                <button
+                  type="button"
+                  className="flex h-3.5 w-5 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  disabled={!canEdit || idx === 0}
+                  onClick={() => move(idx, -1)}
+                  aria-label="Subir"
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  className="flex h-3.5 w-5 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  disabled={!canEdit || idx === sources.length - 1}
+                  onClick={() => move(idx, 1)}
+                  aria-label="Descer"
+                >
+                  <ArrowDown className="h-3 w-3" />
+                </button>
+              </div>
 
-            <div className="flex-1">
+              {canEdit ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="h-4 w-4 shrink-0 rounded-full border border-border"
+                      style={{ background: s.color ?? "transparent" }}
+                      aria-label="Editar cor"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2" align="start">
+                    <div className="flex flex-wrap gap-1.5 max-w-[180px]">
+                      {PRESET_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => update.mutate({ id: s.id, patch: { color: c } })}
+                          className={`h-6 w-6 rounded-full border-2 transition ${s.color === c ? "border-foreground scale-110" : "border-transparent"}`}
+                          style={{ background: c }}
+                          aria-label={`Cor ${c}`}
+                        />
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <span
+                  className="h-4 w-4 shrink-0 rounded-full border border-border"
+                  style={{ background: s.color ?? "transparent" }}
+                />
+              )}
+
               {canEdit ? (
                 <Input
                   defaultValue={s.name}
@@ -139,44 +183,39 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
                     const v = e.target.value.trim();
                     if (v && v !== s.name) update.mutate({ id: s.id, patch: { name: v } });
                   }}
-                  className="h-9"
+                  className="h-7 flex-1 border-0 bg-transparent px-1 text-sm focus-visible:ring-1"
                 />
               ) : (
-                <span className="text-sm font-medium">{s.name}</span>
+                <span className="flex-1 text-sm font-medium">{s.name}</span>
               )}
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                <code className="font-mono">{s.slug}</code>
-                {s.is_system && <Badge variant="outline" className="h-5 text-[10px]">sistema</Badge>}
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <Switch
-                  checked={s.is_active}
-                  disabled={!canEdit}
-                  onCheckedChange={(v) => update.mutate({ id: s.id, patch: { is_active: v } })}
-                />
-                <span className="text-xs text-muted-foreground">{s.is_active ? "Ativa" : "Inativa"}</span>
-              </div>
+              {s.is_system && (
+                <Badge variant="outline" className="h-4 shrink-0 px-1 text-[9px] font-normal">sistema</Badge>
+              )}
+
+              <Switch
+                checked={s.is_active}
+                disabled={!canEdit}
+                onCheckedChange={(v) => update.mutate({ id: s.id, patch: { is_active: v } })}
+                className="scale-75"
+              />
+
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-destructive"
+                className="h-6 w-6 p-0 text-destructive opacity-0 transition group-hover:opacity-100 disabled:opacity-0"
                 disabled={!canEdit || s.is_system}
                 onClick={() => handleDelete(s)}
                 title={s.is_system ? "Origens do sistema só podem ser desativadas" : "Remover"}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-          </div>
-        ))}
-        {sources.length === 0 && (
-          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Nenhuma origem cadastrada.
-          </p>
-        )}
+          ))}
+          {sources.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground">Nenhuma origem cadastrada.</p>
+          )}
+        </div>
       </div>
       {dialog}
     </div>
