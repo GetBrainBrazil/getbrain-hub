@@ -312,8 +312,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           <div className="font-semibold text-foreground">O que será transferido pro projeto:</div>
           <ul className="space-y-0.5 text-muted-foreground">
             <li>• Descoberta (escopo, entregáveis, premissas, riscos, stack, critérios de aceite)</li>
-            <li>• Anexos comerciais (organograma, mockup, prints) — se houver</li>
+            <li>• Contato principal, origem do lead e contexto comercial (dores, concorrentes, racional)</li>
+            <li>• Anexos do deal (organograma, mockup, documentos enviados)</li>
             <li>• Dependências do deal viram dependências do projeto</li>
+            <li>• Cliente financeiro: busca por CNPJ, cria automático se não existir</li>
             <li>
               • {loadingProposal
                 ? 'Verificando propostas…'
