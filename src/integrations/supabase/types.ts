@@ -300,6 +300,7 @@ export type Database = {
       anexos: {
         Row: {
           created_at: string | null
+          deal_id: string | null
           descricao: string | null
           id: string
           movimentacao_id: string | null
@@ -312,6 +313,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deal_id?: string | null
           descricao?: string | null
           id?: string
           movimentacao_id?: string | null
@@ -324,6 +326,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deal_id?: string | null
           descricao?: string | null
           id?: string
           movimentacao_id?: string | null
@@ -3180,6 +3183,7 @@ export type Database = {
           actual_delivery_date: string | null
           business_context: string | null
           code: string
+          commercial_context: Json
           company_id: string
           complexity_baseline: number | null
           contract_value: number | null
@@ -3199,8 +3203,10 @@ export type Database = {
           notes: string | null
           organization_id: string
           organograma_url: string | null
+          origin_lead_source_id: string | null
           owner_actor_id: string | null
           premises: string[]
+          primary_contact_person_id: string | null
           project_type: Database["public"]["Enums"]["project_type"]
           scope_in: string | null
           scope_out: string | null
@@ -3217,6 +3223,7 @@ export type Database = {
           actual_delivery_date?: string | null
           business_context?: string | null
           code?: string
+          commercial_context?: Json
           company_id: string
           complexity_baseline?: number | null
           contract_value?: number | null
@@ -3236,8 +3243,10 @@ export type Database = {
           notes?: string | null
           organization_id: string
           organograma_url?: string | null
+          origin_lead_source_id?: string | null
           owner_actor_id?: string | null
           premises?: string[]
+          primary_contact_person_id?: string | null
           project_type: Database["public"]["Enums"]["project_type"]
           scope_in?: string | null
           scope_out?: string | null
@@ -3254,6 +3263,7 @@ export type Database = {
           actual_delivery_date?: string | null
           business_context?: string | null
           code?: string
+          commercial_context?: Json
           company_id?: string
           complexity_baseline?: number | null
           contract_value?: number | null
@@ -3273,8 +3283,10 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           organograma_url?: string | null
+          origin_lead_source_id?: string | null
           owner_actor_id?: string | null
           premises?: string[]
+          primary_contact_person_id?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
           scope_in?: string | null
           scope_out?: string | null
@@ -3309,10 +3321,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "projects_origin_lead_source_id_fkey"
+            columns: ["origin_lead_source_id"]
+            isOneToOne: false
+            referencedRelation: "crm_lead_sources"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "projects_owner_actor_id_fkey"
             columns: ["owner_actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_primary_contact_person_id_fkey"
+            columns: ["primary_contact_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
             referencedColumns: ["id"]
           },
           {
