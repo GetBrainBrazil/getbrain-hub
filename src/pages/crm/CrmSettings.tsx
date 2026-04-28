@@ -2,7 +2,7 @@ import { Settings2, Tag, Workflow, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LeadSourcesManager } from "@/components/crm/settings/LeadSourcesManager";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 
 export default function CrmSettings() {
   const { isAdmin } = useAuth();
