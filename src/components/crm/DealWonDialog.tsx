@@ -250,10 +250,24 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           project_type: projectType,
           start_date: startDate || null,
           estimated_delivery_date: estimatedDelivery || null,
+          categoria_id: categoriaId || null,
+          centro_custo_id: centroId || null,
+          conta_bancaria_id: contaId || null,
+          meio_pagamento_id: meioId || null,
         },
         p_installments: cleaned,
       });
       if (error) throw error;
+
+      // Salva defaults financeiros pra próxima conversão
+      try {
+        localStorage.setItem(FIN_DEFAULTS_KEY, JSON.stringify({
+          categoria_id: categoriaId || undefined,
+          centro_custo_id: centroId || undefined,
+          conta_bancaria_id: contaId || undefined,
+          meio_pagamento_id: meioId || undefined,
+        }));
+      } catch {}
 
       toast.success(
         `Deal fechado · projeto ${data?.project_code ?? ''} criado · ${data?.installments_created ?? cleaned.length} parcela(s)`,
