@@ -130,7 +130,28 @@ export function useEntityAudit(type: 'deal' | 'lead' | 'company', id?: string) {
 
 export function useUpdateDealField(code?: string) {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: async ({ id, updates }: { id: string; updates: Partial<Deal> }) => { const { error } = await sb.from('deals').update(updates).eq('id', id); if (error) throw error; }, onSettled: (_d, _e, vars) => { qc.invalidateQueries({ queryKey: ['crm-deal-code', code] }); qc.invalidateQueries({ queryKey: ['crm-deals'] }); qc.invalidateQueries({ queryKey: ['crm-metrics'] }); if (vars?.updates.company_id) qc.invalidateQueries({ queryKey: ['crm-company-detail', vars.updates.company_id] }); } });
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Deal> }) => {
+      const { error } = await sb.from('deals').update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async ({ updates }) => {
+      const key = ['crm-deal-code', code];
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Deal>(key);
+      if (previous) qc.setQueryData<Deal>(key, { ...previous, ...(updates as Deal) });
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['crm-deal-code', code], ctx.previous);
+    },
+    onSettled: (_d, _e, vars) => {
+      qc.invalidateQueries({ queryKey: ['crm-deal-code', code] });
+      qc.invalidateQueries({ queryKey: ['crm-deals'] });
+      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+      if (vars?.updates.company_id) qc.invalidateQueries({ queryKey: ['crm-company-detail', vars.updates.company_id] });
+    },
+  });
 }
 
 export function useUpdateLeadField(code?: string) {
