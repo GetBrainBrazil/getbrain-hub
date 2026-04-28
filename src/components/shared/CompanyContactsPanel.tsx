@@ -19,8 +19,8 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Mail, Phone, Plus, Star, StarOff, Trash2, Pencil, Save, X, User,
-  Briefcase, UserPlus, Check, ChevronsUpDown, Tag,
+  Mail, Phone, Plus, Star, Trash2, Save, X, User,
+  Building2, UserPlus, Check, ChevronsUpDown, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";

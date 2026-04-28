@@ -1,132 +1,43 @@
 ## Objetivo
 
-Fechar as lacunas entre **Deal (CRM)** e **Projeto** ao usar o "Marcar como ganho", copiando os campos que ainda se perdem e centralizando as configurações financeiras no momento da conversão. Também trazer da lógica de Projetos algumas integrações bidirecionais úteis.
+Remover os botões de ação visíveis no hover (estrela / lápis / lixeira) do card de contato e tornar **o card inteiro clicável** para abrir o modo de edição inline. As ações secundárias (definir principal, remover) ficam dentro do formulário de edição. Aplicar em **CRM e Projetos** (mesmo componente compartilhado), preservando o diferencial visual de cada módulo.
 
----
+## Escopo
 
-## Mapeamento atual (o que já passa, o que falta)
+Arquivo único: `src/components/shared/CompanyContactsPanel.tsx` (usado pelos dois wrappers — `CardContatos` em Projetos e `CompanyContactsManager` no CRM).
 
-```text
-DEAL                              PROJETO                    STATUS
-────────────────────────────────  ─────────────────────────  ───────────────
-company_id                        company_id                 ✅ ok
-title                             name                       ✅ ok
-estimated_value                   contract_value             ✅ ok
-project_type                      project_type               ✅ ok
-scope_summary/in/out              description/scope_in/out   ✅ ok
-deliverables/premises/risks       idem (arrays)              ✅ ok
-acceptance_criteria               idem                       ✅ ok
-technical_stack                   idem                       ✅ ok
-estimated_hours_total             estimated_hours_baseline   ✅ ok
-estimated_complexity              complexity_baseline        ✅ ok
-business_context                  business_context           ✅ ok
-organograma_url / mockup_url      idem                       ✅ ok
-deal_dependencies                 project_dependencies       ✅ ok (mapeado)
-proposta aceita                   proposals.project_id       ✅ ok
-─────────────────────────────────────────────────────────────────────────────
-contact_person_id                 (perdido)                  ❌ FALTA
-origin_lead_id                    (perdido — sem origem)     ❌ FALTA
-pain_description/category/cost    (perdido)                  ❌ FALTA (contexto)
-competitors / pricing_rationale   (perdido)                  ❌ FALTA (contexto)
-clientes.id (financeiro)          match por nome frágil      ⚠️ FALTA CNPJ
-categoria/centro_custo/conta      não escolhidos             ❌ FALTA na UI
-```
+## Mudanças no card (modo leitura)
 
----
+1. **Remover** o bloco de ações no canto direito (estrela/lápis/lixeira com `opacity-0 group-hover`).
+2. **Card inteiro clicável** (`onClick` + `role="button"` + `tabIndex={0}` + Enter/Space) → abre modo edição (`setEditingPersonId(c.person_id)`).
+3. Manter `cursor-pointer` e um leve `hover:border-accent/30 hover:bg-accent/5` para indicar interatividade (estilo Projetos da image-115).
+4. **Estrela "Principal"** continua visível como badge informativo já existente (`PRINCIPAL` ao lado do nome) — não como botão de ação no card.
+5. Links `mailto:` / `tel:` recebem `e.stopPropagation()` para não disparar a edição quando o usuário clica em email/telefone.
+6. Badges de papéis comerciais (CRM) e o `CommercialRolePicker` também recebem `stopPropagation` (continuam editáveis sem abrir o form).
+7. Ícone de empresa (`Building2`) ao lado do cargo, igual ao mock do Projetos (image-115 mostra `COO`/`CEO` com ícone).
 
-## Ações
+## Mudanças no formulário de edição
 
-### Ação A — Migration: completar `close_deal_as_won`
+O `ContactForm` (modo edit de contato existente) ganha duas ações extras no rodapé, ao lado de Cancelar/Salvar:
 
-1. **Contato principal** → propaga `deals.contact_person_id` para `projects.primary_contact_person_id` (criar coluna se não existir e popular `company_people.is_primary_contact = true` quando aplicável).
-2. **Origem do lead** → criar `projects.origin_lead_source_id` (FK opcional para `crm_lead_sources`) e copiar do lead/deal.
-3. **Contexto comercial** → criar `projects.commercial_context jsonb` consolidando `pain_description`, `pain_category`, `pain_cost_brl_monthly`, `pain_hours_monthly`, `competitors`, `decision_makers`, `pricing_rationale`, `current_solution`. Não polui colunas operacionais; fica disponível como leitura/aba "Contexto comercial" no projeto.
-4. **Cliente financeiro robusto** → resolver `cliente_id`:
-   - 1º tenta por `companies.cnpj` ↔ `clientes.cpf_cnpj`,
-   - 2º fallback por nome (lógica atual),
-   - 3º se nenhum: cria `clientes` automaticamente com dados de `companies` (nome, cnpj, sector, e-mails/telefones do contato primário).
-5. **Propagar IDs financeiros** escolhidos no diálogo (categoria, centro de custo, conta bancária, meio de pagamento) para `financial_recurrences` e parcelas geradas.
+1. **Botão "Definir como principal"** (esquerda, `variant="ghost"`, ícone `Star`) — só aparece se ainda não for principal. Usa o mesmo `handleTogglePrimary` atual.
+2. **Botão "Remover contato"** (esquerda, `variant="ghost"` destrutivo, ícone `Trash2`) — usa o `handleUnlink` atual com confirmação.
 
-### Ação B — UI `DealWonDialog` (campos financeiros)
+Assim, todas as ações continuam acessíveis, só que dentro do contexto de edição (consistente com o pedido: "clicar e abrir o modo de edição").
 
-Adicionar bloco "Configuração financeira" (colapsável, com defaults inteligentes) com:
+## Diferenciação visual entre módulos
 
-- **Categoria de receita** (`categorias` tipo `receita`) — default: última usada em receitas de projeto.
-- **Centro de custo** (`centros_custo`).
-- **Conta bancária** (`contas_bancarias`).
-- **Meio de pagamento** (`meios_pagamento`).
+- **Projetos** (`showRoles=false`): card limpo, sem linha de papéis comerciais — fica idêntico à image-115.
+- **CRM** (`showRoles=true`): mantém a linha de badges de papel + picker abaixo dos contatos; identidade visual cyan/accent do CRM preservada via tokens existentes (`bg-accent/15`, `text-accent`, `border-accent/30`). Sem mudanças em cores.
 
-Os IDs entram no `p_project_data` e são propagados pela RPC. Se vazios, mantém comportamento atual (parcelas sem categoria/conta — como hoje).
+## Acessibilidade
 
-### Ação C — Integrações bidirecionais (copiar lógica de Projetos)
+- `role="button"`, `tabIndex={0}`, `aria-label="Editar contato {nome}"`.
+- Handler de teclado: Enter/Space abre edição.
+- `stopPropagation` em todos os elementos interativos internos (mailto, tel, badge X, papel picker).
 
-Inspirado no que já funciona em Projetos:
+## Arquivos tocados
 
-1. **Contatos da empresa visíveis nos dois lados** — já feito via `CompanyContactsPanel`. Reforço: marcar contato primário no projeto reflete na empresa e fica disponível pro próximo deal da mesma empresa.
-2. **Anexos** — Projetos tem `anexos.projeto_id`. Adicionar suporte a `anexos.deal_id` (coluna nullable + RLS). Quando o deal for fechado, anexos do deal viram anexos do projeto (UPDATE simples). Assim, já no CRM o usuário pode anexar documentos comerciais sem precisar duplicar depois.
-3. **Atalho de navegação** — no header do projeto criado, mostrar chip "Originado do deal `DEAL-008`" linkando de volta. No deal fechado, já existe link pro projeto; padronizar visual.
-4. **Sincronia de status do cliente** — já feito (`relationship_status = active_client`). Adicionar inverso: quando todos os projetos da empresa terminarem (`status = concluido` ou cancelado), opção de marcar `relationship_status = inactive_client` (apenas sugestão via toast, não automático).
+- `src/components/shared/CompanyContactsPanel.tsx` — única edição.
 
----
-
-## Detalhes técnicos
-
-**Novas colunas (migration):**
-```sql
-ALTER TABLE projects
-  ADD COLUMN IF NOT EXISTS primary_contact_person_id uuid REFERENCES people(id),
-  ADD COLUMN IF NOT EXISTS origin_lead_source_id uuid REFERENCES crm_lead_sources(id),
-  ADD COLUMN IF NOT EXISTS commercial_context jsonb DEFAULT '{}'::jsonb;
-
-ALTER TABLE anexos
-  ADD COLUMN IF NOT EXISTS deal_id uuid; -- sem FK rígida, igual projeto_id
-```
-
-**Resolução de cliente (pseudocódigo SQL):**
-```sql
-SELECT id INTO v_cliente_id FROM clientes
- WHERE cpf_cnpj = v_company.cnpj AND ativo
- LIMIT 1;
-
-IF v_cliente_id IS NULL THEN
-  SELECT id INTO v_cliente_id FROM clientes
-   WHERE LOWER(TRIM(nome)) = LOWER(TRIM(v_company_name)) LIMIT 1;
-END IF;
-
-IF v_cliente_id IS NULL THEN
-  INSERT INTO clientes (nome, razao_social, cpf_cnpj, tipo_pessoa, emails, telefones)
-  VALUES (...)
-  RETURNING id INTO v_cliente_id;
-END IF;
-```
-
-**UI — bloco financeiro no `DealWonDialog`:**
-- Hooks reutilizando `useCategorias`, `useCentrosCusto`, `useContasBancarias`, `useMeiosPagamento`.
-- Layout em grid 2x2, colapsável com `<Collapsible>` aberto por padrão.
-- Defaults: lê `localStorage` (`crm.lastWonFinancialDefaults`) para repetir escolha do último fechamento.
-
-**Componente "Contexto comercial" no projeto:**
-- Nova aba leve em `ProjetoDetailPage` lendo `projects.commercial_context` (read-only, com botão "Editar no deal de origem" se `source_deal_id` existir).
-
----
-
-## Impacto / risco
-
-- **Migration**: aditiva (3 colunas opcionais + 1 em `anexos`). Sem breaking change.
-- **RPC**: mudança backwards-compatible — campos novos em `p_project_data` são opcionais.
-- **UI**: o diálogo continua funcionando se o usuário não preencher financeiro.
-- **Cache**: invalidar `['projects']`, `['movimentacoes']`, `['financial_recurrences']`, `['clientes']` (se cliente foi auto-criado) via `invalidateFinanceCaches` + `invalidateProject`.
-
----
-
-## Resumo do que muda
-
-| Onde | O quê |
-|------|-------|
-| `supabase/migrations/*` | Novas colunas em `projects` e `anexos`; `close_deal_as_won` v3 |
-| `DealWonDialog.tsx` | Bloco "Configuração financeira" + persistência de defaults |
-| `ProjetoDetailPage` | Aba "Contexto comercial" (read-only) + chip "Originado de…" |
-| `anexos` / upload UI do CRM | Permitir anexar no deal; migrar pro projeto na conversão |
-| `cacheInvalidation.ts` | Garantir invalidação cruzada após `close_deal_as_won` |
-
-Pronto pra executar tudo (A + B + C) assim que aprovar.
+Nenhuma migração, nenhum hook novo, nenhuma quebra de API dos wrappers.
