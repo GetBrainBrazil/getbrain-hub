@@ -4259,6 +4259,7 @@ export type Database = {
         Args: { p_ate_data?: string; p_conta_id: string }
         Returns: number
       }
+      cascade_delete_deal: { Args: { p_deal_id: string }; Returns: Json }
       close_deal_as_won: {
         Args: {
           p_deal_id: string
