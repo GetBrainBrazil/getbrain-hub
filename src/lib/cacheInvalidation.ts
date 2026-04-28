@@ -89,6 +89,7 @@ export function invalidateCrmCaches(qc: QueryClient, opts: CrmOpts = {}) {
   qc.invalidateQueries({ queryKey: ["crm-leads"] });
   qc.invalidateQueries({ queryKey: ["crm-leads-full"] });
   qc.invalidateQueries({ queryKey: ["crm-companies-full"] });
+  qc.invalidateQueries({ queryKey: ["crm-companies-aggregates"] });
   qc.invalidateQueries({ queryKey: ["crm-dashboard"] });
   qc.invalidateQueries({ queryKey: ["crm-dashboard-exec"] });
   qc.invalidateQueries({ queryKey: ["crm-metrics"] });
