@@ -146,8 +146,13 @@ export function DeleteDealDialog({
           </div>
         ) : (
           <div className="space-y-1">
-            {/* SELETOR DE MODO — só faz sentido quando há projeto vinculado */}
-            {hasProjectBlock && (
+            {/* SELETOR DE MODO — sempre visível quando há QUALQUER dependência,
+                para que o usuário possa optar por desvincular (safe) ou apagar
+                tudo em cascata (proposta, atividades, dependências, projeto). */}
+            {(hasProjectBlock ||
+              impact.proposals.length > 0 ||
+              impact.activitiesCount > 0 ||
+              impact.dependenciesCount > 0) && (
               <>
                 <SectionTitle>Modo de exclusão</SectionTitle>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -166,7 +171,9 @@ export function DeleteDealDialog({
                       Seguro
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Bloqueado: você precisa apagar o projeto antes.
+                      {hasProjectBlock
+                        ? 'Bloqueado: você precisa apagar o projeto antes.'
+                        : 'Apaga só o deal. Propostas viram avulsas, lead volta para "novo".'}
                     </div>
                   </button>
                   <button
@@ -184,7 +191,7 @@ export function DeleteDealDialog({
                       Em cascata
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Apaga o deal, o projeto e tudo que está pendurado nele.
+                      Apaga o deal e tudo que está pendurado nele (propostas, projeto, financeiro).
                     </div>
                   </button>
                 </div>
