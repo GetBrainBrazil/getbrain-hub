@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Code2 } from "lucide-react";
+import { ExternalLink, Code2, User, Clock, Zap, Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ACTION_COLORS, MODULE_LABEL, actionLabel, fieldLabel, formatValue, isMeaningfulField } from "@/lib/audit/formatters";
+import {
+  ACTION_COLORS, MODULE_BADGE, MODULE_LABEL,
+  actionVerb, diffChanges, fieldLabel, formatValue,
+  relativeTime, resolveModule, sourceLabel,
+} from "@/lib/audit/formatters";
 import { UnifiedAuditEntry } from "@/hooks/admin/useUnifiedAudit";
 import { cn } from "@/lib/utils";
 
@@ -20,9 +23,7 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
 };
 
 export function AuditDetailDrawer({
-  entry,
-  open,
-  onOpenChange,
+  entry, open, onOpenChange,
 }: {
   entry: UnifiedAuditEntry | null;
   open: boolean;
@@ -34,60 +35,100 @@ export function AuditDetailDrawer({
   if (!entry) return null;
 
   const dt = new Date(entry.created_at);
-  const initials = (entry.actor?.name ?? "??").split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase();
-  const changes = entry.changes ?? {};
-  const fieldKeys = Object.keys(changes).filter(isMeaningfulField);
+  const { entityNoun } = resolveModule(entry.entity_type);
+  const actorName = entry.actor?.name ?? null;
+  const isAutomatic = !actorName;
+  const initials = (actorName ?? "Sis").split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase();
+  const diff = entry.changes ? diffChanges(entry.changes) : {};
+  const fieldKeys = Object.keys(diff);
 
   const route = entry.entity_type && entry.entity_id && ENTITY_ROUTES[entry.entity_type]
     ? ENTITY_ROUTES[entry.entity_type](entry.entity_id)
     : null;
 
+  const verb = entry.action === "login" ? "entrou no sistema" : actionVerb(entry.action, entityNoun);
+  const source = sourceLabel(entry.metadata, entry.source, !isAutomatic);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader className="space-y-3">
-          <div className="flex items-center gap-2">
+        <SheetHeader className="space-y-3 text-left">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={cn("h-2.5 w-2.5 rounded-full", ACTION_COLORS[entry.action])} />
-            <Badge variant="outline" className="text-xs">{actionLabel(entry.rawAction)}</Badge>
-            <Badge variant="secondary" className="text-xs">{MODULE_LABEL[entry.module]} · {entry.submoduleLabel}</Badge>
+            <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium", MODULE_BADGE[entry.module])}>
+              {MODULE_LABEL[entry.module]}
+            </span>
+            <span className="text-xs text-muted-foreground">{entry.submoduleLabel}</span>
+            {entry.entity_code && (
+              <span className="font-mono text-xs text-foreground">{entry.entity_code}</span>
+            )}
           </div>
-          <SheetTitle className="text-left text-base font-medium leading-snug">
-            {entry.entity_code ? (
-              <span className="font-mono text-sm mr-2">{entry.entity_code}</span>
-            ) : null}
-            {entry.entity_title ?? entry.summary ?? `${actionLabel(entry.rawAction)} ${entry.submoduleLabel}`}
+          <SheetTitle className="text-base font-semibold leading-snug">
+            {entry.entity_title ?? entry.summary ?? `${MODULE_LABEL[entry.module]} · ${entry.submoduleLabel}`}
           </SheetTitle>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Avatar className="h-6 w-6">
-              {entry.actor?.avatar_url ? <AvatarImage src={entry.actor.avatar_url} /> : null}
-              <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
-            </Avatar>
-            <span>{entry.actor?.name ?? "Sistema"}</span>
-            <span>·</span>
-            <span>{dt.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" })}</span>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{actorName ?? "Automático"}</span>{" "}{verb}.
+          </p>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 space-y-5">
+          {/* Quem / Quando / Origem */}
+          <div className="rounded-lg border border-border bg-card/30 p-3 space-y-2.5 text-sm">
+            <div className="flex items-start gap-2.5">
+              <User className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-muted-foreground">Quem fez</div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <Avatar className="h-5 w-5">
+                    {entry.actor?.avatar_url ? <AvatarImage src={entry.actor.avatar_url} /> : null}
+                    <AvatarFallback className="text-[9px]">
+                      {isAutomatic ? <Bot className="h-3 w-3" /> : initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{actorName ?? "Automático (sistema)"}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <Clock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-muted-foreground">Quando</div>
+                <div className="font-medium mt-0.5">
+                  {dt.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}
+                  <span className="text-muted-foreground font-normal ml-1.5">({relativeTime(entry.created_at)})</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <Zap className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-muted-foreground">Origem da ação</div>
+                <div className="font-medium mt-0.5">{source}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Campos alterados */}
           {fieldKeys.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Campos alterados</h4>
-              <div className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                O que mudou ({fieldKeys.length} {fieldKeys.length === 1 ? "campo" : "campos"})
+              </h4>
+              <div className="space-y-2">
                 {fieldKeys.map((k) => {
-                  const v = changes[k];
-                  const isFromTo = v && typeof v === "object" && "from" in v && "to" in v;
+                  const { from, to } = diff[k];
                   return (
                     <div key={k} className="rounded-md border border-border bg-card/50 p-3">
                       <div className="text-xs font-medium text-muted-foreground mb-1.5">{fieldLabel(k)}</div>
-                      {isFromTo ? (
-                        <div className="flex items-center gap-2 text-sm flex-wrap">
-                          <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 line-through">{formatValue(v.from)}</span>
-                          <span className="text-muted-foreground">→</span>
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{formatValue(v.to)}</span>
-                        </div>
-                      ) : (
-                        <div className="text-sm">{formatValue(v)}</div>
-                      )}
+                      <div className="flex items-center gap-2 text-sm flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 line-through">
+                          {formatValue(from, k)}
+                        </span>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          {formatValue(to, k)}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
@@ -103,20 +144,16 @@ export function AuditDetailDrawer({
             <p className="text-sm text-muted-foreground">Sem detalhes adicionais.</p>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
             {route && (
-              <Button
-                variant="default"
-                onClick={() => { onOpenChange(false); navigate(route); }}
-                className="gap-2"
-              >
+              <Button onClick={() => { onOpenChange(false); navigate(route); }} className="gap-2">
                 <ExternalLink className="h-4 w-4" />
                 Abrir registro
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => setShowJson((v) => !v)} className="gap-2">
               <Code2 className="h-4 w-4" />
-              {showJson ? "Ocultar" : "Ver"} JSON
+              {showJson ? "Ocultar" : "Ver"} dados técnicos
             </Button>
           </div>
 

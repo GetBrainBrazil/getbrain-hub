@@ -10,7 +10,8 @@ import { useUsuarios } from "@/hooks/useUsuarios";
 import { useUnifiedAudit, UnifiedAuditEntry } from "@/hooks/admin/useUnifiedAudit";
 import { AuditFeedItem } from "@/components/admin/auditoria/AuditFeedItem";
 import { AuditDetailDrawer } from "@/components/admin/auditoria/AuditDetailDrawer";
-import { MODULE_LABEL } from "@/lib/audit/formatters";
+import { MODULE_LABEL, ACTION_LEGEND, ACTION_COLORS } from "@/lib/audit/formatters";
+import { cn } from "@/lib/utils";
 
 function dayLabel(iso: string): string {
   const d = new Date(iso);
@@ -93,12 +94,23 @@ export default function AdminAuditoriaPage() {
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2"><History className="h-5 w-5" /> Auditoria</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {entityType ? `Mostrando histórico apenas de ${entityType}.` : "Histórico de tudo que aconteceu no sistema."}
+            {entityType ? `Mostrando histórico apenas deste registro.` : "Tudo que aconteceu no sistema: quem fez, onde, quando e o que mudou."}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={exportCsv} disabled={entries.length === 0} className="gap-2">
           <Download className="h-4 w-4" /> Exportar CSV
         </Button>
+      </div>
+
+      {/* Legenda das cores */}
+      <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground bg-muted/30 border border-border rounded-md px-3 py-2">
+        <span className="font-medium text-foreground">Legenda:</span>
+        {ACTION_LEGEND.map((l) => (
+          <span key={l.action} className="inline-flex items-center gap-1.5">
+            <span className={cn("h-2 w-2 rounded-full", ACTION_COLORS[l.action])} />
+            {l.label}
+          </span>
+        ))}
       </div>
 
       {/* Filtros */}
@@ -109,25 +121,25 @@ export default function AdminAuditoriaPage() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Select value={moduleFilter} onValueChange={setModuleFilter}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Módulo" /></SelectTrigger>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Setor do sistema" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os módulos</SelectItem>
-              <SelectItem value="crm">CRM</SelectItem>
+              <SelectItem value="all">Todos os setores</SelectItem>
+              <SelectItem value="crm">CRM (vendas)</SelectItem>
               <SelectItem value="projetos">Projetos</SelectItem>
               <SelectItem value="financeiro">Financeiro</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="admin">Admin (usuários, acessos)</SelectItem>
               <SelectItem value="outros">Outros</SelectItem>
             </SelectContent>
           </Select>
           <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Ação" /></SelectTrigger>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Tipo de ação" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as ações</SelectItem>
-              <SelectItem value="create">Criou</SelectItem>
-              <SelectItem value="update">Alterou</SelectItem>
-              <SelectItem value="delete">Removeu</SelectItem>
-              <SelectItem value="status_change">Mudou status</SelectItem>
-              <SelectItem value="login">Login</SelectItem>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              <SelectItem value="create">Criação</SelectItem>
+              <SelectItem value="update">Alteração</SelectItem>
+              <SelectItem value="status_change">Mudança de status</SelectItem>
+              <SelectItem value="delete">Exclusão</SelectItem>
+              <SelectItem value="login">Acesso ao sistema</SelectItem>
             </SelectContent>
           </Select>
           <Select value={userFilter} onValueChange={setUserFilter}>

@@ -1,122 +1,133 @@
-# Auditoria unificada em /admin/auditoria
+# Auditoria intuitiva para leigos
 
-Substituir `/admin/logs` por uma página única **Auditoria** que mostra tudo que foi criado, alterado ou removido em qualquer módulo (CRM, Projetos, Financeiro, Admin), com filtros simples e diff legível.
+Resolver os 3 problemas reportados:
+1. **"Sistema" aparecendo** — porque o trigger `crm_audit_trigger` tenta resolver o autor pelos campos `updated_by`/`created_by` da row, que o app não preenche. 47 de 259 logs estão sem ator.
+2. **"Alterou 2 campos: New Data, Old Data"** — meu formatter listou as chaves do JSON `{new_data, old_data}` como se fossem nomes de campos. É um bug: preciso fazer o **diff entre as duas rows** pra saber o que mudou de verdade.
+3. **Cores sem legenda** e visual sem hierarquia — bullets coloridos sem nada explicando, módulo perdido no meio do texto cinza.
 
-## Princípios de UX (a pedido seu)
+## O que vai mudar
 
-- **Prático, não burocrático**: filtros em uma linha só, scaneável.
-- **Padrão "feed" agrupado por dia** — como Linear/GitHub, fácil de bater o olho.
-- **Detalhe sob demanda**: lista mostra resumo legível ("Daniel mudou Estágio: X → Y"); o JSON completo aparece num drawer só se você clicar.
-- **Sem abas, sem submenus** — um filtro de Módulo cobre tudo.
+### 1. Trigger do banco (migration)
+Atualizar `crm_audit_trigger()` pra resolver `auth.uid()` automaticamente quando `updated_by` for null:
 
-## Wireframe
+```sql
+-- Fallback chain: updated_by → created_by → auth.uid()→humans → owner_actor_id
+IF v_actor IS NULL THEN
+  v_uid := auth.uid();
+  IF v_uid IS NOT NULL THEN
+    SELECT actor_id INTO v_actor FROM public.humans WHERE auth_user_id = v_uid;
+  END IF;
+END IF;
+```
+
+Também guardar `auth_uid` no `metadata`, e fazer **backfill** dos 47 registros antigos quando possível. Resultado: a partir de agora, **toda ação humana mostra a pessoa real**. Só ficam como "Automático" eventos realmente automáticos (edge function sem contexto auth, gatilhos em cascata).
+
+### 2. Diff correto e em linguagem natural
+
+Nova função `diffChanges()` em `formatters.ts` que:
+- Detecta o formato `{new_data, old_data}` e calcula o diff campo-a-campo
+- Ignora ruído (`id`, `organization_id`, `updated_at`, `stage_changed_at`, `code`, `created_at`)
+- Traduz **valores enum** pra texto humano: `presencial_agendada` → "Reunião agendada", `fechado_ganho` → "Fechado ganho", `software_sob_medida` → "Software sob medida"
+- Formata números: `60000` em campo `*value*` → "R$ 60.000,00"; `80` em `probability_pct` → "80%"
+- Datas ISO → `dd/mm/aaaa`
+- UUIDs → "(referência)" (resolvidos pelo nome quando possível em V2)
+
+Resultado das frases:
+- ❌ Antes: *"Alterou 2 campos: New Data, Old Data"*
+- ✅ Depois: *"Mudou Probabilidade de 50% para 80%"*
+- ✅ Múltiplos: *"Alterou Probabilidade, Próximo passo e Estágio"*
+- ✅ Muitos: *"Atualizou 7 campos"* (clique pra ver tudo)
+
+### 3. Novo visual da lista (claro pra leigo)
 
 ```text
 ┌────────────────────────────────────────────────────────────────┐
 │ Auditoria                                       [⤓ Exportar]   │
 │ Histórico de tudo que aconteceu no sistema.                    │
-├────────────────────────────────────────────────────────────────┤
-│ [🔍 Buscar por código, título ou campo...                  ]   │
-│ [Módulo: Tudo ▾] [Ação ▾] [Usuário ▾] [Período: 7 dias ▾]      │
-├────────────────────────────────────────────────────────────────┤
-│ HOJE · 28 abr                                                  │
-│  ●  14:32  Daniel  →  CRM · DEAL-008                           │
-│            Alterou Responsável de João Pedro para Vitor Correa │
-│  ●  14:30  Daniel  →  CRM · DEAL-008                           │
-│            Mudou estágio: Em negociação → Fechado ganho        │
-│  ●  14:12  Vitor   →  Projetos · PRJ-014                       │
-│            Criou tarefa "Configurar webhook"                   │
 │                                                                │
-│ ONTEM · 27 abr                                                 │
-│  ●  18:40  Daniel  →  Financeiro · MOV-2210                    │
-│            Removeu (lixeira)                                   │
-│ ...                                                            │
-│                       [Carregar mais 50]                       │
+│ Legenda:                                                       │
+│ 🟢 Criação · 🟡 Alteração · 🔵 Mudança de status               │
+│ 🔴 Exclusão · 🟣 Acesso ao sistema                             │
+├────────────────────────────────────────────────────────────────┤
+│ [filtros…]                                                     │
+├────────────────────────────────────────────────────────────────┤
+│ HOJE                                                           │
+│                                                                │
+│ ●  20:15  [👤 D]  Daniel Rocha  alterou um deal                │
+│           [CRM]  Deal · DEAL-008 · Sunbright Engenharia        │
+│           ▸ Mudou Probabilidade de 50% para 80%                │
+│                                                                │
+│ ●  19:54  [🤖]    Automático (gatilho do sistema)              │
+│           [CRM]  Deal · DEAL-008 · Sunbright Engenharia        │
+│           ▸ Mudou Estágio: Em negociação → Fechado ganho       │
+│                                                                │
+│ ●  19:35  [👤 D]  Daniel Rocha  entrou no sistema              │
+│           [Admin]  Autenticação                                │
+│           ▸ Login com daniel@getbrain.com.br                   │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-Cor do bullet pela ação: **verde** create · **âmbar** update · **vermelho** delete · **azul** status_change · **cinza** outros.
+**Diferenças vs hoje:**
+- **Nome em destaque** (peso 600, cor foreground) + frase de ação ("alterou um deal", "criou uma movimentação", "entrou no sistema")
+- **Badge colorido por módulo** com cor própria: CRM ciano · Projetos roxo · Financeiro verde · Admin rosa · Outros cinza — bate o olho e sabe o setor
+- **Linha do "o quê"** com `▸` e em texto destacado, separada da linha de contexto
+- **Quando o ator é null mas é claramente automático**, mostra **"Automático (gatilho do sistema)"** com ícone de robô — explica que NÃO foi pessoa, ao invés de só "Sistema"
+- **Avatar com inicial colorida** pelo módulo (não só cinza)
+- **Legenda de cores** sempre visível abaixo do título da página
 
-## Drawer ao clicar numa linha
+### 4. Drawer de detalhe melhorado
 
 ```text
-DEAL-008 · Atualização · 28 abr 14:32
-Daniel · daniel@getbrain.com.br
+DEAL-008 · Sunbright Engenharia                           [×]
+─────────────────────────────────────────────────────────────
+[CRM] Deal · Alteração
+
+Quem fez:    👤 Daniel Rocha (daniel@getbrain.com.br)
+Quando:      28 abr 2026 às 20:15 (há 3 minutos)
+Origem:      Edição manual no CRM
 
 CAMPOS ALTERADOS
-  Responsável     João Pedro  →  Vitor Correa
-  Próximo passo   (vazio)     →  Enviar proposta revisada
+┌─ Probabilidade ─────────────────────────┐
+│ 50%  →  80%                             │
+└─────────────────────────────────────────┘
+┌─ Próximo passo ─────────────────────────┐
+│ (vazio)  →  Enviar proposta revisada    │
+└─────────────────────────────────────────┘
 
-[Abrir DEAL-008 ↗]
+[Abrir DEAL-008 ↗]   [Ver dados técnicos]
 ```
 
-Sem JSON cru visível por padrão — só um botão discreto "Ver JSON" pra quando precisar debug.
+- Adiciona linha **"Origem"** explicando se foi *Edição manual no CRM* (`source: crm_audit_trigger` + auth_uid presente), *Conversão automática de lead* (`source: lead_conversion`), *Ação administrativa* (`system_audit_logs`), etc.
+- Adiciona **"há X minutos"** para contexto temporal rápido
+- "Ver JSON" virou "Ver dados técnicos" (linguagem leiga)
 
-## Filtros (1 linha de chips)
+### 5. Logins repetidos colapsam
 
-- **Módulo**: Tudo · CRM · Projetos · Financeiro · Admin · Configurações
-- **Ação**: Tudo · Criou · Alterou · Removeu · Mudou status · Login
-- **Usuário**: dropdown com avatar+nome
-- **Período**: Hoje · 7d · 30d · 90d · Personalizado (date-range picker)
-- **Busca**: full-text por código (DEAL-008, PRJ-014…), título da entidade ou nome do campo alterado
+Múltiplos logins consecutivos do mesmo usuário viram **uma linha**:
+> "Daniel Rocha entrou no sistema **3 vezes** entre 19:35 e 20:32"
 
-Filtros persistidos via `usePersistedState` (já é padrão do projeto).
+(clica pra expandir cada um)
 
-## Fonte de dados unificada
+### 6. Filtros mais explicativos
 
-Hoje existem **duas tabelas** com o mesmo propósito:
-- `audit_logs` — usada por CRM, projetos, financeiro (202+ updates já registrados)
-- `system_audit_logs` — usada pela área admin (criação de usuário, mudança de cargo, etc.)
+Trocar labels:
+- "Módulo" → **"Setor do sistema"**
+- "Ação" → **"Tipo de ação"**
+- "Período" → mantém
 
-Ambas serão lidas pelo mesmo hook **`useUnifiedAudit`**, normalizando para um único formato:
+## Arquivos a alterar
 
-```ts
-type UnifiedAuditEntry = {
-  id: string;
-  source: 'audit_logs' | 'system_audit_logs';
-  module: 'crm' | 'projetos' | 'financeiro' | 'admin' | 'configuracoes';
-  submodule: string;       // 'deals', 'tasks', 'movimentacoes'…
-  entity_code: string | null; // DEAL-008, PRJ-014…
-  entity_title: string | null;
-  action: 'create' | 'update' | 'delete' | 'status_change' | 'login' | 'other';
-  actor: { id: string; name: string; avatar_url: string | null } | null;
-  changes: Record<string, { from: any; to: any }>;
-  created_at: string;
-};
-```
+| Arquivo | O quê |
+|---|---|
+| **migration nova** | Atualizar `crm_audit_trigger` (auth.uid() fallback + auth_uid no metadata) + backfill |
+| `src/lib/audit/formatters.ts` | Nova `diffChanges()`, dicionário `ENUM_LABELS`, `MODULE_BADGE` por cor, `formatValue` com moeda/% |
+| `src/components/admin/auditoria/AuditFeedItem.tsx` | Novo layout: nome em destaque + frase de ação + badge módulo colorido + linha do diff |
+| `src/components/admin/auditoria/AuditDetailDrawer.tsx` | Linha "Quem/Quando/Origem", "há X min", botão renomeado |
+| `src/hooks/admin/useUnifiedAudit.ts` | Detectar ator ausente + `metadata.source` para classificar como "Automático" vs humano. Agrupar logins consecutivos. |
+| `src/pages/admin/AdminAuditoriaPage.tsx` | Adicionar legenda de cores no topo, filtros relabelados |
 
-## Acesso
+## Fora do escopo (V2 se quiser)
 
-**Só admins** — proteção via `has_role(auth.uid(), 'admin')` igual ao resto do `/admin/*`. Itens não-admin no menu admin nem aparecem.
-
-## Trabalho técnico
-
-### Arquivos novos
-- `src/pages/admin/AdminAuditoriaPage.tsx` — página feed
-- `src/components/admin/auditoria/AuditFeedItem.tsx` — linha do feed com bullet, ator, descrição legível
-- `src/components/admin/auditoria/AuditDetailDrawer.tsx` — drawer com diff campo-a-campo
-- `src/hooks/admin/useUnifiedAudit.ts` — hook único que lê e merge as duas tabelas
-- `src/lib/audit/formatters.ts` — funções `describeAction()`, `describeField()`, `formatValue()`, `resolveModule()` que transformam IDs/JSON em texto humano (ex: `owner_actor_id` → "Responsável", UUID de actor → nome do usuário)
-
-### Arquivos editados
-- `src/pages/admin/AdminLayout.tsx` — trocar item "Logs" por "Auditoria" com ícone `History`
-- `src/App.tsx` — trocar rota `logs` por `auditoria`, manter `/admin/logs` como redirect pra não quebrar links
-- `src/pages/admin/AdminLogsPage.tsx` — deletar (substituído)
-- `src/components/crm/DealSidebarRich.tsx` — adicionar link "Ver auditoria completa →" abaixo do bloco "Histórico de stage", levando pra `/admin/auditoria?entity_type=deals&entity_id=<id>`
-- `mem://index.md` + nova `mem://features/auditoria` — registrar o padrão
-
-### Detalhes técnicos importantes
-- **Performance**: paginação por cursor (`created_at` desc + id), 50 por página. Não fazer `select *` — só campos necessários.
-- **Resolução de nomes**: bulk-fetch dos `actor_id` referenciados na página atual (1 query extra), mapeado em memória — evita N+1.
-- **Resolução de códigos** (DEAL-008, PRJ-014): bulk-fetch das entidades referenciadas; cache de 5min.
-- **Formatação humana de campos**: dicionário em `formatters.ts` mapeando colunas técnicas (ex: `pain_cost_brl_monthly` → "Custo da dor (mensal)").
-- **Realtime opcional** (V2): `supabase.channel('audit_logs').on('INSERT', ...)` para o feed atualizar sozinho. Fora do escopo desta primeira entrega.
-
-## Integração com telas de detalhe
-
-Sidebar do deal/lead/projeto ganha um link "Ver auditoria completa →" filtrando direto pela entidade. O bloco "Histórico de stage" continua como resumo rápido.
-
-## Fora do escopo
-
-- Realtime (live append) — fica pra V2 se você quiser.
-- Restaurar registros deletados a partir do log — não vou implementar, mas o JSON guardado já permite isso futuramente.
+- Resolver UUIDs nos diffs pelo nome real (ex: `owner_actor_id: actor-uuid → actor-uuid` virar "João Silva → Maria Santos") — exige uma 2ª query bulk de actors.
+- Realtime live append.
+- Filtro "Apenas ações automáticas" / "Apenas humanas".
