@@ -128,6 +128,69 @@ export function useEntityAudit(type: 'deal' | 'lead' | 'company', id?: string) {
   return useQuery({ queryKey: ['crm-audit', type, id], enabled: !!id, queryFn: async (): Promise<AuditRow[]> => { const entityType = type === 'company' ? 'companies' : type === 'deal' ? 'deals' : 'leads'; const { data, error } = await sb.from('audit_logs').select('id, created_at, action, entity_type, changes, metadata, actor_id').eq('entity_type', entityType).eq('entity_id', id).order('created_at', { ascending: false }); if (error) throw error; const rows = (data ?? []) as (AuditRow & { actor_id: string | null })[]; const actorIds = Array.from(new Set(rows.map((r) => r.actor_id).filter(Boolean))); const { data: actors } = actorIds.length ? await sb.from('actors').select('id, display_name, avatar_url').in('id', actorIds) : { data: [] }; const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x])); return rows.map((r) => ({ ...r, actor: r.actor_id ? actorMap.get(r.actor_id) ?? null : null })); } });
 }
 
+/**
+ * Aplica patch otimista nas listagens de deals em cache (pipeline, kanban, etc.)
+ * para que toda a UI responda instantaneamente, não só a tela de detalhe.
+ */
+function patchDealInLists(qc: ReturnType<typeof useQueryClient>, dealId: string, patch: Partial<Deal>) {
+  qc.setQueriesData<Deal[] | undefined>({ queryKey: ['crm-deals'] }, (old) => {
+    if (!Array.isArray(old)) return old;
+    return old.map((d) => (d.id === dealId ? { ...d, ...patch } : d));
+  });
+  qc.setQueriesData<Lead[] | undefined>({ queryKey: ['crm-company-deals'] }, (old) => {
+    if (!Array.isArray(old)) return old;
+    return old.map((d: any) => (d.id === dealId ? { ...d, ...patch } : d));
+  });
+}
+
+function patchLeadInLists(qc: ReturnType<typeof useQueryClient>, leadId: string, patch: Partial<Lead>) {
+  qc.setQueriesData<Lead[] | undefined>({ queryKey: ['crm-leads-full'] }, (old) => {
+    if (!Array.isArray(old)) return old;
+    return old.map((l) => (l.id === leadId ? { ...l, ...patch } : l));
+  });
+  qc.setQueriesData<Lead[] | undefined>({ queryKey: ['crm-company-leads'] }, (old) => {
+    if (!Array.isArray(old)) return old;
+    return old.map((l) => (l.id === leadId ? { ...l, ...patch } : l));
+  });
+}
+
+/**
+ * Hidrata os objetos relacionados (owner, company, contact) lendo de outras
+ * caches já carregadas, para que o optimistic update reflita imediatamente
+ * o nome/avatar exibido no Select — eliminando o "delay" percebido.
+ */
+function hydrateDealPatch(
+  qc: ReturnType<typeof useQueryClient>,
+  previous: Deal,
+  updates: Partial<Deal>,
+): Partial<Deal> {
+  const patch: Partial<Deal> = { ...updates };
+
+  if ('owner_actor_id' in updates) {
+    const actors = (qc.getQueryData<CrmActor[]>(['crm-actors']) ?? []) as CrmActor[];
+    patch.owner = updates.owner_actor_id
+      ? actors.find((a) => a.id === updates.owner_actor_id) ?? null
+      : null;
+  }
+  if ('company_id' in updates) {
+    const companies =
+      (qc.getQueryData<CrmCompany[]>(['crm-companies-full']) ?? []) as CrmCompany[];
+    patch.company = updates.company_id
+      ? companies.find((c) => c.id === updates.company_id) ?? null
+      : null;
+  }
+  if ('contact_person_id' in updates) {
+    const companyId = (updates.company_id ?? previous.company_id) as string | null;
+    const contacts =
+      (qc.getQueryData<CrmPerson[]>(['crm-company-contacts', companyId]) ?? []) as CrmPerson[];
+    patch.contact = updates.contact_person_id
+      ? contacts.find((p) => p.id === updates.contact_person_id) ?? null
+      : null;
+  }
+
+  return patch;
+}
+
 export function useUpdateDealField(code?: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -135,11 +198,16 @@ export function useUpdateDealField(code?: string) {
       const { error } = await sb.from('deals').update(updates).eq('id', id);
       if (error) throw error;
     },
-    onMutate: async ({ updates }) => {
+    onMutate: async ({ id, updates }) => {
       const key = ['crm-deal-code', code];
       await qc.cancelQueries({ queryKey: key });
       const previous = qc.getQueryData<Deal>(key);
-      if (previous) qc.setQueryData<Deal>(key, { ...previous, ...(updates as Deal) });
+      if (!previous) return { previous };
+
+      const patch = hydrateDealPatch(qc, previous, updates);
+      qc.setQueryData<Deal>(key, { ...previous, ...patch });
+      patchDealInLists(qc, id, patch);
+
       return { previous };
     },
     onError: (_err, _vars, ctx) => {
@@ -148,15 +216,68 @@ export function useUpdateDealField(code?: string) {
     onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['crm-deal-code', code] });
       qc.invalidateQueries({ queryKey: ['crm-deals'] });
-      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
-      if (vars?.updates.company_id) qc.invalidateQueries({ queryKey: ['crm-company-detail', vars.updates.company_id] });
+      // Só invalida métricas quando o campo realmente afeta números agregados.
+      const u = vars?.updates ?? {};
+      const affectsMetrics =
+        'stage' in u || 'estimated_value' in u || 'estimated_implementation_value' in u ||
+        'estimated_mrr_value' in u || 'probability_pct' in u;
+      if (affectsMetrics) qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+      if (u.company_id) qc.invalidateQueries({ queryKey: ['crm-company-detail', u.company_id] });
     },
   });
 }
 
 export function useUpdateLeadField(code?: string) {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: async ({ id, updates }: { id: string; updates: Partial<Lead> }) => { const { error } = await sb.from('leads').update(updates).eq('id', id); if (error) throw error; }, onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-lead-code', code] }); qc.invalidateQueries({ queryKey: ['crm-leads-full'] }); qc.invalidateQueries({ queryKey: ['crm-metrics'] }); } });
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Lead> }) => {
+      const { error } = await sb.from('leads').update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, updates }) => {
+      const key = ['crm-lead-code', code];
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Lead>(key);
+      if (!previous) return { previous };
+
+      const patch: Partial<Lead> = { ...updates };
+      if ('owner_actor_id' in updates) {
+        const actors = (qc.getQueryData<CrmActor[]>(['crm-actors']) ?? []) as CrmActor[];
+        patch.owner = updates.owner_actor_id
+          ? actors.find((a) => a.id === updates.owner_actor_id) ?? null
+          : null;
+      }
+      if ('company_id' in updates) {
+        const companies = (qc.getQueryData<CrmCompany[]>(['crm-companies-full']) ?? []) as CrmCompany[];
+        patch.company = updates.company_id
+          ? companies.find((c) => c.id === updates.company_id) ?? null
+          : null;
+      }
+      if ('contact_person_id' in updates) {
+        const companyId = (updates.company_id ?? previous.company_id) as string | null;
+        const contacts = (qc.getQueryData<CrmPerson[]>(['crm-company-contacts', companyId]) ?? []) as CrmPerson[];
+        patch.contact = updates.contact_person_id
+          ? contacts.find((p) => p.id === updates.contact_person_id) ?? null
+          : null;
+      }
+
+      qc.setQueryData<Lead>(key, { ...previous, ...patch });
+      patchLeadInLists(qc, id, patch);
+
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['crm-lead-code', code], ctx.previous);
+    },
+    onSettled: (_d, _e, vars) => {
+      qc.invalidateQueries({ queryKey: ['crm-lead-code', code] });
+      qc.invalidateQueries({ queryKey: ['crm-leads-full'] });
+      const u = vars?.updates ?? {};
+      if ('status' in u || 'estimated_value' in u) {
+        qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+      }
+    },
+  });
 }
 
 export function useUpdateCompanyField(id?: string) {
@@ -166,14 +287,21 @@ export function useUpdateCompanyField(id?: string) {
       const { error } = await sb.from('companies').update(updates).eq('id', companyId);
       if (error) throw error;
     },
-    // Optimistic update: aplica na cache imediatamente para a UI responder na hora.
-    onMutate: async ({ updates }) => {
+    onMutate: async ({ companyId, updates }) => {
       const key = ['crm-company-detail', id];
       await qc.cancelQueries({ queryKey: key });
       const previous = qc.getQueryData<CompanyDetail>(key);
       if (previous) {
         qc.setQueryData<CompanyDetail>(key, { ...previous, ...(updates as CompanyDetail) });
       }
+      // Espelha na listagem geral também.
+      qc.setQueriesData<CompanyDetail[] | undefined>(
+        { queryKey: ['crm-companies-full'] },
+        (old) => {
+          if (!Array.isArray(old)) return old;
+          return old.map((c) => (c.id === companyId ? { ...c, ...(updates as CompanyDetail) } : c));
+        },
+      );
       return { previous };
     },
     onError: (_err, _vars, ctx) => {
