@@ -1155,10 +1155,13 @@ export type Database = {
           id: string
           identified_risks: string[]
           lost_reason: string | null
+          mockup_screenshots: string[]
+          mockup_url: string | null
           next_step: string | null
           next_step_date: string | null
           notes: string | null
           organization_id: string
+          organograma_url: string | null
           origin_lead_id: string | null
           owner_actor_id: string | null
           pain_category:
@@ -1215,10 +1218,13 @@ export type Database = {
           id?: string
           identified_risks?: string[]
           lost_reason?: string | null
+          mockup_screenshots?: string[]
+          mockup_url?: string | null
           next_step?: string | null
           next_step_date?: string | null
           notes?: string | null
           organization_id: string
+          organograma_url?: string | null
           origin_lead_id?: string | null
           owner_actor_id?: string | null
           pain_category?:
@@ -1275,10 +1281,13 @@ export type Database = {
           id?: string
           identified_risks?: string[]
           lost_reason?: string | null
+          mockup_screenshots?: string[]
+          mockup_url?: string | null
           next_step?: string | null
           next_step_date?: string | null
           notes?: string | null
           organization_id?: string
+          organograma_url?: string | null
           origin_lead_id?: string | null
           owner_actor_id?: string | null
           pain_category?:
