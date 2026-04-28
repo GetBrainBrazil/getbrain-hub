@@ -130,7 +130,6 @@ export default function CrmLayout() {
       <Outlet />
 
       <NewLeadDialog open={leadOpen} onOpenChange={setLeadOpen} />
-      <NewDealDialog open={dealOpen} onOpenChange={setDealOpen} />
     </div>
   );
 }
