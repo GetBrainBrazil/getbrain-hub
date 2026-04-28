@@ -231,6 +231,7 @@ function CommercialRolePicker({
 
 function ContactForm({
   initial, isPrimaryToggleable, initialIsPrimary, onCancel, onSubmit, submitting, submitLabel,
+  onMakePrimary, onRemove, isAlreadyPrimary,
 }: {
   initial?: FormState;
   isPrimaryToggleable?: boolean;
@@ -239,6 +240,11 @@ function ContactForm({
   onSubmit: (form: FormState, isPrimary: boolean) => void;
   submitting: boolean;
   submitLabel: string;
+  /** Quando presente, mostra botão "Definir como principal" no rodapé (modo edição). */
+  onMakePrimary?: () => void;
+  /** Quando presente, mostra botão "Remover contato" no rodapé (modo edição). */
+  onRemove?: () => void;
+  isAlreadyPrimary?: boolean;
 }) {
   const [form, setForm] = useState<FormState>(initial ?? emptyForm);
   const [isPrimary, setIsPrimary] = useState(!!initialIsPrimary);
@@ -253,7 +259,7 @@ function ContactForm({
   };
 
   return (
-    <div className="rounded-md border border-border bg-muted/20 p-3">
+    <div className="rounded-md border border-accent/30 bg-accent/5 p-3">
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label className="text-xs">Nome *</Label>
@@ -278,13 +284,28 @@ function ContactForm({
           Definir como contato principal
         </label>
       )}
-      <div className="mt-3 flex justify-end gap-2">
-        <Button size="sm" variant="ghost" onClick={onCancel} disabled={submitting}>
-          <X className="mr-1 h-3.5 w-3.5" /> Cancelar
-        </Button>
-        <Button size="sm" onClick={handle} disabled={submitting}>
-          <Save className="mr-1 h-3.5 w-3.5" /> {submitting ? "Salvando…" : submitLabel}
-        </Button>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1">
+          {onMakePrimary && !isAlreadyPrimary && (
+            <Button size="sm" variant="ghost" onClick={onMakePrimary} disabled={submitting} className="text-xs">
+              <Star className="mr-1 h-3.5 w-3.5" /> Definir como principal
+            </Button>
+          )}
+          {onRemove && (
+            <Button size="sm" variant="ghost" onClick={onRemove} disabled={submitting}
+              className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive">
+              <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover contato
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={onCancel} disabled={submitting}>
+            <X className="mr-1 h-3.5 w-3.5" /> Cancelar
+          </Button>
+          <Button size="sm" onClick={handle} disabled={submitting}>
+            <Save className="mr-1 h-3.5 w-3.5" /> {submitting ? "Salvando…" : submitLabel}
+          </Button>
+        </div>
       </div>
     </div>
   );
