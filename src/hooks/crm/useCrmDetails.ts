@@ -140,7 +140,29 @@ export function useUpdateLeadField(code?: string) {
 
 export function useUpdateCompanyField(id?: string) {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: async ({ companyId, updates }: { companyId: string; updates: Partial<CompanyDetail> }) => { const { error } = await sb.from('companies').update(updates).eq('id', companyId); if (error) throw error; }, onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-company-detail', id] }); qc.invalidateQueries({ queryKey: ['crm-companies-full'] }); } });
+  return useMutation({
+    mutationFn: async ({ companyId, updates }: { companyId: string; updates: Partial<CompanyDetail> }) => {
+      const { error } = await sb.from('companies').update(updates).eq('id', companyId);
+      if (error) throw error;
+    },
+    // Optimistic update: aplica na cache imediatamente para a UI responder na hora.
+    onMutate: async ({ updates }) => {
+      const key = ['crm-company-detail', id];
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<CompanyDetail>(key);
+      if (previous) {
+        qc.setQueryData<CompanyDetail>(key, { ...previous, ...(updates as CompanyDetail) });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['crm-company-detail', id], ctx.previous);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['crm-company-detail', id] });
+      qc.invalidateQueries({ queryKey: ['crm-companies-full'] });
+    },
+  });
 }
 
 export function useCloseDealAsWon() {
