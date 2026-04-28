@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowRight, ChevronDown, Settings2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -53,6 +54,23 @@ function fmtDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+type Option = { id: string; nome: string; tipo?: string | null };
+
+const FIN_DEFAULTS_KEY = 'crm.lastWonFinancialDefaults';
+
+function loadFinDefaults(): {
+  categoria_id?: string;
+  centro_custo_id?: string;
+  conta_bancaria_id?: string;
+  meio_pagamento_id?: string;
+} {
+  try {
+    return JSON.parse(localStorage.getItem(FIN_DEFAULTS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
 export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -71,6 +89,17 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     { id: newId(), amount: '', due_date: fmtDateInput(addMonths(new Date(), 1)) },
   ]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Configuração financeira (opcional, com defaults via localStorage)
+  const [categorias, setCategorias] = useState<Option[]>([]);
+  const [centros, setCentros] = useState<Option[]>([]);
+  const [contas, setContas] = useState<Option[]>([]);
+  const [meios, setMeios] = useState<Option[]>([]);
+  const [categoriaId, setCategoriaId] = useState<string>('');
+  const [centroId, setCentroId] = useState<string>('');
+  const [contaId, setContaId] = useState<string>('');
+  const [meioId, setMeioId] = useState<string>('');
+  const [finOpen, setFinOpen] = useState(true);
 
   // Carrega proposta aceita (ou enviada mais recente) ao abrir
   useEffect(() => {
@@ -94,6 +123,36 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     })();
     return () => { cancelled = true; };
   }, [open, deal?.id]);
+
+  // Carrega listas financeiras + aplica defaults do localStorage
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const [cats, ccs, cbs, mps] = await Promise.all([
+        sb.from('categorias').select('id, nome, tipo').eq('ativo', true).eq('tipo', 'receita').order('nome'),
+        sb.from('centros_custo').select('id, nome').eq('ativo', true).order('nome'),
+        sb.from('contas_bancarias').select('id, nome').eq('ativo', true).order('nome'),
+        sb.from('meios_pagamento').select('id, nome').eq('ativo', true).order('nome'),
+      ]);
+      if (cancelled) return;
+      const cList = (cats.data ?? []) as Option[];
+      const ccList = (ccs.data ?? []) as Option[];
+      const cbList = (cbs.data ?? []) as Option[];
+      const mpList = (mps.data ?? []) as Option[];
+      setCategorias(cList);
+      setCentros(ccList);
+      setContas(cbList);
+      setMeios(mpList);
+
+      const def = loadFinDefaults();
+      setCategoriaId(def.categoria_id && cList.find((x) => x.id === def.categoria_id) ? def.categoria_id : '');
+      setCentroId(def.centro_custo_id && ccList.find((x) => x.id === def.centro_custo_id) ? def.centro_custo_id : '');
+      setContaId(def.conta_bancaria_id && cbList.find((x) => x.id === def.conta_bancaria_id) ? def.conta_bancaria_id : '');
+      setMeioId(def.meio_pagamento_id && mpList.find((x) => x.id === def.meio_pagamento_id) ? def.meio_pagamento_id : '');
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   // Pré-preenche valor total das parcelas com valor da proposta (se houver)
   const proposalTotal = useMemo(
@@ -191,10 +250,24 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           project_type: projectType,
           start_date: startDate || null,
           estimated_delivery_date: estimatedDelivery || null,
+          categoria_id: categoriaId || null,
+          centro_custo_id: centroId || null,
+          conta_bancaria_id: contaId || null,
+          meio_pagamento_id: meioId || null,
         },
         p_installments: cleaned,
       });
       if (error) throw error;
+
+      // Salva defaults financeiros pra próxima conversão
+      try {
+        localStorage.setItem(FIN_DEFAULTS_KEY, JSON.stringify({
+          categoria_id: categoriaId || undefined,
+          centro_custo_id: centroId || undefined,
+          conta_bancaria_id: contaId || undefined,
+          meio_pagamento_id: meioId || undefined,
+        }));
+      } catch {}
 
       toast.success(
         `Deal fechado · projeto ${data?.project_code ?? ''} criado · ${data?.installments_created ?? cleaned.length} parcela(s)`,
@@ -202,6 +275,14 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       qc.invalidateQueries({ queryKey: ['deal', deal.code] });
       qc.invalidateQueries({ queryKey: ['crm', 'deals'] });
       qc.invalidateQueries({ queryKey: ['proposals'] });
+      // Cross-module: financeiro, projetos e clientes (pode ter sido auto-criado)
+      const { invalidateFinanceCaches, invalidateProjectCaches, invalidateCrmCaches } =
+        await import('@/lib/cacheInvalidation');
+      invalidateFinanceCaches(qc, { projectId: data?.project_id, clientId: data?.cliente_id });
+      if (data?.project_id) invalidateProjectCaches(qc, data.project_id);
+      invalidateCrmCaches(qc, { dealId: deal.id });
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['projects'] });
       onOpenChange(false);
       if (data?.project_id) {
         if (onSuccess) onSuccess(data.project_id);
@@ -231,8 +312,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           <div className="font-semibold text-foreground">O que será transferido pro projeto:</div>
           <ul className="space-y-0.5 text-muted-foreground">
             <li>• Descoberta (escopo, entregáveis, premissas, riscos, stack, critérios de aceite)</li>
-            <li>• Anexos comerciais (organograma, mockup, prints) — se houver</li>
+            <li>• Contato principal, origem do lead e contexto comercial (dores, concorrentes, racional)</li>
+            <li>• Anexos do deal (organograma, mockup, documentos enviados)</li>
             <li>• Dependências do deal viram dependências do projeto</li>
+            <li>• Cliente financeiro: busca por CNPJ, cria automático se não existir</li>
             <li>
               • {loadingProposal
                 ? 'Verificando propostas…'
@@ -286,6 +369,79 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
             />
           </div>
         </div>
+
+        {/* Configuração financeira (opcional) */}
+        <Collapsible open={finOpen} onOpenChange={setFinOpen} className="rounded-lg border border-border bg-muted/10">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between p-3 text-left"
+            >
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Settings2 className="h-3.5 w-3.5" />
+                Configuração financeira (opcional)
+              </div>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${finOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-3 pb-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Categoria de receita</Label>
+                <Select value={categoriaId || 'none'} onValueChange={(v) => setCategoriaId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem categoria —</SelectItem>
+                    {categorias.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Centro de custo</Label>
+                <Select value={centroId || 'none'} onValueChange={(v) => setCentroId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem centro —</SelectItem>
+                    {centros.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Conta bancária</Label>
+                <Select value={contaId || 'none'} onValueChange={(v) => setContaId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem conta —</SelectItem>
+                    {contas.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Meio de pagamento</Label>
+                <Select value={meioId || 'none'} onValueChange={(v) => setMeioId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem meio —</SelectItem>
+                    {meios.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Aplicado a todas as parcelas geradas. Sua escolha fica salva pra próxima conversão.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Parcelas */}
         <div className="space-y-2">
