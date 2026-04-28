@@ -198,15 +198,39 @@ export function useProximasAtividades(filters: DashboardFilters) {
       if (filters.projectTypes.length)
         rows = rows.filter((a: any) => filters.projectTypes.includes(a.deal.project_type_v2));
 
-      return rows.slice(0, 10).map((a: any) => ({
-        id: a.id,
-        type: a.type,
-        title: a.title,
-        scheduled_at: a.scheduled_at,
-        deal_id: a.deal_id,
-        deal: a.deal ? { code: a.deal.code, title: a.deal.title } : null,
-        owner: a.owner,
-      }));
+      rows = rows.slice(0, 10);
+
+      // Lookup owners (activity.owner_actor_id || deal.owner_actor_id)
+      const ownerIds = Array.from(
+        new Set(
+          rows
+            .map((a: any) => a.owner_actor_id ?? a.deal.owner_actor_id)
+            .filter(Boolean),
+        ),
+      );
+      const ownersMap = new Map<string, { display_name: string; avatar_url: string | null }>();
+      if (ownerIds.length) {
+        const { data: actors } = await sb
+          .from('actors')
+          .select('id, display_name, avatar_url')
+          .in('id', ownerIds);
+        (actors ?? []).forEach((a: any) =>
+          ownersMap.set(a.id, { display_name: a.display_name, avatar_url: a.avatar_url }),
+        );
+      }
+
+      return rows.map((a: any) => {
+        const oid = a.owner_actor_id ?? a.deal.owner_actor_id;
+        return {
+          id: a.id,
+          type: a.type,
+          title: a.title,
+          scheduled_at: a.scheduled_at,
+          deal_id: a.deal_id,
+          deal: a.deal ? { code: a.deal.code, title: a.deal.title } : null,
+          owner: oid ? (ownersMap.get(oid) ?? null) : null,
+        };
+      });
     },
   });
 }
