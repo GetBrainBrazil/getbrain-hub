@@ -1,69 +1,96 @@
-## Parte 1 — Seleção em lote em `/CRM/Empresas`
 
-Replicar o mesmo padrão já entregue em Leads, adaptado às particularidades de Empresas.
+# Merge limpo: Empresas → Leads
 
-### Comportamento
-- Coluna inicial com `Checkbox` por linha + checkbox no header (selecionar todos os filtrados, com estado `indeterminate`)
-- Mobile (cards): mesmo padrão do Leads — checkbox lateral em cada card + atalho "Selecionar todos / Desmarcar todos" acima da lista
-- Clique no checkbox não navega para o detalhe (`stopPropagation`)
-- Seleção é podada quando filtros removem itens (efeito que limpa ids fora de `filtered`)
-- Barra de ações sticky aparece quando `selected.size > 0`: contagem + "Limpar" + "Excluir selecionados" (destructive)
-- Confirmação via `useConfirm()` (regra do projeto — nunca usar `confirm()` nativo)
-- Feedback via `toast` do sonner
+## Decisão de produto
+Para o seu negócio, **toda empresa é um lead** (1:1, sem reuso histórico). Então a separação Empresas × Leads só duplica trabalho. Vamos:
 
-### KPIs dinâmicos (substituem os 4 atuais quando há seleção)
-- "Empresas selecionadas" — contagem
-- "Clientes ativos / sel." — quantos selecionados estão `active_client`
-- "Leads selecionados" — soma do status `lead`
-- "Perdidas selecionadas" — soma do status `lost`
+- Eliminar a **aba Empresas** do menu superior do CRM
+- Manter Leads como a **única lista** de "empresas que estão na nossa base"
+- A linha do Lead passa a mostrar dados que hoje só aparecem em Empresa (indústria, porte, site, status de relacionamento, receita ganha, # deals)
+- A página de detalhe da empresa (`/crm/empresas/:id`) continua existindo, mas vira **rota interna** — alcançada via "Ver ficha da empresa" dentro do Lead. Não some, porque outros módulos (Pipeline, Lead detail, Projetos) já apontam pra ela.
+- A tabela `companies` no banco **não muda** — continua sendo o registro mestre. Só some da navegação.
 
-Sem seleção → mantém os 4 KPIs atuais (Total empresas, Active clients, Leads em aberto, Perdidas).
+Isso preserva: schema, dados, hooks, integrações com Projetos / Deals / Orçamentos / Vendas / Financeiro.
 
-### Exclusão em lote — regra de segurança
-Empresas têm muitos vínculos cruzados (leads, deals, projetos, contratos, contatos). Para evitar quebrar histórico financeiro:
+## O que muda na navegação
 
-- Novo hook `useBulkDeleteCompanies()` em `src/hooks/crm/useCrmReference.ts`
-- Antes de excluir, faz pré-checagem em `leads`, `deals` e `projects` filtrados por `company_id IN (ids)` e `deleted_at IS NULL`
-- Empresas com qualquer vínculo ativo → **puladas** (não excluídas), retornadas em `skipped`
-- Empresas sem vínculos → **soft delete** (`UPDATE companies SET deleted_at = now()`), preservando histórico
-- Toast informa: "X empresa(s) arquivada(s). Y ignorada(s) por possuírem leads/deals/projetos vinculados."
-- Invalida caches: `crm-companies`, `crm-companies-full`, `crm-company-autocomplete`, `crm-metrics`
+```text
+Antes:                            Depois:
+CRM                               CRM
+├─ Dashboard                      ├─ Dashboard
+├─ Pipeline                       ├─ Pipeline
+├─ Leads                          ├─ Leads & Empresas   ← rota /crm/leads
+├─ Empresas       ← removido      └─ Calendário
+└─ Calendário
+```
 
-### Arquivos
-- `src/hooks/crm/useCrmReference.ts` — adicionar `useBulkDeleteCompanies`
-- `src/pages/crm/CrmEmpresas.tsx` — checkboxes, barra de ações, KPIs dinâmicos, integração com `useConfirm` + `toast`
+Sidebar: remover o item "Empresas" (`src/components/AppSidebar.tsx`).
+Tabs do CRM: remover `{ value: 'empresas', label: 'Empresas' }` (`src/pages/crm/CrmLayout.tsx`).
+Rota `/crm/empresas` (lista) é removida do `App.tsx`. Rota `/crm/empresas/:id` (detalhe) **fica**.
 
----
+## O que muda na tela de Leads (`/crm/leads`)
 
-## Parte 2 — Resposta sobre integrar Leads ↔ Empresas
+Tabela ganha colunas vindas de Empresa, ordenadas por relevância:
 
-**Sim, faz total sentido — e na verdade já estão integrados no schema, mas a UI ainda não explora isso.**
+| Code | Título do Lead | Empresa | **Status empresa** | **Indústria** | **Porte** | Status lead | Origem | Valor | **Deals** | **Receita ganha** | Dono | Criação |
 
-### O que já existe hoje no banco
-- `leads.company_id` é **obrigatório** (`NOT NULL`) e referencia `companies.id`. Todo lead já nasce ligado a uma empresa.
-- `deals.company_id` idem. Há também `deals.origin_lead_id` ligando deal ao lead que o originou.
-- `companies.relationship_status` tem valores exatamente alinhados ao funil: `prospect → lead → active_client → former_client / lost`.
-- Hooks já cruzam os dois: `useCompanyLeads(id)`, `useCompanyDeals(id)`, `useCompanyStats(id)`. A página `/crm/empresas/:id` já mostra leads e deals da empresa.
+- **Status empresa**: badge `prospect / lead / active_client / former_client / lost` — clicável para filtrar
+- **Deals / Receita ganha**: agregados da empresa (já existem em `useCompanyRowStats`)
+- Coluna "Empresa" vira link "Ver ficha →" abrindo `/crm/empresas/:id` em drawer ou nova aba
 
-### O que está faltando (oportunidades de integração)
-1. **Sincronizar `companies.relationship_status` automaticamente** a partir do estado dos leads/deals da empresa. Hoje é manual e tende a ficar desatualizado:
-   - Tem deal `fechado_ganho` ativo → `active_client`
-   - Tem lead aberto e nenhum deal → `lead`
-   - Tem deal aberto → mantém `lead` ou novo status `negociando`
-   - Todos perdidos/descartados sem nada ativo → `lost`
-   - Implementar via trigger Postgres em `leads` e `deals` que recalcula o status da empresa.
+Filtros adicionados ao topo:
+- Status do lead (já existe)
+- **Status do relacionamento da empresa** (novo — reaproveita filtro de Empresas)
+- **Indústria** e **Porte** (novos — vindos de Empresas)
 
-2. **Na página de Leads, mostrar o `relationship_status` da empresa** ao lado do nome (badge), e permitir clicar e ir para a empresa. Hoje só aparece o nome da empresa.
+KPIs do topo passam a mostrar (sem seleção):
+- Leads abertos | Taxa conversão | Valor pipeline | **Clientes ativos** | **Receita ganha total**
 
-3. **Bloquear/avisar criação de lead duplicado** para a mesma empresa quando já existe lead aberto — evita pipeline poluído.
+Com seleção (já implementado), continua: Selecionados | Conversão | Valor.
 
-4. **KPIs cruzados em Empresas**: além de "Leads em aberto" agregado, mostrar "Empresas com lead aberto sem deal" (gargalo de conversão lead→deal por empresa).
+## Criação de Lead
 
-5. **Filtro reverso em Leads**: filtrar leads por `relationship_status` da empresa (ex.: "todos os leads de ex-clientes" para campanhas de reativação).
+Ao criar um Lead novo (`NewLeadDialog`), o fluxo unifica Lead + Empresa:
 
-### Recomendação prática
-- **Curto prazo (rápido, alto valor):** items 2 e 3 — apenas UI, sem migração. Mostrar status da empresa no lead e impedir duplicidade.
-- **Médio prazo:** item 1 — trigger de sincronização. Elimina dado desalinhado entre os dois módulos.
-- **Longo prazo:** itens 4 e 5 — refinamentos de gestão.
+1. Campo "Empresa" continua com autocomplete (cria nova se não existir — já é assim)
+2. **Novo: aviso** se a empresa já tem Lead aberto ("Esta empresa já tem o lead L-0123 em aberto. Continuar mesmo assim?")
+3. Ao criar a empresa do zero pelo diálogo, abre um mini-form com 3 campos extras opcionais (indústria, porte, site) para não precisar mais ir à tela de Empresas
 
-Se você aprovar, posso implementar a Parte 1 agora e, num próximo passo, atacar os itens 2 e 3 da Parte 2 (que são os de melhor custo/benefício).
+A função `useCreateCompany` já existe e é reaproveitada.
+
+## Integrações externas — checklist sem quebra
+
+Verificado nos arquivos abaixo. Tudo continua funcionando porque a tabela e a rota de detalhe não somem:
+
+- `src/pages/crm/CrmPipeline.tsx` → `navigate('/crm/empresas/:id')` ✅ continua
+- `src/pages/crm/CrmLeadDetail.tsx` → `Link to /crm/empresas/:id` ✅ continua
+- `src/pages/crm/CrmDealDetail.tsx`, `CrmCompanyDetail.tsx` ✅ continuam
+- `src/components/projetos/*`, `src/hooks/projetos/useProjectContacts.ts` (lê `companies`) ✅
+- `src/components/orcamentos/*`, `src/hooks/orcamentos/*` ✅
+- `src/components/vendas/NovaVendaDialog.tsx`, `useVendas.ts` ✅
+- `src/hooks/finance/useFinanceExtras.ts`, `FinanceBlocks09B.tsx` ✅
+- `src/hooks/crm/useCrmDashboard*.ts`, `useCrmMetrics.ts` ✅
+- Cache invalidation em `src/lib/cacheInvalidation.ts` (`invalidateCrmCaches`) ✅
+
+Nenhum hook é renomeado. `useAllCompanies`, `useBulkDeleteCompanies`, `useCreateCompany`, `useCompanyLeads`, `useCompanyDeals` continuam exportados — passam a ser consumidos dentro de Leads.
+
+## Arquivos a modificar
+
+1. **`src/components/AppSidebar.tsx`** — remover item "Empresas"
+2. **`src/pages/crm/CrmLayout.tsx`** — remover tab "empresas"
+3. **`src/App.tsx`** — remover rota `<Route path="empresas" element={<CrmEmpresas />} />` (manter `/crm/empresas/:id`)
+4. **`src/pages/crm/CrmLeads.tsx`** — adicionar colunas/filtros/KPIs de empresa; usar `useCompanyRowStats` por linha (memoizado em batch para evitar N queries — agregar via um único `useAllCompaniesAggregates`)
+5. **`src/components/crm/NewLeadDialog.tsx`** — duplicate-warning + mini campos de empresa
+6. **`src/hooks/crm/useCrmDetails.ts`** — adicionar `useAllCompaniesAggregates()` que retorna `{ companyId → { dealsOpen, revenueWon, leadsOpen } }` em UMA query (evita N+1)
+7. **`src/pages/crm/CrmEmpresas.tsx`** — **deletar** (não é mais referenciado)
+8. **`src/pages/crm/CrmCompanyDetail.tsx`** — manter; ajustar breadcrumb "Empresas → /crm/leads"
+
+## Migração / banco
+**Nenhuma migração SQL necessária.** Schema permanece idêntico. Decisão é puramente de UI/UX.
+
+## Riscos e mitigação
+- Risco: alguém com bookmark `/crm/empresas` cair em 404 → adicionar redirect `/crm/empresas` → `/crm/leads` no `App.tsx`
+- Risco: performance da tabela de Leads com agregados por empresa → resolvido com 1 query agregada (`useAllCompaniesAggregates`) em vez de hook por linha
+
+## Resultado final
+Você tem **uma única lista** ("Leads & Empresas") que mostra cada empresa da sua base com todo o contexto comercial (status, indústria, porte, deals, receita) sem precisar trocar de aba. A ficha detalhada da empresa continua acessível pelo link na linha — só não polui mais o menu.
