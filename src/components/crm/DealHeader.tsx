@@ -344,15 +344,30 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
       <div className="flex flex-wrap gap-2">
         <EditableKPI
           icon={Wallet}
-          label="Valor estimado"
+          label="Implementação"
           accent
-          display={<span className="font-mono">{formatCurrency(Number(deal.estimated_value ?? 0))}</span>}
+          display={<span className="font-mono">{formatCurrency(Number(deal.estimated_implementation_value ?? 0))}</span>}
           renderEditor={(done) => (
             <NumberEditor
               kind="currency"
-              initial={deal.estimated_value}
+              initial={deal.estimated_implementation_value}
               min={0}
-              onSave={(v) => saveField({ estimated_value: v }, 'Valor estimado')}
+              onSave={(v) => saveField({ estimated_implementation_value: v }, 'Valor de implementação')}
+              done={done}
+            />
+          )}
+        />
+        <EditableKPI
+          icon={Repeat}
+          label="MRR (mensal)"
+          accent
+          display={<span className="font-mono">{formatCurrency(Number(deal.estimated_mrr_value ?? 0))}</span>}
+          renderEditor={(done) => (
+            <NumberEditor
+              kind="currency"
+              initial={deal.estimated_mrr_value}
+              min={0}
+              onSave={(v) => saveField({ estimated_mrr_value: v }, 'MRR estimado')}
               done={done}
             />
           )}
