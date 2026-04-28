@@ -126,6 +126,7 @@ export default function MovimentacaoDetalhe() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { confirm: confirmDialog, dialog: confirmDialogEl } = useConfirm();
+  const qc = useQueryClient();
 
   // Modos: create | edit | view
   const isCreate = !id && !!tipoParam;
