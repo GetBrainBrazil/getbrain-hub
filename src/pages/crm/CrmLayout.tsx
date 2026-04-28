@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { MultiFilter, SearchBox, ValueRangeFilter } from '@/components/crm/CrmFilters';
-import { NewDealDialog } from '@/components/crm/NewDealDialog';
 import { NewLeadDialog } from '@/components/crm/NewLeadDialog';
 import { useCrmActors, useDistinctLeadSources } from '@/hooks/crm/useCrmReference';
 import { useCrmHubStore } from '@/hooks/useCrmHubStore';
