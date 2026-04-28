@@ -178,6 +178,7 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
           </p>
         )}
       </div>
+      {dialog}
     </div>
   );
 }
