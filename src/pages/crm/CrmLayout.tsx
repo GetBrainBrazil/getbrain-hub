@@ -25,10 +25,12 @@ const SHOW_NEW_LEAD = new Set(['leads']);
 export default function CrmLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useAuth();
   const [leadOpen, setLeadOpen] = useState(false);
   const { data: actors = [] } = useCrmActors();
   const { data: sources = [] } = useDistinctLeadSources();
   const store = useCrmHubStore();
+  const TABS = useMemo(() => ALL_TABS.filter((t) => !t.adminOnly || isAdmin), [isAdmin]);
   const currentTab = TABS.find((t) => location.pathname.startsWith(`/crm/${t.value}`))?.value ?? 'pipeline';
   const showNewLead = SHOW_NEW_LEAD.has(currentTab);
   const hasActions = showNewLead;
