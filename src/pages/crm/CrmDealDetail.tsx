@@ -28,8 +28,8 @@ import {
   COMPLEXITY_LABEL,
 } from '@/constants/dealEnumLabels';
 import { useDealByCode, useUpdateDealField } from '@/hooks/crm/useCrmDetails';
-import { useDeleteDeal } from '@/hooks/crm/useDeals';
-import { DangerZone } from '@/components/crm/DangerZone';
+import { useDeleteDeal, DealDeleteBlockedError } from '@/hooks/crm/useDeals';
+import { DeleteDealDialog, DealDangerZoneTrigger } from '@/components/crm/DeleteDealDialog';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateCrmCaches } from '@/lib/cacheInvalidation';
@@ -585,18 +585,39 @@ function DangerZoneDeal({ deal }: { deal: Deal }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const deleteDeal = useDeleteDeal();
+  const [open, setOpen] = useState(false);
+
+  const handleConfirm = async () => {
+    try {
+      await deleteDeal.mutateAsync(deal.id);
+      invalidateCrmCaches(qc, { dealId: deal.id, companyId: deal.company_id });
+      // Invalida caches de projetos/finance caso o deal tivesse vínculo desfeito
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      qc.invalidateQueries({ queryKey: ['proposals'] });
+      toast.success(`Deal ${deal.code} excluído.`);
+      setOpen(false);
+      navigate('/crm/pipeline', { replace: true });
+    } catch (err: any) {
+      if (err instanceof DealDeleteBlockedError) {
+        toast.error(err.message);
+      } else {
+        toast.error(`Erro ao excluir deal: ${err?.message ?? 'tente novamente'}`);
+      }
+    }
+  };
+
   return (
-    <DangerZone
-      entityLabel="deal"
-      entityName={`${deal.code} — ${deal.title}`}
-      cascadeWarning="Atividades e dependências vinculadas a este deal serão removidas em cascata."
-      onDelete={async () => {
-        await deleteDeal.mutateAsync(deal.id);
-        invalidateCrmCaches(qc, { dealId: deal.id, companyId: deal.company_id });
-        toast.success('Deal excluído.');
-        navigate('/crm/pipeline');
-      }}
-    />
+    <>
+      <DealDangerZoneTrigger onOpen={() => setOpen(true)} loading={deleteDeal.isPending} />
+      <DeleteDealDialog
+        open={open}
+        onOpenChange={setOpen}
+        dealId={deal.id}
+        dealCode={deal.code}
+        dealTitle={deal.title}
+        onConfirm={handleConfirm}
+      />
+    </>
   );
 }
 

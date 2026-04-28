@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   AlertTriangle,
   FileText,
@@ -320,7 +320,4 @@ export function DealDangerZoneTrigger({
   );
 }
 
-// Reexport pra tipagem correta sem warning de unused
 export type { Props as DeleteDealDialogProps };
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _navHint = useNavigate;

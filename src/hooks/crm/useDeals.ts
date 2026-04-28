@@ -132,14 +132,38 @@ export function useUpdateDealStage() {
   });
 }
 
+export class DealDeleteBlockedError extends Error {
+  constructor(message: string, public reason: 'has_project') {
+    super(message);
+    this.name = 'DealDeleteBlockedError';
+  }
+}
+
 export function useDeleteDeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Hard delete: remove dependentes em cascata e depois o deal.
-      // Sem FKs declaradas no schema, fazemos a limpeza manual.
+      // Defesa em profundidade: bloquear se ainda houver projeto vinculado.
+      const { data: linkedProject } = await sb
+        .from('projects')
+        .select('id, code')
+        .eq('source_deal_id', id)
+        .maybeSingle();
+      if (linkedProject) {
+        throw new DealDeleteBlockedError(
+          `Existe projeto vinculado (${linkedProject.code}). Exclua o projeto primeiro.`,
+          'has_project',
+        );
+      }
+
+      // Cascata manual para dependentes que não têm FK ON DELETE CASCADE.
+      // (deal_activities e deal_dependencies já são CASCADE no banco, mas
+      // chamamos explicitamente também para invalidar caches dependentes.)
       await sb.from('deal_activities').delete().eq('deal_id', id);
       await sb.from('deal_dependencies').delete().eq('deal_id', id);
+
+      // proposals.deal_id e leads.converted_to_deal_id agora são SET NULL,
+      // o trigger lead_revert_on_deal_delete cuida de voltar o lead pra "novo".
       const { error } = await sb.from('deals').delete().eq('id', id);
       if (error) throw error;
     },
@@ -149,6 +173,9 @@ export function useDeleteDeal() {
       qc.invalidateQueries({ queryKey: ['crm-metrics'] });
       qc.invalidateQueries({ queryKey: ['crm-deals-indicators'] });
       qc.invalidateQueries({ queryKey: ['crm-dashboard-exec'] });
+      qc.invalidateQueries({ queryKey: ['crm-leads'] });
+      qc.invalidateQueries({ queryKey: ['crm-leads-full'] });
+      qc.invalidateQueries({ queryKey: ['proposals'] });
       if (id) qc.invalidateQueries({ queryKey: ['crm-deal', id] });
     },
   });
