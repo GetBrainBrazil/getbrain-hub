@@ -15,7 +15,12 @@ const TABS = [
   { value: 'pipeline', label: 'Pipeline' },
   { value: 'leads', label: 'Leads & Empresas' },
   { value: 'calendario', label: 'Calendário' },
+  { value: 'configuracoes', label: 'Configurações' },
 ];
+
+// Botões "Novo Lead" / "Novo Deal" só aparecem nas abas onde fazem sentido
+const SHOW_NEW_LEAD = new Set(['pipeline', 'leads']);
+const SHOW_NEW_DEAL = new Set(['pipeline']);
 
 export default function CrmLayout() {
   const navigate = useNavigate();
@@ -26,6 +31,9 @@ export default function CrmLayout() {
   const { data: sources = [] } = useDistinctLeadSources();
   const store = useCrmHubStore();
   const currentTab = TABS.find((t) => location.pathname.startsWith(`/crm/${t.value}`))?.value ?? 'pipeline';
+  const showNewLead = SHOW_NEW_LEAD.has(currentTab);
+  const showNewDeal = SHOW_NEW_DEAL.has(currentTab);
+  const hasActions = showNewLead || showNewDeal;
 
   const filterControls = (
     <>
