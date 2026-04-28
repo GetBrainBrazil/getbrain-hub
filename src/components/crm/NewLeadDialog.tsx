@@ -30,6 +30,9 @@ export function NewLeadDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   useEffect(() => { if (!form.owner_actor_id && actors[0]) setForm((f) => ({ ...f, owner_actor_id: actors[0].id })); }, [actors, form.owner_actor_id]);
 
+  // Detecta lead aberto na mesma empresa para evitar duplicidade
+  const openLeadForCompany = form.company_id ? allLeads.find((l) => l.company_id === form.company_id && !['descartado', 'convertido'].includes(l.status)) : null;
+
   const submit = () => createLead.mutate({
     title: form.title,
     company_id: form.company_id,
