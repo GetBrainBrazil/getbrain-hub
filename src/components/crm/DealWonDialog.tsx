@@ -124,6 +124,36 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     return () => { cancelled = true; };
   }, [open, deal?.id]);
 
+  // Carrega listas financeiras + aplica defaults do localStorage
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const [cats, ccs, cbs, mps] = await Promise.all([
+        sb.from('categorias').select('id, nome, tipo').eq('ativo', true).eq('tipo', 'receita').order('nome'),
+        sb.from('centros_custo').select('id, nome').eq('ativo', true).order('nome'),
+        sb.from('contas_bancarias').select('id, nome').eq('ativo', true).order('nome'),
+        sb.from('meios_pagamento').select('id, nome').eq('ativo', true).order('nome'),
+      ]);
+      if (cancelled) return;
+      const cList = (cats.data ?? []) as Option[];
+      const ccList = (ccs.data ?? []) as Option[];
+      const cbList = (cbs.data ?? []) as Option[];
+      const mpList = (mps.data ?? []) as Option[];
+      setCategorias(cList);
+      setCentros(ccList);
+      setContas(cbList);
+      setMeios(mpList);
+
+      const def = loadFinDefaults();
+      setCategoriaId(def.categoria_id && cList.find((x) => x.id === def.categoria_id) ? def.categoria_id : '');
+      setCentroId(def.centro_custo_id && ccList.find((x) => x.id === def.centro_custo_id) ? def.centro_custo_id : '');
+      setContaId(def.conta_bancaria_id && cbList.find((x) => x.id === def.conta_bancaria_id) ? def.conta_bancaria_id : '');
+      setMeioId(def.meio_pagamento_id && mpList.find((x) => x.id === def.meio_pagamento_id) ? def.meio_pagamento_id : '');
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
+
   // Pré-preenche valor total das parcelas com valor da proposta (se houver)
   const proposalTotal = useMemo(
     () => (acceptedProposal ? calculateScopeTotal(acceptedProposal.scope_items ?? []) : 0),
