@@ -9,8 +9,9 @@ import {
 import { SectorPicker } from './SectorPicker';
 import { CompanyContactsManager } from './CompanyContactsManager';
 import {
-  CLIENT_TYPE_LABEL, CLIENT_TYPE_OPTIONS, CLIENT_TYPE_COLOR,
-  REVENUE_RANGE_LABEL, REVENUE_RANGE_OPTIONS, DIGITAL_MATURITY_LABEL,
+  CLIENT_TYPE_LABEL, CLIENT_TYPE_OPTIONS, CLIENT_TYPE_COLOR, CLIENT_TYPE_DESCRIPTION,
+  REVENUE_RANGE_LABEL, REVENUE_RANGE_OPTIONS,
+  DIGITAL_MATURITY_LABEL, DIGITAL_MATURITY_DESCRIPTION,
 } from '@/constants/companyEnumLabels';
 import {
   useCompanyDetail, useUpdateCompanyField, useUpdateDealField,
