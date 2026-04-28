@@ -33,7 +33,6 @@ import { DangerZone } from '@/components/crm/DangerZone';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateCrmCaches } from '@/lib/cacheInvalidation';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
