@@ -1,45 +1,79 @@
-# Melhorias na sidebar do Deal
+# Eliminar delay ao selecionar campos de relacionamento
 
-Refinar a sidebar do detalhe do deal (`DealSidebarRich.tsx`) para deixar mais claro o propósito de cada zona de navegação, melhorar o feedback visual no hover e renomear o campo Owner.
+## Causa raiz
+
+Os hooks de update (`useUpdateDealField`, `useUpdateLeadField`, `useUpdateCompanyField`) já fazem **optimistic update** — mas só sobre os IDs (`owner_actor_id`, `company_id`, `contact_person_id`).
+
+O `<SelectValue>` da sidebar mostra `deal.owner.display_name` (objeto hidratado via join), e esse objeto **não** é atualizado no `onMutate`. Resultado: o ID muda na hora, mas o nome/avatar exibido só troca depois que o `invalidateQueries` rebusca a query inteira do servidor (~300-800ms). Esse é o "delay" que o usuário sente em vários selects do sistema.
+
+Mesma raiz se aplica a:
+
+- **Owner / Responsável** (`owner_actor_id` → `owner`)
+- **Empresa** do deal/lead (`company_id` → `company`)
+- **Contato principal** (`contact_person_id` → `contact`)
+- **Lead**: owner, company, contact (mesmo padrão em `useUpdateLeadField`)
+- **Company detail**: setor (`sector_id`)
 
 ## O que muda
 
-### 1. Tooltips explicativos em cada item de navegação
-Cada zona da navegação (Cliente, Dor, Solução, Dependências, Comercial) ganha um tooltip ao passar o mouse, explicando o que se preenche ali. Conteúdo proposto:
+### 1. Hidratar objetos relacionados no `onMutate`
 
-- **Cliente** — "Dados da empresa, contatos e tipo de cliente (B2B/B2C)."
-- **Dor** — "Dor identificada, categoria, custo mensal e solução atual."
-- **Solução** — "Escopo, entregáveis, critérios de aceite, premissas e estimativa."
-- **Dependências** — "Acessos, dados, pessoas e autorizações necessárias para iniciar."
-- **Comercial** — "Valores, orçamento, decisores, concorrentes e próximos passos."
+Reescrever o `onMutate` dos três hooks (`useUpdateDealField`, `useUpdateLeadField`, `useUpdateCompanyField`) para que, quando o update mexer num campo de relacionamento, o objeto correspondente também seja atualizado na cache lendo de outras queries já carregadas (actors, companies, people).
 
-Implementação: usar o componente `Tooltip` já existente do shadcn (`@/components/ui/tooltip`), envelopando cada `<a>` da nav.
+Exemplo da lógica (Deal):
+```ts
+onMutate: async ({ updates }) => {
+  const key = ['crm-deal-code', code];
+  await qc.cancelQueries({ queryKey: key });
+  const previous = qc.getQueryData<Deal>(key);
+  if (!previous) return { previous };
 
-### 2. Hover mais destacado e legível
-Hoje o hover usa `hover:bg-muted/40`, que fica fraco. Trocar por um destaque com a cor de acento mas mantendo o texto totalmente legível:
+  const patch: Partial<Deal> = { ...updates };
 
-- Item ativo no hover: `hover:bg-accent/15 hover:text-foreground hover:border-l-2 hover:border-accent hover:pl-2` (uma barrinha lateral cyan + leve fundo translúcido).
-- O número (01, 02…) passa a `hover:text-accent` para reforçar.
-- Transição suave já existente (`transition-colors`) — manter, e adicionar `transition-all` para a borda lateral.
-- Garantir contraste: o texto continua usando `text-foreground` (não vira neon sobre neon).
+  if ('owner_actor_id' in updates) {
+    const actors = qc.getQueryData<CrmActor[]>(['crm-actors']) ?? [];
+    patch.owner = updates.owner_actor_id
+      ? actors.find(a => a.id === updates.owner_actor_id) ?? null
+      : null;
+  }
+  if ('company_id' in updates) {
+    // mesma ideia lendo de ['crm-companies-full']
+  }
+  if ('contact_person_id' in updates) {
+    // lendo de ['crm-company-contacts', previous.company_id]
+  }
 
-### 3. Renomear "Owner" → "Responsável"
-Confirmado: é o responsável pelo deal/projeto no CRM.
+  qc.setQueryData<Deal>(key, { ...previous, ...patch });
+  return { previous };
+},
+```
 
-- Título do bloco: `Responsável` (em vez de `Owner`).
-- Placeholder do select: `Sem responsável`.
-- Item "sem owner" do dropdown: `— sem responsável —`.
+Repetir o padrão em `useUpdateLeadField` (que hoje **nem tem optimistic update**) e `useUpdateCompanyField`.
 
-Escopo desta renomeação: apenas a sidebar (`DealSidebarRich.tsx`). Outras telas (kanban, listagem, header) continuam como estão para não estourar o escopo — se quiser propagar, é só pedir num próximo passo.
+### 2. Adicionar optimistic update ao `useUpdateLeadField`
 
-## Arquivo afetado
+Hoje só tem `onSettled` → todos os campos do lead têm delay. Adicionar `onMutate` + `onError` no mesmo padrão do `useUpdateDealField`, com hidratação dos relacionamentos.
 
-- `src/components/crm/DealSidebarRich.tsx` (única edição).
+### 3. Atualizar caches de listagem na hora também
+
+No `onMutate` do deal, também aplicar o patch nas listagens em cache (`['crm-deals']`, `['crm-deals-pipeline']`) usando `setQueriesData` com matcher por `queryKey`, para que o pipeline/kanban também responda na hora — não só a tela de detalhe.
+
+### 4. Reduzir refetch desnecessário
+
+No `onSettled`, manter apenas `invalidateQueries` para a query principal e listagens; remover invalidações de queries grandes (metrics, audit) quando o campo alterado não as afeta. Hoje qualquer update do deal invalida `['crm-metrics']` e força refetch — o que contribui pra sensação de "trava".
+
+## Arquivos afetados
+
+- `src/hooks/crm/useCrmDetails.ts` — reescrita dos 3 hooks de update.
 
 ## Detalhes técnicos
 
-- Importar `Tooltip`, `TooltipContent`, `TooltipProvider`, `TooltipTrigger` de `@/components/ui/tooltip`.
-- Adicionar campo `hint: string` em cada item do array `ZONES`.
-- Envolver a `<nav>` com um `<TooltipProvider delayDuration={300}>`.
-- Cada `<a>` vira `<TooltipTrigger asChild>` dentro de um `<Tooltip>`, com `<TooltipContent side="left">` mostrando o hint.
-- Classes de hover ajustadas conforme descrito acima, mantendo o estilo "loop" mais discreto para Dependências (badge 2C).
+- Usar `qc.getQueryData` para ler caches sem disparar refetch.
+- Usar `qc.setQueriesData({ queryKey: ['crm-deals'] }, fn)` para alcançar todas as variantes de listagem.
+- Garantir que `previous` seja restaurado em `onError` para todas as caches modificadas.
+- Não tocar nas RLS nem na lógica de servidor — mudança puramente client-side.
+- Tipos: usar `Partial<Deal>` / `Partial<Lead>` / `Partial<CompanyDetail>` como hoje; o patch de relacionamento expande para o objeto completo (`owner`, `company`, `contact`).
+
+## Fora do escopo
+
+- Selects de outras áreas do sistema (financeiro, projetos) — se você confirmar que sente o mesmo delay lá, podemos aplicar o mesmo padrão num próximo passo. Esta tarefa foca no CRM (deal, lead, company), que é onde os campos de "responsável" e relacionamentos vivem.
