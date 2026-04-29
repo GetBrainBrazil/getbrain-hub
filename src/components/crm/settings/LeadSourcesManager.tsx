@@ -4,11 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useConfirm } from "@/components/ConfirmDialog";
 import {
   CrmLeadSource,
@@ -18,8 +13,8 @@ import {
   useReorderLeadSource,
   useUpdateLeadSource,
 } from "@/hooks/crm/useCrmLeadSources";
-
-const PRESET_COLORS = ["#22D3EE", "#10B981", "#F59E0B", "#E1306C", "#A855F7", "#6366F1", "#94A3B8", "#0A66C2", "#25D366", "#4285F4"];
+import { ColorPickerPopover } from "@/components/ui/color-picker-popover";
+import { randomVividHex } from "@/lib/crm/colorUtils";
 
 export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
   const { data: sources = [], isLoading } = useCrmLeadSources();
@@ -30,7 +25,7 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
   const { confirm, dialog } = useConfirm();
 
   const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
+  const [newColor, setNewColor] = useState<string>(() => randomVividHex());
 
   const move = (idx: number, dir: -1 | 1) => {
     const target = idx + dir;
@@ -55,7 +50,15 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
 
   const submit = () => {
     if (!newName.trim()) return;
-    create.mutate({ name: newName.trim(), color: newColor }, { onSuccess: () => setNewName("") });
+    create.mutate(
+      { name: newName.trim(), color: newColor },
+      {
+        onSuccess: () => {
+          setNewName("");
+          setNewColor(randomVividHex());
+        },
+      },
+    );
   };
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
@@ -67,7 +70,9 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
           <h3 className="text-sm font-semibold">Origens de leads</h3>
           <p className="text-xs text-muted-foreground">Opções disponíveis ao cadastrar um lead.</p>
         </div>
-        <span className="text-xs text-muted-foreground">{sources.length} {sources.length === 1 ? "origem" : "origens"}</span>
+        <span className="text-xs text-muted-foreground">
+          {sources.length} {sources.length === 1 ? "origem" : "origens"}
+        </span>
       </div>
 
       {!canEdit && (
@@ -77,33 +82,9 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
       )}
 
       <div className="rounded-lg border border-border bg-card/30">
-        {/* Add row */}
         {canEdit && (
           <div className="flex items-center gap-2 border-b border-border px-2 py-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="h-6 w-6 shrink-0 rounded-full border border-border transition hover:scale-110"
-                  style={{ background: newColor }}
-                  aria-label="Escolher cor"
-                />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2" align="start">
-                <div className="flex flex-wrap gap-1.5 max-w-[180px]">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setNewColor(c)}
-                      className={`h-6 w-6 rounded-full border-2 transition ${newColor === c ? "border-foreground scale-110" : "border-transparent"}`}
-                      style={{ background: c }}
-                      aria-label={`Cor ${c}`}
-                    />
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+            <ColorPickerPopover value={newColor} onCommit={setNewColor} size={24} />
             <Input
               placeholder="Nova origem (ex: TikTok, Webinar...)"
               value={newName}
@@ -119,7 +100,6 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
           </div>
         )}
 
-        {/* List */}
         <div className="divide-y divide-border">
           {sources.map((s, idx) => (
             <div key={s.id} className="group flex items-center gap-2 px-2 py-1.5">
@@ -144,37 +124,12 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
                 </button>
               </div>
 
-              {canEdit ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="h-4 w-4 shrink-0 rounded-full border border-border"
-                      style={{ background: s.color ?? "transparent" }}
-                      aria-label="Editar cor"
-                    />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-2" align="start">
-                    <div className="flex flex-wrap gap-1.5 max-w-[180px]">
-                      {PRESET_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => update.mutate({ id: s.id, patch: { color: c } })}
-                          className={`h-6 w-6 rounded-full border-2 transition ${s.color === c ? "border-foreground scale-110" : "border-transparent"}`}
-                          style={{ background: c }}
-                          aria-label={`Cor ${c}`}
-                        />
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ) : (
-                <span
-                  className="h-4 w-4 shrink-0 rounded-full border border-border"
-                  style={{ background: s.color ?? "transparent" }}
-                />
-              )}
+              <ColorPickerPopover
+                value={s.color}
+                disabled={!canEdit}
+                size={18}
+                onCommit={(hex) => update.mutate({ id: s.id, patch: { color: hex } })}
+              />
 
               {canEdit ? (
                 <Input
@@ -190,7 +145,9 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
               )}
 
               {s.is_system && (
-                <Badge variant="outline" className="h-4 shrink-0 px-1 text-[9px] font-normal">sistema</Badge>
+                <Badge variant="outline" className="h-4 shrink-0 px-1 text-[9px] font-normal">
+                  sistema
+                </Badge>
               )}
 
               <Switch
