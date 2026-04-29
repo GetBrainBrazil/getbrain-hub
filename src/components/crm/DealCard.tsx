@@ -92,19 +92,66 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
           </span>
         </div>
 
-        {/* Value + prob + close date */}
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="text-base font-semibold text-foreground">
-            {formatCurrency(Number(deal.estimated_value ?? 0))}{' '}
-            <span className="text-xs font-normal text-muted-foreground">· {deal.probability_pct}%</span>
-          </p>
-          <span className="text-[11px] text-muted-foreground">{daysLabel(deal.expected_close_date)}</span>
-        </div>
+        {/* Values: Implementação + MRR (smart display) */}
+        {(() => {
+          const impl = deal.estimated_implementation_value;
+          const mrr = deal.estimated_mrr_value;
+          const hasImpl = impl != null && Number(impl) > 0;
+          const hasMrr = mrr != null && Number(mrr) > 0;
+          const hasBoth = hasImpl && hasMrr;
+          const fallback = Number(deal.estimated_value ?? 0);
 
-        {/* Probability bar */}
-        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
-          <div className={cn('h-full rounded-full', DEAL_STAGE_BAR[deal.stage])} style={{ width: `${deal.probability_pct}%` }} />
-        </div>
+          return (
+            <div className="mt-3">
+              <div className="flex items-start justify-between gap-2">
+                {hasBoth ? (
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 min-w-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-baseline gap-1" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/70">Impl</span>
+                          <span className="text-sm font-semibold text-foreground">{formatCurrency(Number(impl))}</span>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Valor de implementação (one-time)</TooltipContent>
+                    </Tooltip>
+                    <span className="text-muted-foreground/40 text-xs">+</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-baseline gap-1" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-[9px] font-semibold uppercase tracking-wider text-accent/80">MRR</span>
+                          <span className="text-sm font-semibold text-accent">{formatCurrency(Number(mrr))}</span>
+                          <span className="text-[10px] font-normal text-muted-foreground">/mês</span>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Receita recorrente mensal</TooltipContent>
+                    </Tooltip>
+                  </div>
+                ) : hasImpl ? (
+                  <p className="text-base font-semibold text-foreground">
+                    {formatCurrency(Number(impl))}
+                    <span className="ml-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">impl</span>
+                  </p>
+                ) : hasMrr ? (
+                  <p className="text-base font-semibold text-accent">
+                    {formatCurrency(Number(mrr))}
+                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">/mês MRR</span>
+                  </p>
+                ) : (
+                  <p className="text-base font-semibold text-foreground">{formatCurrency(fallback)}</p>
+                )}
+                <span className="shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">
+                  {deal.probability_pct}% · {daysLabel(deal.expected_close_date)}
+                </span>
+              </div>
+
+              {/* Probability bar */}
+              <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+                <div className={cn('h-full rounded-full', DEAL_STAGE_BAR[deal.stage])} style={{ width: `${deal.probability_pct}%` }} />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Next step */}
         <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-2 text-[11px]">
