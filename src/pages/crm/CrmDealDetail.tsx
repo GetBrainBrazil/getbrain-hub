@@ -37,7 +37,6 @@ import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
   Deal,
-  DealProjectType,
   EstimationConfidence,
 } from '@/types/crm';
 

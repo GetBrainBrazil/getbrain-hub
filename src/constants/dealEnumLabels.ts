@@ -1,5 +1,4 @@
 import type {
-  DealProjectType,
   DealPainCategory,
   EstimationConfidence,
   DealDependencyType,
