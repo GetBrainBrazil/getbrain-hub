@@ -1,61 +1,70 @@
-# Corrigir fluxo de "Proposta na Mesa" + redesenhar modal
+# Modal "Criar proposta": campos de Implementação + MRR
 
-## Problema identificado
+## Objetivo
 
-No `handleDragEnd` de `src/pages/crm/CrmPipeline.tsx`, a verificação de proposta vinculada só roda **depois** de uma checagem antiga de `estimated_value`. Quando o deal não tinha valor, o sistema abria o modal "Valor obrigatório" (genérico, feio) e nunca chegava na lógica nova de criar proposta — exatamente o que aconteceu no print.
+Quando o deal for movido para **Proposta na Mesa** sem proposta vinculada, o modal de criação deve coletar **dois valores**:
 
-Ordem atual (errada):
-```text
-perdido? → valor obrigatório? → ganho? → tem proposta?
+- **Valor de implementação (R$)** — obrigatório, vai virar um item de escopo da proposta.
+- **MRR mensal (R$)** — opcional, vai virar `maintenance_monthly_value` da proposta.
+
+Ambos também ficam salvos no deal (`estimated_implementation_value`, `estimated_mrr_value`, `estimated_value`).
+
+## Pré-preenchimento
+
+Ao abrir o modal:
+
+- Se `deal.estimated_implementation_value` já existir → preenche o campo de implementação.
+- Se `deal.estimated_mrr_value` já existir → preenche o campo de MRR.
+- Se nada existir mas `deal.estimated_value` existir → usa como sugestão para implementação.
+
+## Mudanças
+
+### 1. `src/components/crm/CreateProposalForStageDialog.tsx`
+
+- Substituir o input único de "Valor estimado" por **dois campos**:
+  - `Valor de implementação (R$)` — obrigatório, com prefixo R$ e auto-foco.
+  - `MRR mensal (R$)` — opcional, com helper text "Deixe em branco se não houver mensalidade recorrente.".
+- Mostrar os campos sempre (não condicionar a `!deal.estimated_value`), mas pré-preenchidos com os valores já existentes no deal.
+- Botão habilita só quando implementação > 0.
+- Manter o card de contexto, ícone, aviso final e visual já aprovado.
+- Atualizar a callback `onConfirm` para receber `{ implementationValue: number; mrrValue?: number }`.
+
+### 2. `src/pages/crm/CrmPipeline.tsx`
+
+- `handleCreateProposalForDeal({ implementationValue, mrrValue })`:
+  1. `update` no deal: `estimated_implementation_value = implementationValue`, `estimated_mrr_value = mrrValue ?? null`, `estimated_value = implementationValue + (mrrValue ?? 0) * 12` (apenas se ainda estava nulo, para não sobrescrever uma estimativa anterior do usuário).
+  2. Chama `createDraftProposal` passando os dois valores novos.
+  3. Resto do fluxo permanece igual (commit do estágio, invalidação de caches, navegação para `/financeiro/orcamentos/:id/editar`).
+- Remover a checagem antiga `if (stage === 'proposta_na_mesa' && !deal.estimated_value)` se ainda existir — agora o modal sempre coleta os valores quando precisa.
+
+### 3. `src/components/orcamentos/createDraftProposal.ts`
+
+Estender o input para aceitar os dois valores:
+
+```ts
+interface CreateDraftProposalInput {
+  dealId?: string | null;
+  companyId: string;
+  companyName: string;
+  validityDays?: number;
+  implementationValue?: number;   // novo
+  mrrValue?: number | null;       // novo
+  implementationLabel?: string;   // default: "Implementação"
+}
 ```
 
-Além disso, o modal "Criar proposta para este deal?" hoje é um `Dialog` minimalista, sem ícone, sem contexto visual do deal nem do valor, e sem captura do valor estimado quando ele não existe.
+Comportamento:
+- Se `implementationValue` for informado, criar `scope_items: [{ title: implementationLabel, value: implementationValue }]`.
+- Se `mrrValue && mrrValue > 0`, gravar `maintenance_monthly_value = mrrValue` (mantém `maintenance_description` no default já existente).
 
-## Solução
-
-### 1. Unificar o gating do estágio "proposta_na_mesa"
-
-Substituir as duas checagens separadas (linhas 174 e 176-187) por **uma única ramificação** que:
-
-1. Busca em paralelo (`Promise.all`) a contagem de propostas ativas vinculadas ao deal.
-2. Decide o que abrir:
-   - Sem proposta → abre o **novo modal "Criar proposta"** (que também coleta `estimated_value` se faltar).
-   - Com proposta mas sem valor → abre o modal "Valor obrigatório" (mantido, mas redesenhado).
-   - Com proposta e com valor → move direto.
-
-Remover o modal `valueRequired` antigo do JSX e os estados `valueRequired` / `requiredValue` se não forem mais necessários (o novo modal cobre os dois casos).
-
-### 2. Redesenhar o modal "Criar proposta para este deal"
-
-Novo componente `src/components/crm/CreateProposalForStageDialog.tsx` com:
-
-- **Header visual**: ícone `FileText` num círculo `bg-accent/10 text-accent`, título e descrição clara.
-- **Card de contexto do deal**: nome da empresa, código do deal, estágio atual → "Proposta na Mesa" (com seta), todos com tipografia hierarquizada.
-- **Campo de valor estimado** (só aparece quando `deal.estimated_value` está vazio):
-  - Label "Valor estimado do orçamento (R$)"
-  - Input numérico com prefixo "R$" e formatação BRL.
-  - Texto auxiliar: "Esse valor pode ser ajustado depois na proposta."
-- **Aviso informativo**: bloco `bg-muted/40 border-l-2 border-accent` explicando "Vamos criar um rascunho e te levar direto para a edição da proposta."
-- **Footer**:
-  - "Cancelar" (outline)
-  - "Criar e abrir proposta" (botão primário com ícone `ArrowRight`, loading state "Criando…")
-- **Acessibilidade/UX**: foco automático no input quando ele aparece; `Enter` confirma; bloqueio de fechamento durante `creatingProposal`.
-
-### 3. Ajustar `handleCreateProposalForDeal`
-
-Aceitar um `estimatedValue?: number` opcional. Quando informado, antes de chamar `createDraftProposal` faz `update` no deal setando `estimated_value`. Depois cria a proposta, faz commit do estágio, invalida caches e navega.
-
-### 4. Padronizar o modal "Valor obrigatório" (caso ainda exista)
-
-Se decidirmos manter para o cenário "tem proposta mas não tem valor", aplicar o mesmo estilo (ícone, descrição, prefixo R$, helper text). Mas o caminho mais limpo é **remover** esse modal — o cenário fica coberto pelo novo, e quando há proposta o valor já costuma estar nela.
+Sem mudança de schema — `proposals.scope_items` (jsonb) e `proposals.maintenance_monthly_value` já existem.
 
 ## Arquivos afetados
 
-- `src/pages/crm/CrmPipeline.tsx` — reordenar `handleDragEnd`, remover modal antigo, plugar novo componente.
-- `src/components/crm/CreateProposalForStageDialog.tsx` — **novo** modal redesenhado.
+- `src/components/crm/CreateProposalForStageDialog.tsx` — dois inputs, novo contrato de `onConfirm`.
+- `src/pages/crm/CrmPipeline.tsx` — handler atualizado, update no deal com ambos os campos.
+- `src/components/orcamentos/createDraftProposal.ts` — aceita e persiste implementação + MRR.
 
-## Resultado esperado
+## Resultado
 
-- Arrastar um deal sem proposta para "Proposta na Mesa" sempre abre o **novo modal bonito**, mesmo quando o deal não tem valor estimado.
-- O usuário informa o valor (se necessário) e clica em "Criar e abrir proposta" — é levado direto para `/financeiro/orcamentos/:id/editar` com tudo pré-preenchido.
-- Modal antigo "Valor obrigatório" some do fluxo de "Proposta na Mesa".
+Mover um deal para "Proposta na Mesa" → modal pede (ou confirma) **Valor de implementação** + **MRR opcional** → cria a proposta já com 1 item de escopo "Implementação" (R$ X) e `maintenance_monthly_value` preenchido se houver MRR → leva o usuário direto para a edição.
