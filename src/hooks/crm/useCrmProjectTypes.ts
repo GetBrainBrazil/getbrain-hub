@@ -122,6 +122,31 @@ export function useDeleteProjectType() {
   });
 }
 
+/**
+ * Conta quantos deals usam cada tipo de projeto. Usado para
+ * priorizar os chips "mais usados" no seletor.
+ */
+export function useProjectTypeUsage() {
+  return useQuery({
+    queryKey: ["crm-project-types-usage"] as const,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data, error } = await (sb as any)
+        .from("deals")
+        .select("project_type_v2")
+        .not("project_type_v2", "is", null);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const row of (data ?? []) as { project_type_v2: string | null }[]) {
+        const k = row.project_type_v2;
+        if (!k) continue;
+        counts[k] = (counts[k] ?? 0) + 1;
+      }
+      return counts;
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useReorderProjectType() {
   const qc = useQueryClient();
   return useMutation({
