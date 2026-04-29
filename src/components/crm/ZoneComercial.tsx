@@ -11,10 +11,19 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { CurrencyInput } from '@/components/ui/currency-input';
+import { CurrencyInput, IntegerInput } from '@/components/ui/currency-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUpdateDealField } from '@/hooks/crm/useCrmDetails';
 import { cn } from '@/lib/utils';
 import type { Deal } from '@/types/crm';
+
+const PROJECT_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'planning',           label: 'Planejamento' },
+  { value: 'em_desenvolvimento', label: 'Em desenvolvimento' },
+  { value: 'em_homologacao',     label: 'Em homologação' },
+  { value: 'entregue',           label: 'Entregue' },
+  { value: 'em_manutencao',      label: 'Em manutenção' },
+];
 
 function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
