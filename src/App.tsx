@@ -158,7 +158,7 @@ const App = () => (
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             {/* Centro de Configurações Gerais (admin-only) */}
-            <Route path="/configuracoes" element={<ProtectedRoute><ConfiguracoesLayout /></ProtectedRoute>}>
+            <Route path="/configuracoes" element={<AdminRoute><ConfiguracoesLayout /></AdminRoute>}>
               <Route index element={<Navigate to="pessoas/setores" replace />} />
               <Route path="pessoas/setores" element={<Setores />} />
               <Route path="pessoas/papeis-contato" element={<PapeisContatoPage />} />
@@ -180,7 +180,7 @@ const App = () => (
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+            <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<Navigate to="usuarios" replace />} />
               <Route path="usuarios" element={<AdminUsuariosList />} />
               <Route path="permissoes" element={<AdminPermissoesPage />} />
@@ -188,7 +188,7 @@ const App = () => (
               <Route path="auditoria" element={<AdminAuditoriaPage />} />
               <Route path="logs" element={<Navigate to="/admin/auditoria" replace />} />
             </Route>
-            <Route path="/admin/usuarios/:id" element={<ProtectedRoute><UsuarioFichaPage mode="admin" /></ProtectedRoute>} />
+            <Route path="/admin/usuarios/:id" element={<AdminRoute><UsuarioFichaPage mode="admin" /></AdminRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
             <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
