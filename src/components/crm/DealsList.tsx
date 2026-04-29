@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import type { Deal } from '@/types/crm';
 
-export type DealsListSort = 'next_step' | 'value' | 'probability' | 'close' | 'recent';
+export type DealsListSort = 'next_step' | 'value' | 'value_asc' | 'probability' | 'close' | 'recent';
 
 interface Props {
   deals: Deal[];
@@ -169,6 +169,9 @@ export function sortDeals(deals: Deal[], sort: DealsListSort): Deal[] {
   const arr = [...deals];
   if (sort === 'value') {
     return arr.sort((a, b) => Number(b.estimated_value ?? 0) - Number(a.estimated_value ?? 0));
+  }
+  if (sort === 'value_asc') {
+    return arr.sort((a, b) => Number(a.estimated_value ?? 0) - Number(b.estimated_value ?? 0));
   }
   if (sort === 'probability') {
     return arr.sort((a, b) => b.probability_pct - a.probability_pct);

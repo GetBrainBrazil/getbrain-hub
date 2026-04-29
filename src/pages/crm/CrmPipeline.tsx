@@ -368,8 +368,9 @@ export default function CrmPipeline() {
     !!search.trim();
 
   const sortLabels: Record<DealsListSort, string> = {
-    next_step: 'Próxima ação',
+    value_asc: 'Valor (menor → maior)',
     value: 'Valor (maior → menor)',
+    next_step: 'Próxima ação',
     probability: 'Probabilidade',
     close: 'Fecha em',
     recent: 'Recém-criado',
@@ -407,8 +408,11 @@ export default function CrmPipeline() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs whitespace-nowrap">
                       <ArrowUpDown className="h-3.5 w-3.5" />
-                      <span className="hidden md:inline">{sortLabels[sort]}</span>
-                      <span className="md:hidden">Ordenar</span>
+                      <span className="hidden md:inline">
+                        <span className="text-muted-foreground mr-1">Ordem:</span>
+                        {sortLabels[sort]}
+                      </span>
+                      <span className="md:hidden">Ordem</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
