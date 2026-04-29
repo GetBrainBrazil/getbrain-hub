@@ -742,7 +742,7 @@ export default function CrmDealDetail() {
               <ZoneCliente deal={deal} />
               <ZoneDor deal={deal} save={save} />
               <ZoneSolucao deal={deal} save={save} />
-              <ZoneDependencias dealId={deal.id} />
+              <ZoneDependencias dealId={deal.id} dealCode={deal.code} dealTitle={deal.title} />
               <ZoneComercial deal={deal} />
             </TabsContent>
 

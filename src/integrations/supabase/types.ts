@@ -1212,10 +1212,18 @@ export type Database = {
           dependency_type: Database["public"]["Enums"]["deal_dependency_type"]
           description: string
           id: string
+          impact_if_missing: string | null
+          internal_owner_actor_id: string | null
+          is_blocker: boolean
+          links: string[]
           notes: string | null
           organization_id: string
+          priority: Database["public"]["Enums"]["deal_dependency_priority"]
+          requested_at: string | null
+          responsible_email: string | null
           responsible_person_name: string | null
           responsible_person_role: string | null
+          responsible_phone: string | null
           status: Database["public"]["Enums"]["deal_dependency_status"]
           updated_at: string
           updated_by: string | null
@@ -1229,10 +1237,18 @@ export type Database = {
           dependency_type: Database["public"]["Enums"]["deal_dependency_type"]
           description: string
           id?: string
+          impact_if_missing?: string | null
+          internal_owner_actor_id?: string | null
+          is_blocker?: boolean
+          links?: string[]
           notes?: string | null
           organization_id: string
+          priority?: Database["public"]["Enums"]["deal_dependency_priority"]
+          requested_at?: string | null
+          responsible_email?: string | null
           responsible_person_name?: string | null
           responsible_person_role?: string | null
+          responsible_phone?: string | null
           status?: Database["public"]["Enums"]["deal_dependency_status"]
           updated_at?: string
           updated_by?: string | null
@@ -1246,10 +1262,18 @@ export type Database = {
           dependency_type?: Database["public"]["Enums"]["deal_dependency_type"]
           description?: string
           id?: string
+          impact_if_missing?: string | null
+          internal_owner_actor_id?: string | null
+          is_blocker?: boolean
+          links?: string[]
           notes?: string | null
           organization_id?: string
+          priority?: Database["public"]["Enums"]["deal_dependency_priority"]
+          requested_at?: string | null
+          responsible_email?: string | null
           responsible_person_name?: string | null
           responsible_person_role?: string | null
+          responsible_phone?: string | null
           status?: Database["public"]["Enums"]["deal_dependency_status"]
           updated_at?: string
           updated_by?: string | null
@@ -1267,6 +1291,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_dependencies_internal_owner_actor_id_fkey"
+            columns: ["internal_owner_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
             referencedColumns: ["id"]
           },
           {
@@ -4862,6 +4893,7 @@ export type Database = {
         | "tecnico"
         | "financeiro"
         | "outro"
+      deal_dependency_priority: "baixa" | "media" | "alta" | "critica"
       deal_dependency_status:
         | "aguardando_combinar"
         | "combinado"
@@ -5151,6 +5183,7 @@ export const Constants = {
         "financeiro",
         "outro",
       ],
+      deal_dependency_priority: ["baixa", "media", "alta", "critica"],
       deal_dependency_status: [
         "aguardando_combinar",
         "combinado",

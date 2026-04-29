@@ -3,6 +3,7 @@ import type {
   EstimationConfidence,
   DealDependencyType,
   DealDependencyStatus,
+  DealDependencyPriority,
   ContactRole,
 } from '@/types/crm';
 
@@ -75,6 +76,29 @@ export const DEPENDENCY_STATUS_COLOR: Record<DealDependencyStatus, string> = {
   combinado: 'bg-accent/15 text-accent border-accent/30',
   liberado: 'bg-success/15 text-success border-success/30',
   atrasado: 'bg-destructive/15 text-destructive border-destructive/30',
+};
+
+export const DEPENDENCY_PRIORITY_LABEL: Record<DealDependencyPriority, string> = {
+  baixa: 'Baixa',
+  media: 'Média',
+  alta: 'Alta',
+  critica: 'Crítica',
+};
+export const DEPENDENCY_PRIORITY_OPTIONS: DealDependencyPriority[] = [
+  'baixa', 'media', 'alta', 'critica',
+];
+export const DEPENDENCY_PRIORITY_COLOR: Record<DealDependencyPriority, string> = {
+  baixa: 'bg-muted text-muted-foreground border-border',
+  media: 'bg-accent/15 text-accent border-accent/30',
+  alta: 'bg-warning/15 text-warning border-warning/30',
+  critica: 'bg-destructive/15 text-destructive border-destructive/30',
+};
+/** Cor da borda esquerda do card por prioridade (Tailwind border-l-4) */
+export const DEPENDENCY_PRIORITY_BORDER: Record<DealDependencyPriority, string> = {
+  baixa: 'border-l-border',
+  media: 'border-l-accent',
+  alta: 'border-l-warning',
+  critica: 'border-l-destructive',
 };
 
 export const CONTACT_ROLE_LABEL: Record<ContactRole, string> = {

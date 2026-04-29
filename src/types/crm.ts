@@ -20,6 +20,8 @@ export type DealDependencyType =
 export type DealDependencyStatus =
   | 'aguardando_combinar' | 'combinado' | 'liberado' | 'atrasado';
 
+export type DealDependencyPriority = 'baixa' | 'media' | 'alta' | 'critica';
+
 export type CompanyClientType = 'b2b' | 'b2c' | 'b2b_b2c';
 export type CompanyRevenueRange = 'ate_360k' | 'de_360k_a_4_8m' | 'de_4_8m_a_30m' | 'acima_30m';
 export type ContactRole = 'decisor' | 'usuario_final' | 'tecnico' | 'financeiro' | 'outro';
@@ -32,8 +34,16 @@ export interface DealDependency {
   description: string;
   responsible_person_name: string | null;
   responsible_person_role: string | null;
+  responsible_email: string | null;
+  responsible_phone: string | null;
   agreed_deadline: string | null;
+  requested_at: string | null;
   status: DealDependencyStatus;
+  priority: DealDependencyPriority;
+  is_blocker: boolean;
+  internal_owner_actor_id: string | null;
+  impact_if_missing: string | null;
+  links: string[];
   notes: string | null;
   created_at?: string;
   updated_at?: string;
