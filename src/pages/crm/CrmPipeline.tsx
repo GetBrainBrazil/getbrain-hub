@@ -129,6 +129,7 @@ export default function CrmPipeline() {
   const [won, setWon] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [needsProposal, setNeedsProposal] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [creatingProposal, setCreatingProposal] = useState(false);
+  const [visualStageOverrides, setVisualStageOverrides] = useState<Record<string, DealStage>>({});
 
   const openCreateDialog = (stage: DealStage = 'descoberta_marcada') => {
     setCreateStage(stage);
@@ -137,12 +138,15 @@ export default function CrmPipeline() {
 
   // Deals filtrados (estágio + tipo)
   const filteredDeals = useMemo(() => {
-    return rawDeals.filter((d) => {
+    return rawDeals.map((d) => {
+      const overrideStage = visualStageOverrides[d.id];
+      return overrideStage ? { ...d, stage: overrideStage, probability_pct: DEAL_STAGE_PROBABILITY[overrideStage] } : d;
+    }).filter((d) => {
       if (stageFilter.length && !stageFilter.includes(d.stage)) return false;
       if (projectTypeFilter.length && !(d.project_type_v2 ?? []).some((s) => projectTypeFilter.includes(s))) return false;
       return true;
     });
-  }, [rawDeals, stageFilter, projectTypeFilter]);
+  }, [rawDeals, visualStageOverrides, stageFilter, projectTypeFilter]);
 
   // Lista mostra apenas ativos por padrão (sem filtro de estágio aplicado)
   const listDeals = useMemo(() => {
