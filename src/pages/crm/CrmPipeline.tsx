@@ -22,8 +22,6 @@ import {
   DEAL_STAGE_DOT,
   DEAL_STAGE_LABEL,
   DEAL_STAGE_PROBABILITY,
-  DEAL_STAGE_TEXT,
-  DEAL_STAGE_TONE,
   DEAL_STAGES,
 } from '@/constants/dealStages';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
@@ -60,8 +58,6 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const total = deals.reduce((sum, d) => sum + Number(d.estimated_value ?? 0), 0);
   const dotClass = DEAL_STAGE_DOT[stage];
-  const toneClass = DEAL_STAGE_TONE[stage]; // border-l-*
-  const textClass = DEAL_STAGE_TEXT[stage];
 
   if (collapsed) {
     return (
@@ -74,8 +70,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
         aria-label={`Expandir ${DEAL_STAGE_LABEL[stage]}`}
         title="Clique para expandir"
         className={cn(
-          'group flex w-12 shrink-0 cursor-pointer flex-col items-center gap-2 rounded-lg border-l-4 bg-muted/20 p-2 transition-colors hover:bg-muted/40',
-          toneClass,
+          'group flex w-12 shrink-0 cursor-pointer flex-col items-center gap-2 rounded-lg bg-muted/20 p-2 transition-colors hover:bg-muted/40',
           isOver && 'bg-accent/10 ring-2 ring-accent/40',
         )}
       >
@@ -84,7 +79,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
           className="flex flex-1 items-center justify-center"
           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
         >
-          <span className={cn('whitespace-nowrap text-xs font-semibold', textClass)}>
+          <span className="whitespace-nowrap text-xs font-semibold text-foreground">
             {DEAL_STAGE_LABEL[stage]}
           </span>
         </div>
@@ -96,7 +91,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   }
 
   return (
-    <div className={cn('flex w-[85vw] sm:w-80 shrink-0 flex-col rounded-lg border-l-4 bg-muted/20 p-3 snap-start sm:snap-align-none', toneClass)}>
+    <div className="flex w-[85vw] sm:w-80 shrink-0 flex-col rounded-lg bg-muted/20 p-3 snap-start sm:snap-align-none">
       <div
         role="button"
         tabIndex={0}
@@ -110,7 +105,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
           <div className="flex min-w-0 items-center gap-2">
             <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', dotClass)} aria-hidden />
             <div className="min-w-0">
-              <h3 className={cn('truncate text-sm font-semibold', textClass)}>{DEAL_STAGE_LABEL[stage]}</h3>
+              <h3 className="truncate text-sm font-semibold text-foreground">{DEAL_STAGE_LABEL[stage]}</h3>
               <p className="text-xs text-muted-foreground">{formatCurrency(total)} · {deals.length} deals</p>
             </div>
           </div>
