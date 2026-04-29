@@ -87,33 +87,16 @@ export function NovoOrcamentoModal({
     setSubmitting(true);
     try {
       const co = companies.find((c) => c.id === companyId);
-      const userRes = await supabase.auth.getUser();
-      const uid = userRes.data.user?.id ?? null;
-      const validUntil = new Date(Date.now() + 30 * 86400000)
-        .toISOString()
-        .slice(0, 10);
-
-      const { data, error } = await supabase
-        .from("proposals" as any)
-        .insert({
-          organization_id: ORG_ID,
-          deal_id: dealId === "__none__" ? null : dealId,
-          company_id: companyId,
-          status: "rascunho",
-          client_company_name: co?.trade_name || co?.legal_name || "",
-          scope_items: [],
-          valid_until: validUntil,
-          created_by: uid,
-          updated_by: uid,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
+      const newId = await createDraftProposal({
+        dealId: dealId === "__none__" ? null : dealId,
+        companyId,
+        companyName: co?.trade_name || co?.legal_name || "",
+      });
 
       qc.invalidateQueries({ queryKey: ["proposals"] });
       qc.invalidateQueries({ queryKey: ["proposals_kpis"] });
       onOpenChange(false);
-      navigate(`/financeiro/orcamentos/${(data as any).id}/editar`);
+      navigate(`/financeiro/orcamentos/${newId}/editar`);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao criar orçamento");
     } finally {
