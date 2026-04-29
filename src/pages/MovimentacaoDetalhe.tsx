@@ -244,7 +244,7 @@ export default function MovimentacaoDetalhe() {
     ]);
     setClientes(rClientes.data || []);
     setFornecedores(rFornecedores.data || []);
-    setColaboradores(rColaboradores.data || []);
+    setColaboradores(((rColaboradores.data as any[]) || []).filter((c) => c.ativo));
     setCategorias(rCategorias.data || []);
     setContas(rContas.data || []);
     setMeios(rMeios.data || []);

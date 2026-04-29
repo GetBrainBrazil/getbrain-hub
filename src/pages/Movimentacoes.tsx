@@ -315,7 +315,7 @@ export default function Movimentacoes() {
 
     setClientes(rClientes.data || []);
     setFornecedores(rFornecedores.data || []);
-    setColaboradores(rColaboradores.data || []);
+    setColaboradores(((rColaboradores.data as any[]) || []).filter((c) => c.ativo));
     setCategorias(rCategorias.data || []);
     setContas(rContas.data || []);
     setProjetos(rProjetos.data || []);
