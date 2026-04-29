@@ -90,6 +90,7 @@ function HomeKpi({ label, value, tone }: { label: string; value: string; tone?: 
 
 export default function CrmPipeline() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const ownerFilter = useCrmHubStore((s) => s.ownerFilter);
   const sourceFilter = useCrmHubStore((s) => s.sourceFilter);
   const valueRange = useCrmHubStore((s) => s.valueRange);
