@@ -125,7 +125,7 @@ export default function CrmPipeline() {
   const filteredDeals = useMemo(() => {
     return rawDeals.filter((d) => {
       if (stageFilter.length && !stageFilter.includes(d.stage)) return false;
-      if (projectTypeFilter.length && !projectTypeFilter.includes(d.project_type_v2 ?? '')) return false;
+      if (projectTypeFilter.length && !(d.project_type_v2 ?? []).some((s) => projectTypeFilter.includes(s))) return false;
       return true;
     });
   }, [rawDeals, stageFilter, projectTypeFilter]);
