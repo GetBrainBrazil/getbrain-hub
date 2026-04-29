@@ -385,7 +385,7 @@ function ToolbarButton({
       title={title}
       onMouseDown={onMouseDown}
       tabIndex={-1}
-      className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
       {children}
     </button>
