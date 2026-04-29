@@ -209,7 +209,7 @@ export default function CrmPipeline() {
     if (stage === 'ganho') { setWon({ deal, stage }); return; }
     if (stage === 'proposta_na_mesa') {
       const { count, error } = await supabase
-        .from('proposals' as any)
+        .from('proposals')
         .select('id', { count: 'exact', head: true })
         .eq('deal_id', deal.id)
         .is('deleted_at', null);
@@ -272,7 +272,7 @@ export default function CrmPipeline() {
       try {
         commitStage(deal, stage);
         invalidateProposalCaches(qc, { dealId: deal.id });
-      } catch (postErr: any) {
+      } catch (postErr: unknown) {
         console.error('[Pipeline] proposta criada mas etapa pós-criação falhou', {
           proposalId: newProposalId,
           dealId: deal.id,
@@ -283,9 +283,9 @@ export default function CrmPipeline() {
 
       setNeedsProposal(null);
       navigate(`/financeiro/orcamentos/${newProposalId}/editar`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Pipeline] falha ao criar proposta', { dealId: deal.id, newProposalId, error: err });
-      toast.error(err?.message || 'Erro ao criar proposta');
+      toast.error(err instanceof Error ? err.message : 'Erro ao criar proposta');
       // Se a proposta foi criada mas algo logo depois explodiu, ainda navega
       if (newProposalId) {
         setNeedsProposal(null);
