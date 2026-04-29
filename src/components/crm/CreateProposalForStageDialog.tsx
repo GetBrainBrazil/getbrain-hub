@@ -15,43 +15,62 @@ import { formatCurrency } from "@/lib/formatters";
 import { DEAL_STAGE_LABEL } from "@/constants/dealStages";
 import type { Deal, DealStage } from "@/types/crm";
 
+export interface CreateProposalSubmitPayload {
+  implementationValue: number;
+  mrrValue?: number;
+}
+
 interface Props {
   open: boolean;
   deal: Deal | null;
   onOpenChange: (open: boolean) => void;
   loading: boolean;
-  /** Recebe o valor estimado quando o deal não tinha valor antes. */
-  onConfirm: (estimatedValue?: number) => void | Promise<void>;
+  onConfirm: (payload: CreateProposalSubmitPayload) => void | Promise<void>;
+}
+
+function toStr(n: number | null | undefined): string {
+  return n && Number(n) > 0 ? String(n) : "";
 }
 
 export function CreateProposalForStageDialog({ open, deal, onOpenChange, loading, onConfirm }: Props) {
-  const needsValue = !!deal && !deal.estimated_value;
-  const [valueStr, setValueStr] = useState("");
+  const [implementationStr, setImplementationStr] = useState("");
+  const [mrrStr, setMrrStr] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) {
-      setValueStr("");
-      // foco no input quando precisar de valor
-      if (needsValue) setTimeout(() => inputRef.current?.focus(), 80);
-    }
-  }, [open, needsValue]);
+    if (!open || !deal) return;
+    // Pré-preenche: implementação > estimated_value (fallback) > vazio
+    const implPrefill =
+      deal.estimated_implementation_value ?? deal.estimated_value ?? null;
+    setImplementationStr(toStr(implPrefill as number | null));
+    setMrrStr(toStr(deal.estimated_mrr_value as number | null));
+    setTimeout(() => inputRef.current?.focus(), 80);
+  }, [open, deal]);
 
   if (!deal) return null;
 
   const companyLabel = deal.company?.trade_name || deal.company?.legal_name || "Empresa não informada";
   const fromStageLabel = DEAL_STAGE_LABEL[deal.stage as DealStage] ?? deal.stage;
-  const parsedValue = Number(valueStr.replace(",", "."));
-  const valueIsValid = !needsValue || (Number.isFinite(parsedValue) && parsedValue > 0);
+  const parsedImpl = Number(implementationStr.replace(",", "."));
+  const parsedMrr = Number(mrrStr.replace(",", "."));
+  const implIsValid = Number.isFinite(parsedImpl) && parsedImpl > 0;
+  const mrrIsValid = mrrStr === "" || (Number.isFinite(parsedMrr) && parsedMrr >= 0);
+  const canSubmit = implIsValid && mrrIsValid && !loading;
+
+  const totalAnoEstimado =
+    (implIsValid ? parsedImpl : 0) + (mrrIsValid && parsedMrr > 0 ? parsedMrr * 12 : 0);
 
   const handleConfirm = async () => {
-    if (!valueIsValid) return;
-    await onConfirm(needsValue ? parsedValue : undefined);
+    if (!canSubmit) return;
+    await onConfirm({
+      implementationValue: parsedImpl,
+      mrrValue: mrrIsValid && parsedMrr > 0 ? parsedMrr : undefined,
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !loading && onOpenChange(v)}>
-      <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[520px] p-0 overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border bg-gradient-to-br from-accent/5 via-background to-background">
           <DialogHeader className="space-y-3">
@@ -91,44 +110,72 @@ export function CreateProposalForStageDialog({ open, deal, onOpenChange, loading
               <span className="text-muted-foreground">{fromStageLabel}</span>
               <ArrowRight className="h-3 w-3 text-accent" />
               <span className="font-medium text-accent">Proposta na Mesa</span>
-              {!needsValue && (
-                <span className="ml-auto font-mono text-foreground">
-                  {formatCurrency(Number(deal.estimated_value))}
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Campo de valor (se necessário) */}
-          {needsValue && (
+          {/* Campos de valor: implementação + MRR */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="estimated-value" className="text-xs">
-                Valor estimado do orçamento
+              <Label htmlFor="impl-value" className="text-xs">
+                Valor de implementação <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
                   R$
                 </span>
                 <Input
-                  id="estimated-value"
+                  id="impl-value"
                   ref={inputRef}
                   type="number"
                   inputMode="decimal"
                   step="0.01"
                   min="0"
                   placeholder="0,00"
-                  value={valueStr}
-                  onChange={(e) => setValueStr(e.target.value)}
+                  value={implementationStr}
+                  onChange={(e) => setImplementationStr(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && valueIsValid && !loading) handleConfirm();
+                    if (e.key === "Enter" && canSubmit) handleConfirm();
                   }}
                   className="pl-9 font-mono"
                   disabled={loading}
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Você pode ajustar esse valor depois dentro da proposta.
-              </p>
+              <p className="text-[11px] text-muted-foreground">One-time. Vira o item inicial da proposta.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="mrr-value" className="text-xs">
+                MRR mensal <span className="text-muted-foreground font-normal">(opcional)</span>
+              </Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                  R$
+                </span>
+                <Input
+                  id="mrr-value"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  placeholder="0,00"
+                  value={mrrStr}
+                  onChange={(e) => setMrrStr(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canSubmit) handleConfirm();
+                  }}
+                  className="pl-9 font-mono"
+                  disabled={loading}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">Deixe em branco se não houver mensalidade.</p>
+            </div>
+          </div>
+
+          {/* Total estimado ano 1 */}
+          {totalAnoEstimado > 0 && (
+            <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-xs">
+              <span className="text-muted-foreground">Estimado no ano 1 (impl. + 12× MRR)</span>
+              <span className="font-mono font-semibold text-foreground">{formatCurrency(totalAnoEstimado)}</span>
             </div>
           )}
 
@@ -137,7 +184,7 @@ export function CreateProposalForStageDialog({ open, deal, onOpenChange, loading
             <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-accent" />
             <p className="text-[11px] leading-relaxed text-muted-foreground">
               Vamos criar um <span className="font-medium text-foreground">rascunho de proposta</span> já vinculado a
-              este deal e te levar direto para a tela de edição.
+              este deal, com os valores acima preenchidos, e te levar direto para a tela de edição.
             </p>
           </div>
         </div>
@@ -147,7 +194,7 @@ export function CreateProposalForStageDialog({ open, deal, onOpenChange, loading
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={loading || !valueIsValid} className="gap-1.5">
+          <Button onClick={handleConfirm} disabled={!canSubmit} className="gap-1.5">
             {loading ? "Criando…" : (
               <>
                 Criar e abrir proposta
