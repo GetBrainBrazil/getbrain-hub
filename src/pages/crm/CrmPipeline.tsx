@@ -372,6 +372,27 @@ export default function CrmPipeline() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!needsProposal} onOpenChange={(v) => !v && !creatingProposal && setNeedsProposal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar proposta para este deal?</DialogTitle>
+            <DialogDescription>
+              Este deal ainda não tem nenhuma proposta vinculada. Para movê-lo para
+              <span className="font-medium"> Proposta na Mesa</span>, crie um orçamento agora.
+              Você será levado direto para a tela de edição com o deal já preenchido.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNeedsProposal(null)} disabled={creatingProposal}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateProposalForDeal} disabled={creatingProposal}>
+              {creatingProposal ? 'Criando…' : 'Criar proposta'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <DealWonDialog deal={won?.deal ?? null} open={!!won} onOpenChange={(v) => !v && setWon(null)} onSuccess={(projectId) => navigate(`/projetos/${projectId}`)} />
     </div>
   );
