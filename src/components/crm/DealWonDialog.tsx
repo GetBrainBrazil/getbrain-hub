@@ -316,15 +316,22 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     let cancelled = false;
     (async () => {
       setLoadingProposal(true);
+      // Aceita qualquer proposta vinculada (rascunho/enviada/convertida).
+      // A promoção para 'convertida' acontece no fechamento.
+      // Prioriza convertida > enviada > rascunho, depois mais recente.
       const { data } = await sb
         .from('proposals')
         .select('id, code, status, scope_items, maintenance_monthly_value')
         .eq('deal_id', deal.id)
         .is('deleted_at', null)
-        .in('status', ['convertida', 'enviada'])
-        .order('status', { ascending: true })
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .in('status', ['convertida', 'enviada', 'rascunho'])
+        .order('created_at', { ascending: false });
+      const rows = (data ?? []) as ProposalLite[];
+      const pick =
+        rows.find((r) => r.status === 'convertida') ??
+        rows.find((r) => r.status === 'enviada') ??
+        rows.find((r) => r.status === 'rascunho') ??
+        null;
       if (cancelled) return;
       const row = (data ?? [])[0] ?? null;
       setAcceptedProposal(row as ProposalLite | null);
