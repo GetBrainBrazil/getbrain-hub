@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragOverlay, PointerSensor, closestCorners, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { LayoutGrid, List, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalFor
 import { MultiFilter } from '@/components/crm/CrmFilters';
 import {
   DEAL_STAGE_LABEL,
+  DEAL_STAGE_PROBABILITY,
   DEAL_STAGES,
 } from '@/constants/dealStages';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
@@ -36,23 +37,15 @@ const ACTIVE_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'propos
 
 function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: () => void; onCompanyOpen: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
-  // Enquanto arrasta, o item real fica invisível e com altura zero — quem se
-  // move visualmente é o DragOverlay. Isso evita o "snap-back" de 1 frame
-  // quando o usuário solta o card em outra coluna.
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        className="opacity-0 pointer-events-none"
-        style={{ height: 0, margin: 0, overflow: 'hidden' }}
-        aria-hidden
-      />
-    );
-  }
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn('transition-opacity duration-150', isDragging && 'pointer-events-none opacity-0')}
+      style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+      aria-hidden={isDragging}
+    >
       <DealCard deal={deal} onClick={onOpen} onCompanyClick={onCompanyOpen} />
     </div>
   );
@@ -136,6 +129,7 @@ export default function CrmPipeline() {
   const [won, setWon] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [needsProposal, setNeedsProposal] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [creatingProposal, setCreatingProposal] = useState(false);
+  const [visualStageOverrides, setVisualStageOverrides] = useState<Record<string, DealStage>>({});
 
   const openCreateDialog = (stage: DealStage = 'descoberta_marcada') => {
     setCreateStage(stage);
@@ -144,12 +138,15 @@ export default function CrmPipeline() {
 
   // Deals filtrados (estágio + tipo)
   const filteredDeals = useMemo(() => {
-    return rawDeals.filter((d) => {
+    return rawDeals.map((d) => {
+      const overrideStage = visualStageOverrides[d.id];
+      return overrideStage ? { ...d, stage: overrideStage, probability_pct: DEAL_STAGE_PROBABILITY[overrideStage] } : d;
+    }).filter((d) => {
       if (stageFilter.length && !stageFilter.includes(d.stage)) return false;
       if (projectTypeFilter.length && !(d.project_type_v2 ?? []).some((s) => projectTypeFilter.includes(s))) return false;
       return true;
     });
-  }, [rawDeals, stageFilter, projectTypeFilter]);
+  }, [rawDeals, visualStageOverrides, stageFilter, projectTypeFilter]);
 
   // Lista mostra apenas ativos por padrão (sem filtro de estágio aplicado)
   const listDeals = useMemo(() => {
@@ -176,29 +173,61 @@ export default function CrmPipeline() {
     () => new Map(DEAL_STAGES.map((s) => [s, filteredDeals.filter((d) => d.stage === s)])),
     [filteredDeals],
   );
-  const activeDeal = activeId ? rawDeals.find((d) => d.id === activeId) ?? null : null;
-  const commitStage = (deal: Deal, stage: DealStage, extra?: { lost_reason?: string; estimated_value?: number }) => updateStage.mutate({ id: deal.id, stage, ...extra });
+  const dealsByVisualStage = useMemo(() => {
+    const visualDeals = rawDeals.map((d) => {
+      const overrideStage = visualStageOverrides[d.id];
+      return overrideStage ? { ...d, stage: overrideStage, probability_pct: DEAL_STAGE_PROBABILITY[overrideStage] } : d;
+    });
+    return new Map(visualDeals.map((d) => [d.id, d]));
+  }, [rawDeals, visualStageOverrides]);
+  const activeDeal = activeId ? dealsByVisualStage.get(activeId) ?? null : null;
+  const commitStage = (deal: Deal, stage: DealStage, extra?: { lost_reason?: string; estimated_value?: number }) => {
+    setVisualStageOverrides((prev) => ({ ...prev, [deal.id]: stage }));
+    updateStage.mutate(
+      { id: deal.id, stage, ...extra },
+      {
+        onSuccess: () => setVisualStageOverrides((prev) => {
+          const next = { ...prev };
+          delete next[deal.id];
+          return next;
+        }),
+        onError: () => setVisualStageOverrides((prev) => {
+          const next = { ...prev };
+          delete next[deal.id];
+          return next;
+        }),
+      },
+    );
+  };
   const handleDragEnd = async (e: DragEndEvent) => {
-    setActiveId(null);
     const deal = rawDeals.find((d) => d.id === String(e.active.id));
     const stage = e.over?.id as DealStage | undefined;
-    if (!deal || !stage || deal.stage === stage || !DEAL_STAGES.includes(stage)) return;
+    if (!deal || !stage || deal.stage === stage || !DEAL_STAGES.includes(stage)) { setActiveId(null); return; }
+    setVisualStageOverrides((prev) => ({ ...prev, [deal.id]: stage }));
+    setActiveId(null);
     if (stage === 'perdido') { setLost({ deal, stage }); return; }
     if (stage === 'ganho') { setWon({ deal, stage }); return; }
     if (stage === 'proposta_na_mesa') {
       const { count, error } = await supabase
-        .from('proposals' as any)
+        .from('proposals')
         .select('id', { count: 'exact', head: true })
         .eq('deal_id', deal.id)
         .is('deleted_at', null);
       if (error) {
+        setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[deal.id]; return next; });
         toast.error('Erro ao verificar propostas vinculadas');
         return;
       }
       // Sem proposta vinculada → abre o modal unificado (que também coleta valor se faltar)
       if (!count) { setNeedsProposal({ deal, stage }); return; }
     }
-    commitStage(deal, stage);
+    updateStage.mutate(
+      { id: deal.id, stage },
+      {
+        onSuccess: () => setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[deal.id]; return next; }),
+        onError: () => setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[deal.id]; return next; }),
+      },
+    );
   };
 
   const handleCreateProposalForDeal = async ({ implementationValue, mrrValue }: { implementationValue: number; mrrValue?: number }) => {
@@ -243,7 +272,7 @@ export default function CrmPipeline() {
       try {
         commitStage(deal, stage);
         invalidateProposalCaches(qc, { dealId: deal.id });
-      } catch (postErr: any) {
+      } catch (postErr: unknown) {
         console.error('[Pipeline] proposta criada mas etapa pós-criação falhou', {
           proposalId: newProposalId,
           dealId: deal.id,
@@ -254,9 +283,9 @@ export default function CrmPipeline() {
 
       setNeedsProposal(null);
       navigate(`/financeiro/orcamentos/${newProposalId}/editar`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Pipeline] falha ao criar proposta', { dealId: deal.id, newProposalId, error: err });
-      toast.error(err?.message || 'Erro ao criar proposta');
+      toast.error(err instanceof Error ? err.message : 'Erro ao criar proposta');
       // Se a proposta foi criada mas algo logo depois explodiu, ainda navega
       if (newProposalId) {
         setNeedsProposal(null);
@@ -373,7 +402,13 @@ export default function CrmPipeline() {
           <p className="mt-1 text-xs text-muted-foreground">Crie um novo deal ou ajuste os filtros para visualizar.</p>
         </div>
       ) : (
-        <DndContext sensors={sensors} onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveId(null)}
+        >
           <div className="-mx-1 px-1 flex gap-3 sm:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
             {DEAL_STAGES.map((stage) => (
               <Column
@@ -398,7 +433,11 @@ export default function CrmPipeline() {
 
       <NewDealQuickDialog open={createOpen} onOpenChange={setCreateOpen} initialStage={createStage} />
 
-      <Dialog open={!!lost} onOpenChange={(v) => !v && setLost(null)}>
+      <Dialog open={!!lost} onOpenChange={(v) => {
+        if (v || !lost) return;
+        setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[lost.deal.id]; return next; });
+        setLost(null);
+      }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Motivo da perda</DialogTitle></DialogHeader>
           <div className="space-y-2">
@@ -406,7 +445,10 @@ export default function CrmPipeline() {
             <Textarea value={lostReason} onChange={(e) => setLostReason(e.target.value)} />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setLost(null)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => {
+              if (lost) setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[lost.deal.id]; return next; });
+              setLost(null);
+            }}>Cancelar</Button>
             <Button disabled={!lostReason.trim()} onClick={() => { if (lost) commitStage(lost.deal, lost.stage, { lost_reason: lostReason }); setLost(null); setLostReason(''); }}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
@@ -415,12 +457,25 @@ export default function CrmPipeline() {
       <CreateProposalForStageDialog
         open={!!needsProposal}
         deal={needsProposal?.deal ?? null}
-        onOpenChange={(v) => !v && setNeedsProposal(null)}
+        onOpenChange={(v) => {
+          if (v || !needsProposal) return;
+          setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[needsProposal.deal.id]; return next; });
+          setNeedsProposal(null);
+        }}
         loading={creatingProposal}
         onConfirm={handleCreateProposalForDeal}
       />
 
-      <DealWonDialog deal={won?.deal ?? null} open={!!won} onOpenChange={(v) => !v && setWon(null)} onSuccess={(projectId) => navigate(`/projetos/${projectId}`)} />
+      <DealWonDialog
+        deal={won?.deal ?? null}
+        open={!!won}
+        onOpenChange={(v) => {
+          if (v || !won) return;
+          setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[won.deal.id]; return next; });
+          setWon(null);
+        }}
+        onSuccess={(projectId) => navigate(`/projetos/${projectId}`)}
+      />
     </div>
   );
 }
