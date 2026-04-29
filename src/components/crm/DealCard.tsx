@@ -6,6 +6,7 @@ import { useCrmPainCategories } from '@/hooks/crm/useCrmPainCategories';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
+import { chipStyleFromHex, resolveHex } from '@/lib/crm/colorUtils';
 import type { Deal } from '@/types/crm';
 
 function daysLabel(date: string | null) {
@@ -84,10 +85,8 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
               {projectTypeChips.slice(0, 2).map((pt) => (
                 <span
                   key={pt.slug}
-                  className={cn(
-                    'rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
-                    pt.color ?? 'bg-muted text-muted-foreground border-border',
-                  )}
+                  className="rounded-md border px-1.5 py-0.5 text-[10px] font-medium"
+                  style={chipStyleFromHex(pt.color)}
                 >
                   {pt.name}
                 </span>
@@ -144,12 +143,10 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
                   <TooltipTrigger asChild>
                     <span
                       onClick={(e) => e.stopPropagation()}
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
-                        cat.color ?? 'bg-muted text-muted-foreground border-border',
-                      )}
+                      className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium"
+                      style={chipStyleFromHex(cat.color)}
                     >
-                      <span className={cn('h-1.5 w-1.5 rounded-full', bgDot(cat.color))} />
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: resolveHex(cat.color) }} />
                       {cat.name}
                     </span>
                   </TooltipTrigger>
