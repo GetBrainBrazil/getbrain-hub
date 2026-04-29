@@ -304,6 +304,7 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
         {projectType && (
           <InfoBadge className={projectType.color ?? ''}>
             {projectType.name}
+            {extraProjectTypesCount > 0 && ` +${extraProjectTypesCount}`}
           </InfoBadge>
         )}
         {deal.estimation_confidence && (
