@@ -23,7 +23,6 @@ import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { PainCategoryCombobox } from '@/components/crm/PainCategoryCombobox';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
-  PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
   ESTIMATION_CONFIDENCE_LABEL, ESTIMATION_CONFIDENCE_OPTIONS, ESTIMATION_CONFIDENCE_COLOR,
   COMPLEXITY_LABEL,
@@ -38,7 +37,6 @@ import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
   Deal,
-  DealPainCategory,
   DealProjectType,
   EstimationConfidence,
 } from '@/types/crm';
