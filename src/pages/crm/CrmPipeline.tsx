@@ -359,7 +359,22 @@ export default function CrmPipeline() {
   };
 
   const clearPageFilters = () => { setStageFilter([]); setProjectTypeFilter([]); };
+  const clearAllFilters = () => { clearPageFilters(); resetGlobalFilters(); };
   const hasPageFilters = stageFilter.length > 0 || projectTypeFilter.length > 0;
+  const hasAnyFilters =
+    hasPageFilters ||
+    ownerFilter.length > 0 ||
+    sourceFilter.length > 0 ||
+    !!valueRange ||
+    !!search.trim();
+
+  const sortLabels: Record<DealsListSort, string> = {
+    next_step: 'Próxima ação',
+    value: 'Valor (maior → menor)',
+    probability: 'Probabilidade',
+    close: 'Fecha em',
+    recent: 'Recém-criado',
+  };
 
   if (isLoading) {
     return (
