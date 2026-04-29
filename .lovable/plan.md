@@ -1,71 +1,73 @@
+## Novos estágios do Kanban de Deals
 
-# Melhorar transferência Deal → Projeto
+Você fica com **7 colunas** (não 9 — os 2 primeiros vivem em Leads):
 
-Dois problemas reais a resolver e um enriquecimento de dados.
-
-## Problema 1 — Bug: categorias vazias no modal
-
-A query carrega `categorias` filtrando por `tipo = 'receita'`, mas no banco o valor real é `'receitas'` (plural). Resultado: o select fica sempre vazio, mesmo com 11 categorias de receita cadastradas. Por isso "ele não puxa nenhuma variável existente".
-
-**Correção**: trocar o filtro para `tipo = 'receitas'` (e remover o `tipo` do `.select` que não é usado).
-
-## Problema 2 — UX: criar inline na configuração financeira
-
-Hoje, criar uma categoria/centro/conta exige clicar no botão `+`, abrir um mini-modal, digitar e confirmar. Você quer digitar dentro do próprio campo e criar dali, sem etapa extra.
-
-Já existe no projeto o componente `ComboboxCreate` (`src/components/crm/ComboboxCreate.tsx`) que faz exatamente isso: combobox com busca + opção "Criar [termo]" dentro do mesmo dropdown. É o mesmo padrão usado em CRM (origens de lead, papéis de contato, categorias de dor).
-
-**Mudanças no `DealWonDialog.tsx`**:
-- Substituir os 4 `Select` da seção "Configuração financeira" por `ComboboxCreate`.
-- Cada um com seu `onCreate` que insere direto na tabela (categorias, centros_custo, contas_bancarias, meios_pagamento) e seleciona automaticamente.
-- Remover o mini-modal "+ Criar" (`createTarget`, `createName`, `handleCreateOption`) — fica obsoleto.
-- Manter o `loadFinDefaults`/persistência de defaults no localStorage.
-- Subir essa seção pra cima do modal (logo após "Dados do projeto") já que agora é fácil de usar e é informação importante.
-
-## Problema 3 — Mais informações no card de projeto
-
-A RPC `close_deal_as_won` já copia bastante (escopo, dependências, contexto comercial, anexos, contato primário, origem do lead, hour estimates, mockups). Faltam estes campos identificados no mapeamento anterior:
-
-| Faltando no projeto | Origem | Tratamento |
-|---|---|---|
-| `notes` (anotações livres) | `deals.notes` | Concatenar em `projects.notes` |
-| `project_type_v2` (multi-tipos) | `deals.project_type_v2` | Nova coluna em `projects` |
-| `scope_bullets` (escopo estruturado) | `deals.scope_bullets` | Nova coluna `scope_bullets jsonb` em `projects` |
-| `mrr_value` dedicado | calculado no MRR | Nova coluna `mrr_value numeric` em `projects` (para KPIs/relatórios sem ter que JOIN no `maintenance_contracts`) |
-| `origin_lead_id` (ponteiro do lead) | `deals.origin_lead_id` | Nova coluna `origin_lead_id uuid` em `projects` |
-| Histórico `deal_activities` | `deal_activities` | Manter no deal (rastreável via `source_deal_id`); não duplicar |
-
-### Migração SQL
-
-```sql
-ALTER TABLE public.projects
-  ADD COLUMN IF NOT EXISTS mrr_value         numeric,
-  ADD COLUMN IF NOT EXISTS origin_lead_id    uuid,
-  ADD COLUMN IF NOT EXISTS project_type_v2   text[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS scope_bullets     jsonb  NOT NULL DEFAULT '[]'::jsonb;
+```text
+┌───────────────────┬─────────────────────────────────────────────┬──────────┐
+│ Coluna            │ O que significa                             │ Prob.    │
+├───────────────────┼─────────────────────────────────────────────┼──────────┤
+│ Descoberta Marcada│ Triagem rolou, presencial agendado          │  20%     │
+│ Descobrindo       │ No cliente, montando entendimento/proposta  │  40%     │
+│ Proposta na Mesa  │ Proposta enviada, esperando resposta        │  60%     │
+│ Ajustando         │ Cliente respondeu, refinando termos/escopo  │  75%     │
+│ Ganho             │ Fechado                                     │ 100%     │
+│ Perdido           │ Não rolou                                   │   0%     │
+│ Gelado            │ Cliente sumiu / pediu pra retomar depois    │  10%     │
+└───────────────────┴─────────────────────────────────────────────┴──────────┘
 ```
 
-### Atualização da RPC `close_deal_as_won` (v5)
+**Regra Lead → Deal**: lead vira deal automaticamente quando a **triagem é agendada** (status `triagem_agendada` no Lead). O deal nasce direto em **"Descoberta Marcada"**.
 
-No `INSERT INTO projects` adicionar:
-- `notes` = `v_deal.notes`
-- `mrr_value` = `v_mrr_value` (preenchido depois, via `UPDATE` no fim da função, já que é calculado no bloco MRR)
-- `origin_lead_id` = `v_deal.origin_lead_id`
-- `project_type_v2` = `COALESCE(v_deal.project_type_v2, '{}')`
-- `scope_bullets` = `COALESCE(v_deal.scope_bullets, '[]'::jsonb)`
+## Mapeamento dos deals atuais (automático)
 
-## Detalhes técnicos
+```text
+Reunião Agendada    (presencial_agendada) → Descoberta Marcada
+Reunião Realizada   (presencial_feita)    → Descobrindo
+Orçamento Enviado   (orcamento_enviado)   → Proposta na Mesa
+Em Negociação       (em_negociacao)       → Ajustando
+Ganho               (fechado_ganho)       → Ganho        (sem mudança)
+Perdido             (fechado_perdido)     → Perdido      (sem mudança)
+```
 
-**Arquivos:**
-- `src/components/crm/DealWonDialog.tsx`: refatorar bloco "Configuração financeira" usando `ComboboxCreate`; corrigir filtro `'receitas'`; remover mini-modal de criação; remover imports/estados obsoletos.
-- Nova migration `supabase/migrations/<timestamp>_project_extra_fields_and_won_rpc_v5.sql`:
-  1. `ALTER TABLE projects` com as 4 colunas novas.
-  2. `DROP FUNCTION close_deal_as_won(uuid, jsonb, jsonb)` + recriar v5 com os campos extras no INSERT e o `UPDATE projects SET mrr_value = v_mrr_value WHERE id = v_project_id` no bloco MRR.
+Hoje só tem 1 deal ativo (`presencial_feita`) — migração é trivial.
 
-**Cuidados:**
-- A `ComboboxCreate` usa `onCreate` async — passar handlers que inserem na tabela, dão `await reloadFinanceLists` e selecionam o id retornado.
-- Para `meios_pagamento` o create é simples (só `nome`), mantendo o padrão.
-- `tipo` da categoria criada inline continua sendo `'receitas'` (consistente com banco).
-- `src/integrations/supabase/types.ts` é auto-gerado — não tocar; o cast `as any` em `sb` continua mascarando o tipo até o regen.
+## O que muda
 
-**Não quebra:** RPC ainda aceita a mesma assinatura `(uuid, jsonb, jsonb)`. Projetos antigos sem as novas colunas ficam com defaults vazios.
+### 1. Banco
+- Estender o enum `deal_stage` com os novos valores: `descoberta_marcada`, `descobrindo`, `proposta_na_mesa`, `ajustando`, `ganho`, `perdido`, `gelado`.
+- Migration `UPDATE deals SET stage = ...` aplicando o mapeamento acima.
+- Atualizar default da coluna `stage` para `descoberta_marcada`.
+- Atualizar a RPC `close_deal_as_won` (e qualquer outra que cite `fechado_ganho`/`fechado_perdido`) para os novos slugs.
+- Manter os slugs antigos no enum por enquanto (não dá pra remover valor de enum facilmente sem recriar) — código nunca mais grava neles.
+
+### 2. Fluxo Lead → Deal
+- No hook/ação que muda lead para `triagem_agendada`, criar automaticamente o Deal vinculado já em `descoberta_marcada` (copiando empresa, contato, owner, valor estimado, dor, notas, origem).
+- Lead ganha `converted_to_deal_id` na hora da triagem (hoje só ganha em "convertido").
+- Botão "Converter em Deal" manual continua existindo como fallback.
+
+### 3. Frontend
+- `src/constants/dealStages.ts`: novos slugs, labels, probabilidades, cores (Gelado vira azul-cinza, distinto de Perdido).
+- `src/types/crm.ts` + `src/integrations/supabase/types.ts`: tipos atualizados.
+- `CrmPipeline.tsx`: 7 colunas com scroll horizontal no mobile (já tem padrão).
+- `FunilVisual.tsx` (dashboard): refletir novos estágios.
+- `useCrmDashboard*.ts`, `useDealsIndicators.ts`, `useDeals.ts`: atualizar agregações que filtram por stage.
+- `audit/formatters.ts`: traduzir novos slugs no histórico.
+- `CrmLeadDetail.tsx`: ao agendar triagem, dispara criação do Deal e mostra link.
+
+### 4. Pequenos ajustes
+- Remover qualquer hardcode de "Reunião Agendada/Realizada" em selects de criação rápida (`NewDealQuickDialog.tsx`, `NovoOrcamentoModal.tsx`).
+- Garantir que cards "Gelado" não entram no forecast ponderado padrão (probabilidade baixa, mas filtrar para não inflar pipeline).
+
+## Fora do escopo
+- Campo "Bola com" — você confirmou que não precisa.
+- Mexer no módulo Leads em si (continua com `novo / triagem_agendada / triagem_feita / convertido / descartado`). Só adicionamos a automação que cria o Deal quando triagem é agendada.
+
+## Arquivos tocados (resumo)
+- 1 nova migration (enum + UPDATE + RPC)
+- `src/constants/dealStages.ts`, `src/types/crm.ts`
+- `src/pages/crm/CrmPipeline.tsx`, `src/pages/crm/CrmLeadDetail.tsx`
+- `src/hooks/crm/useDeals.ts`, `useDealsIndicators.ts`, `useCrmDashboard.ts`, `useCrmDashboardExec.ts`, `useCrmDetails.ts`
+- `src/components/crm/dashboard/FunilVisual.tsx`, `DealHeader.tsx`, `NewDealQuickDialog.tsx`, `CrmDetailShared.tsx`
+- `src/lib/audit/formatters.ts`
+
+Aprova que eu já implemento.
