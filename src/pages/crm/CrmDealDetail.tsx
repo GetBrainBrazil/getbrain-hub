@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Sparkles, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -286,8 +288,57 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
 // ---------- Zona 3 — Solução ----------
 
 function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void }) {
+  const [organizing, setOrganizing] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+  const scopeText = (deal.scope_summary ?? '').trim();
+  const bullets = deal.scope_bullets ?? [];
+  const canOrganize = scopeText.length >= 20 && !organizing;
+
+  async function handleOrganize() {
+    if (!canOrganize) return;
+    if (bullets.length > 0) {
+      const ok = await confirm({
+        title: 'Substituir bullets existentes?',
+        description:
+          'Os bullets atuais do "Resumo Escopo" serão substituídos pelos gerados pela IA a partir do texto do Escopo.',
+        confirmLabel: 'Substituir',
+        cancelLabel: 'Cancelar',
+        variant: 'default',
+      });
+      if (!ok) return;
+    }
+    setOrganizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('organize-scope', {
+        body: { scope_text: scopeText },
+      });
+      if (error) {
+        const msg = (error as { message?: string }).message ?? '';
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 402) {
+          toast.error('Sem créditos de IA disponíveis. Adicione créditos em Configurações → Workspace → Uso.');
+        } else if (status === 429) {
+          toast.error('Limite de requisições atingido. Tente novamente em instantes.');
+        } else {
+          toast.error(`Falha ao organizar com IA: ${msg || 'tente novamente'}`);
+        }
+        return;
+      }
+      const next: string[] = Array.isArray(data?.bullets) ? data.bullets : [];
+      if (!next.length) {
+        toast.warning('A IA não conseguiu extrair bullets. Tente detalhar mais o texto do Escopo.');
+        return;
+      }
+      save({ scope_bullets: next });
+      toast.success(`${next.length} bullet${next.length > 1 ? 's' : ''} gerado${next.length > 1 ? 's' : ''} pela IA.`);
+    } finally {
+      setOrganizing(false);
+    }
+  }
+
   return (
     <ZoneSection id="zona-solucao" number={3} title="Solução & Escopo" hint="O que vamos entregar">
+      {confirmDialog}
       <div className="space-y-2">
         <FieldLabel hint="tipos gerenciados em Configurações → Pessoas & Empresas">Tipo de projeto</FieldLabel>
         <ProjectTypeSelect
@@ -308,37 +359,48 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
       </div>
 
       <div className="space-y-2">
-        <FieldLabel hint="resumo curto, 1-3 parágrafos">Resumo do escopo</FieldLabel>
+        <div className="flex items-center justify-between gap-3">
+          <FieldLabel hint="descreva tudo aqui — depois organize em bullets com a IA">Escopo</FieldLabel>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!canOrganize}
+            onClick={handleOrganize}
+            className="h-8 gap-1.5 text-xs"
+            title={
+              scopeText.length < 20
+                ? 'Escreva pelo menos 20 caracteres no Escopo para usar a IA'
+                : 'Organizar o texto do Escopo em bullets curtos'
+            }
+          >
+            {organizing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+            )}
+            {organizing ? 'Organizando…' : 'Organizar com IA'}
+          </Button>
+        </div>
         <InlineText
           value={deal.scope_summary}
           onSave={(v) => save({ scope_summary: v })}
-          placeholder="Em poucas linhas: o que o sistema/automação vai fazer."
+          placeholder="Descreva tudo o que o sistema/automação vai fazer. A IA pode organizar isso em bullets depois."
           multiline
-          minHeight={100}
+          minHeight={140}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <FieldLabel>Escopo IN</FieldLabel>
-          <InlineText
-            value={deal.scope_in}
-            onSave={(v) => save({ scope_in: v })}
-            placeholder="O que está dentro do escopo, item por item ou em parágrafo."
-            multiline
-            minHeight={120}
-          />
-        </div>
-        <div className="space-y-2">
-          <FieldLabel hint="protege contra escopo creep">Escopo OUT</FieldLabel>
-          <InlineText
-            value={deal.scope_out}
-            onSave={(v) => save({ scope_out: v })}
-            placeholder="O que NÃO está incluso. Seja explícito."
-            multiline
-            minHeight={120}
-          />
-        </div>
+      <div className="space-y-2">
+        <FieldLabel hint="bullets curtos, uma linha cada — gerados pela IA ou adicionados manualmente">
+          Resumo Escopo
+        </FieldLabel>
+        <StringListEditor
+          value={bullets}
+          onChange={(next) => save({ scope_bullets: next })}
+          placeholder="Novo bullet..."
+          emptyHint='Nenhum bullet ainda. Clique para adicionar manualmente, ou escreva no "Escopo" e use "Organizar com IA".'
+        />
       </div>
 
       <div className="space-y-2">
@@ -443,7 +505,7 @@ function computeCompleteness(deal: Deal): { pct: number; painOk: boolean; soluca
   const painOk = hasCategory && (deal.pain_description?.trim().length ?? 0) >= 40;
   const solucaoOk =
     (deal.project_type_v2?.length ?? 0) > 0 &&
-    (deal.scope_summary?.trim().length ?? 0) >= 40 &&
+    ((deal.scope_summary?.trim().length ?? 0) >= 40 || (deal.scope_bullets?.length ?? 0) >= 3) &&
     ((deal.deliverables?.length ?? 0) >= 3 || (deal.acceptance_criteria?.length ?? 0) >= 3);
   // 2A só conta Dor + Solução (50% cada). Cliente/Comercial entram pelo refinamento posterior.
   const pct = (painOk ? 50 : 0) + (solucaoOk ? 50 : 0);

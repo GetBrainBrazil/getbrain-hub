@@ -50,7 +50,7 @@ const FIELD_LABELS: Record<string, string> = {
   next_step: "Próximo passo", next_step_date: "Data do próximo passo",
   pain_description: "Dor identificada", pain_category: "Categoria da dor", pain_categories: "Categorias da dor",
   pain_cost_brl_monthly: "Custo da dor (mensal)", pain_hours_monthly: "Horas da dor (mensal)",
-  scope_in: "Escopo incluído", scope_out: "Escopo excluído", scope_summary: "Resumo do escopo",
+  scope_in: "Escopo incluído", scope_out: "Escopo excluído", scope_summary: "Escopo", scope_bullets: "Resumo do escopo (bullets)",
   budget_range_min: "Orçamento mínimo", budget_range_max: "Orçamento máximo",
   estimated_hours_total: "Horas estimadas", estimated_complexity: "Complexidade",
   decision_makers: "Decisores", competitors: "Concorrentes",
