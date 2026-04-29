@@ -1190,6 +1190,7 @@ export type Database = {
           probability_pct: number
           project_type: Database["public"]["Enums"]["project_type"] | null
           project_type_v2: string[]
+          proposal_id: string | null
           proposal_url: string | null
           scope_bullets: Json
           scope_in: string | null
@@ -1261,6 +1262,7 @@ export type Database = {
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
           project_type_v2?: string[]
+          proposal_id?: string | null
           proposal_url?: string | null
           scope_bullets?: Json
           scope_in?: string | null
@@ -1332,6 +1334,7 @@ export type Database = {
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
           project_type_v2?: string[]
+          proposal_id?: string | null
           proposal_url?: string | null
           scope_bullets?: Json
           scope_in?: string | null
@@ -1399,6 +1402,13 @@ export type Database = {
             columns: ["owner_actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
           {
@@ -3360,6 +3370,91 @@ export type Database = {
           },
         ]
       }
+      proposal_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          proposal_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          proposal_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string
+          id: string
+          order_index: number
+          proposal_id: string
+          quantity: number
+          total: number | null
+          unit_price: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description: string
+          id?: string
+          order_index?: number
+          proposal_id: string
+          quantity?: number
+          total?: number | null
+          unit_price?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string
+          id?: string
+          order_index?: number
+          proposal_id?: string
+          quantity?: number
+          total?: number | null
+          unit_price?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_versions: {
         Row: {
           created_at: string
@@ -3404,12 +3499,56 @@ export type Database = {
           },
         ]
       }
+      proposal_views: {
+        Row: {
+          duration_seconds: number | null
+          id: string
+          ip_hash: string | null
+          proposal_id: string
+          sections_viewed: Json
+          session_id: string | null
+          user_agent: string | null
+          viewed_at: string
+        }
+        Insert: {
+          duration_seconds?: number | null
+          id?: string
+          ip_hash?: string | null
+          proposal_id: string
+          sections_viewed?: Json
+          session_id?: string | null
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          duration_seconds?: number | null
+          id?: string
+          ip_hash?: string | null
+          proposal_id?: string
+          sections_viewed?: Json
+          session_id?: string | null
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_views_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           accepted_at: string | null
+          access_password_hash: string | null
+          access_token: string | null
           client_city: string | null
           client_company_name: string
           client_logo_url: string | null
+          client_name: string | null
           code: string
           company_id: string | null
           considerations: Json | null
@@ -3417,10 +3556,14 @@ export type Database = {
           created_by: string | null
           deal_id: string | null
           deleted_at: string | null
+          expires_at: string | null
+          first_viewed_at: string | null
           id: string
           implementation_days: number | null
+          last_viewed_at: string | null
           maintenance_description: string | null
           maintenance_monthly_value: number | null
+          mockup_url: string | null
           organization_id: string
           pdf_generated_at: string | null
           pdf_url: string | null
@@ -3429,18 +3572,25 @@ export type Database = {
           rejection_reason: string | null
           scope_items: Json
           sent_at: string | null
-          status: string
+          status: Database["public"]["Enums"]["proposal_status"]
           template_key: string
+          template_slug: string
+          template_version: string
+          title: string | null
           updated_at: string
           updated_by: string | null
           valid_until: string
           validation_days: number | null
+          view_count: number
         }
         Insert: {
           accepted_at?: string | null
+          access_password_hash?: string | null
+          access_token?: string | null
           client_city?: string | null
           client_company_name: string
           client_logo_url?: string | null
+          client_name?: string | null
           code?: string
           company_id?: string | null
           considerations?: Json | null
@@ -3448,10 +3598,14 @@ export type Database = {
           created_by?: string | null
           deal_id?: string | null
           deleted_at?: string | null
+          expires_at?: string | null
+          first_viewed_at?: string | null
           id?: string
           implementation_days?: number | null
+          last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null
+          mockup_url?: string | null
           organization_id: string
           pdf_generated_at?: string | null
           pdf_url?: string | null
@@ -3460,18 +3614,25 @@ export type Database = {
           rejection_reason?: string | null
           scope_items?: Json
           sent_at?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["proposal_status"]
           template_key?: string
+          template_slug?: string
+          template_version?: string
+          title?: string | null
           updated_at?: string
           updated_by?: string | null
           valid_until: string
           validation_days?: number | null
+          view_count?: number
         }
         Update: {
           accepted_at?: string | null
+          access_password_hash?: string | null
+          access_token?: string | null
           client_city?: string | null
           client_company_name?: string
           client_logo_url?: string | null
+          client_name?: string | null
           code?: string
           company_id?: string | null
           considerations?: Json | null
@@ -3479,10 +3640,14 @@ export type Database = {
           created_by?: string | null
           deal_id?: string | null
           deleted_at?: string | null
+          expires_at?: string | null
+          first_viewed_at?: string | null
           id?: string
           implementation_days?: number | null
+          last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null
+          mockup_url?: string | null
           organization_id?: string
           pdf_generated_at?: string | null
           pdf_url?: string | null
@@ -3491,12 +3656,16 @@ export type Database = {
           rejection_reason?: string | null
           scope_items?: Json
           sent_at?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["proposal_status"]
           template_key?: string
+          template_slug?: string
+          template_version?: string
+          title?: string | null
           updated_at?: string
           updated_by?: string | null
           valid_until?: string
           validation_days?: number | null
+          view_count?: number
         }
         Relationships: [
           {
@@ -4317,6 +4486,29 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_metrics: {
+        Row: {
+          avg_view_count: number | null
+          conversion_rate: number | null
+          organization_id: string | null
+          total_converted: number | null
+          total_draft: number | null
+          total_proposals: number | null
+          total_sent: number | null
+          total_value_converted: number | null
+          total_value_sent: number | null
+          total_viewed: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_account_balance: {
@@ -4387,6 +4579,7 @@ export type Database = {
           valor: number
         }[]
       }
+      gen_proposal_access_token: { Args: never; Returns: string }
       generate_project_code: { Args: never; Returns: string }
       generate_recurrence_installments: {
         Args: { p_horizon_months?: number; p_recurrence_id: string }
@@ -4711,6 +4904,10 @@ export type Database = {
         Args: { p_new_token: string; p_secret_id: string }
         Returns: undefined
       }
+      set_proposal_password: {
+        Args: { _plain_password: string; _proposal_id: string }
+        Returns: undefined
+      }
       update_status_atrasado: { Args: never; Returns: undefined }
       vendas_cancelar: { Args: { p_venda_id: string }; Returns: undefined }
       vendas_dashboard: {
@@ -4883,6 +5080,14 @@ export type Database = {
         | "consultoria"
         | "interno"
         | "outro"
+      proposal_status:
+        | "rascunho"
+        | "enviada"
+        | "visualizada"
+        | "interesse_manifestado"
+        | "expirada"
+        | "convertida"
+        | "recusada"
       sprint_status: "planned" | "active" | "completed" | "cancelled"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status:
@@ -5193,6 +5398,15 @@ export const Constants = {
         "consultoria",
         "interno",
         "outro",
+      ],
+      proposal_status: [
+        "rascunho",
+        "enviada",
+        "visualizada",
+        "interesse_manifestado",
+        "expirada",
+        "convertida",
+        "recusada",
       ],
       sprint_status: ["planned", "active", "completed", "cancelled"],
       task_priority: ["low", "medium", "high", "urgent"],
