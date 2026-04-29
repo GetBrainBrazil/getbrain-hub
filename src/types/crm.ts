@@ -148,6 +148,14 @@ export interface Deal {
   mrr_discount_months: number | null;
   mrr_discount_value: number | null;
 
+  // v2.4 — parcelamento + gatilhos do MRR
+  installments_count: number | null;
+  first_installment_date: string | null;
+  mrr_start_trigger: 'on_delivery' | 'before_delivery' | null;
+  mrr_discount_kind: 'months' | 'until_date' | 'until_stage' | null;
+  mrr_discount_until_date: string | null;
+  mrr_discount_until_stage: string | null;
+
   created_at?: string; company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; origin_source?: string | null; origin_code?: string | null; last_activity?: DealActivity | null;
 }
 
