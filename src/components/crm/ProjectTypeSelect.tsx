@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronsUpDown, Plus, X } from 'lucide-react';
+import { ChevronsUpDown, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -16,16 +16,12 @@ import {
 } from '@/hooks/crm/useCrmProjectTypes';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { chipStyleFromHex, resolveHex } from '@/lib/crm/colorUtils';
 
 interface Props {
   value: string[];
   onChange: (slugs: string[]) => void;
   disabled?: boolean;
-}
-
-function bgDot(colorClass?: string | null) {
-  if (!colorClass) return 'bg-muted-foreground/40';
-  return colorClass.split(' ').find((c) => c.startsWith('bg-')) ?? 'bg-muted-foreground/40';
 }
 
 export function ProjectTypeSelect({ value, onChange, disabled }: Props) {
@@ -65,29 +61,30 @@ export function ProjectTypeSelect({ value, onChange, disabled }: Props) {
       {/* Chips selecionados (em cima) */}
       {selectedItems.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {selectedItems.map((cat) => (
-            <span
-              key={cat.slug}
-              className={cn(
-                'group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm',
-                cat.color ?? 'bg-muted text-muted-foreground border-border',
-              )}
-            >
-              <span className={cn('h-2 w-2 rounded-full', bgDot(cat.color))} />
-              <span className="max-w-[16rem] truncate">{cat.name}</span>
-              {!cat.is_active && <span className="text-[9px] opacity-70">(inativo)</span>}
-              {!disabled && (
-                <button
-                  type="button"
-                  onClick={() => remove(cat.slug)}
-                  className="ml-0.5 rounded-sm opacity-70 hover:bg-foreground/10 hover:opacity-100"
-                  aria-label={`Remover ${cat.name}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </span>
-          ))}
+          {selectedItems.map((cat) => {
+            const hex = resolveHex(cat.color);
+            return (
+              <span
+                key={cat.slug}
+                className="group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm"
+                style={chipStyleFromHex(cat.color)}
+              >
+                <span className="h-2 w-2 rounded-full" style={{ background: hex }} />
+                <span className="max-w-[16rem] truncate">{cat.name}</span>
+                {!cat.is_active && <span className="text-[9px] opacity-70">(inativo)</span>}
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => remove(cat.slug)}
+                    className="ml-0.5 rounded-sm opacity-70 hover:bg-foreground/10 hover:opacity-100"
+                    aria-label={`Remover ${cat.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -157,10 +154,13 @@ export function ProjectTypeSelect({ value, onChange, disabled }: Props) {
                         key={cat.slug}
                         value={cat.name}
                         onSelect={() => toggle(cat.slug)}
+                        className={cn(checked && 'bg-accent/40')}
                       >
-                        <Check className={cn('mr-2 h-4 w-4', checked ? 'opacity-100' : 'opacity-0')} />
+                        <span
+                          className="mr-2 h-2.5 w-2.5 rounded-full"
+                          style={{ background: resolveHex(cat.color) }}
+                        />
                         <span className="flex-1 truncate">{cat.name}</span>
-                        <span className={cn('ml-2 h-2 w-2 rounded-full', bgDot(cat.color))} />
                       </CommandItem>
                     );
                   })}

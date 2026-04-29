@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Check, Plus, X, ChevronsUpDown } from 'lucide-react';
+import { Plus, X, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useCrmPainCategories, useCreatePainCategory } from '@/hooks/crm/useCrmPainCategories';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { chipStyleFromHex, resolveHex } from '@/lib/crm/colorUtils';
 
 interface Props {
   value: string[];
@@ -51,16 +52,14 @@ export function PainCategoriesMultiSelect({ value, onChange, disabled }: Props) 
       {selectedItems.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selectedItems.map((cat) => {
-            const dot = cat.color?.split(' ').find((c) => c.startsWith('bg-')) ?? 'bg-muted-foreground/40';
+            const hex = resolveHex(cat.color);
             return (
               <span
                 key={cat.slug}
-                className={cn(
-                  'group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm',
-                  cat.color ?? 'bg-muted text-muted-foreground border-border',
-                )}
+                className="group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm"
+                style={chipStyleFromHex(cat.color)}
               >
-                <span className={cn('h-2 w-2 rounded-full', dot)} />
+                <span className="h-2 w-2 rounded-full" style={{ background: hex }} />
                 <span className="max-w-[16rem] truncate">{cat.name}</span>
                 {!cat.is_active && <span className="text-[9px] opacity-70">(inativa)</span>}
                 {!disabled && (
@@ -140,15 +139,13 @@ export function PainCategoriesMultiSelect({ value, onChange, disabled }: Props) 
                         key={cat.slug}
                         value={cat.name}
                         onSelect={() => toggle(cat.slug)}
+                        className={cn(checked && 'bg-accent/40')}
                       >
-                        <Check className={cn('mr-2 h-4 w-4', checked ? 'opacity-100' : 'opacity-0')} />
-                        <span className="flex-1 truncate">{cat.name}</span>
                         <span
-                          className={cn(
-                            'ml-2 h-2 w-2 rounded-full',
-                            cat.color?.split(' ').find((c) => c.startsWith('bg-')) ?? 'bg-muted-foreground/40',
-                          )}
+                          className="mr-2 h-2.5 w-2.5 rounded-full"
+                          style={{ background: resolveHex(cat.color) }}
                         />
+                        <span className="flex-1 truncate">{cat.name}</span>
                       </CommandItem>
                     );
                   })}

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirm } from "@/components/ConfirmDialog";
 import {
   CrmProjectType,
@@ -14,8 +13,8 @@ import {
   useReorderProjectType,
   useUpdateProjectType,
 } from "@/hooks/crm/useCrmProjectTypes";
-
-import { PRESET_COLORS, colorPreviewFromToken as colorPreview } from "@/lib/crm/presetColors";
+import { ColorPickerPopover } from "@/components/ui/color-picker-popover";
+import { randomVividHex } from "@/lib/crm/colorUtils";
 
 export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
   const { data: types = [], isLoading } = useCrmProjectTypes();
@@ -26,7 +25,7 @@ export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
   const { confirm, dialog } = useConfirm();
 
   const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState(PRESET_COLORS[0].value);
+  const [newColor, setNewColor] = useState<string>(() => randomVividHex());
 
   const move = (idx: number, dir: -1 | 1) => {
     const target = idx + dir;
@@ -42,7 +41,8 @@ export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
   const handleDelete = async (s: CrmProjectType) => {
     const ok = await confirm({
       title: `Remover tipo "${s.name}"?`,
-      description: "Deals que já usam este tipo mantêm o valor histórico, mas ele não estará mais disponível para seleção.",
+      description:
+        "Deals que já usam este tipo mantêm o valor histórico, mas ele não estará mais disponível para seleção.",
       confirmLabel: "Remover",
       variant: "destructive",
     });
@@ -51,7 +51,15 @@ export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
 
   const submit = () => {
     if (!newName.trim()) return;
-    create.mutate({ name: newName.trim(), color: newColor }, { onSuccess: () => setNewName("") });
+    create.mutate(
+      { name: newName.trim(), color: newColor },
+      {
+        onSuccess: () => {
+          setNewName("");
+          setNewColor(randomVividHex());
+        },
+      },
+    );
   };
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
@@ -61,9 +69,11 @@ export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">Tipos de projeto</h3>
-          <p className="text-xs text-muted-foreground">Opções disponíveis ao classificar o tipo de um deal.</p>
+          <p className="text-xs text-muted-foreground">Opções disponíveis ao classificar o tipo de projeto de um deal.</p>
         </div>
-        <span className="text-xs text-muted-foreground">{types.length} {types.length === 1 ? "tipo" : "tipos"}</span>
+        <span className="text-xs text-muted-foreground">
+          {types.length} {types.length === 1 ? "tipo" : "tipos"}
+        </span>
       </div>
 
       {!canEdit && (
@@ -75,36 +85,14 @@ export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
       <div className="rounded-lg border border-border bg-card/30">
         {canEdit && (
           <div className="flex items-center gap-2 border-b border-border px-2 py-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="h-6 w-6 shrink-0 rounded-full border border-border transition hover:scale-110"
-                  style={{ background: colorPreview(newColor) }}
-                  aria-label="Escolher cor"
-                />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2" align="start">
-                <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      onClick={() => setNewColor(c.value)}
-                      title={c.label}
-                      className={`h-6 w-6 rounded-full border-2 transition ${newColor === c.value ? "border-foreground scale-110" : "border-transparent"}`}
-                      style={{ background: c.preview }}
-                      aria-label={`Cor ${c.label}`}
-                    />
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+            <ColorPickerPopover value={newColor} onCommit={setNewColor} size={24} />
             <Input
               placeholder="Novo tipo (ex: Dashboard, Treinamento...)"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
               className="h-8 flex-1 border-0 bg-transparent px-1 focus-visible:ring-0"
             />
             <Button size="sm" className="h-7" onClick={submit} disabled={!newName.trim() || create.isPending}>
@@ -137,35 +125,12 @@ export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
                 </button>
               </div>
 
-              {canEdit ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="h-4 w-4 shrink-0 rounded-full border border-border"
-                      style={{ background: colorPreview(s.color) }}
-                      aria-label="Editar cor"
-                    />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-2" align="start">
-                    <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                      {PRESET_COLORS.map((c) => (
-                        <button
-                          key={c.value}
-                          type="button"
-                          onClick={() => update.mutate({ id: s.id, patch: { color: c.value } })}
-                          title={c.label}
-                          className={`h-6 w-6 rounded-full border-2 transition ${s.color === c.value ? "border-foreground scale-110" : "border-transparent"}`}
-                          style={{ background: c.preview }}
-                          aria-label={`Cor ${c.label}`}
-                        />
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ) : (
-                <span className="h-4 w-4 shrink-0 rounded-full border border-border" style={{ background: colorPreview(s.color) }} />
-              )}
+              <ColorPickerPopover
+                value={s.color}
+                disabled={!canEdit}
+                size={18}
+                onCommit={(hex) => update.mutate({ id: s.id, patch: { color: hex } })}
+              />
 
               {canEdit ? (
                 <Input
@@ -181,7 +146,9 @@ export function ProjectTypesManager({ canEdit }: { canEdit: boolean }) {
               )}
 
               {s.is_system && (
-                <Badge variant="outline" className="h-4 shrink-0 px-1 text-[9px] font-normal">padrão</Badge>
+                <Badge variant="outline" className="h-4 shrink-0 px-1 text-[9px] font-normal">
+                  padrão
+                </Badge>
               )}
 
               <Switch
