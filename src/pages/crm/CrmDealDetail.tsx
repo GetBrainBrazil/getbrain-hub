@@ -20,7 +20,7 @@ import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
 import { PropostaTabContent } from '@/components/crm/proposta/PropostaTabContent';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
-import { PainCategoryCombobox } from '@/components/crm/PainCategoryCombobox';
+import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
@@ -227,10 +227,10 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
   return (
     <ZoneSection id="zona-dor" number={2} title="Dor & Contexto" hint="O problema que justifica o projeto">
       <div className="space-y-2">
-        <FieldLabel hint="categorias gerenciadas em Configurações → Pessoas & Empresas">Categoria da dor</FieldLabel>
-        <PainCategoryCombobox
-          value={deal.pain_category}
-          onChange={(v) => save({ pain_category: v })}
+        <FieldLabel hint="selecione uma ou mais — gerenciadas em Configurações → Pessoas & Empresas">Categorias da dor</FieldLabel>
+        <PainCategoriesMultiSelect
+          value={deal.pain_categories ?? []}
+          onChange={(v) => save({ pain_categories: v } as Partial<Deal>)}
         />
       </div>
 
@@ -449,7 +449,8 @@ function ComplexitySlider({ value, onSave }: { value: number | null; onSave: (v:
 // ---------- Indicador de descoberta completa ----------
 
 function computeCompleteness(deal: Deal): { pct: number; painOk: boolean; solucaoOk: boolean } {
-  const painOk = !!deal.pain_category && (deal.pain_description?.trim().length ?? 0) >= 40;
+  const hasCategory = (deal.pain_categories?.length ?? 0) > 0 || !!deal.pain_category;
+  const painOk = hasCategory && (deal.pain_description?.trim().length ?? 0) >= 40;
   const solucaoOk =
     !!deal.project_type_v2 &&
     (deal.scope_summary?.trim().length ?? 0) >= 40 &&
