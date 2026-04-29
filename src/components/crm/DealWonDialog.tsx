@@ -949,232 +949,312 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           {/* ============== PASSO 2 — RECEITA ============== */}
           <TabsContent value="receita" className="space-y-4 mt-4">
             <div className="grid gap-4 lg:grid-cols-2">
-              {/* Coluna A — Implementação */}
-              <div className="space-y-3 rounded-lg border border-border p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
-                  <Banknote className="h-3.5 w-3.5 text-primary" />
-                  Implementação (one-shot)
-                </div>
-
-                <div className="rounded border border-border/60 bg-muted/20 p-2 text-[11px] text-muted-foreground">
-                  Total esperado: <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span>
-                  {discountEnabled && discountValue > 0 && (
-                    <> · desconto <span className="text-warning">−{formatBRL(discountValue)}</span></>
-                  )}
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground">Nº de parcelas</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={60}
-                      value={installmentsN}
-                      onChange={(e) => {
-                        setInstallmentsN(e.target.value);
-                        const n = parseInt(e.target.value, 10);
-                        if (!Number.isNaN(n) && n > 0) regenerateInstallments(n, firstDueDate);
-                      }}
-                      className="h-9"
-                    />
+              {/* ====================================================== */}
+              {/* COLUNA A — IMPLEMENTAÇÃO                                */}
+              {/* ====================================================== */}
+              <section className="rounded-xl border border-border bg-card overflow-hidden flex flex-col">
+                <header className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <Banknote className="h-4 w-4" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground">Data da 1ª parcela</Label>
-                    <Input
-                      type="date"
-                      value={firstDueDate}
-                      onChange={(e) => {
-                        setFirstDueDate(e.target.value);
-                        const n = parseInt(installmentsN, 10) || 1;
-                        regenerateInstallments(n, e.target.value);
-                      }}
-                      className="h-9"
-                    />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-foreground leading-tight">Implementação</div>
+                    <div className="text-[11px] text-muted-foreground">Receita única, paga em parcelas</div>
                   </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  {installments.map((inst, idx) => (
-                    <div key={inst.id} className="flex items-center gap-2">
-                      <span className="w-6 text-center font-mono text-xs text-muted-foreground">{idx + 1}</span>
-                      <CurrencyInput
-                        value={inst.amount}
-                        onValueChange={(v) =>
-                          setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, amount: v } : i)))
-                        }
-                        withPrefix
-                        placeholder="R$ 0,00"
-                        className="flex-1"
-                      />
-                      <Input
-                        type="date"
-                        value={inst.due_date}
-                        onChange={(e) =>
-                          setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, due_date: e.target.value } : i)))
-                        }
-                        className="w-36"
-                      />
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive"
-                        disabled={installments.length === 1}
-                        onClick={() => removeInstallment(inst.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <Button type="button" size="sm" variant="outline" onClick={addInstallment}>
-                    <Plus className="h-3.5 w-3.5" /> Adicionar parcela
-                  </Button>
-                  <span className="font-mono text-sm font-bold tabular-nums">
-                    Total: {formatBRL(totalInstallments)}
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                    One-shot
                   </span>
-                </div>
+                </header>
 
-                {expectedTotal > 0 && !installmentsMatchExpected && (
-                  <div className="rounded border border-warning/40 bg-warning/10 p-2 text-[11px] text-warning-foreground">
-                    ⚠️ Total das parcelas ({formatBRL(totalInstallments)}) ≠ valor esperado ({formatBRL(expectedTotal)})
+                <div className="p-4 space-y-4">
+                  {/* Hero — Total esperado */}
+                  <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 flex items-baseline justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total esperado</div>
+                      <div className="font-mono text-lg font-bold text-foreground tabular-nums">
+                        {formatBRL(expectedTotal)}
+                      </div>
+                    </div>
+                    {discountEnabled && discountValue > 0 && (
+                      <div className="text-right">
+                        <div className="text-[10px] uppercase tracking-wide text-warning">Desconto</div>
+                        <div className="font-mono text-sm font-semibold text-warning tabular-nums">
+                          −{formatBRL(discountValue)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {/* Desconto promocional sobre implementação */}
-                <div className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <Percent className="h-3 w-3" /> Desconto promocional
-                    </Label>
-                    <Switch checked={discountEnabled} onCheckedChange={setDiscountEnabled} />
+                  {/* Parâmetros das parcelas */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-muted-foreground">Nº de parcelas</Label>
+                      <Input
+                        type="number" min={1} max={60}
+                        value={installmentsN}
+                        onChange={(e) => {
+                          setInstallmentsN(e.target.value);
+                          const n = parseInt(e.target.value, 10);
+                          if (!Number.isNaN(n) && n > 0) regenerateInstallments(n, firstDueDate);
+                        }}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-muted-foreground">Data da 1ª parcela</Label>
+                      <Input
+                        type="date" value={firstDueDate}
+                        onChange={(e) => {
+                          setFirstDueDate(e.target.value);
+                          const n = parseInt(installmentsN, 10) || 1;
+                          regenerateInstallments(n, e.target.value);
+                        }}
+                        className="h-9"
+                      />
+                    </div>
                   </div>
-                  {discountEnabled && (
-                    <div className="space-y-2">
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <RadioGroup
-                          value={discountKind}
-                          onValueChange={(v) => setDiscountKind(v as 'percent' | 'fixed')}
-                          className="flex items-center gap-3"
+
+                  {/* Tabela de parcelas */}
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <div className="grid grid-cols-[28px_1fr_140px_32px] items-center gap-2 px-2.5 py-1.5 bg-muted/40 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span className="text-center">#</span>
+                      <span>Valor</span>
+                      <span>Vencimento</span>
+                      <span></span>
+                    </div>
+                    <div className="divide-y divide-border">
+                      {installments.map((inst, idx) => (
+                        <div
+                          key={inst.id}
+                          className="grid grid-cols-[28px_1fr_140px_32px] items-center gap-2 px-2.5 py-1.5 hover:bg-muted/20"
                         >
-                          <label className="flex items-center gap-1.5 text-xs">
-                            <RadioGroupItem value="percent" id="disc-pct" /> %
-                          </label>
-                          <label className="flex items-center gap-1.5 text-xs">
-                            <RadioGroupItem value="fixed" id="disc-fix" /> R$
-                          </label>
-                        </RadioGroup>
-                        {discountKind === 'percent' ? (
-                          <Input
-                            type="number" step="0.01" min={0} max={100}
-                            value={discountAmount}
-                            onChange={(e) => setDiscountAmount(e.target.value)}
-                            placeholder="10"
-                            className="h-8"
-                          />
-                        ) : (
+                          <span className="text-center font-mono text-xs text-muted-foreground">{idx + 1}</span>
                           <CurrencyInput
-                            value={discountAmount} onValueChange={setDiscountAmount}
+                            value={inst.amount}
+                            onValueChange={(v) =>
+                              setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, amount: v } : i)))
+                            }
                             withPrefix placeholder="R$ 0,00" className="h-8"
                           />
-                        )}
+                          <Input
+                            type="date" value={inst.due_date}
+                            onChange={(e) =>
+                              setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, due_date: e.target.value } : i)))
+                            }
+                            className="h-8"
+                          />
+                          <Button
+                            type="button" size="icon" variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            disabled={installments.length === 1}
+                            onClick={() => removeInstallment(inst.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between px-2.5 py-2 bg-muted/30 border-t border-border">
+                      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1.5" onClick={addInstallment}>
+                        <Plus className="h-3.5 w-3.5" /> Adicionar parcela
+                      </Button>
+                      <div className="text-right">
+                        <div className="text-[9px] uppercase tracking-wide text-muted-foreground leading-none">Soma</div>
+                        <div className="font-mono text-sm font-bold tabular-nums text-foreground">
+                          {formatBRL(totalInstallments)}
+                        </div>
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Input
-                          type="date" value={discountValidUntil}
-                          onChange={(e) => setDiscountValidUntil(e.target.value)}
-                          className="h-8"
-                          placeholder="Válido até"
-                        />
-                        <Input
-                          value={discountNotes}
-                          onChange={(e) => setDiscountNotes(e.target.value)}
-                          placeholder="Observação"
-                          className="h-8"
-                        />
-                      </div>
+                    </div>
+                  </div>
+
+                  {expectedTotal > 0 && !installmentsMatchExpected && (
+                    <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-2.5 text-[11px]">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-warning" />
+                      <span className="text-foreground">
+                        Soma das parcelas (<span className="font-mono">{formatBRL(totalInstallments)}</span>) difere do total esperado (<span className="font-mono">{formatBRL(expectedTotal)}</span>).
+                      </span>
                     </div>
                   )}
-                </div>
 
-                <FinanceCategorizationCard
-                  title="Categorização — implementação"
-                  subtitle="Aplicada a todas as parcelas geradas"
-                  tone="income"
-                  categoriaId={implCategoriaId} setCategoriaId={setImplCategoriaId}
-                  centroId={implCentroId} setCentroId={setImplCentroId}
-                  contaId={implContaId} setContaId={setImplContaId}
-                  meioId={implMeioId} setMeioId={setImplMeioId}
-                  categorias={categoriasReceita}
-                  centros={centros} contas={contas} meios={meios}
-                  onCreateCategoria={makeCreateCategoria('receitas', 'impl')}
-                  onCreateCentro={makeCreateCentro('impl')}
-                  onCreateConta={makeCreateConta('impl')}
-                  onCreateMeio={makeCreateMeio('impl')}
-                />
-              </div>
-
-              {/* Coluna B — MRR */}
-              <div className={cn('space-y-3 rounded-lg border p-3', mrrEnabled ? 'border-border' : 'border-border/40')}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    <Repeat className="h-3.5 w-3.5 text-primary" />
-                    Manutenção mensal (MRR)
-                  </div>
-                  <Switch checked={mrrEnabled} onCheckedChange={setMrrEnabled} />
-                </div>
-
-                {!mrrEnabled && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Ative para criar contrato de manutenção mensal recorrente em paralelo à implementação.
-                  </p>
-                )}
-
-                {mrrEnabled && (
-                  <div className="space-y-3">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Valor mensal</Label>
-                        <CurrencyInput value={mrrValue} onValueChange={setMrrValue} withPrefix placeholder="R$ 0,00" className="h-9" />
+                  {/* Desconto promocional */}
+                  <div className={cn(
+                    'rounded-lg border transition-colors',
+                    discountEnabled ? 'border-warning/40 bg-warning/5' : 'border-border bg-background/40'
+                  )}>
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <Label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                        <Percent className="h-3.5 w-3.5 text-warning" />
+                        Desconto promocional
+                      </Label>
+                      <Switch checked={discountEnabled} onCheckedChange={setDiscountEnabled} />
+                    </div>
+                    {discountEnabled && (
+                      <div className="px-3 pb-3 pt-1 space-y-2 border-t border-warning/20">
+                        <div className="grid gap-2 sm:grid-cols-[auto_1fr]">
+                          <RadioGroup
+                            value={discountKind}
+                            onValueChange={(v) => setDiscountKind(v as 'percent' | 'fixed')}
+                            className="flex items-center gap-1 rounded-md border border-border bg-background p-1"
+                          >
+                            <label className="flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer">
+                              <RadioGroupItem value="percent" id="disc-pct" /> %
+                            </label>
+                            <label className="flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer">
+                              <RadioGroupItem value="fixed" id="disc-fix" /> R$
+                            </label>
+                          </RadioGroup>
+                          {discountKind === 'percent' ? (
+                            <Input
+                              type="number" step="0.01" min={0} max={100}
+                              value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)}
+                              placeholder="10" className="h-9"
+                            />
+                          ) : (
+                            <CurrencyInput
+                              value={discountAmount} onValueChange={setDiscountAmount}
+                              withPrefix placeholder="R$ 0,00" className="h-9"
+                            />
+                          )}
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground">Válido até</Label>
+                            <Input
+                              type="date" value={discountValidUntil}
+                              onChange={(e) => setDiscountValidUntil(e.target.value)}
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground">Observação</Label>
+                            <Input
+                              value={discountNotes}
+                              onChange={(e) => setDiscountNotes(e.target.value)}
+                              placeholder="Ex: Black Friday"
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Início</Label>
-                        <Input type="date" value={mrrStartDate} onChange={(e) => setMrrStartDate(e.target.value)} className="h-9" />
+                    )}
+                  </div>
+
+                  <FinanceCategorizationCard
+                    title="Categorização — implementação"
+                    subtitle="Aplicada a todas as parcelas geradas"
+                    tone="income"
+                    categoriaId={implCategoriaId} setCategoriaId={setImplCategoriaId}
+                    centroId={implCentroId} setCentroId={setImplCentroId}
+                    contaId={implContaId} setContaId={setImplContaId}
+                    meioId={implMeioId} setMeioId={setImplMeioId}
+                    categorias={categoriasReceita}
+                    centros={centros} contas={contas} meios={meios}
+                    onCreateCategoria={makeCreateCategoria('receitas', 'impl')}
+                    onCreateCentro={makeCreateCentro('impl')}
+                    onCreateConta={makeCreateConta('impl')}
+                    onCreateMeio={makeCreateMeio('impl')}
+                  />
+                </div>
+              </section>
+
+              {/* ====================================================== */}
+              {/* COLUNA B — MRR                                          */}
+              {/* ====================================================== */}
+              <section className={cn(
+                'rounded-xl border bg-card overflow-hidden flex flex-col transition-opacity',
+                mrrEnabled ? 'border-border' : 'border-border/60'
+              )}>
+                <header className={cn(
+                  'flex items-center gap-2.5 px-4 py-3 border-b border-border',
+                  mrrEnabled
+                    ? 'bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent'
+                    : 'bg-muted/20'
+                )}>
+                  <div className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-lg',
+                    mrrEnabled ? 'bg-cyan-500/15 text-cyan-500' : 'bg-muted text-muted-foreground'
+                  )}>
+                    <Repeat className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-foreground leading-tight">Manutenção mensal</div>
+                    <div className="text-[11px] text-muted-foreground">Receita recorrente (MRR)</div>
+                  </div>
+                  {mrrEnabled && (
+                    <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-500">
+                      Ativo
+                    </span>
+                  )}
+                  <Switch checked={mrrEnabled} onCheckedChange={setMrrEnabled} />
+                </header>
+
+                {!mrrEnabled ? (
+                  <div className="p-8 text-center flex-1 flex flex-col items-center justify-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+                      <Repeat className="h-5 w-5 text-muted-foreground/60" />
+                    </div>
+                    <div className="text-sm font-medium text-foreground mb-1">MRR opcional</div>
+                    <p className="text-xs text-muted-foreground max-w-xs">
+                      Ative para criar um contrato de manutenção mensal recorrente em paralelo à implementação.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-4">
+                    {/* Hero — Valor mensal + Início */}
+                    <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] font-medium text-muted-foreground">Valor mensal</Label>
+                          <CurrencyInput value={mrrValue} onValueChange={setMrrValue} withPrefix placeholder="R$ 0,00" className="h-9" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] font-medium text-muted-foreground">Início</Label>
+                          <Input type="date" value={mrrStartDate} onChange={(e) => setMrrStartDate(e.target.value)} className="h-9" />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Duração</Label>
+                    {/* Duração */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-muted-foreground">Duração do contrato</Label>
                       <RadioGroup
                         value={mrrIndefinite ? 'indefinite' : 'fixed'}
                         onValueChange={(v) => setMrrIndefinite(v === 'indefinite')}
-                        className="flex flex-wrap items-center gap-3"
+                        className="grid grid-cols-2 gap-2"
                       >
-                        <label className="flex items-center gap-1.5 text-xs">
-                          <RadioGroupItem value="indefinite" id="mrr-indef" /> Indefinido
+                        <label className={cn(
+                          'flex items-center gap-2 rounded-md border px-3 py-2 text-xs cursor-pointer transition-colors',
+                          mrrIndefinite ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'
+                        )}>
+                          <RadioGroupItem value="indefinite" id="mrr-indef" />
+                          <span className="font-medium">Indefinido</span>
                         </label>
-                        <label className="flex items-center gap-1.5 text-xs">
-                          <RadioGroupItem value="fixed" id="mrr-fixed" /> Por
+                        <label className={cn(
+                          'flex items-center gap-2 rounded-md border px-3 py-2 text-xs cursor-pointer transition-colors',
+                          !mrrIndefinite ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'
+                        )}>
+                          <RadioGroupItem value="fixed" id="mrr-fixed" />
+                          <span className="font-medium">Por</span>
                           <Input
                             type="number" min={1} max={120}
                             value={mrrDuration} onChange={(e) => setMrrDuration(e.target.value)}
                             disabled={mrrIndefinite}
-                            className="h-7 w-16 px-2 text-xs"
-                          /> meses
+                            className="h-7 w-14 px-2 text-xs"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <span className="text-muted-foreground">meses</span>
                         </label>
                       </RadioGroup>
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Início da cobrança</Label>
+                    {/* Início da cobrança */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-muted-foreground">Quando começa a cobrar</Label>
                       <Select
                         value={mrrStartTrigger || ''}
                         onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
                       >
-                        <SelectTrigger className="h-8"><SelectValue placeholder="(usar Início acima)" /></SelectTrigger>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Usar a data de início acima" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
                           <SelectItem value="before_delivery">Antes da entrega</SelectItem>
@@ -1182,60 +1262,83 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                       </Select>
                     </div>
 
-                    <div className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <Percent className="h-3 w-3" /> Desconto promocional no MRR
+                    {/* Desconto MRR */}
+                    <div className={cn(
+                      'rounded-lg border transition-colors',
+                      mrrDiscountEnabled ? 'border-warning/40 bg-warning/5' : 'border-border bg-background/40'
+                    )}>
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <Label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                          <Percent className="h-3.5 w-3.5 text-warning" />
+                          Desconto promocional no MRR
                         </Label>
                         <Switch checked={mrrDiscountEnabled} onCheckedChange={setMrrDiscountEnabled} />
                       </div>
                       {mrrDiscountEnabled && (
-                        <div className="space-y-2">
+                        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-warning/20">
                           <div className="grid gap-2 sm:grid-cols-2">
-                            <Select
-                              value={mrrDiscountKind}
-                              onValueChange={(v) => setMrrDiscountKind(v as 'months' | 'until_date' | 'until_stage')}
-                            >
-                              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="months">Por X meses</SelectItem>
-                                <SelectItem value="until_date">Até uma data</SelectItem>
-                                <SelectItem value="until_stage">Até estágio do projeto</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <CurrencyInput
-                              value={mrrDiscountValue} onValueChange={setMrrDiscountValue}
-                              withPrefix placeholder="Valor c/ desc" className="h-8"
-                            />
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Tipo</Label>
+                              <Select
+                                value={mrrDiscountKind}
+                                onValueChange={(v) => setMrrDiscountKind(v as 'months' | 'until_date' | 'until_stage')}
+                              >
+                                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="months">Por X meses</SelectItem>
+                                  <SelectItem value="until_date">Até uma data</SelectItem>
+                                  <SelectItem value="until_stage">Até estágio do projeto</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Valor com desconto</Label>
+                              <CurrencyInput
+                                value={mrrDiscountValue} onValueChange={setMrrDiscountValue}
+                                withPrefix placeholder="R$ 0,00" className="h-9"
+                              />
+                            </div>
                           </div>
                           {mrrDiscountKind === 'months' && (
-                            <Input
-                              type="number" min={1} max={60}
-                              value={mrrDiscountMonths} onChange={(e) => setMrrDiscountMonths(e.target.value)}
-                              className="h-8" placeholder="Primeiros (meses)"
-                            />
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Por quantos meses</Label>
+                              <Input
+                                type="number" min={1} max={60}
+                                value={mrrDiscountMonths} onChange={(e) => setMrrDiscountMonths(e.target.value)}
+                                className="h-9" placeholder="Ex: 3"
+                              />
+                            </div>
                           )}
                           {mrrDiscountKind === 'until_date' && (
-                            <Input
-                              type="date" value={mrrDiscountUntilDate}
-                              onChange={(e) => setMrrDiscountUntilDate(e.target.value)} className="h-8"
-                            />
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Até quando</Label>
+                              <Input
+                                type="date" value={mrrDiscountUntilDate}
+                                onChange={(e) => setMrrDiscountUntilDate(e.target.value)} className="h-9"
+                              />
+                            </div>
                           )}
                           {mrrDiscountKind === 'until_stage' && (
-                            <Select value={mrrDiscountUntilStage} onValueChange={setMrrDiscountUntilStage}>
-                              <SelectTrigger className="h-8"><SelectValue placeholder="Selecione um estágio…" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="planning">Planejamento</SelectItem>
-                                <SelectItem value="em_desenvolvimento">Em desenvolvimento</SelectItem>
-                                <SelectItem value="em_homologacao">Em homologação</SelectItem>
-                                <SelectItem value="entregue">Entregue</SelectItem>
-                                <SelectItem value="em_manutencao">Em manutenção</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Até o estágio</Label>
+                              <Select value={mrrDiscountUntilStage} onValueChange={setMrrDiscountUntilStage}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione um estágio…" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="planning">Planejamento</SelectItem>
+                                  <SelectItem value="em_desenvolvimento">Em desenvolvimento</SelectItem>
+                                  <SelectItem value="em_homologacao">Em homologação</SelectItem>
+                                  <SelectItem value="entregue">Entregue</SelectItem>
+                                  <SelectItem value="em_manutencao">Em manutenção</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           )}
                           {mrrDiscountInvalid && (
-                            <div className="rounded border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive">
-                              Desconto inválido — valor com desconto deve ser MENOR que o valor cheio.
+                            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-[11px]">
+                              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-destructive" />
+                              <span className="text-foreground">
+                                Desconto inválido — valor com desconto deve ser <strong>menor</strong> que o valor cheio.
+                              </span>
                             </div>
                           )}
                         </div>
@@ -1244,7 +1347,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
                     <FinanceCategorizationCard
                       title="Categorização — MRR"
-                      subtitle="Pode ser diferente da implementação (ex: categoria 'MRR / Manutenção')"
+                      subtitle="Pode ser diferente da implementação (ex: 'MRR / Manutenção')"
                       tone="income"
                       categoriaId={mrrCategoriaId} setCategoriaId={setMrrCategoriaId}
                       centroId={mrrCentroId} setCentroId={setMrrCentroId}
@@ -1259,7 +1362,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                     />
                   </div>
                 )}
-              </div>
+              </section>
             </div>
           </TabsContent>
 
