@@ -810,7 +810,7 @@ export default function CrmDealDetail() {
         completenessPct={pct}
         painOk={painOk}
         solucaoOk={solucaoOk}
-        onCloseRequest={handleCloseRequest}
+        onStageChange={handleStageChange}
       />
 
       {/* Layout 70/30 com tabs */}
@@ -843,6 +843,29 @@ export default function CrmDealDetail() {
         open={wonDialogOpen}
         onOpenChange={setWonDialogOpen}
         deal={deal}
+        onSuccess={(projectId) => navigate(`/projetos/${projectId}`)}
+      />
+
+      <Dialog open={lostDialogOpen} onOpenChange={(v) => { if (!v) { setLostDialogOpen(false); setLostReason(''); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Motivo da perda</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label>Informe o motivo para mover para perdido</Label>
+            <Textarea value={lostReason} onChange={(e) => setLostReason(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLostDialogOpen(false); setLostReason(''); }}>Cancelar</Button>
+            <Button disabled={!lostReason.trim() || updateStage.isPending} onClick={confirmLost}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <CreateProposalForStageDialog
+        open={needsProposalOpen}
+        deal={needsProposalOpen ? deal : null}
+        onOpenChange={(v) => { if (!v) setNeedsProposalOpen(false); }}
+        loading={creatingProposal}
+        onConfirm={handleCreateProposalForDeal}
       />
 
       <DangerZoneDeal deal={deal} />
