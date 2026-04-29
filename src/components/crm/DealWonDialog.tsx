@@ -112,11 +112,12 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     deal?.desired_delivery_date ?? '',
   );
 
-  // Parcelas + input livre de N
+  // Parcelas — agora dirigido por N + data da 1ª (sem botões 1x/3x/etc.)
+  const [installmentsN, setInstallmentsN] = useState<string>('1');
+  const [firstDueDate, setFirstDueDate] = useState<string>(fmtDateInput(addMonths(new Date(), 1)));
   const [installments, setInstallments] = useState<InstallmentDraft[]>([
     { id: newId(), amount: '', due_date: fmtDateInput(addMonths(new Date(), 1)) },
   ]);
-  const [customN, setCustomN] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
   // Configuração financeira
