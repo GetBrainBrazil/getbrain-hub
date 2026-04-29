@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, closestCorners, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
-import { LayoutGrid, List, Plus } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, LayoutGrid, List, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -51,9 +51,44 @@ function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: ()
   );
 }
 
-function Column({ stage, deals, onOpen, onCompanyOpen, onAdd }: { stage: DealStage; deals: Deal[]; onOpen: (deal: Deal) => void; onCompanyOpen: (deal: Deal) => void; onAdd: (stage: DealStage) => void }) {
+function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyOpen, onAdd }: { stage: DealStage; deals: Deal[]; collapsed: boolean; onToggleCollapsed: () => void; onOpen: (deal: Deal) => void; onCompanyOpen: (deal: Deal) => void; onAdd: (stage: DealStage) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const total = deals.reduce((sum, d) => sum + Number(d.estimated_value ?? 0), 0);
+
+  if (collapsed) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={cn(
+          'flex w-12 shrink-0 flex-col items-center gap-2 rounded-lg bg-muted/20 p-2 transition-colors',
+          isOver && 'bg-accent/10 ring-2 ring-accent/40',
+        )}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={onToggleCollapsed}
+          aria-label={`Expandir ${DEAL_STAGE_LABEL[stage]}`}
+          title="Expandir coluna"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+        <div
+          className="flex flex-1 items-center justify-center"
+          style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+        >
+          <span className="whitespace-nowrap text-xs font-semibold text-foreground">
+            {DEAL_STAGE_LABEL[stage]}
+          </span>
+        </div>
+        <span className="rounded-full bg-background px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+          {deals.length}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-[85vw] sm:w-80 shrink-0 flex-col rounded-lg bg-muted/20 p-3 snap-start sm:snap-align-none">
       <div className="mb-3 space-y-2 px-1">
@@ -62,11 +97,23 @@ function Column({ stage, deals, onOpen, onCompanyOpen, onAdd }: { stage: DealSta
             <h3 className="truncate text-sm font-semibold text-foreground">{DEAL_STAGE_LABEL[stage]}</h3>
             <p className="text-xs text-muted-foreground">{formatCurrency(total)} · {deals.length} deals</p>
           </div>
-          {!stage.startsWith('fechado') && (
-            <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7" onClick={() => onAdd(stage)}>
-              <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+          <div className="flex items-center gap-1">
+            {!stage.startsWith('fechado') && (
+              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7" onClick={() => onAdd(stage)} aria-label="Adicionar deal">
+                <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 sm:h-7 sm:w-7"
+              onClick={onToggleCollapsed}
+              aria-label={`Recolher ${DEAL_STAGE_LABEL[stage]}`}
+              title="Recolher coluna"
+            >
+              <ChevronsLeft className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             </Button>
-          )}
+          </div>
         </div>
       </div>
       <div ref={setNodeRef} className={cn('flex max-h-[calc(100vh-360px)] min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto rounded-md pr-1 transition-colors', isOver && 'bg-accent/10 ring-2 ring-accent/40')}>
@@ -106,6 +153,10 @@ export default function CrmPipeline() {
 
   // Persisted view mode
   const [viewMode, setViewMode] = usePersistedState<'lista' | 'kanban'>('crm_view_mode', 'lista');
+  const [collapsedStages, setCollapsedStages] = usePersistedState<DealStage[]>('crm_kanban_collapsed_stages', []);
+  const toggleCollapsedStage = (stage: DealStage) => {
+    setCollapsedStages((prev) => (prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage]));
+  };
 
   // Page-local filters (não persistidos — resetam a cada visita)
   const [stageFilter, setStageFilter] = useState<DealStage[]>([]);
@@ -415,6 +466,8 @@ export default function CrmPipeline() {
                 key={stage}
                 stage={stage}
                 deals={grouped.get(stage) ?? []}
+                collapsed={collapsedStages.includes(stage)}
+                onToggleCollapsed={() => toggleCollapsedStage(stage)}
                 onOpen={(deal) => navigate(`/crm/deals/${deal.code}`)}
                 onCompanyOpen={(deal) => navigate(`/crm/empresas/${deal.company_id}`)}
                 onAdd={(stage) => openCreateDialog(stage)}

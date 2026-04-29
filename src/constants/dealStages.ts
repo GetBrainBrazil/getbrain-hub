@@ -25,10 +25,10 @@ export const DEAL_STAGE_PROBABILITY: Record<DealStage, number> = {
 };
 
 export const DEAL_STAGE_LABEL: Record<DealStage, string> = {
-  descoberta_marcada: 'Descoberta Marcada',
-  descobrindo: 'Descobrindo',
-  proposta_na_mesa: 'Proposta na Mesa',
-  ajustando: 'Ajustando',
+  descoberta_marcada: 'Novos Contatos',
+  descobrindo: 'Em Qualificação',
+  proposta_na_mesa: 'Proposta',
+  ajustando: 'Proposta Enviada',
   ganho: 'Ganho',
   perdido: 'Perdido',
   gelado: 'Gelado',
