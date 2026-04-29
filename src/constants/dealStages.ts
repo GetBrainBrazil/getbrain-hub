@@ -1,42 +1,77 @@
 import type { ActivityType, DealStage } from '@/types/crm';
 
-export const DEAL_STAGES: DealStage[] = ['presencial_agendada', 'presencial_feita', 'orcamento_enviado', 'em_negociacao', 'fechado_ganho', 'fechado_perdido'];
+/**
+ * Estágios oficiais do funil (ordem de exibição no Kanban).
+ * Ganho/Perdido/Gelado ficam no fim e podem ser ocultados em algumas visões.
+ */
+export const DEAL_STAGES: DealStage[] = [
+  'descoberta_marcada',
+  'descobrindo',
+  'proposta_na_mesa',
+  'ajustando',
+  'ganho',
+  'perdido',
+  'gelado',
+];
 
 export const DEAL_STAGE_PROBABILITY: Record<DealStage, number> = {
-  presencial_agendada: 20,
-  presencial_feita: 40,
-  orcamento_enviado: 60,
-  em_negociacao: 75,
-  fechado_ganho: 100,
-  fechado_perdido: 0,
+  descoberta_marcada: 20,
+  descobrindo: 40,
+  proposta_na_mesa: 60,
+  ajustando: 75,
+  ganho: 100,
+  perdido: 0,
+  gelado: 10,
 };
 
 export const DEAL_STAGE_LABEL: Record<DealStage, string> = {
-  presencial_agendada: 'Reunião Agendada',
-  presencial_feita: 'Reunião Realizada',
-  orcamento_enviado: 'Orçamento Enviado',
-  em_negociacao: 'Em Negociação',
-  fechado_ganho: 'Ganho',
-  fechado_perdido: 'Perdido',
+  descoberta_marcada: 'Descoberta Marcada',
+  descobrindo: 'Descobrindo',
+  proposta_na_mesa: 'Proposta na Mesa',
+  ajustando: 'Ajustando',
+  ganho: 'Ganho',
+  perdido: 'Perdido',
+  gelado: 'Gelado',
 };
 
 export const DEAL_STAGE_TONE: Record<DealStage, string> = {
-  presencial_agendada: 'border-l-accent',
-  presencial_feita: 'border-l-chart-5',
-  orcamento_enviado: 'border-l-warning',
-  em_negociacao: 'border-l-chart-4',
-  fechado_ganho: 'border-l-success',
-  fechado_perdido: 'border-l-muted-foreground',
+  descoberta_marcada: 'border-l-accent',
+  descobrindo: 'border-l-chart-5',
+  proposta_na_mesa: 'border-l-warning',
+  ajustando: 'border-l-chart-4',
+  ganho: 'border-l-success',
+  perdido: 'border-l-muted-foreground',
+  gelado: 'border-l-chart-2',
 };
 
 export const DEAL_STAGE_BAR: Record<DealStage, string> = {
-  presencial_agendada: 'bg-accent',
-  presencial_feita: 'bg-chart-5',
-  orcamento_enviado: 'bg-warning',
-  em_negociacao: 'bg-chart-4',
-  fechado_ganho: 'bg-success',
-  fechado_perdido: 'bg-muted-foreground',
+  descoberta_marcada: 'bg-accent',
+  descobrindo: 'bg-chart-5',
+  proposta_na_mesa: 'bg-warning',
+  ajustando: 'bg-chart-4',
+  ganho: 'bg-success',
+  perdido: 'bg-muted-foreground',
+  gelado: 'bg-chart-2',
 };
+
+/**
+ * Mapeamento defensivo para slugs antigos (mantidos no enum por retro-compat).
+ * Use `normalizeDealStage(stage)` ao ler dados do banco antes de indexar
+ * em qualquer um dos records acima.
+ */
+const LEGACY_STAGE_MAP: Record<string, DealStage> = {
+  presencial_agendada: 'descoberta_marcada',
+  presencial_feita: 'descobrindo',
+  orcamento_enviado: 'proposta_na_mesa',
+  em_negociacao: 'ajustando',
+  fechado_ganho: 'ganho',
+  fechado_perdido: 'perdido',
+};
+
+export function normalizeDealStage(stage: string | null | undefined): DealStage {
+  if (!stage) return 'descoberta_marcada';
+  return (LEGACY_STAGE_MAP[stage] ?? stage) as DealStage;
+}
 
 export const ACTIVITY_ICON: Record<ActivityType, string> = {
   reuniao_presencial: '🤝',

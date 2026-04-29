@@ -85,8 +85,8 @@ export function useAllCompaniesAggregates() {
       const get = (id: string) => (map[id] ||= { dealsOpen: 0, dealsWon: 0, revenueWon: 0, leadsOpen: 0 });
       for (const d of (deals ?? []) as { company_id: string; stage: DealStage; estimated_value: number | null }[]) {
         const a = get(d.company_id);
-        if (d.stage === 'fechado_ganho') { a.dealsWon += 1; a.revenueWon += Number(d.estimated_value ?? 0); }
-        else if (d.stage !== 'fechado_perdido') { a.dealsOpen += 1; }
+        if (d.stage === 'ganho') { a.dealsWon += 1; a.revenueWon += Number(d.estimated_value ?? 0); }
+        else if (d.stage !== 'perdido') { a.dealsOpen += 1; }
       }
       for (const l of (leads ?? []) as { company_id: string; status: LeadStatus }[]) {
         if (!['descartado', 'convertido'].includes(l.status)) get(l.company_id).leadsOpen += 1;
@@ -113,7 +113,7 @@ export function useCompanyProjects(id?: string) {
 }
 
 export function useCompanyStats(id?: string) {
-  return useQuery({ queryKey: ['crm-company-stats', id], enabled: !!id, queryFn: async (): Promise<CompanyStats> => { const [{ data: leads }, { data: deals }, { data: projects }] = await Promise.all([sb.from('leads').select('status').eq('company_id', id).is('deleted_at', null), sb.from('deals').select('stage, estimated_value').eq('company_id', id).is('deleted_at', null), sb.from('projects').select('id').eq('company_id', id).is('deleted_at', null)]); const dealRows = (deals ?? []) as { stage: DealStage; estimated_value: number | null }[]; return { leadsOpen: ((leads ?? []) as { status: LeadStatus }[]).filter((l) => !['descartado', 'convertido'].includes(l.status)).length, dealsOpen: dealRows.filter((d) => !['fechado_ganho', 'fechado_perdido'].includes(d.stage)).length, dealsOpenValue: dealRows.filter((d) => !['fechado_ganho', 'fechado_perdido'].includes(d.stage)).reduce((s, d) => s + Number(d.estimated_value ?? 0), 0), dealsWon: dealRows.filter((d) => d.stage === 'fechado_ganho').length, revenueWon: dealRows.filter((d) => d.stage === 'fechado_ganho').reduce((s, d) => s + Number(d.estimated_value ?? 0), 0), projects: (projects ?? []).length }; } });
+  return useQuery({ queryKey: ['crm-company-stats', id], enabled: !!id, queryFn: async (): Promise<CompanyStats> => { const [{ data: leads }, { data: deals }, { data: projects }] = await Promise.all([sb.from('leads').select('status').eq('company_id', id).is('deleted_at', null), sb.from('deals').select('stage, estimated_value').eq('company_id', id).is('deleted_at', null), sb.from('projects').select('id').eq('company_id', id).is('deleted_at', null)]); const dealRows = (deals ?? []) as { stage: DealStage; estimated_value: number | null }[]; return { leadsOpen: ((leads ?? []) as { status: LeadStatus }[]).filter((l) => !['descartado', 'convertido'].includes(l.status)).length, dealsOpen: dealRows.filter((d) => !['ganho', 'perdido'].includes(d.stage)).length, dealsOpenValue: dealRows.filter((d) => !['ganho', 'perdido'].includes(d.stage)).reduce((s, d) => s + Number(d.estimated_value ?? 0), 0), dealsWon: dealRows.filter((d) => d.stage === 'ganho').length, revenueWon: dealRows.filter((d) => d.stage === 'ganho').reduce((s, d) => s + Number(d.estimated_value ?? 0), 0), projects: (projects ?? []).length }; } });
 }
 
 export function useCompanyContacts(id?: string) {

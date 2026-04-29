@@ -18,7 +18,7 @@ import type { DealStage } from '@/types/crm';
 export function NewDealQuickDialog({
   open,
   onOpenChange,
-  initialStage = 'presencial_agendada',
+  initialStage = 'descoberta_marcada',
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -47,7 +47,7 @@ export function NewDealQuickDialog({
     ? allDeals.find(
         (d) =>
           d.company_id === companyId &&
-          !['fechado_ganho', 'fechado_perdido'].includes(d.stage),
+          !['ganho', 'perdido'].includes(d.stage),
       )
     : null;
 

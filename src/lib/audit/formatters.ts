@@ -79,12 +79,12 @@ export function isMeaningfulField(field: string): boolean {
 }
 
 const ENUM_LABELS: Record<string, string> = {
-  presencial_agendada: "Reunião agendada",
+  descoberta_marcada: "Reunião agendada",
   reuniao_realizada: "Reunião realizada",
   proposta_enviada: "Proposta enviada",
-  em_negociacao: "Em negociação",
-  fechado_ganho: "Fechado ganho",
-  fechado_perdido: "Fechado perdido",
+  ajustando: "Em negociação",
+  ganho: "Fechado ganho",
+  perdido: "Fechado perdido",
   novo: "Novo", qualificando: "Qualificando", qualificado: "Qualificado",
   desqualificado: "Desqualificado", convertido: "Convertido",
   software_sob_medida: "Software sob medida", saas: "SaaS",

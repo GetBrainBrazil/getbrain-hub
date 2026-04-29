@@ -8,7 +8,7 @@ import type { CrmPipelineByStage } from '@/hooks/crm/useCrmDashboardExec';
 import type { DealStage } from '@/types/crm';
 
 const OPEN_STAGES: DealStage[] = DEAL_STAGES.filter(
-  (s) => s !== 'fechado_ganho' && s !== 'fechado_perdido',
+  (s) => s !== 'ganho' && s !== 'perdido',
 );
 
 interface Props {

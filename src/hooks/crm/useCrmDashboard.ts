@@ -12,7 +12,7 @@ type FunnelMetrics = {
   leads_novo_current: number; leads_triagem_agendada_current: number; leads_triagem_feita_current: number; leads_ready_stale: number;
   deals_created_30d: number; deals_created_90d: number; deals_won_30d: number; deals_won_90d: number; deals_lost_90d: number;
   revenue_won_30d: number; revenue_won_90d: number; avg_deal_cycle_days: number; deals_stalled_14d: number; deals_overdue: number;
-  deals_presencial_agendada_current: number; deals_presencial_feita_current: number; deals_orcamento_enviado_current: number; deals_em_negociacao_current: number;
+  deals_descoberta_marcada_current: number; deals_descobrindo_current: number; deals_proposta_na_mesa_current: number; deals_ajustando_current: number;
   overdue_activities: number; lead_conversion_rate_30d: number; deal_win_rate_30d: number;
 };
 
@@ -225,14 +225,14 @@ export function useCrmDashboardSnapshot(daysBack: number) {
 
         if (createdBucket) {
           createdBucket.deals_created += 1;
-          if (!['fechado_ganho', 'fechado_perdido'].includes(deal.stage)) {
+          if (!['ganho', 'perdido'].includes(deal.stage)) {
             createdBucket.deals_open += 1;
             createdBucket.pipeline_total += estimatedValue;
             createdBucket.weighted_pipeline += estimatedValue * (Number(deal.probability_pct ?? 0) / 100);
           }
         }
 
-        if (deal.closed_at && deal.stage === 'fechado_ganho') {
+        if (deal.closed_at && deal.stage === 'ganho') {
           const wonBucket = getBucket(deal.closed_at);
           if (wonBucket) {
             wonBucket.deals_won += 1;
@@ -240,7 +240,7 @@ export function useCrmDashboardSnapshot(daysBack: number) {
           }
         }
 
-        if (deal.closed_at && deal.stage === 'fechado_perdido') {
+        if (deal.closed_at && deal.stage === 'perdido') {
           const lostBucket = getBucket(deal.closed_at);
           if (lostBucket) lostBucket.deals_lost += 1;
         }
@@ -269,8 +269,8 @@ export function useCrmDashboardAlerts() {
       const stale = new Date(Date.now() - 14 * 86400000).toISOString();
       const leadStale = new Date(Date.now() - 7 * 86400000).toISOString();
       const [{ data: overdueDeals }, { data: stalledDeals }, { data: readyLeads }, { data: lateActivities }] = await Promise.all([
-        sb.from('deals').select('id, code, title, expected_close_date').is('deleted_at', null).not('stage', 'in', '(fechado_ganho,fechado_perdido)').lt('expected_close_date', new Date().toISOString().slice(0, 10)).limit(20),
-        sb.from('deals').select('id, code, title, stage_changed_at').is('deleted_at', null).not('stage', 'in', '(fechado_ganho,fechado_perdido)').lt('stage_changed_at', stale).limit(20),
+        sb.from('deals').select('id, code, title, expected_close_date').is('deleted_at', null).not('stage', 'in', '(ganho,perdido)').lt('expected_close_date', new Date().toISOString().slice(0, 10)).limit(20),
+        sb.from('deals').select('id, code, title, stage_changed_at').is('deleted_at', null).not('stage', 'in', '(ganho,perdido)').lt('stage_changed_at', stale).limit(20),
         sb.from('leads').select('id, code, title, updated_at').is('deleted_at', null).eq('status', 'triagem_feita' satisfies LeadStatus).lt('updated_at', leadStale).limit(20),
         sb.from('deal_activities').select('id, title, scheduled_at, deal_id, lead_id').is('deleted_at', null).lt('scheduled_at', now).is('happened_at', null).limit(20),
       ]);

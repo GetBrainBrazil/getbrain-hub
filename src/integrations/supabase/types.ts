@@ -4325,11 +4325,7 @@ export type Database = {
       }
       cascade_delete_deal: { Args: { p_deal_id: string }; Returns: Json }
       close_deal_as_won: {
-        Args: {
-          p_deal_id: string
-          p_installments?: Json
-          p_project_data?: Json
-        }
+        Args: { p_deal_id: string; p_installments?: Json; p_project_data: Json }
         Returns: Json
       }
       convert_lead_to_deal: {
@@ -4791,6 +4787,13 @@ export type Database = {
         | "em_negociacao"
         | "fechado_ganho"
         | "fechado_perdido"
+        | "descoberta_marcada"
+        | "descobrindo"
+        | "proposta_na_mesa"
+        | "ajustando"
+        | "ganho"
+        | "perdido"
+        | "gelado"
       employment_type: "founder" | "pj" | "clt" | "intern" | "freelancer"
       estimation_confidence: "alta" | "media" | "baixa"
       human_role:
@@ -5083,6 +5086,13 @@ export const Constants = {
         "em_negociacao",
         "fechado_ganho",
         "fechado_perdido",
+        "descoberta_marcada",
+        "descobrindo",
+        "proposta_na_mesa",
+        "ajustando",
+        "ganho",
+        "perdido",
+        "gelado",
       ],
       employment_type: ["founder", "pj", "clt", "intern", "freelancer"],
       estimation_confidence: ["alta", "media", "baixa"],

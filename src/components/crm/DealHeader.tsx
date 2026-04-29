@@ -279,8 +279,8 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
   };
 
   const stageChange = (s: DealStage) => {
-    if (s === 'fechado_ganho') return onCloseRequest('won');
-    if (s === 'fechado_perdido') return onCloseRequest('lost');
+    if (s === 'ganho') return onCloseRequest('won');
+    if (s === 'perdido') return onCloseRequest('lost');
     update.mutate(
       { id: deal.id, updates: { stage: s, probability_pct: DEAL_STAGE_PROBABILITY[s], closed_at: null } },
       { onError: (err: any) => toast.error(`Erro: ${err?.message ?? 'falhou'}`) },

@@ -27,7 +27,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Deal, DealStage } from '@/types/crm';
 
-const ACTIVE_STAGES: DealStage[] = ['presencial_agendada', 'presencial_feita', 'orcamento_enviado', 'em_negociacao'];
+const ACTIVE_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando'];
 
 function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: () => void; onCompanyOpen: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({ id: deal.id });
@@ -109,14 +109,14 @@ export default function CrmPipeline() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createStage, setCreateStage] = useState<DealStage>('presencial_agendada');
+  const [createStage, setCreateStage] = useState<DealStage>('descoberta_marcada');
   const [lost, setLost] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [lostReason, setLostReason] = useState('');
   const [valueRequired, setValueRequired] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [requiredValue, setRequiredValue] = useState('');
   const [won, setWon] = useState<{ deal: Deal; stage: DealStage } | null>(null);
 
-  const openCreateDialog = (stage: DealStage = 'presencial_agendada') => {
+  const openCreateDialog = (stage: DealStage = 'descoberta_marcada') => {
     setCreateStage(stage);
     setCreateOpen(true);
   };
@@ -162,9 +162,9 @@ export default function CrmPipeline() {
     const deal = rawDeals.find((d) => d.id === String(e.active.id));
     const stage = e.over?.id as DealStage | undefined;
     if (!deal || !stage || deal.stage === stage || !DEAL_STAGES.includes(stage)) return;
-    if (stage === 'fechado_perdido') { setLost({ deal, stage }); return; }
-    if (stage === 'orcamento_enviado' && !deal.estimated_value) { setValueRequired({ deal, stage }); return; }
-    if (stage === 'fechado_ganho') { setWon({ deal, stage }); return; }
+    if (stage === 'perdido') { setLost({ deal, stage }); return; }
+    if (stage === 'proposta_na_mesa' && !deal.estimated_value) { setValueRequired({ deal, stage }); return; }
+    if (stage === 'ganho') { setWon({ deal, stage }); return; }
     commitStage(deal, stage);
   };
 
