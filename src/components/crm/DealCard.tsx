@@ -23,7 +23,7 @@ export function isDiscoveryComplete(deal: Deal): { complete: boolean; missing: s
   const hasCategory = (deal.pain_categories?.length ?? 0) > 0 || !!deal.pain_category;
   if (!hasCategory) missing.push('categoria da dor');
   if (!deal.pain_description || deal.pain_description.trim().length < 40) missing.push('descrição da dor (≥ 40 caracteres)');
-  if (!deal.project_type_v2) missing.push('tipo de projeto');
+  if (!deal.project_type_v2 || deal.project_type_v2.length === 0) missing.push('tipo de projeto');
   if (!deal.scope_summary || deal.scope_summary.trim().length < 40) missing.push('resumo do escopo (≥ 40 caracteres)');
   const dlv = (deal.deliverables ?? []).length;
   const ac = (deal.acceptance_criteria ?? []).length;
