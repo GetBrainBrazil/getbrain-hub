@@ -4532,6 +4532,18 @@ export type Database = {
           saldo_fim_mes: number
         }[]
       }
+      get_profiles_public: {
+        Args: never
+        Returns: {
+          ativo: boolean
+          avatar_url: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          ultimo_acesso: string
+        }[]
+      }
       get_project_health_summary: {
         Args: { p_sprint_ids: string[] }
         Returns: {
