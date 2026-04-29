@@ -385,8 +385,7 @@ export default function CrmPipeline() {
   }
 
   return (
-    <TooltipProvider delayDuration={250}>
-      <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-4 sm:space-y-5">
         {/* Toolbar de comando */}
         <div className="space-y-2 rounded-lg border border-border bg-card/40 p-2 sm:p-2.5">
           {/* Linha 1: busca + ações */}
