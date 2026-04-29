@@ -463,6 +463,9 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         mrr_start_trigger: mrrEnabled && mrrStartTrigger ? mrrStartTrigger : null,
         installments_count: parseInt(installmentsN, 10) || null,
         first_installment_date: firstDueDate || null,
+        // Tipos e dores ajustados no modal — fonte de verdade que a RPC vai copiar p/ projects
+        project_type_v2: projectTypeSlugs,
+        pain_categories: painCategorySlugs,
       };
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
