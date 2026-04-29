@@ -1256,6 +1256,7 @@ export default function ProjetoDetalhe() {
                   sourceDealId={(project as any).source_deal_id}
                   commercialContext={(project as any).commercial_context}
                   originLeadSourceId={(project as any).origin_lead_source_id}
+                  projectTypeSlugs={(project as any).project_type_v2 ?? []}
                 />
                 {/* Informações */}
                 <CardBlock
