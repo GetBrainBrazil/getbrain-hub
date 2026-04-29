@@ -165,7 +165,7 @@ export default function CrmPipeline() {
   );
   const activeDeal = activeId ? rawDeals.find((d) => d.id === activeId) ?? null : null;
   const commitStage = (deal: Deal, stage: DealStage, extra?: { lost_reason?: string; estimated_value?: number }) => updateStage.mutate({ id: deal.id, stage, ...extra });
-  const handleDragEnd = (e: DragEndEvent) => {
+  const handleDragEnd = async (e: DragEndEvent) => {
     setActiveId(null);
     const deal = rawDeals.find((d) => d.id === String(e.active.id));
     const stage = e.over?.id as DealStage | undefined;
@@ -173,7 +173,44 @@ export default function CrmPipeline() {
     if (stage === 'perdido') { setLost({ deal, stage }); return; }
     if (stage === 'proposta_na_mesa' && !deal.estimated_value) { setValueRequired({ deal, stage }); return; }
     if (stage === 'ganho') { setWon({ deal, stage }); return; }
+    if (stage === 'proposta_na_mesa') {
+      const { count, error } = await supabase
+        .from('proposals' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('deal_id', deal.id)
+        .is('deleted_at', null);
+      if (error) {
+        toast.error('Erro ao verificar propostas vinculadas');
+        return;
+      }
+      if (!count) { setNeedsProposal({ deal, stage }); return; }
+    }
     commitStage(deal, stage);
+  };
+
+  const handleCreateProposalForDeal = async () => {
+    if (!needsProposal) return;
+    const { deal, stage } = needsProposal;
+    if (!deal.company_id) {
+      toast.error('Deal sem empresa vinculada — não é possível criar proposta.');
+      return;
+    }
+    setCreatingProposal(true);
+    try {
+      const newId = await createDraftProposal({
+        dealId: deal.id,
+        companyId: deal.company_id,
+        companyName: deal.company_name || '',
+      });
+      commitStage(deal, stage);
+      invalidateProposalCaches(qc, { dealId: deal.id });
+      setNeedsProposal(null);
+      navigate(`/financeiro/orcamentos/${newId}/editar`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao criar proposta');
+    } finally {
+      setCreatingProposal(false);
+    }
   };
 
   const clearPageFilters = () => { setStageFilter([]); setProjectTypeFilter([]); };
