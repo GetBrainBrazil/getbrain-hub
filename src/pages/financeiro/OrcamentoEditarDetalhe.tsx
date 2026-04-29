@@ -54,10 +54,13 @@ export default function OrcamentoEditarDetalhe() {
   const navigate = useNavigate();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const { data, isLoading } = useProposalDetail(id);
+  const { data: itemsRows } = useProposalItems(id);
+  const replaceItems = useReplaceProposalItems();
   const update = useUpdateProposal();
   const gen = useGeneratePDF();
 
   // Local form state — edits are batched until "Salvar" or auto-save on blur
+  const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientCity, setClientCity] = useState("");
   const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
@@ -68,22 +71,28 @@ export default function OrcamentoEditarDetalhe() {
   const [validationDays, setValidationDays] = useState(7);
   const [considerations, setConsiderations] = useState<string[]>([]);
   const [validUntil, setValidUntil] = useState("");
+  const [mockupUrl, setMockupUrl] = useState("");
   const [templateKey, setTemplateKey] = useState<string>("inovacao_tecnologica");
   const [zoom, setZoom] = useState(0.5);
   const [dirty, setDirty] = useState(false);
+  const [itemsDirty, setItemsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
 
+  // Modais novos do prompt 10A
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
+  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string } | null>(null);
+
   useEffect(() => {
     if (!data) return;
     isInitialLoad.current = true;
+    setTitle((data as any).title || "");
     setClientName(data.client_company_name || "");
     setClientCity(data.client_city || "");
     setClientLogoUrl(data.client_logo_url || null);
-    setScopeItems(
-      Array.isArray(data.scope_items) ? (data.scope_items as ScopeItem[]) : []
-    );
     setMaintenance(
       data.maintenance_monthly_value ? Number(data.maintenance_monthly_value) : ""
     );
@@ -93,13 +102,21 @@ export default function OrcamentoEditarDetalhe() {
     setConsiderations(
       Array.isArray(data.considerations) ? (data.considerations as string[]) : []
     );
-    setValidUntil(data.valid_until || "");
+    setValidUntil((data as any).expires_at || data.valid_until || "");
+    setMockupUrl((data as any).mockup_url || "");
     setTemplateKey((data as any).template_key || "inovacao_tecnologica");
     setDirty(false);
+    setItemsDirty(false);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
-    // Reset initial load flag after state settles
     setTimeout(() => { isInitialLoad.current = false; }, 0);
   }, [data?.id]);
+
+  // Carrega itens canônicos para o estado local (formato ScopeItem para a UI atual)
+  useEffect(() => {
+    if (!itemsRows) return;
+    if (itemsDirty) return; // não sobrescreve edição em andamento
+    setScopeItems(canonicalToScopeItems(itemsRows as any));
+  }, [itemsRows, itemsDirty]);
 
   const previewProposal = useMemo(
     () => ({
@@ -132,16 +149,22 @@ export default function OrcamentoEditarDetalhe() {
       setDirty(true);
     };
   }
+  function markItemsDirty(next: ScopeItem[]) {
+    setScopeItems(next);
+    setItemsDirty(true);
+    setDirty(true);
+  }
 
   async function save(extra: Record<string, any> = {}, opts: { silent?: boolean } = {}) {
     if (!id) return;
     await update.mutateAsync({
       id,
       payload: {
+        title: title.trim() || null,
         client_company_name: clientName.trim() || "Cliente",
         client_city: clientCity || null,
         client_logo_url: clientLogoUrl,
-        scope_items: scopeItems,
+        scope_items: scopeItems, // legado mantido p/ compat com PDF
         maintenance_monthly_value:
           typeof maintenance === "number" && maintenance > 0 ? maintenance : null,
         maintenance_description: maintenanceDesc || null,
@@ -149,10 +172,25 @@ export default function OrcamentoEditarDetalhe() {
         validation_days: validationDays,
         considerations,
         valid_until: validUntil,
+        expires_at: validUntil || null,
+        mockup_url: mockupUrl.trim() || null,
         template_key: templateKey,
         ...extra,
       },
     });
+    // Persiste itens canônicos só se houve mudança neles
+    if (itemsDirty) {
+      await replaceItems.mutateAsync({
+        proposalId: id,
+        items: scopeItems.map((it, i) => ({
+          description: it.title || "Item",
+          quantity: 1,
+          unit_price: Number(it.value) || 0,
+          order_index: i,
+        })),
+      });
+      setItemsDirty(false);
+    }
     setDirty(false);
     setLastSavedAt(new Date());
     if (!opts.silent) toast.success("Salvo");
@@ -173,6 +211,7 @@ export default function OrcamentoEditarDetalhe() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     dirty,
+    title,
     clientName,
     clientCity,
     clientLogoUrl,
@@ -183,29 +222,29 @@ export default function OrcamentoEditarDetalhe() {
     validationDays,
     considerations,
     validUntil,
+    mockupUrl,
     templateKey,
   ]);
 
-  async function handleMarkSent() {
+  function handleOpenSendDialog() {
     if (scopeItems.length === 0) {
       toast.error("Adicione pelo menos um item antes de enviar");
       return;
     }
-    const ok = await confirm({
-      title: "Marcar como enviado?",
-      description:
-        "Após marcar como enviado, edições não bloqueiam mas você verá um aviso.",
-      confirmLabel: "Marcar como enviado",
-    });
-    if (!ok) return;
-    await save({ status: "enviada", sent_at: new Date().toISOString() });
-    toast.success("Proposta marcada como enviada");
-  }
-  async function handleAccept() {
-    await save({ status: "convertida", accepted_at: new Date().toISOString() });
-    toast.success("Proposta aceita");
+    if (!validUntil) {
+      toast.error("Defina uma data de validade antes de enviar");
+      return;
+    }
+    setSendDialogOpen(true);
   }
   async function handleReject() {
+    const ok = await confirm({
+      title: "Recusar proposta?",
+      description: "Você pode criar uma nova versão depois.",
+      confirmLabel: "Recusar",
+      variant: "destructive",
+    });
+    if (!ok) return;
     await save({ status: "recusada", rejected_at: new Date().toISOString() });
     toast.success("Proposta recusada");
   }
