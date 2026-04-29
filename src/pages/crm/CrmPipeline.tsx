@@ -104,6 +104,7 @@ export default function CrmPipeline() {
   );
   const { data: indicators } = useDealsIndicators();
   const { data: rawDeals = [], isLoading } = useDeals(filters);
+  const { data: activeProjectTypes = [] } = useCrmProjectTypes({ onlyActive: true });
   const updateStage = useUpdateDealStage();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -203,7 +204,7 @@ export default function CrmPipeline() {
             label="Tipo"
             selected={projectTypeFilter}
             onChange={setProjectTypeFilter}
-            options={PROJECT_TYPE_V2_OPTIONS.map((t) => ({ value: t, label: PROJECT_TYPE_V2_LABEL[t] }))}
+            options={activeProjectTypes.map((t) => ({ value: t.slug, label: t.name }))}
           />
           {hasPageFilters && (
             <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={clearPageFilters}>
