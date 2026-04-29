@@ -32,6 +32,7 @@ const SECTIONS: Section[] = [
       { key: "setores", label: "Setores", path: "/configuracoes/pessoas/setores", icon: FolderTree },
       { key: "papeis-contato", label: "Papéis de Contato", path: "/configuracoes/pessoas/papeis-contato", icon: Users },
       { key: "origens", label: "Origens de Lead", path: "/configuracoes/pessoas/origens", icon: Tag },
+      { key: "categorias-dor", label: "Categorias de Dor", path: "/configuracoes/pessoas/categorias-dor", icon: Tags },
       { key: "cargos", label: "Cargos Internos", path: "/configuracoes/pessoas/cargos", icon: Briefcase },
     ],
   },

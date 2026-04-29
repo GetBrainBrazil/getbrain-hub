@@ -20,9 +20,9 @@ import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
 import { PropostaTabContent } from '@/components/crm/proposta/PropostaTabContent';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
+import { PainCategoryCombobox } from '@/components/crm/PainCategoryCombobox';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
-  PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
   PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
   ESTIMATION_CONFIDENCE_LABEL, ESTIMATION_CONFIDENCE_OPTIONS, ESTIMATION_CONFIDENCE_COLOR,
   COMPLEXITY_LABEL,
@@ -37,7 +37,6 @@ import { cn } from '@/lib/utils';
 import type {
   AcceptanceCriterion,
   Deal,
-  DealPainCategory,
   DealProjectType,
   EstimationConfidence,
 } from '@/types/crm';
@@ -228,13 +227,10 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
   return (
     <ZoneSection id="zona-dor" number={2} title="Dor & Contexto" hint="O problema que justifica o projeto">
       <div className="space-y-2">
-        <FieldLabel>Categoria da dor</FieldLabel>
-        <ChipGroup<DealPainCategory>
-          options={PAIN_CATEGORY_OPTIONS}
+        <FieldLabel hint="categorias gerenciadas em Configurações → Pessoas & Empresas">Categoria da dor</FieldLabel>
+        <PainCategoryCombobox
           value={deal.pain_category}
           onChange={(v) => save({ pain_category: v })}
-          labels={PAIN_CATEGORY_LABEL}
-          colors={PAIN_CATEGORY_COLOR}
         />
       </div>
 

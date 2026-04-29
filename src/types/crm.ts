@@ -8,9 +8,9 @@ export type DealProjectType =
   | 'whatsapp_chatbot' | 'ai_sdr' | 'sistema_gestao'
   | 'automacao_processo' | 'integracao_sistemas' | 'outro';
 
-export type DealPainCategory =
-  | 'operacional' | 'comercial' | 'estrategica'
-  | 'compliance' | 'experiencia' | 'outra';
+// Dynamic — slugs vêm de crm_pain_categories. Mantemos o type como string
+// (slugs do sistema antigo continuam válidos: operacional, comercial, etc.)
+export type DealPainCategory = string;
 
 export type EstimationConfidence = 'alta' | 'media' | 'baixa';
 
