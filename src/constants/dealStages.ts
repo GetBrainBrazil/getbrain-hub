@@ -60,12 +60,12 @@ export const DEAL_STAGE_BAR: Record<DealStage, string> = {
  * em qualquer um dos records acima.
  */
 const LEGACY_STAGE_MAP: Record<string, DealStage> = {
-  descoberta_marcada: 'descoberta_marcada',
-  descobrindo: 'descobrindo',
-  proposta_na_mesa: 'proposta_na_mesa',
-  ajustando: 'ajustando',
-  ganho: 'ganho',
-  perdido: 'perdido',
+  presencial_agendada: 'descoberta_marcada',
+  presencial_feita: 'descobrindo',
+  orcamento_enviado: 'proposta_na_mesa',
+  em_negociacao: 'ajustando',
+  fechado_ganho: 'ganho',
+  fechado_perdido: 'perdido',
 };
 
 export function normalizeDealStage(stage: string | null | undefined): DealStage {
