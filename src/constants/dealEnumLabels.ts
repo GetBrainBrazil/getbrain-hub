@@ -3,6 +3,7 @@ import type {
   EstimationConfidence,
   DealDependencyType,
   DealDependencyStatus,
+  DealDependencyPriority,
   ContactRole,
 } from '@/types/crm';
 
