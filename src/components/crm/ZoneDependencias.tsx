@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, AlertTriangle, Filter as FilterIcon } from 'lucide-react';
+import { Plus, Filter as FilterIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ConfirmDialog';
