@@ -1290,6 +1290,7 @@ export type Database = {
           organograma_url: string | null
           origin_lead_id: string | null
           owner_actor_id: string | null
+          pain_categories: string[]
           pain_category: string | null
           pain_cost_brl_monthly: number | null
           pain_description: string | null
@@ -1353,6 +1354,7 @@ export type Database = {
           organograma_url?: string | null
           origin_lead_id?: string | null
           owner_actor_id?: string | null
+          pain_categories?: string[]
           pain_category?: string | null
           pain_cost_brl_monthly?: number | null
           pain_description?: string | null
@@ -1416,6 +1418,7 @@ export type Database = {
           organograma_url?: string | null
           origin_lead_id?: string | null
           owner_actor_id?: string | null
+          pain_categories?: string[]
           pain_category?: string | null
           pain_cost_brl_monthly?: number | null
           pain_description?: string | null
@@ -4407,14 +4410,19 @@ export type Database = {
         Returns: number
       }
       cascade_delete_deal: { Args: { p_deal_id: string }; Returns: Json }
-      close_deal_as_won: {
-        Args: {
-          p_deal_id: string
-          p_installments?: Json
-          p_project_data?: Json
-        }
-        Returns: Json
-      }
+      close_deal_as_won:
+        | {
+            Args: { p_deal_id: string; p_project_data?: Json }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_deal_id: string
+              p_installments?: Json
+              p_project_data?: Json
+            }
+            Returns: Json
+          }
       convert_lead_to_deal: {
         Args: { p_deal_data?: Json; p_lead_id: string }
         Returns: string
