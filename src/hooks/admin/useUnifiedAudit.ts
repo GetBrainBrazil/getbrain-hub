@@ -35,11 +35,11 @@ const PAGE = 100;
 
 async function resolveActorsByAuthUser(userIds: string[]) {
   if (userIds.length === 0) return new Map<string, { name: string; avatar_url: string | null }>();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url")
-    .in("id", userIds);
-  return new Map((data ?? []).map((p: any) => [p.id, { name: p.full_name ?? "Usuário", avatar_url: p.avatar_url }]));
+  // Use SECURITY DEFINER RPC so non-admin users can also resolve names of other authors
+  const { data } = await supabase.rpc("get_profiles_public" as any);
+  const wanted = new Set(userIds);
+  const filtered = ((data as any[]) ?? []).filter((p) => wanted.has(p.id));
+  return new Map(filtered.map((p: any) => [p.id, { name: p.full_name ?? "Usuário", avatar_url: p.avatar_url }]));
 }
 
 async function resolveActorsByActorId(actorIds: string[]) {

@@ -95,16 +95,16 @@ export function TaskMetadataSidebar({ task }: Props) {
   const { confirm, dialog: confirmDialog } = useConfirm();
   const { data: sprints = [] } = useSprints();
 
-  // Author actor name
+  // Author actor name (uses SECURITY DEFINER RPC to avoid RLS on profiles/humans)
   const { data: createdByActor } = useQuery({
     queryKey: ["actor-by-auth", task.created_by],
     enabled: !!task.created_by,
     queryFn: async () => {
-      const { data } = await SB.from("humans")
-        .select("actor_id, actors:actor_id (display_name)")
-        .eq("auth_user_id", task.created_by)
-        .maybeSingle();
-      return (data?.actors?.display_name as string | undefined) ?? null;
+      const { data } = await SB.rpc("get_profiles_public");
+      const profile = (data as Array<{ id: string; full_name: string | null }> | null)?.find(
+        (p) => p.id === task.created_by,
+      );
+      return profile?.full_name ?? null;
     },
   });
 
