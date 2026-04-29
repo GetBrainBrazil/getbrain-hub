@@ -7,9 +7,10 @@ import { DEAL_STAGE_LABEL, DEAL_STAGE_PROBABILITY, DEAL_STAGES } from '@/constan
 import { cn } from '@/lib/utils';
 import type { DealStage } from '@/types/crm';
 
-// Etapas em progresso, na ordem do funil. Ganho/Perdido ficam fora do stepper
-// para evitar cliques acidentais que abrem o modal de fechamento.
+// Etapas em progresso, na ordem do funil.
 const PROGRESS_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando', 'gelado'];
+// Etapas finais — sempre visíveis no fim do stepper, com estilo distinto.
+const CLOSED_STAGES: DealStage[] = ['ganho', 'perdido'];
 
 export function DetailShell({ children }: { children: React.ReactNode }) { return <div className="mx-auto max-w-[1600px] px-1 pb-12 animate-fade-in">{children}</div>; }
 export function DetailBreadcrumb({ items, closeTo }: { items: { label: string; to?: string }[]; closeTo: string }) {
