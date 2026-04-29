@@ -403,28 +403,6 @@ export default function CrmPipeline() {
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2">
-              {viewMode === 'lista' && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs whitespace-nowrap">
-                      <ArrowUpDown className="h-3.5 w-3.5" />
-                      <span className="hidden md:inline">
-                        <span className="text-muted-foreground mr-1">Ordem:</span>
-                        {sortLabels[sort]}
-                      </span>
-                      <span className="md:hidden">Ordem</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {(Object.keys(sortLabels) as DealsListSort[]).map((k) => (
-                      <DropdownMenuItem key={k} onSelect={() => setSort(k)}>
-                        {sortLabels[k]}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -505,6 +483,30 @@ export default function CrmPipeline() {
               >
                 Limpar
               </Button>
+            )}
+
+            {viewMode === 'lista' && (
+              <>
+                <span className="ml-auto h-6 w-px bg-border" aria-hidden />
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Ordem:
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs whitespace-nowrap">
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      <span>{sortLabels[sort]}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {(Object.keys(sortLabels) as DealsListSort[]).map((k) => (
+                      <DropdownMenuItem key={k} onSelect={() => setSort(k)}>
+                        {sortLabels[k]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             )}
           </div>
         </div>
