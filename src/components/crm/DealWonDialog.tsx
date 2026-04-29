@@ -124,7 +124,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   // Projeto
   const [projectName, setProjectName] = useState(deal?.title ?? '');
-  const [projectType, setProjectType] = useState<string>(deal?.project_type ?? '');
+  const [projectTypeSlugs, setProjectTypeSlugs] = useState<string[]>(deal?.project_type_v2 ?? []);
+  const [painCategorySlugs, setPainCategorySlugs] = useState<string[]>(
+    deal?.pain_categories ?? (deal?.pain_category ? [deal.pain_category] : []),
+  );
   const [startDate, setStartDate] = useState<string>(
     deal?.desired_start_date ?? fmtDateInput(new Date()),
   );
