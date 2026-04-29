@@ -204,9 +204,9 @@ export function LeadSourcesManager({ canEdit }: { canEdit: boolean }) {
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-destructive opacity-0 transition group-hover:opacity-100 disabled:opacity-0"
-                disabled={!canEdit || s.is_system}
+                disabled={!canEdit}
                 onClick={() => handleDelete(s)}
-                title={s.is_system ? "Origens do sistema só podem ser desativadas" : "Remover"}
+                title="Remover"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
