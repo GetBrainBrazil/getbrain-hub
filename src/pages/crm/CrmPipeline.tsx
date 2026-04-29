@@ -121,6 +121,8 @@ export default function CrmPipeline() {
   const [valueRequired, setValueRequired] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [requiredValue, setRequiredValue] = useState('');
   const [won, setWon] = useState<{ deal: Deal; stage: DealStage } | null>(null);
+  const [needsProposal, setNeedsProposal] = useState<{ deal: Deal; stage: DealStage } | null>(null);
+  const [creatingProposal, setCreatingProposal] = useState(false);
 
   const openCreateDialog = (stage: DealStage = 'descoberta_marcada') => {
     setCreateStage(stage);
