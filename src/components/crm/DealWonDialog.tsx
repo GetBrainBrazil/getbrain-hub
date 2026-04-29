@@ -252,7 +252,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     if (!open || !deal) return;
 
     setProjectName(deal.title);
-    setProjectType(deal.project_type ?? '');
+    setProjectTypeSlugs(deal.project_type_v2 ?? []);
+    setPainCategorySlugs(deal.pain_categories ?? (deal.pain_category ? [deal.pain_category] : []));
     setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
     setEstimatedDelivery(deal.desired_delivery_date ?? '');
 
