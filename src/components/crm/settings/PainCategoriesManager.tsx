@@ -19,20 +19,7 @@ import {
   useUpdatePainCategory,
 } from "@/hooks/crm/useCrmPainCategories";
 
-// Presets usando design tokens (mesmo padrão dos chips do projeto)
-const PRESET_COLORS: { label: string; value: string; preview: string }[] = [
-  { label: 'Cyan',    value: 'bg-accent/15 text-accent border-accent/30',          preview: 'hsl(var(--accent))' },
-  { label: 'Verde',   value: 'bg-success/15 text-success border-success/30',       preview: 'hsl(var(--success))' },
-  { label: 'Âmbar',   value: 'bg-warning/15 text-warning border-warning/30',       preview: 'hsl(var(--warning))' },
-  { label: 'Roxo',    value: 'bg-chart-4/15 text-chart-4 border-chart-4/30',       preview: 'hsl(var(--chart-4))' },
-  { label: 'Rosa',    value: 'bg-chart-5/15 text-chart-5 border-chart-5/30',       preview: 'hsl(var(--chart-5))' },
-  { label: 'Cinza',   value: 'bg-muted text-muted-foreground border-border',       preview: 'hsl(var(--muted-foreground))' },
-];
-
-function colorPreview(token: string | null) {
-  const found = PRESET_COLORS.find((c) => c.value === token);
-  return found?.preview ?? 'hsl(var(--muted-foreground))';
-}
+import { PRESET_COLORS, colorPreviewFromToken as colorPreview } from "@/lib/crm/presetColors";
 
 export function PainCategoriesManager({ canEdit }: { canEdit: boolean }) {
   const { data: categories = [], isLoading } = useCrmPainCategories();
