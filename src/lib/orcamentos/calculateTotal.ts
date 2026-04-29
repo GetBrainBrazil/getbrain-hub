@@ -59,7 +59,19 @@ export type ProposalStatus =
   | "recusada";
 
 /** Helper: normaliza status legado caso ainda chegue de cache antigo. */
+const VALID_STATUS = new Set<ProposalStatus>([
+  "rascunho",
+  "enviada",
+  "visualizada",
+  "interesse_manifestado",
+  "expirada",
+  "convertida",
+  "recusada",
+]);
+
 export function normalizeProposalStatus(s: string | null | undefined): ProposalStatus {
+  if (!s) return "rascunho";
+  // Mapeamento legado → novo
   switch (s) {
     case "enviado":
       return "enviada";
@@ -70,17 +82,8 @@ export function normalizeProposalStatus(s: string | null | undefined): ProposalS
       return "recusada";
     case "expirado":
       return "expirada";
-    case "rascunho":
-    case "enviada":
-    case "visualizada":
-    case "interesse_manifestado":
-    case "expirada":
-    case "convertida":
-    case "recusada":
-      return s as ProposalStatus;
-    default:
-      return "rascunho";
   }
+  return VALID_STATUS.has(s as ProposalStatus) ? (s as ProposalStatus) : "rascunho";
 }
 
 /**
