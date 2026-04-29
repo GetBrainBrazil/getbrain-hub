@@ -1,83 +1,56 @@
-# Redesign do "Tipo de Projeto" — escalável para muitos tipos
+# Unificar UX de "Tipo de Projeto" e "Categorias da Dor"
 
-## Problema atual
+Os dois campos vão usar exatamente o mesmo padrão visual. Diferença única: tipo é single-select, categorias é multi-select.
 
-O componente mostra os 5 primeiros tipos como chips e um botão "Mais N". Quando há 15-30+ tipos cadastrados:
-
-- Os 5 chips fixos viram uma escolha quase aleatória (ordem alfabética/criação) — sem relação com o que o usuário usa de fato.
-- A maior parte do trabalho passa a acontecer dentro do popover, anulando a vantagem do "1-clique".
-- Em telas mais estreitas (ou com nomes longos), os chips quebram em várias linhas e poluem o card.
-
-## Proposta
-
-Manter o visual atual de chips coloridos com 1-clique, **mas tornar a seleção inline inteligente e o input de busca sempre visível**, em vez de escondido atrás de um botão.
-
-### Layout final
+## Layout final (idêntico nos dois)
 
 ```text
 TIPO DE PROJETO
-┌──────────────────────────────────────────────────────────────┐
-│ 🔍 Buscar tipo...                                            │  ← input sempre visível
-└──────────────────────────────────────────────────────────────┘
-[● Chatbot WhatsApp ✓]  [● SDR com IA]  [● Sistema gestão]
-[● Site institucional]  [● Automação]   [+12 outros ▾]
+[● Chatbot WhatsApp ✓ ×]                              ← chip(s) selecionado(s) em cima
+┌──────────────────────────────────────────────────┐
+│ Selecionar tipo de projeto...              ▾     │  ← barra discreta embaixo
+└──────────────────────────────────────────────────┘
 ```
 
-- **Input de busca sempre visível** (compacto, no topo). Digitando, os chips abaixo viram o resultado da busca em tempo real (mesmo grid, mesmas cores). Enter seleciona o primeiro; se admin e nada bater, oferece "Criar".
-- **Chips inteligentes** abaixo do input: até 6 (configurável). Seleção por:
-  1. Tipo selecionado atualmente (sempre presente).
-  2. Top mais usados (fonte: contagem em `deals.project_type_v2`).
-  3. Resto preenchido por ordem da tabela.
-- **Pill "+N outros"** abre popover compacto listando o restante (ainda como chips, agrupados, scrollável). Sem `Command` pesado — só uma grade de chips clicáveis.
-- **Item selecionado fora do top**: quando o usuário escolhe pelo "+N outros", ele "promove" o chip pra linha principal naquela sessão (já existe essa lógica, mantemos).
-- **Modo compacto automático**: se houver ≥ 20 tipos cadastrados, esconde a fileira de chips por default e mostra só o input + chip selecionado + botão "Ver todos". Isso evita poluição quando a lista vira realmente grande. Mantém UX limpo e a busca como caminho principal nesse cenário.
+Ao clicar na barra, abre popover com busca + lista (estilo Command), permitindo selecionar/criar.
 
-### Smart ranking dos chips (top usados)
+## Decisões de UX
 
-Usa um hook novo `useProjectTypeUsage()` que consulta uma vez (cache) a contagem por slug em `deals`. Resultado: os 6 chips são sempre os tipos que o usuário/empresa realmente usa. Sem isso, "muitos tipos" significa "5 chips inúteis".
+- **Chips em cima** (estilo bonito do "Tipo de Projeto" atual):
+  - Cor cheia da categoria/tipo + bolinha colorida + nome + ✓ + × no hover.
+  - Em multi-select, vários chips lado a lado; em single-select, um chip só.
+  - Só aparecem os itens selecionados (sem chips "sugeridos" inline — isso simplifica e segue o padrão do Pain).
 
-Query simples:
-```sql
-select project_type_v2 as slug, count(*) as uses
-from deals where project_type_v2 is not null
-group by project_type_v2
-order by uses desc;
-```
+- **Barra de seleção embaixo** (estilo do Pain atual, mas mais discreta):
+  - Botão `outline` com altura `h-8`, texto `text-xs`, ícone `ChevronsUpDown` `h-3.5`.
+  - Hoje a barra tem `default` size + `text-sm` e fica do tamanho de um input cheio — vai diminuir para parecer secundária ao chip selecionado.
+  - Texto: "Selecionar..." quando vazio; "Trocar..." (single) ou "Adicionar mais..." (multi) quando já tem seleção.
 
-### Comportamentos finos
-
-- **Atalho de teclado**: input já em foco quando o card abre não, mas focável com `/` quando o card está visível (opcional, marcamos como "nice to have" e implementamos só se simples).
-- **Limpar seleção**: o chip selecionado tem um `×` discreto no hover (além de re-clicar pra desmarcar).
-- **Vazio com filtro**: estado claro "Nenhum tipo encontrado" + CTA "Criar '<termo>'" (admin).
-- **Cor ao buscar**: chips filtrados mantêm cor original; itens fora do filtro somem (não ficam acinzentados — reduz ruído visual).
-- **Acessibilidade**: input com `role=combobox`, chips com `aria-pressed`, navegação por Tab + Enter funcional.
-
-### Quando NÃO houver muitos tipos (≤ 6)
-
-Comportamento praticamente idêntico ao atual: input fica visível mas discreto, todos os chips aparecem, sem "+N". Não regredimos a experiência atual quando a lista é pequena.
+- **Popover**:
+  - Mesmo `Command` com input de busca, lista filtrada, criação inline para admins (Enter cria).
+  - Lista mostra ✓ à esquerda do nome quando selecionado, bolinha colorida à direita.
 
 ## Detalhes técnicos
 
 **Arquivos a editar:**
 
-- `src/components/crm/ProjectTypeSelect.tsx` — reescrita do layout e da lógica de ranking; mesma assinatura de props (`value`, `onChange`, `disabled`, `inlineLimit`).
-- `src/hooks/crm/useCrmProjectTypes.ts` — adicionar `useProjectTypeUsage()` (query agregada via `supabase.from('deals').select('project_type_v2')` e contagem client-side, cache 5 min). Sem migration nova.
+- `src/components/crm/ProjectTypeSelect.tsx` — reescrever do zero. Remover smart-ranking, modo compacto, input sempre visível, "+N outros". Substituir por: chip(s) selecionado(s) + barra `Popover`+`Command` (igual ao Pain). Mesma assinatura de props (`value`, `onChange`, `disabled`).
+- `src/components/crm/PainCategoriesMultiSelect.tsx` — manter estrutura, mas:
+  - Trocar a barra de `size default` para `size sm` + `h-8` + `text-xs` para deixar mais discreta.
+  - Adicionar bolinha colorida e ícone ✓ nos chips selecionados (alinhar visual com o do tipo).
+  - Manter ícone × para remover, manter popover Command.
 
 **Sem mudanças em:**
 
-- Schema (tabela `crm_project_types` continua igual).
-- `ProjectTypesManager` (página de configurações).
-- `DealCard` / `DealHeader` / filtros do pipeline (continuam consumindo o hook existente).
+- `src/hooks/crm/useCrmProjectTypes.ts` (o hook `useProjectTypeUsage` adicionado anteriormente fica órfão — pode ser removido para limpar, mas não quebra nada se ficar).
+- Schema de banco.
+- `useCrmPainCategories`, página de configurações dos dois.
+- `CrmDealDetail.tsx` (consumidor — assinaturas iguais).
 
-**Limites:**
-
-- `inlineLimit` default sobe de 5 para 6 (cabe melhor em 2 linhas se necessário).
-- Threshold do "modo compacto": 20 tipos cadastrados.
-
-**Performance:** `useProjectTypeUsage` roda 1x e fica em cache; staleTime alto. Se a tabela `deals` ficar grande, trocamos por uma RPC/view materializada — mas para o volume atual, client-side basta.
+**Limpeza opcional:** remover `useProjectTypeUsage` de `src/hooks/crm/useCrmProjectTypes.ts` já que não será mais usado.
 
 ## Fora do escopo
 
-- Ranking por usuário/equipe (só global por enquanto).
-- Reordenar chips por drag manualmente no card (já existe na página de configurações).
-- Multi-select (tipo de projeto continua single-select; só "categorias da dor" é multi).
+- Mudar cards do `DealCard` (já tratado em iterações anteriores).
+- Multi-select para tipo de projeto (continua single).
+- Mudanças no schema ou nas páginas de gerenciamento em `/configuracoes/pessoas/*`.
