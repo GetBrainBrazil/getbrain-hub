@@ -31,7 +31,7 @@ export function useProposalDetail(id: string | undefined) {
         .is("deleted_at", null)
         .maybeSingle();
       if (error) throw error;
-      return (data ?? null) as ProposalDetail | null;
+      return (data ?? null) as unknown as ProposalDetail | null;
     },
     retry: 1,
   });
