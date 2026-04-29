@@ -28,7 +28,7 @@ import type { ProposalRow } from "@/hooks/orcamentos/useProposals";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 import { effectiveStatus } from "@/lib/orcamentos/calculateTotal";
 
-type ColumnId = "rascunho" | "enviado" | "aceito" | "recusado" | "expirado";
+type ColumnId = "rascunho" | "enviada" | "convertida" | "recusada" | "expirada";
 
 interface Props {
   rows: ProposalRow[];
@@ -82,8 +82,8 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
     const sourceEff = effectiveStatus(row.status, row.valid_until) as ColumnId;
     if (sourceEff === target) return;
 
-    if (target === "expirado") {
-      toast.error("Status 'expirado' é automático — ajuste a validade");
+    if (target === "expirada") {
+      toast.error("Status 'expirada' é automático — ajuste a validade");
       return;
     }
 
@@ -96,11 +96,11 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
     const { row, target } = pending;
     const payload: Record<string, any> = { status: target as ProposalStatus };
 
-    if (target === "enviado") {
+    if (target === "enviada") {
       payload.sent_at = new Date().toISOString();
-    } else if (target === "aceito") {
+    } else if (target === "convertida") {
       payload.accepted_at = new Date().toISOString();
-    } else if (target === "recusado") {
+    } else if (target === "recusada") {
       payload.rejected_at = new Date().toISOString();
       payload.rejection_reason = rejectionReason.trim() || null;
     } else if (target === "rascunho") {
@@ -144,28 +144,28 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
               onCardClick={onCardClick}
             />
             <OrcamentoKanbanColumn
-              id="enviado"
+              id="enviada"
               label="Enviado"
               rows={columns.enviado}
               onCardClick={onCardClick}
               accentClass="text-primary"
             />
             <OrcamentoKanbanColumn
-              id="aceito"
+              id="convertida"
               label="Aceito"
               rows={columns.aceito}
               onCardClick={onCardClick}
               accentClass="text-success"
             />
             <OrcamentoKanbanColumn
-              id="recusado"
+              id="recusada"
               label="Recusado"
               rows={columns.recusado}
               onCardClick={onCardClick}
               accentClass="text-destructive"
             />
             <OrcamentoKanbanColumn
-              id="expirado"
+              id="expirada"
               label="Expirado"
               rows={columns.expirado}
               onCardClick={onCardClick}
@@ -195,9 +195,9 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
               onClick={applyMove}
               disabled={
                 update.isPending ||
-                (pending?.target === "recusado" && !rejectionReason.trim())
+                (pending?.target === "recusada" && !rejectionReason.trim())
               }
-              variant={pending?.target === "recusado" ? "destructive" : "default"}
+              variant={pending?.target === "recusada" ? "destructive" : "default"}
             >
               {update.isPending ? "Salvando…" : "Confirmar"}
             </Button>
@@ -226,7 +226,7 @@ function MoveDialogBody({
   setReason: (v: string) => void;
 }) {
   const { row, target } = pending;
-  if (target === "enviado") {
+  if (target === "enviada") {
     return (
       <DialogHeader>
         <DialogTitle>Marcar {row.code} como enviado?</DialogTitle>
@@ -237,7 +237,7 @@ function MoveDialogBody({
       </DialogHeader>
     );
   }
-  if (target === "aceito") {
+  if (target === "convertida") {
     return (
       <DialogHeader>
         <DialogTitle>Marcar {row.code} como aceita?</DialogTitle>
@@ -248,7 +248,7 @@ function MoveDialogBody({
       </DialogHeader>
     );
   }
-  if (target === "recusado") {
+  if (target === "recusada") {
     return (
       <>
         <DialogHeader>

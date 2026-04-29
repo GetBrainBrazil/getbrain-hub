@@ -33,21 +33,21 @@ export function useProposalKPIs() {
         0
       );
 
-      const aceitos = rows.filter((r) => r.status === "aceito");
+      const aceitos = rows.filter((r) => r.status === "convertida");
       const aceitoTotal = aceitos.reduce(
         (acc, r) => acc + calculateScopeTotal(r.scope_items),
         0
       );
 
       const emAberto = rows.filter(
-        (r) => r.status === "enviado" && r.valid_until >= today
+        (r) => r.status === "enviada" && r.valid_until >= today
       );
       const emAbertoTotal = emAberto.reduce(
         (acc, r) => acc + calculateScopeTotal(r.scope_items),
         0
       );
 
-      const recusados = rows.filter((r) => r.status === "recusado").length;
+      const recusados = rows.filter((r) => r.status === "recusada").length;
       const denom = aceitos.length + recusados;
       const conversao = denom > 0 ? (aceitos.length / denom) * 100 : 0;
 

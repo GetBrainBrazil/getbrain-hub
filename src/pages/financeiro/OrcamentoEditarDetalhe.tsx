@@ -183,15 +183,15 @@ export default function OrcamentoEditarDetalhe() {
       confirmLabel: "Marcar como enviado",
     });
     if (!ok) return;
-    await save({ status: "enviado", sent_at: new Date().toISOString() });
+    await save({ status: "enviada", sent_at: new Date().toISOString() });
     toast.success("Proposta marcada como enviada");
   }
   async function handleAccept() {
-    await save({ status: "aceito", accepted_at: new Date().toISOString() });
+    await save({ status: "convertida", accepted_at: new Date().toISOString() });
     toast.success("Proposta aceita");
   }
   async function handleReject() {
-    await save({ status: "recusado", rejected_at: new Date().toISOString() });
+    await save({ status: "recusada", rejected_at: new Date().toISOString() });
     toast.success("Proposta recusada");
   }
 
@@ -232,7 +232,7 @@ export default function OrcamentoEditarDetalhe() {
   const total = calculateScopeTotal(scopeItems);
   const monthlyTotal = typeof maintenance === "number" && maintenance > 0 ? maintenance : 0;
   const eff = effectiveStatus(data.status as any, validUntil);
-  const isLocked = data.status === "aceito" || data.status === "cancelado";
+  const isLocked = data.status === "convertida" || data.status === "cancelado";
   const savedLabel = lastSavedAt
     ? `Salvo às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
     : "—";
@@ -331,7 +331,7 @@ export default function OrcamentoEditarDetalhe() {
               <Send className="h-3.5 w-3.5" /> Marcar como enviado
             </Button>
           )}
-          {data.status === "enviado" && (
+          {data.status === "enviada" && (
             <>
               <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={handleAccept}>
                 <Check className="h-3.5 w-3.5" /> Aceitar
@@ -485,7 +485,7 @@ export default function OrcamentoEditarDetalhe() {
             />
           </Card>
 
-          {data.status === "recusado" && (
+          {data.status === "recusada" && (
             <Card className="p-4 space-y-2">
               <Label className="text-xs">Motivo da recusa (opcional)</Label>
               <Textarea

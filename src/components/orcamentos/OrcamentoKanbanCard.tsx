@@ -119,12 +119,12 @@ function CardBody({
         </div>
       )}
       <div className="flex items-center gap-1 text-[10px] text-muted-foreground border-t border-border pt-1.5">
-        {eff === "aceito" ? (
+        {eff === "convertida" ? (
           <>
             <FileSignature className="h-3 w-3 text-success" />
             <span>Aceito</span>
           </>
-        ) : eff === "expirado" ? (
+        ) : eff === "expirada" ? (
           <>
             <Calendar className="h-3 w-3 text-amber-500" />
             <span className="text-amber-500">

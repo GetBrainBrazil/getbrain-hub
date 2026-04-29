@@ -161,7 +161,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         .select('id, code, status, scope_items, maintenance_monthly_value')
         .eq('deal_id', deal.id)
         .is('deleted_at', null)
-        .in('status', ['aceito', 'enviado'])
+        .in('status', ['convertida', 'enviada'])
         .order('status', { ascending: true })
         .order('created_at', { ascending: false })
         .limit(1);
@@ -442,10 +442,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       };
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
-      if (acceptedProposal && acceptedProposal.status === 'enviado') {
+      if (acceptedProposal && acceptedProposal.status === 'enviada') {
         await sb
           .from('proposals')
-          .update({ status: 'aceito', accepted_at: new Date().toISOString() })
+          .update({ status: 'convertida', accepted_at: new Date().toISOString() })
           .eq('id', acceptedProposal.id);
       }
 
@@ -567,7 +567,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
               • {loadingProposal
                 ? 'Verificando propostas…'
                 : acceptedProposal
-                  ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) ${acceptedProposal.status === 'enviado' ? '→ será marcada como aceita e' : ''} vinculada ao projeto`
+                  ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) ${acceptedProposal.status === 'enviada' ? '→ será marcada como aceita e' : ''} vinculada ao projeto`
                   : 'Nenhuma proposta enviada/aceita encontrada'}
             </li>
           </ul>

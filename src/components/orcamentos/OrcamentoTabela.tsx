@@ -114,7 +114,7 @@ export function OrcamentoTabela({ rows, loading, onAction, onRowClick }: Props) 
                           <Send className="h-4 w-4" /> Marcar como enviado
                         </DropdownMenuItem>
                       )}
-                      {r.status === "enviado" && (
+                      {r.status === "enviada" && (
                         <>
                           <DropdownMenuItem onClick={() => onAction(r, "mark-accepted")}>
                             <Check className="h-4 w-4 text-success" /> Marcar como aceito
