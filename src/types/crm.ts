@@ -3,10 +3,9 @@ export type LeadStatus = 'novo' | 'triagem_agendada' | 'triagem_feita' | 'descar
 export type DealStage = 'presencial_agendada' | 'presencial_feita' | 'orcamento_enviado' | 'em_negociacao' | 'fechado_ganho' | 'fechado_perdido';
 export type ActivityType = 'reuniao_presencial' | 'reuniao_virtual' | 'ligacao' | 'email' | 'whatsapp' | 'outro';
 
-// v2.0 — descoberta enxuta
-export type DealProjectType =
-  | 'whatsapp_chatbot' | 'ai_sdr' | 'sistema_gestao'
-  | 'automacao_processo' | 'integracao_sistemas' | 'outro';
+// v2.1 — slugs vêm de crm_project_types (dinâmico). Mantém type como string
+// p/ compat com slugs antigos (whatsapp_chatbot, ai_sdr, etc.).
+export type DealProjectType = string;
 
 // Dynamic — slugs vêm de crm_pain_categories. Mantemos o type como string
 // (slugs do sistema antigo continuam válidos: operacional, comercial, etc.)
