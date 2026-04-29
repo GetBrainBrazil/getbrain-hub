@@ -4,6 +4,7 @@ import {
   Loader2, Plus, Trash2, ArrowRight, ArrowLeft,
   Repeat, Percent, Wallet, FolderOpen, Banknote,
   ClipboardCheck, AlertTriangle, CheckCircle2, Settings2,
+  Link2, FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
