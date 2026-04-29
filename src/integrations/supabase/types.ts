@@ -3140,15 +3140,19 @@ export type Database = {
           installments_count: number | null
           mockup_screenshots: string[]
           mockup_url: string | null
+          mrr_value: number | null
           name: string
           notes: string | null
           organization_id: string
           organograma_url: string | null
+          origin_lead_id: string | null
           origin_lead_source_id: string | null
           owner_actor_id: string | null
           premises: string[]
           primary_contact_person_id: string | null
           project_type: Database["public"]["Enums"]["project_type"]
+          project_type_v2: string[]
+          scope_bullets: Json
           scope_in: string | null
           scope_out: string | null
           source_deal_id: string | null
@@ -3180,15 +3184,19 @@ export type Database = {
           installments_count?: number | null
           mockup_screenshots?: string[]
           mockup_url?: string | null
+          mrr_value?: number | null
           name: string
           notes?: string | null
           organization_id: string
           organograma_url?: string | null
+          origin_lead_id?: string | null
           origin_lead_source_id?: string | null
           owner_actor_id?: string | null
           premises?: string[]
           primary_contact_person_id?: string | null
           project_type: Database["public"]["Enums"]["project_type"]
+          project_type_v2?: string[]
+          scope_bullets?: Json
           scope_in?: string | null
           scope_out?: string | null
           source_deal_id?: string | null
@@ -3220,15 +3228,19 @@ export type Database = {
           installments_count?: number | null
           mockup_screenshots?: string[]
           mockup_url?: string | null
+          mrr_value?: number | null
           name?: string
           notes?: string | null
           organization_id?: string
           organograma_url?: string | null
+          origin_lead_id?: string | null
           origin_lead_source_id?: string | null
           owner_actor_id?: string | null
           premises?: string[]
           primary_contact_person_id?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
+          project_type_v2?: string[]
+          scope_bullets?: Json
           scope_in?: string | null
           scope_out?: string | null
           source_deal_id?: string | null
