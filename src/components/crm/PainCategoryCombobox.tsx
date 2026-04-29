@@ -20,9 +20,8 @@ export function PainCategoryCombobox({ value, onChange, disabled }: PainCategory
   const selected = allCategories.find((c) => c.slug === value);
 
   const options: ComboOption[] = useMemo(() => {
-    const base = categories.map((c) => ({ value: c.slug, label: c.name }));
+    const base: ComboOption[] = categories.map((c) => ({ value: c.slug, label: c.name }));
     if (selected && !categories.find((c) => c.slug === selected.slug)) {
-      // a atual está inativa — mostra mesmo assim com hint
       base.unshift({ value: selected.slug, label: selected.name, hint: 'inativa' });
     }
     return base;
