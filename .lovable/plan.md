@@ -1,125 +1,71 @@
-## Diagnóstico — o que está quebrado hoje
 
-Investiguei o fluxo `Deal → Projeto` e achei 5 problemas, sendo um deles **crítico** (que explica por que "não puxa nada e não consigo criar nada na config financeira"):
+# Melhorar transferência Deal → Projeto
 
-### 1. RPC `close_deal_as_won` foi sobrescrita por engano (CRÍTICO)
-A migration de `pain_categories` (29/04) substituiu a versão completa v3 da função por uma versão antiga e mutilada que:
-- **Perdeu o parâmetro `p_installments`** — parcelas digitadas no diálogo são ignoradas
-- **Perdeu a configuração financeira** (categoria, centro de custo, conta, meio) — por isso "não puxa nada"
-- **Perdeu a criação da recorrência** em `financial_recurrences` → nenhuma parcela cai no financeiro
-- **Perdeu a resolução/criação automática do cliente** por CNPJ
-- **Perdeu o vínculo de propostas aceitas** ao projeto e o move dos anexos
-- **Perdeu o update do deal** (stage, closed_at, generated_project_id)
-- Retorna `uuid` em vez do `jsonb` que o front espera → mensagens de sucesso quebradas
+Dois problemas reais a resolver e um enriquecimento de dados.
 
-### 2. Dropdowns financeiros vazios
-Confirmado no banco: `categorias` (receita) = 0 linhas, `centros_custo` = 0 linhas. Não é RLS, é falta de dados. Precisa de botão "+ Criar" inline no diálogo.
+## Problema 1 — Bug: categorias vazias no modal
 
-### 3. MRR não vira contrato de manutenção
-O deal já tem `estimated_mrr_value` na ficha, mas a RPC nunca cria a recorrência mensal de manutenção. Vai pro projeto como número solto e some.
+A query carrega `categorias` filtrando por `tipo = 'receita'`, mas no banco o valor real é `'receitas'` (plural). Resultado: o select fica sempre vazio, mesmo com 11 categorias de receita cadastradas. Por isso "ele não puxa nenhuma variável existente".
 
-### 4. Faltam campos de desconto e custos extras
-Não existe nada em `deals` nem no diálogo de fechamento pra:
-- Desconto promocional (% ou R$, com prazo de validade)
-- Custos extras recorrentes (APIs externas, infra, licenças) que precisam virar despesa do projeto
+**Correção**: trocar o filtro para `tipo = 'receitas'` (e remover o `tipo` do `.select` que não é usado).
 
-### 5. Parcelas — só botões fixos
-Os botões `1x 2x 3x 6x 12x` dividem o total igualmente, mas não dá pra digitar "8x" ou "10x".
+## Problema 2 — UX: criar inline na configuração financeira
 
----
+Hoje, criar uma categoria/centro/conta exige clicar no botão `+`, abrir um mini-modal, digitar e confirmar. Você quer digitar dentro do próprio campo e criar dali, sem etapa extra.
 
-## Plano de correção
+Já existe no projeto o componente `ComboboxCreate` (`src/components/crm/ComboboxCreate.tsx`) que faz exatamente isso: combobox com busca + opção "Criar [termo]" dentro do mesmo dropdown. É o mesmo padrão usado em CRM (origens de lead, papéis de contato, categorias de dor).
 
-### Backend — nova migration
+**Mudanças no `DealWonDialog.tsx`**:
+- Substituir os 4 `Select` da seção "Configuração financeira" por `ComboboxCreate`.
+- Cada um com seu `onCreate` que insere direto na tabela (categorias, centros_custo, contas_bancarias, meios_pagamento) e seleciona automaticamente.
+- Remover o mini-modal "+ Criar" (`createTarget`, `createName`, `handleCreateOption`) — fica obsoleto.
+- Manter o `loadFinDefaults`/persistência de defaults no localStorage.
+- Subir essa seção pra cima do modal (logo após "Dados do projeto") já que agora é fácil de usar e é informação importante.
 
-**Schema novo em `deals`:**
-- `discount_amount numeric` + `discount_kind` ('percent'|'fixed') + `discount_valid_until date` + `discount_notes text`
-- `extra_costs jsonb` — array de `{description, amount, recurrence ('once'|'monthly'|'yearly'), notes}` (ex: API OpenAI R$ 200/mês)
-- `mrr_start_date date` + `mrr_duration_months int` (null = indefinido) + `mrr_discount_months int` + `mrr_discount_value numeric` (pra "primeiros 3 meses com 50% off")
+## Problema 3 — Mais informações no card de projeto
 
-**RPC `close_deal_as_won` reconstruída** (volta pra v3 completa + extensões):
-- Aceita de volta `p_installments` e config financeira (categoria/centro/conta/meio)
-- Cria recorrência de **implementação** (parcelas) como antes
-- Se `estimated_mrr_value > 0`: cria **segunda recorrência mensal** (manutenção) vinculada ao projeto, usando `mrr_start_date` e `mrr_duration_months`
-- Se houver `mrr_discount_value/months`: gera as N primeiras movimentações com valor reduzido
-- Para cada item de `extra_costs` recorrente (mensal/anual): cria recorrência de **despesa** vinculada ao projeto. Para `'once'`: movimentação única.
-- Aplica desconto no total da implementação se `discount_*` preenchido
-- Mantém: copy de descoberta/contexto/anexos/dependências, vínculo de propostas, criação de cliente por CNPJ, marcar deal como ganho, propagar IDs financeiros, retornar `jsonb` completo
+A RPC `close_deal_as_won` já copia bastante (escopo, dependências, contexto comercial, anexos, contato primário, origem do lead, hour estimates, mockups). Faltam estes campos identificados no mapeamento anterior:
 
-### Frontend — `DealWonDialog.tsx` reescrito
+| Faltando no projeto | Origem | Tratamento |
+|---|---|---|
+| `notes` (anotações livres) | `deals.notes` | Concatenar em `projects.notes` |
+| `project_type_v2` (multi-tipos) | `deals.project_type_v2` | Nova coluna em `projects` |
+| `scope_bullets` (escopo estruturado) | `deals.scope_bullets` | Nova coluna `scope_bullets jsonb` em `projects` |
+| `mrr_value` dedicado | calculado no MRR | Nova coluna `mrr_value numeric` em `projects` (para KPIs/relatórios sem ter que JOIN no `maintenance_contracts`) |
+| `origin_lead_id` (ponteiro do lead) | `deals.origin_lead_id` | Nova coluna `origin_lead_id uuid` em `projects` |
+| Histórico `deal_activities` | `deal_activities` | Manter no deal (rastreável via `source_deal_id`); não duplicar |
 
-**Novas seções:**
+### Migração SQL
 
-```text
-┌─ Resumo do que vai ser transferido ───────┐
-│ ✓ Descoberta, contatos, anexos…           │
-│ ✓ Implementação: R$ 12.000 em N parcelas  │
-│ ✓ Manutenção (MRR): R$ 800/mês a partir   │
-│   de DD/MM, por 12 meses                  │
-│ ✓ Custos extras: 2 itens (R$ 250/mês)     │
-└───────────────────────────────────────────┘
-
-┌─ Parcelas de implementação ───────────────┐
-│ Atalhos: [1x][2x][3x][6x][12x]            │
-│ Ou digite: [____]x  [Aplicar]             │ ← novo
-│ • Lista editável (valor + vencimento)     │
-└───────────────────────────────────────────┘
-
-┌─ Manutenção / MRR (auto se > 0) ──────────┐ ← novo
-│ Valor mensal:  R$ [800,00]                │
-│ Início:        [DD/MM/AAAA]               │
-│ Duração:       (•) Indefinido  ( ) ___ m  │
-│ ☑ Desconto: primeiros [3] meses por R$ [400]│
-└───────────────────────────────────────────┘
-
-┌─ Desconto promocional (opcional) ─────────┐ ← novo
-│ Tipo: (•) % ( ) R$  Valor: [10] %         │
-│ Válido até: [DD/MM/AAAA]                  │
-│ Observação: [_______________________]     │
-└───────────────────────────────────────────┘
-
-┌─ Custos extras (APIs, infra, licenças) ───┐ ← novo
-│ + Adicionar custo                         │
-│ • OpenAI API · R$ 200 · mensal · [🗑]     │
-│ • Setup AWS  · R$ 1.500 · uma vez · [🗑]  │
-└───────────────────────────────────────────┘
-
-┌─ Configuração financeira (opcional) ──────┐
-│ Categoria de receita: [select] [+ Criar]  │ ← novo botão
-│ Centro de custo:      [select] [+ Criar]  │ ← novo botão
-│ Conta bancária:       [select] [+ Criar]  │ ← novo botão
-│ Meio de pagamento:    [select]            │
-└───────────────────────────────────────────┘
+```sql
+ALTER TABLE public.projects
+  ADD COLUMN IF NOT EXISTS mrr_value         numeric,
+  ADD COLUMN IF NOT EXISTS origin_lead_id    uuid,
+  ADD COLUMN IF NOT EXISTS project_type_v2   text[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS scope_bullets     jsonb  NOT NULL DEFAULT '[]'::jsonb;
 ```
 
-**Botões "+ Criar" inline** abrem mini-modal que insere direto em `categorias`/`centros_custo`/`contas_bancarias` sem fechar o diálogo, recarrega a lista e seleciona o item recém-criado.
+### Atualização da RPC `close_deal_as_won` (v5)
 
-**Input livre de parcelas:** `[____]x [Aplicar]` ao lado dos atalhos — aceita qualquer N entre 1 e 60.
-
-**Persistência no deal:** ao abrir, lê `discount_*`, `extra_costs`, `mrr_*` do deal; ao confirmar, salva de volta no deal antes de chamar a RPC (assim a ficha do deal preserva o histórico).
-
----
+No `INSERT INTO projects` adicionar:
+- `notes` = `v_deal.notes`
+- `mrr_value` = `v_mrr_value` (preenchido depois, via `UPDATE` no fim da função, já que é calculado no bloco MRR)
+- `origin_lead_id` = `v_deal.origin_lead_id`
+- `project_type_v2` = `COALESCE(v_deal.project_type_v2, '{}')`
+- `scope_bullets` = `COALESCE(v_deal.scope_bullets, '[]'::jsonb)`
 
 ## Detalhes técnicos
 
-**Arquivos alterados:**
-- `supabase/migrations/<novo>.sql` — adiciona colunas + reescreve RPC
-- `src/components/crm/DealWonDialog.tsx` — UI nova + novos params
-- `src/types/crm.ts` — campos novos no `Deal`
-- `src/components/crm/ZoneComercial.tsx` — exibir/editar desconto + custos extras + MRR detalhado também na ficha do deal (não só no diálogo de fechamento)
+**Arquivos:**
+- `src/components/crm/DealWonDialog.tsx`: refatorar bloco "Configuração financeira" usando `ComboboxCreate`; corrigir filtro `'receitas'`; remover mini-modal de criação; remover imports/estados obsoletos.
+- Nova migration `supabase/migrations/<timestamp>_project_extra_fields_and_won_rpc_v5.sql`:
+  1. `ALTER TABLE projects` com as 4 colunas novas.
+  2. `DROP FUNCTION close_deal_as_won(uuid, jsonb, jsonb)` + recriar v5 com os campos extras no INSERT e o `UPDATE projects SET mrr_value = v_mrr_value WHERE id = v_project_id` no bloco MRR.
 
-**Compatibilidade:** todos os campos novos têm default seguro (`NULL` / `'[]'::jsonb`). Deals antigos continuam funcionando — UI só mostra blocos novos quando relevante (MRR só aparece se `estimated_mrr_value > 0`, etc.).
+**Cuidados:**
+- A `ComboboxCreate` usa `onCreate` async — passar handlers que inserem na tabela, dão `await reloadFinanceLists` e selecionam o id retornado.
+- Para `meios_pagamento` o create é simples (só `nome`), mantendo o padrão.
+- `tipo` da categoria criada inline continua sendo `'receitas'` (consistente com banco).
+- `src/integrations/supabase/types.ts` é auto-gerado — não tocar; o cast `as any` em `sb` continua mascarando o tipo até o regen.
 
-**Validação no front:**
-- Total parcelas = valor implementação − desconto (warning se diferente)
-- MRR exige data de início se valor > 0
-- Custos extras exigem descrição + valor
-
-**Sem mudança de RLS necessária** — todas as tabelas já têm policies adequadas.
-
----
-
-## O que NÃO vou mexer agora
-
-- Não vou criar telas novas de gerenciamento de categorias/centros (já existem em `/configuracoes/financeiro/...`) — só atalho "+ Criar" inline.
-- Não vou refatorar o `ZoneComercial` inteiro — só acrescentar os campos novos.
+**Não quebra:** RPC ainda aceita a mesma assinatura `(uuid, jsonb, jsonb)`. Projetos antigos sem as novas colunas ficam com defaults vazios.
