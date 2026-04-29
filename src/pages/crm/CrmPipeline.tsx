@@ -386,9 +386,132 @@ export default function CrmPipeline() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      {/* Header da home: KPIs + toggle + filtros + sort */}
-      <div className="space-y-3">
+    <TooltipProvider delayDuration={250}>
+      <div className="space-y-4 sm:space-y-5">
+        {/* Toolbar de comando */}
+        <div className="rounded-lg border border-border bg-card/40 p-2 sm:p-2.5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+            {/* Busca */}
+            <div className="relative flex-1 min-w-0">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar deals, empresas, contatos..."
+                className="h-9 w-full border-border/60 bg-background pl-9 text-sm"
+                aria-label="Buscar no CRM"
+              />
+            </div>
+
+            {/* Ações à direita */}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <UnifiedFiltersPopover
+                value={{
+                  owners: ownerFilter,
+                  sources: sourceFilter,
+                  valueRange,
+                  stages: stageFilter,
+                  projectTypes: projectTypeFilter,
+                }}
+                onChange={(next) => {
+                  setOwnerFilter(next.owners);
+                  setSourceFilter(next.sources);
+                  setValueRange(next.valueRange);
+                  setStageFilter(next.stages as DealStage[]);
+                  setProjectTypeFilter(next.projectTypes);
+                }}
+                ownerOptions={actors.map((a) => ({ value: a.id, label: a.display_name }))}
+                sourceOptions={[{ value: 'direto', label: 'Direto' }, ...leadSources.map((s) => ({ value: s, label: s }))]}
+                stageOptions={DEAL_STAGES.map((s) => ({ value: s, label: DEAL_STAGE_LABEL[s] }))}
+                projectTypeOptions={activeProjectTypes.map((t) => ({ value: t.slug, label: t.name }))}
+                onClearAll={clearAllFilters}
+              />
+
+              {viewMode === 'lista' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs whitespace-nowrap">
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      <span className="hidden md:inline">{sortLabels[sort]}</span>
+                      <span className="md:hidden">Ordenar</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {(Object.keys(sortLabels) as DealsListSort[]).map((k) => (
+                      <DropdownMenuItem key={k} onSelect={() => setSort(k)}>
+                        {sortLabels[k]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              <Button
+                size="sm"
+                onClick={() => openCreateDialog()}
+                className="h-9 gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
+              >
+                <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo Deal</span><span className="xs:hidden">Deal</span>
+              </Button>
+
+              {/* Toggle Lista/Kanban — segmented control compacto, só ícones */}
+              <div className="inline-flex h-9 overflow-hidden rounded-md border border-border bg-background p-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('lista')}
+                      aria-label="Visualizar em lista"
+                      aria-pressed={viewMode === 'lista'}
+                      className={cn(
+                        'flex h-full w-9 items-center justify-center rounded-sm transition-colors',
+                        viewMode === 'lista'
+                          ? 'bg-accent text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-muted',
+                      )}
+                    >
+                      <List className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Lista</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('kanban')}
+                      aria-label="Visualizar em kanban"
+                      aria-pressed={viewMode === 'kanban'}
+                      className={cn(
+                        'flex h-full w-9 items-center justify-center rounded-sm transition-colors',
+                        viewMode === 'kanban'
+                          ? 'bg-accent text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-muted',
+                      )}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Kanban</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          </div>
+
+          {hasAnyFilters && (
+            <div className="mt-2 flex items-center justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                onClick={clearAllFilters}
+              >
+                Limpar todos os filtros
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
           <HomeKpi label="Pipeline total" value={formatCurrency(homeKpis.pipeline)} />
@@ -396,75 +519,6 @@ export default function CrmPipeline() {
           <HomeKpi label="Deals ativos" value={String(homeKpis.activeCount)} />
           <HomeKpi label="Deps atrasadas" value={String(homeKpis.overdueDeps)} tone={homeKpis.overdueDeps > 0 ? 'destructive' : undefined} />
         </div>
-
-        {/* Toolbar: filtros + sort + toggle */}
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/40 p-2 sm:p-2.5">
-          <MultiFilter
-            label="Estágio"
-            selected={stageFilter}
-            onChange={(v) => setStageFilter(v as DealStage[])}
-            options={DEAL_STAGES.map((s) => ({ value: s, label: DEAL_STAGE_LABEL[s] }))}
-          />
-          <MultiFilter
-            label="Tipo"
-            selected={projectTypeFilter}
-            onChange={setProjectTypeFilter}
-            options={activeProjectTypes.map((t) => ({ value: t.slug, label: t.name }))}
-          />
-          {hasPageFilters && (
-            <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={clearPageFilters}>
-              Limpar
-            </Button>
-          )}
-          <div className="flex-1" />
-          <Button
-            size="sm"
-            onClick={() => openCreateDialog()}
-            className="h-9 gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> Novo Deal
-          </Button>
-          {viewMode === 'lista' && (
-            <Select value={sort} onValueChange={(v) => setSort(v as DealsListSort)}>
-              <SelectTrigger className="h-9 w-[180px] text-xs">
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="next_step">Próxima ação</SelectItem>
-                <SelectItem value="value">Valor (maior → menor)</SelectItem>
-                <SelectItem value="probability">Probabilidade</SelectItem>
-                <SelectItem value="close">Fecha em</SelectItem>
-                <SelectItem value="recent">Recém-criado</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-          {/* Toggle Lista/Kanban */}
-          <div className="flex h-9 overflow-hidden rounded-md border border-border bg-background">
-            <button
-              type="button"
-              onClick={() => setViewMode('lista')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 text-xs font-medium transition-colors',
-                viewMode === 'lista' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted',
-              )}
-              aria-pressed={viewMode === 'lista'}
-            >
-              <List className="h-3.5 w-3.5" /> Lista
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('kanban')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 text-xs font-medium transition-colors',
-                viewMode === 'kanban' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted',
-              )}
-              aria-pressed={viewMode === 'kanban'}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" /> Kanban
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* View body */}
       {viewMode === 'lista' ? (
