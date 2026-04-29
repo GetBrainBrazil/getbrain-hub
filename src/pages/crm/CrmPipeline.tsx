@@ -15,6 +15,7 @@ import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
 import { NewDealQuickDialog } from '@/components/crm/NewDealQuickDialog';
+import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalForStageDialog';
 import { MultiFilter } from '@/components/crm/CrmFilters';
 import {
   DEAL_STAGE_LABEL,
