@@ -1,50 +1,77 @@
-## Diagnóstico do flicker no Kanban do CRM
 
-Quando você arrasta um card de uma coluna pra outra, por 1 frame ele "pisca" de volta na coluna antiga antes de aparecer na nova. Isso acontece porque:
+## Problema
 
-1. O Pipeline usa `DragOverlay` (uma cópia do card que segue o mouse) **e** o card original continua sendo renderizado na coluna antiga durante o arrasto.
-2. Quando você solta, o overlay desaparece imediatamente. O card original ainda está montado na coluna antiga, com o `transform` voltando a `(0,0)` — então ele "snap-back" para a posição inicial.
-3. No próximo frame, o React aplica o optimistic update do `useUpdateDealStage` (`onMutate`) e o card aparece na coluna nova. Esse delta de 1 frame é o flash que você vê.
+A área superior do CRM hoje tem **três faixas empilhadas** com responsabilidades misturadas:
 
-A causa raiz não é a query nem o backend (o optimistic update já está correto): é só o item original do dnd-kit ficando visível durante o arrasto.
+1. Header com título "CRM" + busca solta no topo da página + filtros globais (Dono / Origem / Valor / Limpar) jogados à direita, longe das tabs.
+2. Tabs (Dashboard / Pipeline / Leads...).
+3. Cards de KPI.
+4. Outra toolbar com filtros de página (Estágio / Tipo) + Novo Deal + ordenação + toggle Lista/Kanban.
 
-## Correção
+Resultado: dois lugares com filtros, dois lugares com ações, busca distante das tabs, hierarquia visual quebrada e muito ruído.
 
-Em `src/pages/crm/CrmPipeline.tsx`, ajustar o componente `DraggableDeal` para que **enquanto `isDragging` for verdadeiro o card original fique invisível e com altura zero** — quem se move visualmente é só o `DragOverlay`. Quando você solta, o overlay some no mesmo instante em que o React reposiciona o card real na nova coluna (via optimistic update já existente). Sem dois cards na tela ao mesmo tempo, sem snap-back, sem flicker.
+## Objetivo
 
-Mudança pontual:
+Uma única **toolbar de comando** logo abaixo das tabs, organizada em zonas claras (esquerda = busca/filtros, direita = ações/visualização), com filtros consolidados num único botão e visual mais leve.
 
-```tsx
-function DraggableDeal({ deal, onOpen, onCompanyOpen }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
+## Layout proposto
 
-  if (isDragging) {
-    // Item real "colapsa" — visualização fica a cargo do DragOverlay.
-    return (
-      <div
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        className="opacity-0 pointer-events-none"
-        style={{ height: 0, margin: 0, overflow: 'hidden' }}
-        aria-hidden
-      />
-    );
-  }
-
-  return (
-    <div ref={setNodeRef} {...attributes} {...listeners}>
-      <DealCard deal={deal} onClick={onOpen} onCompanyClick={onCompanyOpen} />
-    </div>
-  );
-}
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  CRM                                                                   │
+│  Funil comercial e relacionamento com clientes                         │
+├────────────────────────────────────────────────────────────────────────┤
+│  Dashboard  [Pipeline]  Leads & Empresas  Calendário  Configurações    │
+├────────────────────────────────────────────────────────────────────────┤
+│  [🔍 Buscar deals, empresas, contatos...]   [⚙ Filtros •3] [↕ Ordenar] │
+│                                              [+ Novo Deal] [≡ ▢]       │
+├────────────────────────────────────────────────────────────────────────┤
+│  Pipeline total   Forecast   Deals ativos   Deps atrasadas             │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-Mantém:
-- `DragOverlay` com `dropAnimation={null}` (já está assim — sem animação de retorno).
-- `useUpdateDealStage` com optimistic update (já está correto).
-- Toda a lógica de drag/drop, gates de proposta/perda/ganho.
+Mudanças-chave:
 
-## Resultado esperado
+- **Busca** vira um campo grande à esquerda da toolbar única (ocupa a largura disponível), sem moldura externa redundante.
+- **Filtros consolidados**: um único botão `Filtros` abre um popover com Dono, Origem, Valor, Estágio e Tipo. Badge mostra a contagem de filtros ativos. Botão "Limpar tudo" dentro do popover.
+- **Ordenar** vira um botão dropdown discreto (só aparece em modo Lista).
+- **Novo Deal** com destaque (cor accent), à direita.
+- **Toggle Lista/Kanban** como segmented control compacto (só ícones com tooltip), no extremo direito.
+- **KPIs descem** para baixo da toolbar, ainda visíveis mas sem competir com os controles.
+- Em **mobile**: busca em linha cheia; abaixo, linha com `Filtros`, `Ordenar`, `Novo Deal` e o toggle de visualização — tudo em altura 40px tocável.
 
-Você arrasta o card → ele segue o mouse via overlay → solta na nova coluna → ele aparece direto lá, sem "voltar e ir" visual. Transição suave, sem bug.
+## Arquivos a alterar
+
+- `src/pages/crm/CrmLayout.tsx`
+  - Remover a faixa de filtros global (Dono/Origem/Valor) que aparece só no Pipeline. Esses filtros migram para o popover unificado dentro do Pipeline.
+  - Manter só: título, tabs e (em "Leads & Empresas") botão Novo Lead.
+  - A busca também deixa de morar no layout — vai para a toolbar do Pipeline (e pode ser reaproveitada em Leads quando fizer sentido). Por ora, mantemos só no Pipeline.
+
+- `src/pages/crm/CrmPipeline.tsx`
+  - Substituir as duas toolbars atuais por uma única toolbar de comando.
+  - Criar `<UnifiedFiltersPopover>` (componente local ou em `src/components/crm/UnifiedFiltersPopover.tsx`) que recebe owner/source/value/stage/projectType e expõe um único botão com badge.
+  - KPIs renderizados depois da toolbar, usando o mesmo grid atual mas com leve redução de peso visual (opcional: 1 linha discreta de chips em vez de cards). Vamos manter cards, só repassando para baixo da toolbar.
+  - Toggle Lista/Kanban → segmented control só com ícones + `aria-label` e tooltip.
+  - Ordenar → `Button` + `DropdownMenu` (mais leve que `Select` cheio).
+
+- (opcional, mesmo arquivo) Pequenos ajustes de espaçamento para reduzir o "ar" entre as faixas e consolidar a hierarquia.
+
+## Comportamento
+
+- Filtros globais (Dono/Origem/Valor/Search) **continuam persistindo** via `useCrmHubStore` — só mudam de lugar visual.
+- Filtros de página (Estágio/Tipo) **continuam locais** ao Pipeline (resetam ao sair) — mas convivem no mesmo popover.
+- Botão "Limpar" do popover chama `store.resetFilters()` **e** zera os filtros locais, em uma ação só.
+- Badge no botão Filtros = soma de owner + source + (valueRange ativo ? 1 : 0) + stage + projectType.
+
+## Não faz parte
+
+- Não vou tocar Dashboard / Leads & Empresas / Calendário neste passo (escopo é a "barra estragada" do Pipeline mostrada no print). Se quiser depois, replico o mesmo padrão lá.
+- Não estou mudando paleta nem fontes — só hierarquia/agrupamento.
+
+## Detalhes técnicos
+
+- Novo componente `UnifiedFiltersPopover` usa `Popover` + `Command`/listas existentes; reaproveita `MultiFilter` e `ValueRangeFilter` por dentro para não duplicar lógica.
+- Segmented control = dois `<button>` com `aria-pressed`, dentro de um wrapper `inline-flex rounded-md border bg-background p-0.5`, ícone `List` / `LayoutGrid` 16px.
+- Toolbar wrapper: `flex items-center gap-2 rounded-lg border border-border bg-card/40 p-2`.
+- Mobile: `flex-col gap-2`; busca `w-full`; segunda linha `flex items-center gap-2 justify-between`.
+- A11y: cada controle com `aria-label`, popover focável, badge com `aria-label="3 filtros ativos"`.
