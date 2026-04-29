@@ -228,13 +228,10 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
   return (
     <ZoneSection id="zona-dor" number={2} title="Dor & Contexto" hint="O problema que justifica o projeto">
       <div className="space-y-2">
-        <FieldLabel>Categoria da dor</FieldLabel>
-        <ChipGroup<DealPainCategory>
-          options={PAIN_CATEGORY_OPTIONS}
+        <FieldLabel hint="categorias gerenciadas em Configurações → Pessoas & Empresas">Categoria da dor</FieldLabel>
+        <PainCategoryCombobox
           value={deal.pain_category}
           onChange={(v) => save({ pain_category: v })}
-          labels={PAIN_CATEGORY_LABEL}
-          colors={PAIN_CATEGORY_COLOR}
         />
       </div>
 
