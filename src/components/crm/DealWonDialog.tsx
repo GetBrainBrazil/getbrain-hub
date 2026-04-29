@@ -316,18 +316,24 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     let cancelled = false;
     (async () => {
       setLoadingProposal(true);
+      // Aceita qualquer proposta vinculada (rascunho/enviada/convertida).
+      // A promoção para 'convertida' acontece no fechamento.
+      // Prioriza convertida > enviada > rascunho, depois mais recente.
       const { data } = await sb
         .from('proposals')
         .select('id, code, status, scope_items, maintenance_monthly_value')
         .eq('deal_id', deal.id)
         .is('deleted_at', null)
-        .in('status', ['convertida', 'enviada'])
-        .order('status', { ascending: true })
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .in('status', ['convertida', 'enviada', 'rascunho'])
+        .order('created_at', { ascending: false });
+      const rows = (data ?? []) as ProposalLite[];
+      const pick =
+        rows.find((r) => r.status === 'convertida') ??
+        rows.find((r) => r.status === 'enviada') ??
+        rows.find((r) => r.status === 'rascunho') ??
+        null;
       if (cancelled) return;
-      const row = (data ?? [])[0] ?? null;
-      setAcceptedProposal(row as ProposalLite | null);
+      setAcceptedProposal(pick);
       setLoadingProposal(false);
     })();
     return () => { cancelled = true; };
@@ -698,7 +704,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
       let proposalMarked = false;
-      if (acceptedProposal && acceptedProposal.status === 'enviada') {
+      if (acceptedProposal && acceptedProposal.status !== 'convertida') {
         await sb
           .from('proposals')
           .update({ status: 'convertida', accepted_at: new Date().toISOString() })
@@ -859,8 +865,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                 Deal {deal.code} · {loadingProposal
                   ? 'verificando propostas…'
                   : acceptedProposal
-                    ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) será vinculada`
-                    : 'Nenhuma proposta enviada/aceita encontrada'}
+                    ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status})${acceptedProposal.status === 'convertida' ? ' já vinculada' : ' será marcada como convertida e vinculada'}`
+                    : 'Nenhuma proposta vinculada encontrada'}
               </div>
             </div>
           </TabsContent>
