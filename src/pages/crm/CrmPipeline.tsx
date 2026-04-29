@@ -6,16 +6,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
 import { NewDealQuickDialog } from '@/components/crm/NewDealQuickDialog';
 import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalForStageDialog';
-import { MultiFilter } from '@/components/crm/CrmFilters';
+import { UnifiedFiltersPopover } from '@/components/crm/UnifiedFiltersPopover';
+import { useCrmActors, useDistinctLeadSources } from '@/hooks/crm/useCrmReference';
 import {
   DEAL_STAGE_LABEL,
   DEAL_STAGE_PROBABILITY,
