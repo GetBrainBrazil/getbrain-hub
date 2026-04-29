@@ -1,77 +1,54 @@
-
 ## Problema
 
-A área superior do CRM hoje tem **três faixas empilhadas** com responsabilidades misturadas:
+Hoje, ao mudar de estágio pelo card (stepper dentro do detalhe do deal):
 
-1. Header com título "CRM" + busca solta no topo da página + filtros globais (Dono / Origem / Valor / Limpar) jogados à direita, longe das tabs.
-2. Tabs (Dashboard / Pipeline / Leads...).
-3. Cards de KPI.
-4. Outra toolbar com filtros de página (Estágio / Tipo) + Novo Deal + ordenação + toggle Lista/Kanban.
+1. As etapas "Convertido" (Ganho) e "Perdido" não aparecem no stepper — só são mostradas como caixa fixa quando o deal já está fechado. Não dá para fechar o deal a partir do stepper.
+2. Quando se tenta marcar como "Perdido", aparece só um toast informativo ("chega no próximo loop"), sem o dialog para informar o motivo.
+3. Quando se move para "Qualificado" (proposta_na_mesa) pelo stepper, **não há a checagem de proposta vinculada** que o Kanban faz — então a regra de "criar/escolher proposta" é pulada.
 
-Resultado: dois lugares com filtros, dois lugares com ações, busca distante das tabs, hierarquia visual quebrada e muito ruído.
+Resultado: o stepper do card é menos completo que o arrastar-e-soltar do Kanban.
 
-## Objetivo
+## O que vai mudar
 
-Uma única **toolbar de comando** logo abaixo das tabs, organizada em zonas claras (esquerda = busca/filtros, direita = ações/visualização), com filtros consolidados num único botão e visual mais leve.
+Tornar o stepper do detalhe do deal funcionalmente equivalente ao Kanban:
 
-## Layout proposto
+- **Mostrar Convertido e Perdido** como duas etapas extras no fim do stepper, com cores próprias (verde / vermelho) e ícones (check / X). Ficam separadas das etapas em progresso por uma divisória visual leve, para que o usuário entenda que são finalizações.
+- **Confirmar antes de fechar**: clicar em "Convertido" abre o `DealWonDialog` (parcelas, MRR, descontos, etc.), e clicar em "Perdido" abre o dialog com Textarea para o motivo da perda — exatamente como acontece no Kanban.
+- **Aplicar a regra de proposta** ao mover para "Qualificado" pelo stepper: se o deal não tem proposta vinculada, abre o `CreateProposalForStageDialog` (mesmo dialog usado hoje no arrastar-e-soltar). Se já tem, aplica direto.
+- **Mostrar o estado fechado de forma consistente**: quando o deal já está em Convertido ou Perdido, o stepper continua mostrando todas as etapas (com a etapa atual destacada), em vez de virar uma caixa única — assim o usuário pode reabrir movendo para outra etapa anterior, se quiser.
+
+## Como vai ser feito (técnico)
+
+Arquivos a editar:
+
+- `src/components/crm/CrmDetailShared.tsx`
+  - Estender `PROGRESS_STAGES` para incluir `ganho` e `perdido`, mas renderizar essas duas com estilo distinto (cores success / destructive, ícones Check / X).
+  - Remover o early-return "isClosed" que substitui o stepper por uma caixa única — manter o stepper sempre visível.
+  - Conector visual antes de Convertido/Perdido vira um separador mais sutil.
+
+- `src/pages/crm/CrmDealDetail.tsx`
+  - Estado novo: `lostDialog` ({ deal, reason }) e `needsProposalDialog` ({ deal, stage }).
+  - `handleCloseRequest('lost')` passa a abrir o dialog de motivo (Textarea + botão Confirmar) em vez de só mostrar toast.
+  - Adicionar handler `handleStageChange` que substitui o atual fluxo do stepper:
+    - `ganho` → abre DealWonDialog
+    - `perdido` → abre dialog de motivo
+    - `proposta_na_mesa` → query rápida em `proposals` por `deal_id`; se `count === 0`, abre `CreateProposalForStageDialog`; senão, persiste direto via `useUpdateDealField`.
+    - Outras etapas → persiste direto.
+  - Renderizar `CreateProposalForStageDialog` e o Dialog de motivo da perda no JSX (analogamente ao que já existe em `CrmPipeline.tsx`).
+  - Reaproveitar `createDraftProposal` + `invalidateProposalCaches` quando o usuário criar a proposta a partir do stepper.
+
+- `src/components/crm/DealHeader.tsx`
+  - `stageChange` deixa de chamar diretamente `update.mutate` e passa a delegar tudo para o pai via uma nova prop `onStageChange(stage)`. Mantém a chamada `onCloseRequest` como fallback ou é substituída por `onStageChange` (consolidando as duas props em uma só).
+  - Pequena refatoração de tipo no `Props`.
+
+Caches: já cobertos pelos hooks existentes (`useUpdateDealField` invalida CRM; `invalidateProposalCaches` é chamado quando a proposta é criada).
+
+## Diagrama do novo stepper
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  CRM                                                                   │
-│  Funil comercial e relacionamento com clientes                         │
-├────────────────────────────────────────────────────────────────────────┤
-│  Dashboard  [Pipeline]  Leads & Empresas  Calendário  Configurações    │
-├────────────────────────────────────────────────────────────────────────┤
-│  [🔍 Buscar deals, empresas, contatos...]   [⚙ Filtros •3] [↕ Ordenar] │
-│                                              [+ Novo Deal] [≡ ▢]       │
-├────────────────────────────────────────────────────────────────────────┤
-│  Pipeline total   Forecast   Deals ativos   Deps atrasadas             │
-└────────────────────────────────────────────────────────────────────────┘
+Novo Lead ── Primeiro Contato ── Qualificado ── Proposta Enviada ── Negociação  ┊  Convertido   Perdido
+   ●              ○                  ○               ○                 ○        ┊      ◯           ◯
+                                                                                ┊   (verde)     (vermelho)
 ```
 
-Mudanças-chave:
-
-- **Busca** vira um campo grande à esquerda da toolbar única (ocupa a largura disponível), sem moldura externa redundante.
-- **Filtros consolidados**: um único botão `Filtros` abre um popover com Dono, Origem, Valor, Estágio e Tipo. Badge mostra a contagem de filtros ativos. Botão "Limpar tudo" dentro do popover.
-- **Ordenar** vira um botão dropdown discreto (só aparece em modo Lista).
-- **Novo Deal** com destaque (cor accent), à direita.
-- **Toggle Lista/Kanban** como segmented control compacto (só ícones com tooltip), no extremo direito.
-- **KPIs descem** para baixo da toolbar, ainda visíveis mas sem competir com os controles.
-- Em **mobile**: busca em linha cheia; abaixo, linha com `Filtros`, `Ordenar`, `Novo Deal` e o toggle de visualização — tudo em altura 40px tocável.
-
-## Arquivos a alterar
-
-- `src/pages/crm/CrmLayout.tsx`
-  - Remover a faixa de filtros global (Dono/Origem/Valor) que aparece só no Pipeline. Esses filtros migram para o popover unificado dentro do Pipeline.
-  - Manter só: título, tabs e (em "Leads & Empresas") botão Novo Lead.
-  - A busca também deixa de morar no layout — vai para a toolbar do Pipeline (e pode ser reaproveitada em Leads quando fizer sentido). Por ora, mantemos só no Pipeline.
-
-- `src/pages/crm/CrmPipeline.tsx`
-  - Substituir as duas toolbars atuais por uma única toolbar de comando.
-  - Criar `<UnifiedFiltersPopover>` (componente local ou em `src/components/crm/UnifiedFiltersPopover.tsx`) que recebe owner/source/value/stage/projectType e expõe um único botão com badge.
-  - KPIs renderizados depois da toolbar, usando o mesmo grid atual mas com leve redução de peso visual (opcional: 1 linha discreta de chips em vez de cards). Vamos manter cards, só repassando para baixo da toolbar.
-  - Toggle Lista/Kanban → segmented control só com ícones + `aria-label` e tooltip.
-  - Ordenar → `Button` + `DropdownMenu` (mais leve que `Select` cheio).
-
-- (opcional, mesmo arquivo) Pequenos ajustes de espaçamento para reduzir o "ar" entre as faixas e consolidar a hierarquia.
-
-## Comportamento
-
-- Filtros globais (Dono/Origem/Valor/Search) **continuam persistindo** via `useCrmHubStore` — só mudam de lugar visual.
-- Filtros de página (Estágio/Tipo) **continuam locais** ao Pipeline (resetam ao sair) — mas convivem no mesmo popover.
-- Botão "Limpar" do popover chama `store.resetFilters()` **e** zera os filtros locais, em uma ação só.
-- Badge no botão Filtros = soma de owner + source + (valueRange ativo ? 1 : 0) + stage + projectType.
-
-## Não faz parte
-
-- Não vou tocar Dashboard / Leads & Empresas / Calendário neste passo (escopo é a "barra estragada" do Pipeline mostrada no print). Se quiser depois, replico o mesmo padrão lá.
-- Não estou mudando paleta nem fontes — só hierarquia/agrupamento.
-
-## Detalhes técnicos
-
-- Novo componente `UnifiedFiltersPopover` usa `Popover` + `Command`/listas existentes; reaproveita `MultiFilter` e `ValueRangeFilter` por dentro para não duplicar lógica.
-- Segmented control = dois `<button>` com `aria-pressed`, dentro de um wrapper `inline-flex rounded-md border bg-background p-0.5`, ícone `List` / `LayoutGrid` 16px.
-- Toolbar wrapper: `flex items-center gap-2 rounded-lg border border-border bg-card/40 p-2`.
-- Mobile: `flex-col gap-2`; busca `w-full`; segunda linha `flex items-center gap-2 justify-between`.
-- A11y: cada controle com `aria-label`, popover focável, badge com `aria-label="3 filtros ativos"`.
+A divisória `┊` separa visualmente "em progresso" de "fechado".

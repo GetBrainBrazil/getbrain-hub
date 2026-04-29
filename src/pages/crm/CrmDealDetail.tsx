@@ -23,6 +23,13 @@ import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
 import { PropostaTabContent } from '@/components/crm/proposta/PropostaTabContent';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
+import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalForStageDialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { createDraftProposal } from '@/components/orcamentos/createDraftProposal';
+import { invalidateProposalCaches } from '@/lib/cacheInvalidation';
+import { useUpdateDealStage } from '@/hooks/crm/useDeals';
+import { DEAL_STAGE_PROBABILITY } from '@/constants/dealStages';
+import type { DealStage } from '@/types/crm';
 import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
 import { ProjectTypeSelect } from '@/components/crm/ProjectTypeSelect';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -669,6 +676,14 @@ export default function CrmDealDetail() {
   const [persistedTab, setPersistedTab] = usePersistedState<string>('crm-deal-active-tab', 'descoberta');
   const activeTab = tabFromUrl ?? persistedTab;
   const [wonDialogOpen, setWonDialogOpen] = useState(false);
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
+  const [lostReason, setLostReason] = useState('');
+  const [needsProposalOpen, setNeedsProposalOpen] = useState(false);
+  const [creatingProposal, setCreatingProposal] = useState(false);
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const updateStage = useUpdateDealStage();
+  const updateDealField = useUpdateDealField(code);
 
   const handleTabChange = (next: string) => {
     setPersistedTab(next);
@@ -678,11 +693,80 @@ export default function CrmDealDetail() {
     setSearchParams(sp, { replace: true });
   };
 
-  const handleCloseRequest = (kind: 'won' | 'lost') => {
-    if (kind === 'won') {
-      setWonDialogOpen(true);
-    } else {
-      toast.info('Fechamento como perdido (com motivo) chega no próximo loop.');
+  const handleStageChange = async (next: DealStage) => {
+    if (!deal) return;
+    if (next === deal.stage) return;
+
+    if (next === 'ganho') { setWonDialogOpen(true); return; }
+    if (next === 'perdido') { setLostReason(''); setLostDialogOpen(true); return; }
+
+    if (next === 'proposta_na_mesa') {
+      const { count, error } = await supabase
+        .from('proposals')
+        .select('id', { count: 'exact', head: true })
+        .eq('deal_id', deal.id)
+        .is('deleted_at', null);
+      if (error) { toast.error('Erro ao verificar propostas vinculadas'); return; }
+      if (!count) { setNeedsProposalOpen(true); return; }
+    }
+
+    updateDealField.mutate(
+      { id: deal.id, updates: { stage: next, probability_pct: DEAL_STAGE_PROBABILITY[next], closed_at: null } as any },
+      { onError: (err: any) => toast.error(`Erro: ${err?.message ?? 'falhou'}`) },
+    );
+  };
+
+  const confirmLost = () => {
+    if (!deal || !lostReason.trim()) return;
+    updateStage.mutate(
+      { id: deal.id, stage: 'perdido', lost_reason: lostReason.trim() },
+      {
+        onSuccess: () => { setLostDialogOpen(false); setLostReason(''); },
+        onError: (err: any) => toast.error(`Erro: ${err?.message ?? 'falhou'}`),
+      },
+    );
+  };
+
+  const handleCreateProposalForDeal = async ({ implementationValue, mrrValue }: { implementationValue: number; mrrValue?: number }) => {
+    if (!deal) return;
+    if (!deal.company_id) { toast.error('Deal sem empresa vinculada — não é possível criar proposta.'); return; }
+    setCreatingProposal(true);
+    let newProposalId: string | null = null;
+    try {
+      const dealUpdate: { estimated_implementation_value: number; estimated_mrr_value: number | null; estimated_value?: number } = {
+        estimated_implementation_value: implementationValue,
+        estimated_mrr_value: mrrValue ?? null,
+      };
+      if (!deal.estimated_value) {
+        dealUpdate.estimated_value = implementationValue + (mrrValue ?? 0) * 12;
+      }
+      const { error: updErr } = await supabase.from('deals').update(dealUpdate).eq('id', deal.id);
+      if (updErr) throw updErr;
+
+      newProposalId = await createDraftProposal({
+        dealId: deal.id,
+        companyId: deal.company_id,
+        companyName: deal.company?.trade_name || deal.company?.legal_name || '',
+        implementationValue,
+        mrrValue: mrrValue ?? null,
+      });
+
+      try {
+        updateStage.mutate({ id: deal.id, stage: 'proposta_na_mesa' });
+        invalidateProposalCaches(qc, { dealId: deal.id });
+      } catch (postErr) {
+        console.error('[DealDetail] proposta criada mas etapa pós-criação falhou', { proposalId: newProposalId, dealId: deal.id, error: postErr });
+        toast.warning('Proposta criada, mas o estágio do deal não avançou. Ajuste manualmente se necessário.');
+      }
+
+      setNeedsProposalOpen(false);
+      navigate(`/financeiro/orcamentos/${newProposalId}/editar`);
+    } catch (err) {
+      console.error('[DealDetail] falha ao criar proposta', { dealId: deal.id, newProposalId, error: err });
+      toast.error(err instanceof Error ? err.message : 'Erro ao criar proposta');
+      if (newProposalId) navigate(`/financeiro/orcamentos/${newProposalId}/editar`);
+    } finally {
+      setCreatingProposal(false);
     }
   };
 
@@ -726,7 +810,7 @@ export default function CrmDealDetail() {
         completenessPct={pct}
         painOk={painOk}
         solucaoOk={solucaoOk}
-        onCloseRequest={handleCloseRequest}
+        onStageChange={handleStageChange}
       />
 
       {/* Layout 70/30 com tabs */}
@@ -759,6 +843,29 @@ export default function CrmDealDetail() {
         open={wonDialogOpen}
         onOpenChange={setWonDialogOpen}
         deal={deal}
+        onSuccess={(projectId) => navigate(`/projetos/${projectId}`)}
+      />
+
+      <Dialog open={lostDialogOpen} onOpenChange={(v) => { if (!v) { setLostDialogOpen(false); setLostReason(''); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Motivo da perda</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label>Informe o motivo para mover para perdido</Label>
+            <Textarea value={lostReason} onChange={(e) => setLostReason(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLostDialogOpen(false); setLostReason(''); }}>Cancelar</Button>
+            <Button disabled={!lostReason.trim() || updateStage.isPending} onClick={confirmLost}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <CreateProposalForStageDialog
+        open={needsProposalOpen}
+        deal={needsProposalOpen ? deal : null}
+        onOpenChange={(v) => { if (!v) setNeedsProposalOpen(false); }}
+        loading={creatingProposal}
+        onConfirm={handleCreateProposalForDeal}
       />
 
       <DangerZoneDeal deal={deal} />
