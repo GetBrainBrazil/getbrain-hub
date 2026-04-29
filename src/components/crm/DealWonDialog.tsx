@@ -19,9 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { ComboboxCreate, type ComboOption } from '@/components/crm/ComboboxCreate';
+import { ProjectTypeSelect } from '@/components/crm/ProjectTypeSelect';
+import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateScopeTotal, formatBRL, type ScopeItem } from '@/lib/orcamentos/calculateTotal';
-import { PROJECT_TYPE_OPTIONS, PROJECT_TYPE_LABEL } from '@/constants/dealStages';
 import type { Deal } from '@/types/crm';
 
 const sb = supabase as any;
@@ -123,7 +124,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   // Projeto
   const [projectName, setProjectName] = useState(deal?.title ?? '');
-  const [projectType, setProjectType] = useState<string>(deal?.project_type ?? '');
+  const [projectTypeSlugs, setProjectTypeSlugs] = useState<string[]>(deal?.project_type_v2 ?? []);
+  const [painCategorySlugs, setPainCategorySlugs] = useState<string[]>(
+    deal?.pain_categories ?? (deal?.pain_category ? [deal.pain_category] : []),
+  );
   const [startDate, setStartDate] = useState<string>(
     deal?.desired_start_date ?? fmtDateInput(new Date()),
   );
@@ -248,7 +252,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     if (!open || !deal) return;
 
     setProjectName(deal.title);
-    setProjectType(deal.project_type ?? '');
+    setProjectTypeSlugs(deal.project_type_v2 ?? []);
+    setPainCategorySlugs(deal.pain_categories ?? (deal.pain_category ? [deal.pain_category] : []));
     setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
     setEstimatedDelivery(deal.desired_delivery_date ?? '');
 
@@ -403,7 +408,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   async function handleConfirm() {
     if (!deal) return;
     if (!projectName.trim()) { toast.error('Informe o nome do projeto'); return; }
-    if (!projectType) { toast.error('Selecione o tipo de projeto'); return; }
+    if (projectTypeSlugs.length === 0) { toast.error('Selecione ao menos um tipo de projeto'); return; }
 
     const cleaned = installments
       .map((i) => ({ amount: Number(i.amount) || 0, due_date: i.due_date }))
@@ -458,6 +463,9 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         mrr_start_trigger: mrrEnabled && mrrStartTrigger ? mrrStartTrigger : null,
         installments_count: parseInt(installmentsN, 10) || null,
         first_installment_date: firstDueDate || null,
+        // Tipos e dores ajustados no modal — fonte de verdade que a RPC vai copiar p/ projects
+        project_type_v2: projectTypeSlugs,
+        pain_categories: painCategorySlugs,
       };
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
@@ -470,7 +478,9 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
       const projectData: Record<string, any> = {
         name: projectName.trim(),
-        project_type: projectType,
+        // project_type legado (single) — mantém o do deal por compatibilidade.
+        // A fonte de verdade visual é project_type_v2 (multi), copiado do deal pela RPC.
+        project_type: deal.project_type ?? null,
         start_date: startDate || null,
         estimated_delivery_date: estimatedDelivery || null,
         categoria_id: categoriaId || null,
@@ -615,16 +625,13 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
             </Label>
             <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo</Label>
-            <Select value={projectType} onValueChange={setProjectType}>
-              <SelectTrigger><SelectValue placeholder="Escolha…" /></SelectTrigger>
-              <SelectContent>
-                {PROJECT_TYPE_OPTIONS.map((p) => (
-                  <SelectItem key={p} value={p}>{PROJECT_TYPE_LABEL[p]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de projeto</Label>
+            <ProjectTypeSelect value={projectTypeSlugs} onChange={setProjectTypeSlugs} />
+          </div>
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dores</Label>
+            <PainCategoriesMultiSelect value={painCategorySlugs} onChange={setPainCategorySlugs} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Início</Label>
