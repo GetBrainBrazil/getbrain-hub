@@ -69,6 +69,25 @@ function fmtDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+function buildInstallments(n: number, firstDueDate: string, baseAmount: number): InstallmentDraft[] {
+  const safeN = Math.min(60, Math.max(1, Math.floor(n) || 1));
+  const base = baseAmount > 0 ? baseAmount : 0;
+  const per = base > 0 ? Math.round((base / safeN) * 100) / 100 : 0;
+  const remainder = base > 0 ? Math.round((base - per * safeN) * 100) / 100 : 0;
+  const start = firstDueDate ? new Date(`${firstDueDate}T12:00:00`) : addMonths(new Date(), 1);
+  const list: InstallmentDraft[] = [];
+  for (let i = 0; i < safeN; i++) {
+    const amount = i === 0 ? per + remainder : per;
+    const date = i === 0 ? start : addMonths(start, i);
+    list.push({
+      id: newId(),
+      amount: amount > 0 ? String(amount) : '',
+      due_date: fmtDateInput(date),
+    });
+  }
+  return list;
+}
+
 type Option = { id: string; nome: string };
 
 const FIN_DEFAULTS_KEY = 'crm.lastWonFinancialDefaults';
