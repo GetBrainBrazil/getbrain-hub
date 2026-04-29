@@ -18,7 +18,7 @@ interface Props {
   completenessPct: number;
   painOk: boolean;
   solucaoOk: boolean;
-  onCloseRequest: (kind: 'won' | 'lost') => void;
+  onStageChange: (stage: DealStage) => void;
 }
 
 /* ------------------------------------------------------------------ */
