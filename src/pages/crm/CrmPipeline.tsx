@@ -200,7 +200,7 @@ export default function CrmPipeline() {
       const newId = await createDraftProposal({
         dealId: deal.id,
         companyId: deal.company_id,
-        companyName: deal.company_name || '',
+        companyName: deal.company?.trade_name || deal.company?.legal_name || '',
       });
       commitStage(deal, stage);
       invalidateProposalCaches(qc, { dealId: deal.id });
