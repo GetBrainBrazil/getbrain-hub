@@ -232,7 +232,7 @@ export default function OrcamentoEditarDetalhe() {
   const total = calculateScopeTotal(scopeItems);
   const monthlyTotal = typeof maintenance === "number" && maintenance > 0 ? maintenance : 0;
   const eff = effectiveStatus(data.status as any, validUntil);
-  const isLocked = data.status === "convertida" || data.status === "cancelado";
+  const isLocked = data.status === "convertida";
   const savedLabel = lastSavedAt
     ? `Salvo às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
     : "—";

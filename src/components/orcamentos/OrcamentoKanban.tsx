@@ -61,7 +61,7 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
     };
     for (const r of rows) {
       const eff = effectiveStatus(r.status, r.valid_until);
-      const colId: ColumnId = eff === "cancelado" ? "rascunho" : (eff as ColumnId);
+      const colId: ColumnId = (["rascunho","enviada","convertida","recusada","expirada"].includes(eff) ? eff : "rascunho") as ColumnId;
       if (buckets[colId]) buckets[colId].push(r);
     }
     return buckets;
