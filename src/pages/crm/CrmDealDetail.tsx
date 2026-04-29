@@ -363,17 +363,25 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
 
     let mode: 'replace' | 'merge' = 'replace';
     if (hasExisting) {
-      const choice = await confirm({
+      const goAhead = await confirm({
         title: 'Já existe conteúdo nos campos do escopo',
         description:
-          'A IA vai gerar Entregáveis, Premissas, Critérios de aceite, Riscos e Stack técnico a partir do texto do Escopo. Quer SUBSTITUIR o conteúdo atual ou MESCLAR (adicionar só os itens novos)?',
+          'A IA vai gerar Entregáveis, Premissas, Critérios de aceite, Riscos e Stack técnico a partir do texto do Escopo. Deseja continuar?',
+        confirmLabel: 'Continuar',
+        cancelLabel: 'Cancelar',
+        variant: 'default',
+      });
+      if (!goAhead) return;
+
+      const merge = await confirm({
+        title: 'Como aplicar o resultado?',
+        description:
+          'MESCLAR adiciona apenas itens novos (sem remover os atuais). SUBSTITUIR sobrescreve cada lista que a IA preencher.',
         confirmLabel: 'Mesclar (adicionar)',
         cancelLabel: 'Substituir tudo',
         variant: 'default',
       });
-      // confirm=true → mesclar; confirm=false → substituir; null=cancelado
-      if (choice === null) return;
-      mode = choice ? 'merge' : 'replace';
+      mode = merge ? 'merge' : 'replace';
     }
 
     setOrganizing(true);
