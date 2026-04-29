@@ -381,14 +381,31 @@ export default function OrcamentoEditarDetalhe() {
             PDF
           </Button>
           {data.status === "rascunho" && (
-            <Button size="sm" onClick={handleMarkSent}>
-              <Send className="h-3.5 w-3.5" /> Marcar como enviado
+            <Button size="sm" onClick={handleOpenSendDialog}>
+              <Send className="h-3.5 w-3.5" /> Marcar como enviada
             </Button>
           )}
           {data.status === "enviada" && (
             <>
-              <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={handleAccept}>
-                <Check className="h-3.5 w-3.5" /> Aceitar
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if ((data as any).access_token) {
+                    setGeneratedTokenInfo({
+                      accessToken: (data as any).access_token,
+                      expiresAt: validUntil,
+                    });
+                    setLinkDialogOpen(true);
+                  } else {
+                    toast.error("Esta proposta não tem link de acesso ainda");
+                  }
+                }}
+              >
+                <Link2 className="h-3.5 w-3.5" /> Ver link
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setPwdDialogOpen(true)}>
+                <KeyRound className="h-3.5 w-3.5" /> Redefinir senha
               </Button>
               <Button size="sm" variant="outline" className="text-destructive" onClick={handleReject}>
                 <X className="h-3.5 w-3.5" /> Recusar
