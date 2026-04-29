@@ -484,7 +484,7 @@ export default function OrcamentoEditarDetalhe() {
             </h2>
             <ScopeItemsEditor
               items={scopeItems}
-              onChange={markDirty(setScopeItems)}
+              onChange={markItemsDirty}
             />
             <div className="flex items-center justify-between border-t border-border pt-3">
               <span className="text-sm text-muted-foreground">Total dos itens</span>
