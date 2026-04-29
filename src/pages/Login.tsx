@@ -13,30 +13,15 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [fullName, setFullName] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: window.location.origin,
-          },
-        });
-        if (error) throw error;
-        toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate("/");
     } catch (error: any) {
       toast.error(error.message || "Erro ao autenticar");
     } finally {
@@ -52,26 +37,13 @@ export default function Login() {
         </div>
         <Card>
           <CardHeader className="text-center px-4 sm:px-6">
-            <CardTitle className="text-xl sm:text-2xl">{isSignUp ? "Criar Conta" : "Entrar"}</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Entrar</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {isSignUp ? "Preencha os dados para criar sua conta" : "Acesse a plataforma GetBrain"}
+              Acesse a plataforma GetBrain
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome completo</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Seu nome"
-                    required
-                    className="h-11"
-                  />
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <Input
@@ -96,22 +68,16 @@ export default function Login() {
                   required
                   minLength={6}
                   className="h-11"
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  autoComplete="current-password"
                 />
               </div>
               <Button type="submit" className="w-full h-11" disabled={loading}>
-                {loading ? "Carregando..." : isSignUp ? "Criar Conta" : "Entrar"}
+                {loading ? "Carregando..." : "Entrar"}
               </Button>
             </form>
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                className="text-sm text-muted-foreground hover:text-accent transition-colors"
-                onClick={() => setIsSignUp(!isSignUp)}
-              >
-                {isSignUp ? "Já tem conta? Entrar" : "Não tem conta? Criar"}
-              </button>
-            </div>
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Acesso restrito. Solicite ao administrador a criação da sua conta.
+            </p>
           </CardContent>
         </Card>
       </div>
