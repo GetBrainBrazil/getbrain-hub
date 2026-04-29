@@ -192,8 +192,8 @@ function InlineMoney({
 }
 
 function InlineInteger({
-  value, onSave, placeholder, suffix,
-}: { value: number | null; onSave: (v: number | null) => void; placeholder?: string; suffix?: string }) {
+  value, onSave, placeholder, suffix, fullHeight,
+}: { value: number | null; onSave: (v: number | null) => void; placeholder?: string; suffix?: string; fullHeight?: boolean }) {
   const [local, setLocal] = useState(value === null ? '' : String(value));
   useEffect(() => { setLocal(value === null ? '' : String(value)); }, [value]);
   const commit = () => {
@@ -206,7 +206,10 @@ function InlineInteger({
     if (Number.isFinite(n) && n !== value) onSave(n);
   };
   return (
-    <div className="flex items-center rounded-md border border-input bg-background/60 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+    <div className={cn(
+      "flex items-center rounded-md border border-input bg-background/60 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background",
+      fullHeight && "h-full"
+    )}>
       <IntegerInput
         value={local}
         onValueChange={setLocal}
@@ -214,7 +217,10 @@ function InlineInteger({
         onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
         placeholder={placeholder}
         withSeparator
-        className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+        className={cn(
+          "border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
+          fullHeight && "h-full"
+        )}
       />
       {suffix && <span className="pr-2.5 text-xs text-muted-foreground">{suffix}</span>}
     </div>
