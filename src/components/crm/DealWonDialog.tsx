@@ -333,8 +333,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         rows.find((r) => r.status === 'rascunho') ??
         null;
       if (cancelled) return;
-      const row = (data ?? [])[0] ?? null;
-      setAcceptedProposal(row as ProposalLite | null);
+      setAcceptedProposal(pick);
       setLoadingProposal(false);
     })();
     return () => { cancelled = true; };
