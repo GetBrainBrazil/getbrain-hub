@@ -153,6 +153,10 @@ export default function CrmPipeline() {
 
   // Persisted view mode
   const [viewMode, setViewMode] = usePersistedState<'lista' | 'kanban'>('crm_view_mode', 'lista');
+  const [collapsedStages, setCollapsedStages] = usePersistedState<DealStage[]>('crm_kanban_collapsed_stages', []);
+  const toggleCollapsedStage = (stage: DealStage) => {
+    setCollapsedStages((prev) => (prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage]));
+  };
 
   // Page-local filters (não persistidos — resetam a cada visita)
   const [stageFilter, setStageFilter] = useState<DealStage[]>([]);
