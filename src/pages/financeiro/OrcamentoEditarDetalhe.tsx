@@ -596,6 +596,8 @@ export default function OrcamentoEditarDetalhe() {
               </p>
             </div>
           </Card>
+
+          {data.status === "recusada" && (
             <Card className="p-4 space-y-2">
               <Label className="text-xs">Motivo da recusa (opcional)</Label>
               <Textarea
