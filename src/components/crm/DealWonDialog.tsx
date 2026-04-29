@@ -340,35 +340,9 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setInstallments((prev) => prev.filter((i) => i.id !== id));
   }
 
-  function splitEvenly(n: number) {
+  function regenerateInstallments(n: number, firstDate: string) {
     const base = expectedTotal > 0 ? expectedTotal : (baseImplementation > 0 ? baseImplementation : 0);
-    if (base <= 0) {
-      toast.error('Defina um valor de proposta ou estimativa do deal antes de dividir');
-      return;
-    }
-    if (n < 1 || n > 60) {
-      toast.error('Número de parcelas deve ficar entre 1 e 60');
-      return;
-    }
-    const per = Math.round((base / n) * 100) / 100;
-    const remainder = Math.round((base - per * n) * 100) / 100;
-    const list: InstallmentDraft[] = [];
-    let baseDate = new Date();
-    for (let i = 0; i < n; i++) {
-      const amount = i === 0 ? per + remainder : per;
-      baseDate = addMonths(baseDate, 1);
-      list.push({ id: newId(), amount: String(amount), due_date: fmtDateInput(baseDate) });
-    }
-    setInstallments(list);
-  }
-
-  function applyCustomN() {
-    const n = parseInt(customN, 10);
-    if (Number.isNaN(n)) {
-      toast.error('Digite um número de parcelas válido');
-      return;
-    }
-    splitEvenly(n);
+    setInstallments(buildInstallments(n, firstDate, base));
   }
 
   // ============== Custos extras ==============
