@@ -1,6 +1,13 @@
 export type CompanyRelationshipStatus = 'prospect' | 'lead' | 'active_client' | 'former_client' | 'lost';
 export type LeadStatus = 'novo' | 'triagem_agendada' | 'triagem_feita' | 'descartado' | 'convertido';
-export type DealStage = 'presencial_agendada' | 'presencial_feita' | 'orcamento_enviado' | 'em_negociacao' | 'fechado_ganho' | 'fechado_perdido';
+export type DealStage =
+  | 'descoberta_marcada'
+  | 'descobrindo'
+  | 'proposta_na_mesa'
+  | 'ajustando'
+  | 'ganho'
+  | 'perdido'
+  | 'gelado';
 export type ActivityType = 'reuniao_presencial' | 'reuniao_virtual' | 'ligacao' | 'email' | 'whatsapp' | 'outro';
 
 // v2.1 — slugs vêm de crm_project_types (dinâmico). Mantém type como string
