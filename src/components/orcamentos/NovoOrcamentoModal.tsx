@@ -108,7 +108,7 @@ export function NovoOrcamentoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Novo Orçamento</DialogTitle>
+          <DialogTitle>Nova Proposta</DialogTitle>
           <DialogDescription>
             O orçamento começa como rascunho. Você poderá editar todo o
             conteúdo na próxima tela.

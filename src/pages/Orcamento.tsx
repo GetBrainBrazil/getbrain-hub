@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function Orcamento() {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Orçamento</h1>
+      <h1 className="text-2xl font-bold">Proposta</h1>
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <div className="text-4xl mb-4">📊</div>
