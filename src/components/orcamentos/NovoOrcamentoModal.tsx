@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { createDraftProposal } from "@/components/orcamentos/createDraftProposal";
 
 interface Props {
   open: boolean;
@@ -27,8 +28,6 @@ interface Props {
   defaultDealId?: string | null;
   defaultCompanyId?: string | null;
 }
-
-const ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 export function NovoOrcamentoModal({
   open,
