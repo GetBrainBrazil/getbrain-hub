@@ -4,9 +4,28 @@ export interface ScopeItem {
   value: number;
 }
 
+/** Item canônico vindo da tabela proposal_items */
+export interface ProposalItemRow {
+  id: string;
+  proposal_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  order_index: number;
+}
+
 export function calculateScopeTotal(items: ScopeItem[] | unknown): number {
   if (!Array.isArray(items)) return 0;
   return items.reduce((acc, it: any) => acc + (Number(it?.value) || 0), 0);
+}
+
+export function calculateItemsTotal(items: ProposalItemRow[] | undefined | null): number {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce(
+    (acc, it) => acc + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
+    0
+  );
 }
 
 export function formatBRL(value: number): string {
@@ -25,24 +44,56 @@ export function formatDateBR(iso: string | null | undefined): string {
   return `${d}/${m}/${y}`;
 }
 
+/**
+ * Status novo (enum proposal_status no banco).
+ * O legado ('enviado'|'aceito'|'recusado'|'cancelado') NÃO existe mais — ficou
+ * mapeado pela migration de 10A para os novos valores.
+ */
 export type ProposalStatus =
   | "rascunho"
-  | "enviado"
-  | "aceito"
-  | "recusado"
-  | "expirado"
-  | "cancelado";
+  | "enviada"
+  | "visualizada"
+  | "interesse_manifestado"
+  | "expirada"
+  | "convertida"
+  | "recusada";
+
+/** Helper: normaliza status legado caso ainda chegue de cache antigo. */
+export function normalizeProposalStatus(s: string | null | undefined): ProposalStatus {
+  switch (s) {
+    case "enviado":
+      return "enviada";
+    case "aceito":
+      return "convertida";
+    case "recusado":
+    case "cancelado":
+      return "recusada";
+    case "expirado":
+      return "expirada";
+    case "rascunho":
+    case "enviada":
+    case "visualizada":
+    case "interesse_manifestado":
+    case "expirada":
+    case "convertida":
+    case "recusada":
+      return s as ProposalStatus;
+    default:
+      return "rascunho";
+  }
+}
 
 /**
- * Status efetivo para exibição: 'enviado' com valid_until vencido vira 'expirado'.
+ * Status efetivo para exibição: 'enviada' com expires_at vencido vira 'expirada'.
  */
 export function effectiveStatus(
-  status: ProposalStatus,
-  validUntil: string
+  status: ProposalStatus | string,
+  expiresAt: string | null | undefined
 ): ProposalStatus {
-  if (status === "enviado" && validUntil) {
+  const s = normalizeProposalStatus(status);
+  if (s === "enviada" && expiresAt) {
     const today = new Date().toISOString().slice(0, 10);
-    if (validUntil < today) return "expirado";
+    if (expiresAt < today) return "expirada";
   }
-  return status;
+  return s;
 }

@@ -29,10 +29,10 @@ type ViewMode = "kanban" | "table";
 const STATUS_TABS: { v: StatusFilter; label: string }[] = [
   { v: "todos", label: "Todos" },
   { v: "rascunho", label: "Rascunho" },
-  { v: "enviado", label: "Enviado" },
-  { v: "aceito", label: "Aceito" },
-  { v: "recusado", label: "Recusado" },
-  { v: "expirado", label: "Expirado" },
+  { v: "enviada", label: "Enviado" },
+  { v: "convertida", label: "Aceito" },
+  { v: "recusada", label: "Recusado" },
+  { v: "expirada", label: "Expirado" },
 ];
 
 export default function Orcamentos() {
@@ -114,7 +114,7 @@ export default function Orcamentos() {
         {
           id: row.id,
           payload: {
-            status: "enviado",
+            status: "enviada",
             sent_at: new Date().toISOString(),
           },
         },
@@ -127,7 +127,7 @@ export default function Orcamentos() {
         {
           id: row.id,
           payload: {
-            status: "aceito",
+            status: "convertida",
             accepted_at: new Date().toISOString(),
           },
         },
@@ -140,7 +140,7 @@ export default function Orcamentos() {
         {
           id: row.id,
           payload: {
-            status: "recusado",
+            status: "recusada",
             rejected_at: new Date().toISOString(),
           },
         },

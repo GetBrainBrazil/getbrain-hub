@@ -104,16 +104,16 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
     }
     const ok = await confirm({
       title: 'Marcar como enviada?',
-      description: 'A proposta passa pra status "enviado". Edições continuam permitidas.',
+      description: 'A proposta passa pra status "enviada". Edições continuam permitidas.',
       confirmLabel: 'Marcar como enviada',
     });
     if (!ok) return;
-    await persist({ status: 'enviado', sent_at: new Date().toISOString() });
+    await persist({ status: 'enviada', sent_at: new Date().toISOString() });
     toast.success('Proposta enviada');
   }
 
   async function handleAccept() {
-    await persist({ status: 'aceito', accepted_at: new Date().toISOString() });
+    await persist({ status: 'convertida', accepted_at: new Date().toISOString() });
     toast.success('Proposta aceita');
     // Oferece fechar o deal como ganho na sequência
     if (onRequestClose && deal.stage !== 'ganho' && deal.stage !== 'perdido') {
@@ -134,7 +134,7 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
       variant: 'destructive',
     });
     if (!ok) return;
-    await persist({ status: 'recusado', rejected_at: new Date().toISOString() });
+    await persist({ status: 'recusada', rejected_at: new Date().toISOString() });
     toast.success('Proposta recusada');
   }
 
@@ -278,7 +278,7 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
                 <Send className="h-3.5 w-3.5" /> Marcar como enviada
               </Button>
             )}
-            {proposal.status === 'enviado' && (
+            {proposal.status === 'enviada' && (
               <>
                 <Button
                   size="sm"

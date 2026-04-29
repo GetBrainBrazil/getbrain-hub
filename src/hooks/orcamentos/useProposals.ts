@@ -45,7 +45,7 @@ export function useProposals(filters: ProposalFilters) {
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
-      if (filters.status && filters.status !== "todos" && filters.status !== "expirado") {
+      if (filters.status && filters.status !== "todos" && filters.status !== "expirada") {
         q = q.eq("status", filters.status);
       }
       if (filters.search?.trim()) {
@@ -56,10 +56,10 @@ export function useProposals(filters: ProposalFilters) {
       if (error) throw error;
       let rows = (data || []) as unknown as ProposalRow[];
 
-      // Filtrar 'expirado' client-side (status='enviado' + valid_until < hoje)
+      // Filtrar 'expirada' client-side (status='enviada' + valid_until < hoje)
       const today = new Date().toISOString().slice(0, 10);
-      if (filters.status === "expirado") {
-        rows = rows.filter((r) => r.status === "enviado" && r.valid_until < today);
+      if (filters.status === "expirada") {
+        rows = rows.filter((r) => r.status === "enviada" && r.valid_until < today);
       }
       return rows;
     },
