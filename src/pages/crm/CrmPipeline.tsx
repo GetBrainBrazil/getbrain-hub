@@ -173,13 +173,38 @@ export default function CrmPipeline() {
     () => new Map(DEAL_STAGES.map((s) => [s, filteredDeals.filter((d) => d.stage === s)])),
     [filteredDeals],
   );
-  const activeDeal = activeId ? rawDeals.find((d) => d.id === activeId) ?? null : null;
-  const commitStage = (deal: Deal, stage: DealStage, extra?: { lost_reason?: string; estimated_value?: number }) => updateStage.mutate({ id: deal.id, stage, ...extra });
+  const dealsByVisualStage = useMemo(() => {
+    const visualDeals = rawDeals.map((d) => {
+      const overrideStage = visualStageOverrides[d.id];
+      return overrideStage ? { ...d, stage: overrideStage, probability_pct: DEAL_STAGE_PROBABILITY[overrideStage] } : d;
+    });
+    return new Map(visualDeals.map((d) => [d.id, d]));
+  }, [rawDeals, visualStageOverrides]);
+  const activeDeal = activeId ? dealsByVisualStage.get(activeId) ?? null : null;
+  const commitStage = (deal: Deal, stage: DealStage, extra?: { lost_reason?: string; estimated_value?: number }) => {
+    setVisualStageOverrides((prev) => ({ ...prev, [deal.id]: stage }));
+    updateStage.mutate(
+      { id: deal.id, stage, ...extra },
+      {
+        onSuccess: () => setVisualStageOverrides((prev) => {
+          const next = { ...prev };
+          delete next[deal.id];
+          return next;
+        }),
+        onError: () => setVisualStageOverrides((prev) => {
+          const next = { ...prev };
+          delete next[deal.id];
+          return next;
+        }),
+      },
+    );
+  };
   const handleDragEnd = async (e: DragEndEvent) => {
-    setActiveId(null);
     const deal = rawDeals.find((d) => d.id === String(e.active.id));
     const stage = e.over?.id as DealStage | undefined;
-    if (!deal || !stage || deal.stage === stage || !DEAL_STAGES.includes(stage)) return;
+    if (!deal || !stage || deal.stage === stage || !DEAL_STAGES.includes(stage)) { setActiveId(null); return; }
+    setVisualStageOverrides((prev) => ({ ...prev, [deal.id]: stage }));
+    setActiveId(null);
     if (stage === 'perdido') { setLost({ deal, stage }); return; }
     if (stage === 'ganho') { setWon({ deal, stage }); return; }
     if (stage === 'proposta_na_mesa') {
@@ -189,13 +214,20 @@ export default function CrmPipeline() {
         .eq('deal_id', deal.id)
         .is('deleted_at', null);
       if (error) {
+        setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[deal.id]; return next; });
         toast.error('Erro ao verificar propostas vinculadas');
         return;
       }
       // Sem proposta vinculada → abre o modal unificado (que também coleta valor se faltar)
       if (!count) { setNeedsProposal({ deal, stage }); return; }
     }
-    commitStage(deal, stage);
+    updateStage.mutate(
+      { id: deal.id, stage },
+      {
+        onSuccess: () => setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[deal.id]; return next; }),
+        onError: () => setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[deal.id]; return next; }),
+      },
+    );
   };
 
   const handleCreateProposalForDeal = async ({ implementationValue, mrrValue }: { implementationValue: number; mrrValue?: number }) => {
