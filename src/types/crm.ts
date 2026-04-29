@@ -84,6 +84,7 @@ export interface Deal {
   business_context: string | null;
   scope_in: string | null;
   scope_out: string | null;
+  scope_bullets: string[];
   acceptance_criteria: AcceptanceCriterion[];
   deliverables: string[];
   premises: string[];
