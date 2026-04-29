@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase as sb } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { randomPresetColor } from "@/lib/crm/presetColors";
 
 export type CrmPainCategory = {
   id: string;
@@ -81,7 +82,7 @@ export function useCreatePainCategory() {
         .insert({
           name: payload.name.trim(),
           slug,
-          color: payload.color ?? "bg-muted text-muted-foreground border-border",
+          color: payload.color ?? randomPresetColor(),
           display_order: nextOrder,
           is_active: true,
           is_system: false,
