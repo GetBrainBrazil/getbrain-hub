@@ -42,85 +42,110 @@ export function DetailBreadcrumb({ items, closeTo }: { items: { label: string; t
 }
 
 export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?: (stage: DealStage) => void }) {
-  const isClosed = stage === 'ganho' || stage === 'perdido';
+  const progressIndex = PROGRESS_STAGES.indexOf(stage);
+  const isClosedStage = CLOSED_STAGES.includes(stage);
 
-  if (isClosed) {
-    const isWon = stage === 'ganho';
+  const renderStep = (s: DealStage, opts: { isDone: boolean; isCurrent: boolean; kind: 'progress' | 'won' | 'lost' }) => {
+    const { isDone, isCurrent, kind } = opts;
+    const isFuture = !isDone && !isCurrent;
+    const isWon = kind === 'won';
+    const isLost = kind === 'lost';
+
     return (
-      <div className={cn(
-        'flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium',
-        isWon
-          ? 'border-success/40 bg-success/10 text-success'
-          : 'border-destructive/40 bg-destructive/10 text-destructive'
-      )}>
-        <span className={cn('flex h-6 w-6 items-center justify-center rounded-full', isWon ? 'bg-success/20' : 'bg-destructive/20')}>
-          {isWon ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-        </span>
-        Deal {DEAL_STAGE_LABEL[stage]}
-      </div>
+      <Tooltip key={s}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={() => onChange?.(s)}
+            disabled={!onChange}
+            aria-current={isCurrent ? 'step' : undefined}
+            className={cn(
+              'group flex flex-1 flex-col items-center gap-1.5 rounded-md px-2 py-2 text-center transition',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
+              onChange ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default',
+            )}
+          >
+            <span className={cn(
+              'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition',
+              // Em progresso: usa accent
+              kind === 'progress' && isDone && 'border-accent bg-accent text-accent-foreground',
+              kind === 'progress' && isCurrent && 'border-accent bg-accent text-accent-foreground ring-4 ring-accent/20',
+              kind === 'progress' && isFuture && 'border-border bg-background',
+              // Convertido (won)
+              isWon && isCurrent && 'border-success bg-success text-success-foreground ring-4 ring-success/20',
+              isWon && !isCurrent && 'border-success/40 bg-background text-success',
+              // Perdido (lost)
+              isLost && isCurrent && 'border-destructive bg-destructive text-destructive-foreground ring-4 ring-destructive/20',
+              isLost && !isCurrent && 'border-destructive/40 bg-background text-destructive',
+            )}>
+              {kind === 'progress' && isDone && <Check className="h-3 w-3" strokeWidth={3} />}
+              {isWon && <Check className="h-3 w-3" strokeWidth={3} />}
+              {isLost && <X className="h-3 w-3" strokeWidth={3} />}
+            </span>
+            <span className={cn(
+              'text-[11px] leading-tight transition',
+              isCurrent && 'font-semibold text-foreground',
+              isDone && 'text-foreground/80',
+              isFuture && 'text-muted-foreground',
+              isWon && !isCurrent && 'text-success/80',
+              isLost && !isCurrent && 'text-destructive/80',
+            )}>
+              {DEAL_STAGE_LABEL[s]}
+            </span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p className="font-medium">{DEAL_STAGE_LABEL[s]}</p>
+          <p className="text-xs text-muted-foreground">Probabilidade padrão: {DEAL_STAGE_PROBABILITY[s]}%</p>
+        </TooltipContent>
+      </Tooltip>
     );
-  }
-
-  const currentIndex = PROGRESS_STAGES.indexOf(stage);
-  // Se por algum motivo o stage não estiver entre as etapas em progresso, considera tudo "futuro".
-  const safeIndex = currentIndex === -1 ? -1 : currentIndex;
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex w-full min-w-0 items-stretch gap-1 overflow-x-auto pb-1 scrollbar-hide">
         {PROGRESS_STAGES.map((s, i) => {
-          const isDone = safeIndex >= 0 && i < safeIndex;
-          const isCurrent = i === safeIndex;
-          const isFuture = !isDone && !isCurrent;
+          const isDone = progressIndex >= 0 && i < progressIndex;
+          const isCurrent = i === progressIndex;
           const showConnector = i < PROGRESS_STAGES.length - 1;
           return (
             <div key={s} className="flex flex-1 min-w-[110px] items-start gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onChange?.(s)}
-                    disabled={!onChange}
-                    aria-current={isCurrent ? 'step' : undefined}
-                    className={cn(
-                      'group flex flex-1 flex-col items-center gap-1.5 rounded-md px-2 py-2 text-center transition',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
-                      onChange ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default',
-                    )}
-                  >
-                    <span className={cn(
-                      'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition',
-                      isDone && 'border-accent bg-accent text-accent-foreground',
-                      isCurrent && 'border-accent bg-accent text-accent-foreground ring-4 ring-accent/20',
-                      isFuture && 'border-border bg-background',
-                    )}>
-                      {isDone && <Check className="h-3 w-3" strokeWidth={3} />}
-                    </span>
-                    <span className={cn(
-                      'text-[11px] leading-tight transition',
-                      isCurrent && 'font-semibold text-foreground',
-                      isDone && 'text-foreground/80',
-                      isFuture && 'text-muted-foreground',
-                    )}>
-                      {DEAL_STAGE_LABEL[s]}
-                    </span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p className="font-medium">{DEAL_STAGE_LABEL[s]}</p>
-                  <p className="text-xs text-muted-foreground">Probabilidade padrão: {DEAL_STAGE_PROBABILITY[s]}%</p>
-                </TooltipContent>
-              </Tooltip>
+              {renderStep(s, { isDone, isCurrent, kind: 'progress' })}
               {showConnector && (
                 <span className={cn(
                   'mt-[14px] h-1 flex-1 min-w-[16px] rounded-full transition',
-                  i < safeIndex ? 'bg-accent' : 'bg-border'
+                  i < progressIndex ? 'bg-accent' : 'bg-border'
                 )} />
               )}
             </div>
           );
         })}
+
+        {/* Separador entre etapas em progresso e fechamentos */}
+        <div className="mx-1 flex shrink-0 items-stretch" aria-hidden>
+          <div className="my-1 w-px bg-border/60" />
+        </div>
+
+        {/* Etapas finais: Convertido / Perdido */}
+        {CLOSED_STAGES.map((s) => (
+          <div key={s} className="flex shrink-0 min-w-[100px] items-start">
+            {renderStep(s, {
+              isDone: false,
+              isCurrent: stage === s,
+              kind: s === 'ganho' ? 'won' : 'lost',
+            })}
+          </div>
+        ))}
       </div>
+      {isClosedStage && (
+        <p className={cn(
+          'mt-1 text-xs',
+          stage === 'ganho' ? 'text-success' : 'text-destructive',
+        )}>
+          Deal {DEAL_STAGE_LABEL[stage]} — clique em outra etapa para reabrir.
+        </p>
+      )}
     </TooltipProvider>
   );
 }
