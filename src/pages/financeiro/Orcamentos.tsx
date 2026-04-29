@@ -88,7 +88,7 @@ export default function Orcamentos() {
     if (action === "duplicate") {
       dup.mutate(row.id, {
         onSuccess: (newId) => {
-          toast.success("Orçamento duplicado");
+          toast.success("Proposta duplicada");
           navigate(`/financeiro/orcamentos/${newId}/editar`);
         },
       });
@@ -163,7 +163,7 @@ export default function Orcamentos() {
     <div className="space-y-4 md:space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold">Orçamentos</h1>
+          <h1 className="text-xl md:text-2xl font-semibold">Propostas</h1>
           <p className="text-xs md:text-sm text-muted-foreground">
             Crie, edite e gere PDFs de propostas comerciais
           </p>
@@ -184,7 +184,7 @@ export default function Orcamentos() {
           </ToggleGroup>
           <Button onClick={() => setNovoOpen(true)} className="h-10 md:h-9 shrink-0">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Novo Orçamento</span>
+            <span className="hidden sm:inline">Nova Proposta</span>
             <span className="sm:hidden">Novo</span>
           </Button>
         </div>
