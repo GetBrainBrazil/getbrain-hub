@@ -1034,6 +1034,42 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_pain_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deal_activities: {
         Row: {
           created_at: string
@@ -1254,9 +1290,7 @@ export type Database = {
           organograma_url: string | null
           origin_lead_id: string | null
           owner_actor_id: string | null
-          pain_category:
-            | Database["public"]["Enums"]["deal_pain_category"]
-            | null
+          pain_category: string | null
           pain_cost_brl_monthly: number | null
           pain_description: string | null
           pain_hours_monthly: number | null
@@ -1319,9 +1353,7 @@ export type Database = {
           organograma_url?: string | null
           origin_lead_id?: string | null
           owner_actor_id?: string | null
-          pain_category?:
-            | Database["public"]["Enums"]["deal_pain_category"]
-            | null
+          pain_category?: string | null
           pain_cost_brl_monthly?: number | null
           pain_description?: string | null
           pain_hours_monthly?: number | null
@@ -1384,9 +1416,7 @@ export type Database = {
           organograma_url?: string | null
           origin_lead_id?: string | null
           owner_actor_id?: string | null
-          pain_category?:
-            | Database["public"]["Enums"]["deal_pain_category"]
-            | null
+          pain_category?: string | null
           pain_cost_brl_monthly?: number | null
           pain_description?: string | null
           pain_hours_monthly?: number | null
@@ -4806,13 +4836,6 @@ export type Database = {
         | "hardware"
         | "autorizacao_legal"
         | "outro"
-      deal_pain_category:
-        | "operacional"
-        | "comercial"
-        | "estrategica"
-        | "compliance"
-        | "experiencia"
-        | "outra"
       deal_project_type:
         | "whatsapp_chatbot"
         | "ai_sdr"
@@ -5110,14 +5133,6 @@ export const Constants = {
         "hardware",
         "autorizacao_legal",
         "outro",
-      ],
-      deal_pain_category: [
-        "operacional",
-        "comercial",
-        "estrategica",
-        "compliance",
-        "experiencia",
-        "outra",
       ],
       deal_project_type: [
         "whatsapp_chatbot",
