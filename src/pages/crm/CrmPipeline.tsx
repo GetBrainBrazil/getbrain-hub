@@ -197,7 +197,11 @@ export default function CrmPipeline() {
     try {
       // Persiste implementação + MRR no deal. estimated_value só é setado se ainda estiver vazio,
       // para não sobrescrever uma estimativa anterior do usuário.
-      const dealUpdate: Record<string, any> = {
+      const dealUpdate: {
+        estimated_implementation_value: number;
+        estimated_mrr_value: number | null;
+        estimated_value?: number;
+      } = {
         estimated_implementation_value: implementationValue,
         estimated_mrr_value: mrrValue ?? null,
       };
