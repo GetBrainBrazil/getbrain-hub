@@ -11,13 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
 import { NewDealQuickDialog } from '@/components/crm/NewDealQuickDialog';
 import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalForStageDialog';
-import { UnifiedFiltersPopover } from '@/components/crm/UnifiedFiltersPopover';
+import { MultiFilter, ValueRangeFilter } from '@/components/crm/CrmFilters';
 import { useCrmActors, useDistinctLeadSources } from '@/hooks/crm/useCrmReference';
 import {
   DEAL_STAGE_LABEL,
