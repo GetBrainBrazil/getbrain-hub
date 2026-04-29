@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { DetailBreadcrumb, DetailShell } from '@/components/crm/CrmDetailShared';
 import { StringListEditor } from '@/components/shared/StringListEditor';
 import { AcceptanceCriteriaEditor } from '@/components/shared/AcceptanceCriteriaEditor';
@@ -136,13 +137,17 @@ function InlineText({
   };
   if (multiline) {
     return (
-      <Textarea
+      <RichTextEditor
         value={local}
+        onChange={setLocal}
+        onSave={(v) => {
+          const trimmed = v.trim();
+          const next = trimmed === '' ? null : trimmed;
+          if (next !== (value ?? null)) onSave(next);
+        }}
         placeholder={placeholder}
-        onChange={(e) => setLocal(e.target.value)}
-        onBlur={commit}
-        style={minHeight ? { minHeight } : undefined}
-        className="resize-none bg-background/60"
+        minHeight={minHeight}
+        autoFocus={false}
       />
     );
   }
