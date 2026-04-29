@@ -21,9 +21,9 @@ import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
 import { PropostaTabContent } from '@/components/crm/proposta/PropostaTabContent';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
+import { ProjectTypeSelect } from '@/components/crm/ProjectTypeSelect';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
-  PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS, PROJECT_TYPE_V2_COLOR,
   ESTIMATION_CONFIDENCE_LABEL, ESTIMATION_CONFIDENCE_OPTIONS, ESTIMATION_CONFIDENCE_COLOR,
   COMPLEXITY_LABEL,
 } from '@/constants/dealEnumLabels';
@@ -282,28 +282,14 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
 // ---------- Zona 3 — Solução ----------
 
 function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void }) {
-  const isOutro = deal.project_type_v2 === 'outro';
-
   return (
     <ZoneSection id="zona-solucao" number={3} title="Solução & Escopo" hint="O que vamos entregar">
       <div className="space-y-2">
-        <FieldLabel>Tipo de projeto</FieldLabel>
-        <ChipGroup<DealProjectType>
-          options={PROJECT_TYPE_V2_OPTIONS}
+        <FieldLabel hint="tipos gerenciados em Configurações → Pessoas & Empresas">Tipo de projeto</FieldLabel>
+        <ProjectTypeSelect
           value={deal.project_type_v2}
-          onChange={(v) => save({ project_type_v2: v, project_type_custom: v === 'outro' ? deal.project_type_custom : null })}
-          labels={PROJECT_TYPE_V2_LABEL}
-          colors={PROJECT_TYPE_V2_COLOR}
+          onChange={(v) => save({ project_type_v2: v })}
         />
-        {isOutro && (
-          <div className="pt-2">
-            <InlineText
-              value={deal.project_type_custom}
-              onSave={(v) => save({ project_type_custom: v })}
-              placeholder="Descreva o tipo de projeto..."
-            />
-          </div>
-        )}
       </div>
 
       <div className="space-y-2">
