@@ -93,7 +93,8 @@ export interface Deal {
   technical_stack: string[];
 
   // Dor estruturada
-  pain_category: DealPainCategory | null;
+  pain_category: DealPainCategory | null;        // legado (1 categoria) — manter por compat
+  pain_categories: string[];                      // v2.1 — múltiplas categorias
   pain_description: string | null;
   pain_cost_brl_monthly: number | null;
   pain_hours_monthly: number | null;
