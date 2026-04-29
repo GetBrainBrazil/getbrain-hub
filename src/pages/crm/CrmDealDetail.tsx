@@ -589,22 +589,27 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
 
       <div className="rounded-md border border-border/60 bg-background/40 p-4">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estimativa grossa</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-stretch">
+          <div className="flex flex-col space-y-2">
             <FieldLabel>Horas totais</FieldLabel>
-            <InlineInteger
-              value={deal.estimated_hours_total}
-              onSave={(v) => save({ estimated_hours_total: v })}
-              placeholder="0"
-              suffix="h"
-            />
+            <div className="flex-1">
+              <InlineInteger
+                value={deal.estimated_hours_total}
+                onSave={(v) => save({ estimated_hours_total: v })}
+                placeholder="0"
+                suffix="h"
+                fullHeight
+              />
+            </div>
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-col space-y-2">
             <FieldLabel>Complexidade</FieldLabel>
-            <ComplexitySlider
-              value={deal.estimated_complexity}
-              onSave={(v) => save({ estimated_complexity: v })}
-            />
+            <div className="flex-1">
+              <ComplexitySlider
+                value={deal.estimated_complexity}
+                onSave={(v) => save({ estimated_complexity: v })}
+              />
+            </div>
           </div>
         </div>
       </div>
