@@ -425,6 +425,24 @@ export default function OrcamentoEditarDetalhe() {
             </div>
           )}
 
+          <Card className="p-4 space-y-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+              Identificação
+            </h2>
+            <div>
+              <Label className="text-xs">Título da proposta</Label>
+              <Input
+                value={title}
+                onChange={(e) => markDirty(setTitle)(e.target.value)}
+                className="h-9"
+                placeholder="Ex: Plataforma de Gestão Comercial"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Aparece no topo da página pública e no PDF. Default: nome do cliente.
+              </p>
+            </div>
+          </Card>
+
           <Card className="p-4 space-y-4">
             <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
               Cliente
