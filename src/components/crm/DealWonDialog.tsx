@@ -859,34 +859,99 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                 </RadioGroup>
               </div>
 
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Início da cobrança</Label>
+                <Select
+                  value={mrrStartTrigger || ''}
+                  onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="(usar Início acima)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
+                    <SelectItem value="before_delivery">Antes da entrega</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="rounded border border-border/60 bg-background/40 p-2.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-[11px] text-muted-foreground">Desconto promocional no MRR</Label>
                   <Switch checked={mrrDiscountEnabled} onCheckedChange={setMrrDiscountEnabled} />
                 </div>
                 {mrrDiscountEnabled && (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Primeiros (meses)</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={60}
-                        value={mrrDiscountMonths}
-                        onChange={(e) => setMrrDiscountMonths(e.target.value)}
-                        className="h-8"
-                      />
+                  <div className="space-y-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Tipo de validade</Label>
+                        <Select
+                          value={mrrDiscountKind}
+                          onValueChange={(v) => setMrrDiscountKind(v as 'months' | 'until_date' | 'until_stage')}
+                        >
+                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="months">Por X meses</SelectItem>
+                            <SelectItem value="until_date">Até uma data</SelectItem>
+                            <SelectItem value="until_stage">Até estágio do projeto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Valor mensal com desconto</Label>
+                        <CurrencyInput
+                          value={mrrDiscountValue}
+                          onValueChange={setMrrDiscountValue}
+                          withPrefix
+                          placeholder="R$ 0,00"
+                          className="h-8"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Valor mensal com desconto</Label>
-                      <CurrencyInput
-                        value={mrrDiscountValue}
-                        onValueChange={setMrrDiscountValue}
-                        withPrefix
-                        placeholder="R$ 0,00"
-                        className="h-8"
-                      />
-                    </div>
+
+                    {mrrDiscountKind === 'months' && (
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Primeiros (meses)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={mrrDiscountMonths}
+                          onChange={(e) => setMrrDiscountMonths(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                    )}
+
+                    {mrrDiscountKind === 'until_date' && (
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Válido até</Label>
+                        <Input
+                          type="date"
+                          value={mrrDiscountUntilDate}
+                          onChange={(e) => setMrrDiscountUntilDate(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                    )}
+
+                    {mrrDiscountKind === 'until_stage' && (
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Encerra quando o projeto chegar em</Label>
+                        <Select value={mrrDiscountUntilStage} onValueChange={setMrrDiscountUntilStage}>
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Selecione um estágio…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="planning">Planejamento</SelectItem>
+                            <SelectItem value="em_desenvolvimento">Em desenvolvimento</SelectItem>
+                            <SelectItem value="em_homologacao">Em homologação</SelectItem>
+                            <SelectItem value="entregue">Entregue</SelectItem>
+                            <SelectItem value="em_manutencao">Em manutenção</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
