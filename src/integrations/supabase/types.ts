@@ -4231,36 +4231,6 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles_public: {
-        Row: {
-          ativo: boolean | null
-          avatar_url: string | null
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string | null
-          ultimo_acesso: string | null
-        }
-        Insert: {
-          ativo?: boolean | null
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string | null
-          ultimo_acesso?: string | null
-        }
-        Update: {
-          ativo?: boolean | null
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string | null
-          ultimo_acesso?: string | null
-        }
-        Relationships: []
-      }
       project_metrics: {
         Row: {
           actors_allocated: number | null
