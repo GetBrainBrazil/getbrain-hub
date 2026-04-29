@@ -56,6 +56,7 @@ import ConfiguracoesLayout from "./pages/configuracoes/ConfiguracoesLayout";
 import PapeisContatoPage from "./pages/configuracoes/pessoas/PapeisContatoPage";
 import OrigensLeadPage from "./pages/configuracoes/pessoas/OrigensLeadPage";
 import CargosPage from "./pages/configuracoes/pessoas/CargosPage";
+import CategoriasDorPage from "./pages/configuracoes/pessoas/CategoriasDorPage";
 import FinContasPage from "./pages/configuracoes/financeiro/FinContasPage";
 import FinCategoriasPage from "./pages/configuracoes/financeiro/FinCategoriasPage";
 import FinCentrosPage from "./pages/configuracoes/financeiro/FinCentrosPage";
