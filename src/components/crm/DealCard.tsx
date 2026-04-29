@@ -55,8 +55,11 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
   );
 
   const { data: projectTypes = [] } = useCrmProjectTypes();
-  const projectType = useMemo(
-    () => projectTypes.find((t) => t.slug === deal.project_type_v2) ?? null,
+  const projectTypeChips = useMemo(
+    () =>
+      (deal.project_type_v2 ?? [])
+        .map((slug) => projectTypes.find((t) => t.slug === slug))
+        .filter(Boolean) as typeof projectTypes,
     [projectTypes, deal.project_type_v2],
   );
 
