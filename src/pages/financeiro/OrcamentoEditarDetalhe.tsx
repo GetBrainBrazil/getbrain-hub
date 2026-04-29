@@ -662,6 +662,38 @@ export default function OrcamentoEditarDetalhe() {
         </div>
       </div>
       {confirmDialog}
+
+      {/* Modal: marcar como enviada (define senha + valida data) */}
+      <MarcarComoEnviadaDialog
+        proposalId={data.id}
+        proposalCode={data.code}
+        expiresAt={validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        onSent={(info) => {
+          setGeneratedTokenInfo(info);
+          setLinkDialogOpen(true);
+          // refresh local: validUntil pode ter mudado
+          setValidUntil(info.expiresAt);
+          setLastSavedAt(new Date());
+        }}
+      />
+
+      {/* Modal: link público gerado */}
+      <LinkGeradoDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        accessToken={generatedTokenInfo?.accessToken ?? null}
+        expiresAt={generatedTokenInfo?.expiresAt ?? validUntil}
+      />
+
+      {/* Modal: redefinir senha (proposta já enviada) */}
+      <RedefinirSenhaDialog
+        proposalId={data.id}
+        proposalCode={data.code}
+        open={pwdDialogOpen}
+        onOpenChange={setPwdDialogOpen}
+      />
     </div>
   );
 }
