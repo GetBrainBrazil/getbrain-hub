@@ -196,7 +196,9 @@ export function useProximasAtividades(filters: DashboardFilters) {
       if (filters.ownerIds.length)
         rows = rows.filter((a: any) => filters.ownerIds.includes(a.deal.owner_actor_id));
       if (filters.projectTypes.length)
-        rows = rows.filter((a: any) => filters.projectTypes.includes(a.deal.project_type_v2));
+        rows = rows.filter((a: any) =>
+          (a.deal.project_type_v2 ?? []).some((s: string) => filters.projectTypes.includes(s)),
+        );
 
       rows = rows.slice(0, 10);
 
