@@ -466,6 +466,8 @@ export default function CrmPipeline() {
                 key={stage}
                 stage={stage}
                 deals={grouped.get(stage) ?? []}
+                collapsed={collapsedStages.includes(stage)}
+                onToggleCollapsed={() => toggleCollapsedStage(stage)}
                 onOpen={(deal) => navigate(`/crm/deals/${deal.code}`)}
                 onCompanyOpen={(deal) => navigate(`/crm/empresas/${deal.company_id}`)}
                 onAdd={(stage) => openCreateDialog(stage)}
