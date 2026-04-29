@@ -7,6 +7,12 @@ export interface CreateDraftProposalInput {
   companyId: string;
   companyName: string;
   validityDays?: number;
+  /** Valor de implementação (one-time). Vira o primeiro item do escopo. */
+  implementationValue?: number | null;
+  /** Label do item de implementação no escopo. */
+  implementationLabel?: string;
+  /** Valor mensal recorrente (MRR). Vira `maintenance_monthly_value`. */
+  mrrValue?: number | null;
 }
 
 /**
@@ -19,12 +25,23 @@ export async function createDraftProposal({
   companyId,
   companyName,
   validityDays = 30,
+  implementationValue,
+  implementationLabel = "Implementação",
+  mrrValue,
 }: CreateDraftProposalInput): Promise<string> {
   const userRes = await supabase.auth.getUser();
   const uid = userRes.data.user?.id ?? null;
   const validUntil = new Date(Date.now() + validityDays * 86400000)
     .toISOString()
     .slice(0, 10);
+
+  const scopeItems =
+    implementationValue && implementationValue > 0
+      ? [{ title: implementationLabel, description: "", value: Number(implementationValue) }]
+      : [];
+
+  const maintenanceMonthly =
+    mrrValue && mrrValue > 0 ? Number(mrrValue) : null;
 
   const { data, error } = await supabase
     .from("proposals" as any)
@@ -34,7 +51,8 @@ export async function createDraftProposal({
       company_id: companyId,
       status: "rascunho",
       client_company_name: companyName,
-      scope_items: [],
+      scope_items: scopeItems,
+      maintenance_monthly_value: maintenanceMonthly,
       valid_until: validUntil,
       created_by: uid,
       updated_by: uid,
