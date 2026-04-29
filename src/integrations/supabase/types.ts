@@ -4791,6 +4791,13 @@ export type Database = {
         | "em_negociacao"
         | "fechado_ganho"
         | "fechado_perdido"
+        | "descoberta_marcada"
+        | "descobrindo"
+        | "proposta_na_mesa"
+        | "ajustando"
+        | "ganho"
+        | "perdido"
+        | "gelado"
       employment_type: "founder" | "pj" | "clt" | "intern" | "freelancer"
       estimation_confidence: "alta" | "media" | "baixa"
       human_role:
@@ -5083,6 +5090,13 @@ export const Constants = {
         "em_negociacao",
         "fechado_ganho",
         "fechado_perdido",
+        "descoberta_marcada",
+        "descobrindo",
+        "proposta_na_mesa",
+        "ajustando",
+        "ganho",
+        "perdido",
+        "gelado",
       ],
       employment_type: ["founder", "pj", "clt", "intern", "freelancer"],
       estimation_confidence: ["alta", "media", "baixa"],
