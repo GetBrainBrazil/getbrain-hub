@@ -138,18 +138,18 @@ Quase tudo já está implementado. Mudanças:
 ### 8. Não implementar
 Tudo do 10B/10C/10D conforme prompt. Estrutura de `access_token`, `proposal_views`, `proposal_events` e `pdf_url` fica criada mas dormente.
 
-## Critérios de pronto
+## Critérios de pronto — STATUS
 
-- Migration roda limpa, mapeando status antigos pros novos.
-- `proposal_items` populada com snapshot dos `scope_items` jsonb existentes.
-- `deals.proposal_id` populado pra deals que já tinham proposta.
-- Editor lê/grava itens da nova tabela; autosave continua funcionando.
-- Modal "Marcar como enviada" exige senha, gera link, mostra modal pós-envio.
-- "Redefinir senha" funciona em propostas enviadas.
-- `proposal_metrics` retorna números corretos.
-- `close_deal_as_won` marca proposta como `convertida`.
-- Audit logs registram tudo.
-- Sem regressão na geração de PDF (continua usando snapshot atual).
+- [x] Migration aplicada: enum `proposal_status`, tabelas `proposal_items`, `proposal_views`, `proposal_events`, view `proposal_metrics`, `deals.proposal_id`, triggers de senha/transição/access_token.
+- [x] `proposal_items` populada via backfill dos `scope_items` jsonb existentes.
+- [x] Editor `/financeiro/orcamentos/:id/editar` lê e grava em `proposal_items` (autosave continua).
+- [x] Novos campos `title` e `mockup_url` no editor.
+- [x] Modal "Marcar como enviada" com senha + validade → `LinkGeradoDialog` com URL pública reservada.
+- [x] Modal "Redefinir senha" disponível pra propostas enviadas.
+- [x] `createDraftProposal.ts` espelha o item de implementação em `proposal_items`.
+- [x] `PropostaTabContent` (CRM) também usa o novo fluxo com senha + redefinir.
+- [x] `close_deal_as_won` marca propostas vinculadas como `convertida` (via trigger DB).
+- [x] Rota pública `/p/{access_token}` fica reservada — implementação no 10B.
 
 ## Riscos / decisões
 
