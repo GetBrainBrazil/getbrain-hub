@@ -76,7 +76,7 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   const valueDiverges = total > 0 && dealValue > 0 && Math.abs(total - dealValue) > 0.01;
   const noDealValue = total > 0 && dealValue === 0;
 
-  async function persist(extra: Record<string, any> = {}) {
+  async function persist(extra: Record<string, any> = {}, opts: { syncItems?: boolean } = {}) {
     setSaving(true);
     try {
       const userRes = await supabase.auth.getUser();
@@ -85,10 +85,29 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
         scope_items: items,
         maintenance_monthly_value: monthlyNum && monthlyNum > 0 ? monthlyNum : null,
         valid_until: validUntil,
+        expires_at: validUntil,
         updated_by: uid,
         ...extra,
       }).eq('id', proposal.id);
       if (error) throw error;
+
+      // Espelha em proposal_items (tabela canônica do schema 10A)
+      if (opts.syncItems !== false) {
+        await sb.from('proposal_items').update({ deleted_at: new Date().toISOString() })
+          .eq('proposal_id', proposal.id).is('deleted_at', null);
+        if (items.length > 0) {
+          const rows = items.map((it, i) => ({
+            proposal_id: proposal.id,
+            description: it.title || 'Item',
+            quantity: 1,
+            unit_price: Number(it.value) || 0,
+            order_index: i,
+            created_by: uid,
+            updated_by: uid,
+          }));
+          await sb.from('proposal_items').insert(rows);
+        }
+      }
       onChanged();
     } catch (e: any) {
       toast.error(`Erro ao salvar: ${e?.message ?? 'tente novamente'}`);
