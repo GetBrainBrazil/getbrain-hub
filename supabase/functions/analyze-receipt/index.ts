@@ -1,9 +1,21 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+const ALLOWED_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
 
 const PROMPT = `Analise este comprovante de pagamento bancário brasileiro e extraia os seguintes dados em formato JSON:
 {
@@ -26,6 +38,26 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    // --- Auth check ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!OPENAI_API_KEY) {
       return new Response(JSON.stringify({ error: "OPENAI_API_KEY não configurada" }), {
         status: 500,
@@ -36,6 +68,18 @@ Deno.serve(async (req) => {
     const { image, mimeType } = await req.json();
     if (!image || !mimeType) {
       return new Response(JSON.stringify({ error: "image e mimeType são obrigatórios" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof mimeType !== "string" || !ALLOWED_MIME.has(mimeType.toLowerCase())) {
+      return new Response(JSON.stringify({ error: "mimeType inválido. Use png/jpeg/webp/gif." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof image !== "string" || image.length > 8_000_000) {
+      return new Response(JSON.stringify({ error: "image inválida ou muito grande" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -68,7 +112,7 @@ Deno.serve(async (req) => {
     if (!openaiRes.ok) {
       const errText = await openaiRes.text();
       console.error("OpenAI error", openaiRes.status, errText);
-      return new Response(JSON.stringify({ error: `OpenAI ${openaiRes.status}`, detail: errText }), {
+      return new Response(JSON.stringify({ error: `OpenAI ${openaiRes.status}` }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -76,15 +120,14 @@ Deno.serve(async (req) => {
 
     const json = await openaiRes.json();
     let content: string = json.choices?.[0]?.message?.content ?? "";
-    // Strip eventual ```json fences
     content = content.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
 
     let parsed: any;
     try {
       parsed = JSON.parse(content);
-    } catch (e) {
+    } catch {
       console.error("Parse error", content);
-      return new Response(JSON.stringify({ error: "Resposta não-JSON da IA", raw: content }), {
+      return new Response(JSON.stringify({ error: "Resposta não-JSON da IA" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

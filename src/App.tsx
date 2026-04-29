@@ -83,6 +83,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isAdmin, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Carregando...</div></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return <AppLayout>{children}</AppLayout>;
+}
+
 /** Redirects "/" to the last visited route (sessionStorage) if available */
 function HomeRedirect() {
   const lastRoute = getLastRoute();
@@ -150,7 +158,7 @@ const App = () => (
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             {/* Centro de Configurações Gerais (admin-only) */}
-            <Route path="/configuracoes" element={<ProtectedRoute><ConfiguracoesLayout /></ProtectedRoute>}>
+            <Route path="/configuracoes" element={<AdminRoute><ConfiguracoesLayout /></AdminRoute>}>
               <Route index element={<Navigate to="pessoas/setores" replace />} />
               <Route path="pessoas/setores" element={<Setores />} />
               <Route path="pessoas/papeis-contato" element={<PapeisContatoPage />} />
@@ -172,7 +180,7 @@ const App = () => (
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+            <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<Navigate to="usuarios" replace />} />
               <Route path="usuarios" element={<AdminUsuariosList />} />
               <Route path="permissoes" element={<AdminPermissoesPage />} />
@@ -180,7 +188,7 @@ const App = () => (
               <Route path="auditoria" element={<AdminAuditoriaPage />} />
               <Route path="logs" element={<Navigate to="/admin/auditoria" replace />} />
             </Route>
-            <Route path="/admin/usuarios/:id" element={<ProtectedRoute><UsuarioFichaPage mode="admin" /></ProtectedRoute>} />
+            <Route path="/admin/usuarios/:id" element={<AdminRoute><UsuarioFichaPage mode="admin" /></AdminRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
             <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
