@@ -113,7 +113,14 @@ export function useDeleteContactRole() {
       if (error) throw error;
     },
     onSuccess: () => toast.success("Papel removido"),
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao remover papel"),
+    onError: (e: any) => {
+      const msg = e?.message ?? "";
+      if (e?.code === "23503" || /foreign key|violates/i.test(msg)) {
+        toast.error("Este papel está em uso por algum contato. Desative-o em vez de excluir.");
+      } else {
+        toast.error(msg || "Erro ao remover papel");
+      }
+    },
     onSettled: () => invalidate(qc),
   });
 }
