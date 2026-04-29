@@ -609,6 +609,7 @@ export default function CrmPipeline() {
         }}
         onSuccess={(projectId) => navigate(`/projetos/${projectId}`)}
       />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
