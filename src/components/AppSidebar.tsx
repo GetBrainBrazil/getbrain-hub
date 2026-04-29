@@ -58,7 +58,7 @@ const navItems: NavItem[] = [
       { title: "Contas a Pagar / Receber", url: "/financeiro/movimentacoes" },
       { title: "Recorrências", url: "/financeiro/recorrencias" },
       { title: "Contratos", url: "/financeiro/contratos" },
-      { title: "Orçamentos", url: "/financeiro/orcamentos" },
+      { title: "Propostas", url: "/financeiro/orcamentos" },
       { title: "Relatórios", url: "/financeiro/relatorios" },
       { title: "Extratos Bancários", url: "/financeiro/extratos" },
     ],
