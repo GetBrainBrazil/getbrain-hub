@@ -12,10 +12,10 @@ export interface DealIndicatorsMap {
 }
 
 const ACTIVE_STAGES: DealStage[] = [
-  'presencial_agendada',
-  'presencial_feita',
-  'orcamento_enviado',
-  'em_negociacao',
+  'descoberta_marcada',
+  'descobrindo',
+  'proposta_na_mesa',
+  'ajustando',
 ];
 
 export function useDealsIndicators() {

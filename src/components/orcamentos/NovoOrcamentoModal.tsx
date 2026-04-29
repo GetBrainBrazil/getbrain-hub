@@ -60,10 +60,10 @@ export function NovoOrcamentoModal({
           .select("id, code, title, stage, company_id")
           .is("deleted_at", null)
           .in("stage", [
-            "presencial_agendada",
-            "presencial_feita",
-            "orcamento_enviado",
-            "em_negociacao",
+            "descoberta_marcada",
+            "descobrindo",
+            "proposta_na_mesa",
+            "ajustando",
           ])
           .order("created_at", { ascending: false }),
       ]);

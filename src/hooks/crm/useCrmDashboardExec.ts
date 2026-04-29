@@ -111,7 +111,7 @@ export function useDealsParados(filters: DashboardFilters) {
            activities:deal_activities(id, type, happened_at, scheduled_at, created_at, deleted_at)`,
         )
         .is('deleted_at', null)
-        .not('stage', 'in', '(fechado_ganho,fechado_perdido)');
+        .not('stage', 'in', '(ganho,perdido)');
 
       if (filters.ownerIds.length) q = q.in('owner_actor_id', filters.ownerIds);
       if (filters.projectTypes.length) q = q.overlaps('project_type_v2', filters.projectTypes);

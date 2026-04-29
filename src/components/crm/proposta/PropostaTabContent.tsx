@@ -116,7 +116,7 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
     await persist({ status: 'aceito', accepted_at: new Date().toISOString() });
     toast.success('Proposta aceita');
     // Oferece fechar o deal como ganho na sequência
-    if (onRequestClose && deal.stage !== 'fechado_ganho' && deal.stage !== 'fechado_perdido') {
+    if (onRequestClose && deal.stage !== 'ganho' && deal.stage !== 'perdido') {
       const ok = await confirm({
         title: 'Fechar o deal como ganho?',
         description: 'A proposta foi aceita. Você quer fechar o deal agora — criando o projeto e gerando as parcelas financeiras?',

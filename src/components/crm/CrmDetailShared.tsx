@@ -41,10 +41,10 @@ export function DetailBreadcrumb({ items, closeTo }: { items: { label: string; t
 }
 
 export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?: (stage: DealStage) => void }) {
-  const isClosed = stage === 'fechado_ganho' || stage === 'fechado_perdido';
+  const isClosed = stage === 'ganho' || stage === 'perdido';
 
   if (isClosed) {
-    const isWon = stage === 'fechado_ganho';
+    const isWon = stage === 'ganho';
     return (
       <div className={cn(
         'flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium',
