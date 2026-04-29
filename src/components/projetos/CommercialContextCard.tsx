@@ -16,6 +16,7 @@ const sb = supabase as any;
 const FIELD_LABELS: Record<string, string> = {
   pain_description: 'Dor identificada',
   pain_category: 'Categoria da dor',
+  pain_categories: 'Categorias da dor',
   pain_cost_brl_monthly: 'Custo mensal da dor (R$)',
   pain_hours_monthly: 'Horas/mês perdidas',
   current_solution: 'Solução atual',
@@ -31,6 +32,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 function formatValue(key: string, val: any): string {
   if (val == null || val === '') return '—';
+  if (Array.isArray(val)) return val.length ? val.join(', ') : '—';
   if (key.includes('cost') || key.includes('budget')) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val));
   }
