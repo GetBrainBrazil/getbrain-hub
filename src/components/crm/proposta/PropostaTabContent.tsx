@@ -12,6 +12,9 @@ import { useConfirm } from '@/components/ConfirmDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { OrcamentoStatusBadge } from '@/components/orcamentos/OrcamentoStatusBadge';
 import { ScopeItemsEditor } from '@/components/orcamentos/ScopeItemsEditor';
+import { MarcarComoEnviadaDialog } from '@/components/orcamentos/MarcarComoEnviadaDialog';
+import { LinkGeradoDialog } from '@/components/orcamentos/LinkGeradoDialog';
+import { RedefinirSenhaDialog } from '@/components/orcamentos/RedefinirSenhaDialog';
 import {
   calculateScopeTotal, effectiveStatus, formatBRL, formatDateBR,
   type ProposalStatus, type ScopeItem,
