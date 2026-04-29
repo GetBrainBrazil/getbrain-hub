@@ -248,6 +248,146 @@ export function ZoneComercial({ deal }: { deal: Deal }) {
           </div>
         </div>
 
+        {/* Parcelamento & MRR — pré-preenche o modal de Ganho */}
+        <div className="rounded-md border border-accent/20 bg-accent/5 p-4 space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-accent">
+            Parcelamento & gatilhos do MRR
+          </h3>
+          <p className="text-[11px] text-muted-foreground">
+            Tudo aqui já entra preenchido automaticamente quando você der esse deal como ganho.
+          </p>
+
+          {/* Parcelamento da implementação */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <FieldLabel hint="quantas vezes parcela a implementação">Nº de parcelas</FieldLabel>
+              <IntegerInput
+                value={deal.installments_count != null ? String(deal.installments_count) : ''}
+                onValueChange={(raw) => {
+                  const n = raw ? Math.min(60, Math.max(1, parseInt(raw, 10) || 0)) : null;
+                  if (n !== (deal.installments_count ?? null)) save({ installments_count: n });
+                }}
+                placeholder="Ex: 6"
+              />
+            </div>
+            <div className="space-y-2">
+              <FieldLabel>Data da 1ª parcela</FieldLabel>
+              <DatePickerInline
+                value={deal.first_installment_date}
+                onSave={(v) => save({ first_installment_date: v })}
+              />
+            </div>
+          </div>
+
+          {/* Quando a mensalidade começa */}
+          <div className="space-y-2">
+            <FieldLabel hint="se cobra antes da entrega, geralmente vem com desconto">
+              Início da cobrança da mensalidade (MRR)
+            </FieldLabel>
+            <Select
+              value={deal.mrr_start_trigger ?? ''}
+              onValueChange={(v) =>
+                save({ mrr_start_trigger: (v || null) as Deal['mrr_start_trigger'] })
+              }
+            >
+              <SelectTrigger className="bg-background/60">
+                <SelectValue placeholder="Selecione…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
+                <SelectItem value="before_delivery">Antes da entrega (com desconto)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Desconto temporário do MRR */}
+          <div className="rounded border border-border/50 bg-background/30 p-3 space-y-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Desconto temporário no MRR
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <FieldLabel>Tipo de validade</FieldLabel>
+                <Select
+                  value={deal.mrr_discount_kind ?? ''}
+                  onValueChange={(v) => {
+                    const kind = (v || null) as Deal['mrr_discount_kind'];
+                    const patch: Partial<Deal> = { mrr_discount_kind: kind };
+                    if (kind !== 'months') patch.mrr_discount_months = null;
+                    if (kind !== 'until_date') patch.mrr_discount_until_date = null;
+                    if (kind !== 'until_stage') patch.mrr_discount_until_stage = null;
+                    save(patch);
+                  }}
+                >
+                  <SelectTrigger className="bg-background/60">
+                    <SelectValue placeholder="Sem desconto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="months">Por X meses</SelectItem>
+                    <SelectItem value="until_date">Até uma data</SelectItem>
+                    <SelectItem value="until_stage">Até o projeto chegar em um estágio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel hint="quanto sai por mês durante o desconto">Valor mensal com desconto</FieldLabel>
+                <InlineMoney
+                  value={deal.mrr_discount_value}
+                  onSave={(v) => save({ mrr_discount_value: v })}
+                  placeholder="R$ 0,00"
+                />
+              </div>
+            </div>
+
+            {deal.mrr_discount_kind === 'months' && (
+              <div className="space-y-2">
+                <FieldLabel>Por quantos meses</FieldLabel>
+                <IntegerInput
+                  value={deal.mrr_discount_months != null ? String(deal.mrr_discount_months) : ''}
+                  onValueChange={(raw) => {
+                    const n = raw ? Math.min(60, Math.max(1, parseInt(raw, 10) || 0)) : null;
+                    if (n !== (deal.mrr_discount_months ?? null)) save({ mrr_discount_months: n });
+                  }}
+                  placeholder="Ex: 3"
+                />
+              </div>
+            )}
+
+            {deal.mrr_discount_kind === 'until_date' && (
+              <div className="space-y-2">
+                <FieldLabel>Válido até</FieldLabel>
+                <DatePickerInline
+                  value={deal.mrr_discount_until_date}
+                  onSave={(v) => save({ mrr_discount_until_date: v })}
+                />
+              </div>
+            )}
+
+            {deal.mrr_discount_kind === 'until_stage' && (
+              <div className="space-y-2">
+                <FieldLabel hint="quando o projeto chegar nesse estágio, o desconto cai automaticamente">
+                  Encerra quando projeto chegar em
+                </FieldLabel>
+                <Select
+                  value={deal.mrr_discount_until_stage ?? ''}
+                  onValueChange={(v) => save({ mrr_discount_until_stage: v || null })}
+                >
+                  <SelectTrigger className="bg-background/60">
+                    <SelectValue placeholder="Selecione um estágio…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROJECT_STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Concorrência + proposta */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
