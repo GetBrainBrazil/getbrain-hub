@@ -20,6 +20,8 @@ export type DealDependencyType =
 export type DealDependencyStatus =
   | 'aguardando_combinar' | 'combinado' | 'liberado' | 'atrasado';
 
+export type DealDependencyPriority = 'baixa' | 'media' | 'alta' | 'critica';
+
 export type CompanyClientType = 'b2b' | 'b2c' | 'b2b_b2c';
 export type CompanyRevenueRange = 'ate_360k' | 'de_360k_a_4_8m' | 'de_4_8m_a_30m' | 'acima_30m';
 export type ContactRole = 'decisor' | 'usuario_final' | 'tecnico' | 'financeiro' | 'outro';
