@@ -12,6 +12,9 @@ import { useConfirm } from '@/components/ConfirmDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { OrcamentoStatusBadge } from '@/components/orcamentos/OrcamentoStatusBadge';
 import { ScopeItemsEditor } from '@/components/orcamentos/ScopeItemsEditor';
+import { MarcarComoEnviadaDialog } from '@/components/orcamentos/MarcarComoEnviadaDialog';
+import { LinkGeradoDialog } from '@/components/orcamentos/LinkGeradoDialog';
+import { RedefinirSenhaDialog } from '@/components/orcamentos/RedefinirSenhaDialog';
 import {
   calculateScopeTotal, effectiveStatus, formatBRL, formatDateBR,
   type ProposalStatus, type ScopeItem,
@@ -60,6 +63,10 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   );
   const [validUntil, setValidUntil] = useState(proposal.valid_until);
   const [saving, setSaving] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
+  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string } | null>(null);
 
   useEffect(() => {
     setItems(proposal.scope_items ?? []);
@@ -76,7 +83,7 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   const valueDiverges = total > 0 && dealValue > 0 && Math.abs(total - dealValue) > 0.01;
   const noDealValue = total > 0 && dealValue === 0;
 
-  async function persist(extra: Record<string, any> = {}) {
+  async function persist(extra: Record<string, any> = {}, opts: { syncItems?: boolean } = {}) {
     setSaving(true);
     try {
       const userRes = await supabase.auth.getUser();
@@ -85,10 +92,29 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
         scope_items: items,
         maintenance_monthly_value: monthlyNum && monthlyNum > 0 ? monthlyNum : null,
         valid_until: validUntil,
+        expires_at: validUntil,
         updated_by: uid,
         ...extra,
       }).eq('id', proposal.id);
       if (error) throw error;
+
+      // Espelha em proposal_items (tabela canônica do schema 10A)
+      if (opts.syncItems !== false) {
+        await sb.from('proposal_items').update({ deleted_at: new Date().toISOString() })
+          .eq('proposal_id', proposal.id).is('deleted_at', null);
+        if (items.length > 0) {
+          const rows = items.map((it, i) => ({
+            proposal_id: proposal.id,
+            description: it.title || 'Item',
+            quantity: 1,
+            unit_price: Number(it.value) || 0,
+            order_index: i,
+            created_by: uid,
+            updated_by: uid,
+          }));
+          await sb.from('proposal_items').insert(rows);
+        }
+      }
       onChanged();
     } catch (e: any) {
       toast.error(`Erro ao salvar: ${e?.message ?? 'tente novamente'}`);
@@ -97,19 +123,18 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
     }
   }
 
-  async function handleSend() {
+  async function handleOpenSend() {
     if (items.length === 0) {
       toast.error('Adicione pelo menos um item antes de enviar');
       return;
     }
-    const ok = await confirm({
-      title: 'Marcar como enviada?',
-      description: 'A proposta passa pra status "enviada". Edições continuam permitidas.',
-      confirmLabel: 'Marcar como enviada',
-    });
-    if (!ok) return;
-    await persist({ status: 'enviada', sent_at: new Date().toISOString() });
-    toast.success('Proposta enviada');
+    if (!validUntil) {
+      toast.error('Defina a validade antes de enviar');
+      return;
+    }
+    // Garante que itens recentes estejam persistidos antes de exigir senha
+    await persist();
+    setSendDialogOpen(true);
   }
 
   async function handleAccept() {
@@ -274,12 +299,32 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
               </Button>
             )}
             {proposal.status === 'rascunho' && (
-              <Button size="sm" onClick={handleSend} disabled={saving}>
+              <Button size="sm" onClick={handleOpenSend} disabled={saving}>
                 <Send className="h-3.5 w-3.5" /> Marcar como enviada
               </Button>
             )}
             {proposal.status === 'enviada' && (
               <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if ((proposal as any).access_token) {
+                      setGeneratedTokenInfo({
+                        accessToken: (proposal as any).access_token,
+                        expiresAt: validUntil,
+                      });
+                      setLinkDialogOpen(true);
+                    } else {
+                      toast.error('Esta proposta não tem link de acesso');
+                    }
+                  }}
+                >
+                  Ver link
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setPwdDialogOpen(true)}>
+                  Redefinir senha
+                </Button>
                 <Button
                   size="sm"
                   className="bg-success text-success-foreground hover:bg-success/90"
@@ -304,6 +349,33 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
           {proposal.rejected_at && <span>Recusada em <span className="font-mono">{formatDateBR(proposal.rejected_at)}</span></span>}
         </div>
       </div>
+
+      {/* Modais 10A — senha + link */}
+      <MarcarComoEnviadaDialog
+        proposalId={proposal.id}
+        proposalCode={proposal.code}
+        expiresAt={validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        onSent={(info) => {
+          setGeneratedTokenInfo(info);
+          setLinkDialogOpen(true);
+          setValidUntil(info.expiresAt);
+          onChanged();
+        }}
+      />
+      <LinkGeradoDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        accessToken={generatedTokenInfo?.accessToken ?? null}
+        expiresAt={generatedTokenInfo?.expiresAt ?? validUntil}
+      />
+      <RedefinirSenhaDialog
+        proposalId={proposal.id}
+        proposalCode={proposal.code}
+        open={pwdDialogOpen}
+        onOpenChange={setPwdDialogOpen}
+      />
     </div>
   );
 }

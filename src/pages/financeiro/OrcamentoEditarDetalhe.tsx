@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, Check, X, Save, ZoomIn, ZoomOut, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +11,15 @@ import { toast } from "sonner";
 import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
+import { useProposalItems, useReplaceProposalItems } from "@/hooks/orcamentos/useProposalItems";
 import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import { ScopeItemsEditor } from "@/components/orcamentos/ScopeItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
 import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBadge";
+import { MarcarComoEnviadaDialog } from "@/components/orcamentos/MarcarComoEnviadaDialog";
+import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
+import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 import {
   calculateScopeTotal,
   effectiveStatus,
@@ -34,15 +38,29 @@ import { listTemplates } from "@/lib/orcamentos/templates";
 
 const PDF_DOM_ID = "proposal-pdf-template-live";
 
+/** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
+function canonicalToScopeItems(
+  rows: Array<{ description: string; unit_price: number | string; quantity: number | string }>
+): ScopeItem[] {
+  return rows.map((r) => ({
+    title: r.description,
+    description: "",
+    value: (Number(r.unit_price) || 0) * (Number(r.quantity) || 1),
+  }));
+}
+
 export default function OrcamentoEditarDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const { data, isLoading } = useProposalDetail(id);
+  const { data: itemsRows } = useProposalItems(id);
+  const replaceItems = useReplaceProposalItems();
   const update = useUpdateProposal();
   const gen = useGeneratePDF();
 
   // Local form state — edits are batched until "Salvar" or auto-save on blur
+  const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientCity, setClientCity] = useState("");
   const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
@@ -53,22 +71,28 @@ export default function OrcamentoEditarDetalhe() {
   const [validationDays, setValidationDays] = useState(7);
   const [considerations, setConsiderations] = useState<string[]>([]);
   const [validUntil, setValidUntil] = useState("");
+  const [mockupUrl, setMockupUrl] = useState("");
   const [templateKey, setTemplateKey] = useState<string>("inovacao_tecnologica");
   const [zoom, setZoom] = useState(0.5);
   const [dirty, setDirty] = useState(false);
+  const [itemsDirty, setItemsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
 
+  // Modais novos do prompt 10A
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
+  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string } | null>(null);
+
   useEffect(() => {
     if (!data) return;
     isInitialLoad.current = true;
+    setTitle((data as any).title || "");
     setClientName(data.client_company_name || "");
     setClientCity(data.client_city || "");
     setClientLogoUrl(data.client_logo_url || null);
-    setScopeItems(
-      Array.isArray(data.scope_items) ? (data.scope_items as ScopeItem[]) : []
-    );
     setMaintenance(
       data.maintenance_monthly_value ? Number(data.maintenance_monthly_value) : ""
     );
@@ -78,13 +102,21 @@ export default function OrcamentoEditarDetalhe() {
     setConsiderations(
       Array.isArray(data.considerations) ? (data.considerations as string[]) : []
     );
-    setValidUntil(data.valid_until || "");
+    setValidUntil((data as any).expires_at || data.valid_until || "");
+    setMockupUrl((data as any).mockup_url || "");
     setTemplateKey((data as any).template_key || "inovacao_tecnologica");
     setDirty(false);
+    setItemsDirty(false);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
-    // Reset initial load flag after state settles
     setTimeout(() => { isInitialLoad.current = false; }, 0);
   }, [data?.id]);
+
+  // Carrega itens canônicos para o estado local (formato ScopeItem para a UI atual)
+  useEffect(() => {
+    if (!itemsRows) return;
+    if (itemsDirty) return; // não sobrescreve edição em andamento
+    setScopeItems(canonicalToScopeItems(itemsRows as any));
+  }, [itemsRows, itemsDirty]);
 
   const previewProposal = useMemo(
     () => ({
@@ -117,16 +149,22 @@ export default function OrcamentoEditarDetalhe() {
       setDirty(true);
     };
   }
+  function markItemsDirty(next: ScopeItem[]) {
+    setScopeItems(next);
+    setItemsDirty(true);
+    setDirty(true);
+  }
 
   async function save(extra: Record<string, any> = {}, opts: { silent?: boolean } = {}) {
     if (!id) return;
     await update.mutateAsync({
       id,
       payload: {
+        title: title.trim() || null,
         client_company_name: clientName.trim() || "Cliente",
         client_city: clientCity || null,
         client_logo_url: clientLogoUrl,
-        scope_items: scopeItems,
+        scope_items: scopeItems, // legado mantido p/ compat com PDF
         maintenance_monthly_value:
           typeof maintenance === "number" && maintenance > 0 ? maintenance : null,
         maintenance_description: maintenanceDesc || null,
@@ -134,10 +172,25 @@ export default function OrcamentoEditarDetalhe() {
         validation_days: validationDays,
         considerations,
         valid_until: validUntil,
+        expires_at: validUntil || null,
+        mockup_url: mockupUrl.trim() || null,
         template_key: templateKey,
         ...extra,
       },
     });
+    // Persiste itens canônicos só se houve mudança neles
+    if (itemsDirty) {
+      await replaceItems.mutateAsync({
+        proposalId: id,
+        items: scopeItems.map((it, i) => ({
+          description: it.title || "Item",
+          quantity: 1,
+          unit_price: Number(it.value) || 0,
+          order_index: i,
+        })),
+      });
+      setItemsDirty(false);
+    }
     setDirty(false);
     setLastSavedAt(new Date());
     if (!opts.silent) toast.success("Salvo");
@@ -158,6 +211,7 @@ export default function OrcamentoEditarDetalhe() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     dirty,
+    title,
     clientName,
     clientCity,
     clientLogoUrl,
@@ -168,29 +222,29 @@ export default function OrcamentoEditarDetalhe() {
     validationDays,
     considerations,
     validUntil,
+    mockupUrl,
     templateKey,
   ]);
 
-  async function handleMarkSent() {
+  function handleOpenSendDialog() {
     if (scopeItems.length === 0) {
       toast.error("Adicione pelo menos um item antes de enviar");
       return;
     }
-    const ok = await confirm({
-      title: "Marcar como enviado?",
-      description:
-        "Após marcar como enviado, edições não bloqueiam mas você verá um aviso.",
-      confirmLabel: "Marcar como enviado",
-    });
-    if (!ok) return;
-    await save({ status: "enviada", sent_at: new Date().toISOString() });
-    toast.success("Proposta marcada como enviada");
-  }
-  async function handleAccept() {
-    await save({ status: "convertida", accepted_at: new Date().toISOString() });
-    toast.success("Proposta aceita");
+    if (!validUntil) {
+      toast.error("Defina uma data de validade antes de enviar");
+      return;
+    }
+    setSendDialogOpen(true);
   }
   async function handleReject() {
+    const ok = await confirm({
+      title: "Recusar proposta?",
+      description: "Você pode criar uma nova versão depois.",
+      confirmLabel: "Recusar",
+      variant: "destructive",
+    });
+    if (!ok) return;
     await save({ status: "recusada", rejected_at: new Date().toISOString() });
     toast.success("Proposta recusada");
   }
@@ -327,14 +381,31 @@ export default function OrcamentoEditarDetalhe() {
             PDF
           </Button>
           {data.status === "rascunho" && (
-            <Button size="sm" onClick={handleMarkSent}>
-              <Send className="h-3.5 w-3.5" /> Marcar como enviado
+            <Button size="sm" onClick={handleOpenSendDialog}>
+              <Send className="h-3.5 w-3.5" /> Marcar como enviada
             </Button>
           )}
           {data.status === "enviada" && (
             <>
-              <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={handleAccept}>
-                <Check className="h-3.5 w-3.5" /> Aceitar
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if ((data as any).access_token) {
+                    setGeneratedTokenInfo({
+                      accessToken: (data as any).access_token,
+                      expiresAt: validUntil,
+                    });
+                    setLinkDialogOpen(true);
+                  } else {
+                    toast.error("Esta proposta não tem link de acesso ainda");
+                  }
+                }}
+              >
+                <Link2 className="h-3.5 w-3.5" /> Ver link
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setPwdDialogOpen(true)}>
+                <KeyRound className="h-3.5 w-3.5" /> Redefinir senha
               </Button>
               <Button size="sm" variant="outline" className="text-destructive" onClick={handleReject}>
                 <X className="h-3.5 w-3.5" /> Recusar
@@ -353,6 +424,24 @@ export default function OrcamentoEditarDetalhe() {
               Esta proposta está em status <strong>{data.status}</strong>. Edições ainda são possíveis mas afetam o registro histórico.
             </div>
           )}
+
+          <Card className="p-4 space-y-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+              Identificação
+            </h2>
+            <div>
+              <Label className="text-xs">Título da proposta</Label>
+              <Input
+                value={title}
+                onChange={(e) => markDirty(setTitle)(e.target.value)}
+                className="h-9"
+                placeholder="Ex: Plataforma de Gestão Comercial"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Aparece no topo da página pública e no PDF. Default: nome do cliente.
+              </p>
+            </div>
+          </Card>
 
           <Card className="p-4 space-y-4">
             <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
@@ -395,7 +484,7 @@ export default function OrcamentoEditarDetalhe() {
             </h2>
             <ScopeItemsEditor
               items={scopeItems}
-              onChange={markDirty(setScopeItems)}
+              onChange={markItemsDirty}
             />
             <div className="flex items-center justify-between border-t border-border pt-3">
               <span className="text-sm text-muted-foreground">Total dos itens</span>
@@ -485,6 +574,29 @@ export default function OrcamentoEditarDetalhe() {
             />
           </Card>
 
+          <Card className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                Mockup
+              </h2>
+              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/20 text-accent">
+                Beta
+              </span>
+            </div>
+            <div>
+              <Label className="text-xs">URL do mockup (Figma, Loom, vídeo, etc.)</Label>
+              <Input
+                value={mockupUrl}
+                onChange={(e) => markDirty(setMockupUrl)(e.target.value)}
+                className="h-9"
+                placeholder="https://figma.com/proto/…"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Aparecerá como CTA destacado na página pública e como QR code no PDF.
+              </p>
+            </div>
+          </Card>
+
           {data.status === "recusada" && (
             <Card className="p-4 space-y-2">
               <Label className="text-xs">Motivo da recusa (opcional)</Label>
@@ -550,6 +662,38 @@ export default function OrcamentoEditarDetalhe() {
         </div>
       </div>
       {confirmDialog}
+
+      {/* Modal: marcar como enviada (define senha + valida data) */}
+      <MarcarComoEnviadaDialog
+        proposalId={data.id}
+        proposalCode={data.code}
+        expiresAt={validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        onSent={(info) => {
+          setGeneratedTokenInfo(info);
+          setLinkDialogOpen(true);
+          // refresh local: validUntil pode ter mudado
+          setValidUntil(info.expiresAt);
+          setLastSavedAt(new Date());
+        }}
+      />
+
+      {/* Modal: link público gerado */}
+      <LinkGeradoDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        accessToken={generatedTokenInfo?.accessToken ?? null}
+        expiresAt={generatedTokenInfo?.expiresAt ?? validUntil}
+      />
+
+      {/* Modal: redefinir senha (proposta já enviada) */}
+      <RedefinirSenhaDialog
+        proposalId={data.id}
+        proposalCode={data.code}
+        open={pwdDialogOpen}
+        onOpenChange={setPwdDialogOpen}
+      />
     </div>
   );
 }
