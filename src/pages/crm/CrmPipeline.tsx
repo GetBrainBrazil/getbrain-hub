@@ -153,6 +153,14 @@ export default function CrmPipeline() {
   const sourceFilter = useCrmHubStore((s) => s.sourceFilter);
   const valueRange = useCrmHubStore((s) => s.valueRange);
   const search = useCrmHubStore((s) => s.search);
+  const setOwnerFilter = useCrmHubStore((s) => s.setOwnerFilter);
+  const setSourceFilter = useCrmHubStore((s) => s.setSourceFilter);
+  const setValueRange = useCrmHubStore((s) => s.setValueRange);
+  const setSearch = useCrmHubStore((s) => s.setSearch);
+  const resetGlobalFilters = useCrmHubStore((s) => s.resetFilters);
+
+  const { data: actors = [] } = useCrmActors();
+  const { data: leadSources = [] } = useDistinctLeadSources();
 
   // Persisted view mode
   const [viewMode, setViewMode] = usePersistedState<'lista' | 'kanban'>('crm_view_mode', 'lista');
