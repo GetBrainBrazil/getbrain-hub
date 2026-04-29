@@ -302,7 +302,7 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
           </InfoBadge>
         )}
         {projectType && (
-          <InfoBadge className={projectType.color ?? ''}>
+          <InfoBadge style={chipStyleFromHex(projectType.color)}>
             {projectType.name}
             {extraProjectTypesCount > 0 && ` +${extraProjectTypesCount}`}
           </InfoBadge>

@@ -124,5 +124,5 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
   );
 }
 
-export function InfoBadge({ children, className }: { children: React.ReactNode; className?: string }) { return <Badge variant="outline" className={cn('rounded-md border-border bg-muted/40 font-normal', className)}>{children}</Badge>; }
+export function InfoBadge({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) { return <Badge variant="outline" className={cn('rounded-md border-border bg-muted/40 font-normal', className)} style={style}>{children}</Badge>; }
 
