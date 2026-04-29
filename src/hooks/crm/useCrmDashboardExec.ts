@@ -114,7 +114,7 @@ export function useDealsParados(filters: DashboardFilters) {
         .not('stage', 'in', '(fechado_ganho,fechado_perdido)');
 
       if (filters.ownerIds.length) q = q.in('owner_actor_id', filters.ownerIds);
-      if (filters.projectTypes.length) q = q.in('project_type_v2', filters.projectTypes);
+      if (filters.projectTypes.length) q = q.overlaps('project_type_v2', filters.projectTypes);
 
       const { data, error } = await q;
       if (error) throw error;
