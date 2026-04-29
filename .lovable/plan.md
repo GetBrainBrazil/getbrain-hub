@@ -1,69 +1,83 @@
-## Objetivo
+# Redesign do "Tipo de Projeto" — escalável para muitos tipos
 
-Tornar **Tipo de projeto** (`project_type_v2`) um campo dinâmico, igual ao que fizemos com **Categorias da dor**: gerenciável em Configurações, criável on-the-fly e com cores customizáveis. Diferença principal de UX: **continua sendo seleção única** (um deal tem um tipo) e o campo `project_type_custom` deixa de existir (vira só "criar nova opção").
+## Problema atual
 
-Aproveito a oportunidade pra refinar o que ficou meio cru no campo de dores:
+O componente mostra os 5 primeiros tipos como chips e um botão "Mais N". Quando há 15-30+ tipos cadastrados:
 
-- **Trocar os chips estáticos** que ocupam uma linha enorme por um seletor compacto que sempre mostra a opção atual com sua cor — sem precisar abrir popover só pra ver o que está selecionado.
-- **Quick-pick + busca no mesmo lugar**: as opções mais usadas continuam visíveis como atalhos (1 clique), mas com busca/criação acessível por um botão "Mais opções..." que abre o combobox completo. Evita o problema atual das dores onde tudo é escondido atrás de um popover.
-- **Indicador visual de cor** consistente: pontinho colorido + label, igual padrão de status do GitHub/Linear.
+- Os 5 chips fixos viram uma escolha quase aleatória (ordem alfabética/criação) — sem relação com o que o usuário usa de fato.
+- A maior parte do trabalho passa a acontecer dentro do popover, anulando a vantagem do "1-clique".
+- Em telas mais estreitas (ou com nomes longos), os chips quebram em várias linhas e poluem o card.
 
-## Mudanças no banco
+## Proposta
 
-1. Nova tabela `crm_project_types` (mesmo schema das outras de referência: `name`, `slug`, `color`, `display_order`, `is_active`, `is_system`).
-2. Seed com os 6 tipos atuais (`whatsapp_chatbot`, `ai_sdr`, `sistema_gestao`, `automacao_processo`, `integracao_sistemas`) preservando as cores existentes. **"Outro" entra desativado** (mesma decisão das dores — quem quiser cria um tipo específico).
-3. Converter `deals.project_type_v2` de enum para `text` (preservando os slugs existentes).
-4. Migrar `project_type_custom`: para deals que tinham `project_type_v2='outro'` + `project_type_custom` preenchido, criar registros em `crm_project_types` (slugificados) e apontar `project_type_v2` pra eles. Depois, dropar a coluna `project_type_custom`.
-5. RLS no padrão das outras tabelas de referência (select autenticado, write só admin, sem deletar `is_system=true`).
-6. Atualizar a função `close_deal_as_won` (já lida com `project_type` como string, então o impacto é mínimo — só garantir que o slug é repassado).
+Manter o visual atual de chips coloridos com 1-clique, **mas tornar a seleção inline inteligente e o input de busca sempre visível**, em vez de escondido atrás de um botão.
 
-## Mudanças no front
-
-### Componente novo `ProjectTypeSelect`
-
-Substitui o `ChipGroup` atual em `CrmDealDetail.tsx`. Layout proposto:
+### Layout final
 
 ```text
 TIPO DE PROJETO
-[● Chatbot WhatsApp] [● SDR com IA] [● Sistema de gestão]  [+ mais opções ▾]
-                  ^selecionado (com ring + cor cheia)        ^abre combobox c/ busca + criar
+┌──────────────────────────────────────────────────────────────┐
+│ 🔍 Buscar tipo...                                            │  ← input sempre visível
+└──────────────────────────────────────────────────────────────┘
+[● Chatbot WhatsApp ✓]  [● SDR com IA]  [● Sistema gestão]
+[● Site institucional]  [● Automação]   [+12 outros ▾]
 ```
 
-- Mostra até **5 opções como chips** (as `display_order` mais altas / mais usadas) — clique alterna seleção.
-- O selecionado fica destacado com ring e a cor própria; os demais ficam como outline sutil.
-- Botão **"Mais opções"** abre o `ComboboxCreate` (mesmo já usado nas dores) com busca e criação inline para admins.
-- Se o tipo selecionado não está entre os chips (ex: criado custom), ele aparece automaticamente entre os chips visíveis.
+- **Input de busca sempre visível** (compacto, no topo). Digitando, os chips abaixo viram o resultado da busca em tempo real (mesmo grid, mesmas cores). Enter seleciona o primeiro; se admin e nada bater, oferece "Criar".
+- **Chips inteligentes** abaixo do input: até 6 (configurável). Seleção por:
+  1. Tipo selecionado atualmente (sempre presente).
+  2. Top mais usados (fonte: contagem em `deals.project_type_v2`).
+  3. Resto preenchido por ordem da tabela.
+- **Pill "+N outros"** abre popover compacto listando o restante (ainda como chips, agrupados, scrollável). Sem `Command` pesado — só uma grade de chips clicáveis.
+- **Item selecionado fora do top**: quando o usuário escolhe pelo "+N outros", ele "promove" o chip pra linha principal naquela sessão (já existe essa lógica, mantemos).
+- **Modo compacto automático**: se houver ≥ 20 tipos cadastrados, esconde a fileira de chips por default e mostra só o input + chip selecionado + botão "Ver todos". Isso evita poluição quando a lista vira realmente grande. Mantém UX limpo e a busca como caminho principal nesse cenário.
 
-### Página de gerenciamento
+### Smart ranking dos chips (top usados)
 
-`/configuracoes/pessoas/tipos-de-projeto` — copia 1:1 o padrão do `PainCategoriesManager` (drag-and-drop ordem, editar nome/cor, ativar/desativar, proteger `is_system`).
+Usa um hook novo `useProjectTypeUsage()` que consulta uma vez (cache) a contagem por slug em `deals`. Resultado: os 6 chips são sempre os tipos que o usuário/empresa realmente usa. Sem isso, "muitos tipos" significa "5 chips inúteis".
 
-### Hook `useCrmProjectTypes`
+Query simples:
+```sql
+select project_type_v2 as slug, count(*) as uses
+from deals where project_type_v2 is not null
+group by project_type_v2
+order by uses desc;
+```
 
-Espelho de `useCrmPainCategories`: list, create, update, delete, reorder. Cache invalidado via `invalidateCrmCaches`.
+### Comportamentos finos
 
-### Limpeza dos lugares que usam o enum
+- **Atalho de teclado**: input já em foco quando o card abre não, mas focável com `/` quando o card está visível (opcional, marcamos como "nice to have" e implementamos só se simples).
+- **Limpar seleção**: o chip selecionado tem um `×` discreto no hover (além de re-clicar pra desmarcar).
+- **Vazio com filtro**: estado claro "Nenhum tipo encontrado" + CTA "Criar '<termo>'" (admin).
+- **Cor ao buscar**: chips filtrados mantêm cor original; itens fora do filtro somem (não ficam acinzentados — reduz ruído visual).
+- **Acessibilidade**: input com `role=combobox`, chips com `aria-pressed`, navegação por Tab + Enter funcional.
 
-| Arquivo | Mudança |
-|---|---|
-| `src/types/crm.ts` | `DealProjectType` vira `string`; remover `project_type_custom` do `Deal`. |
-| `src/constants/dealEnumLabels.ts` | Remover `PROJECT_TYPE_V2_LABEL/OPTIONS/COLOR` (vira dinâmico). Manter um `getProjectTypeMeta(slug, list)` helper se útil. |
-| `src/pages/crm/CrmDealDetail.tsx` | Trocar `ChipGroup` + bloco `isOutro/project_type_custom` pelo novo `ProjectTypeSelect`. |
-| `src/pages/crm/CrmPipeline.tsx` | Filtro lateral passa a usar lista vinda do hook (não mais constante). |
-| `src/components/crm/DealCard.tsx` | Chip do header lê cor/label da lista carregada (igual já faz com dores agora). |
-| `src/components/crm/DealHeader.tsx` | Mesma adaptação. |
-| `src/hooks/crm/useCrmDashboardExec.ts` | Filtro `projectTypes` continua igual (já usa string). |
+### Quando NÃO houver muitos tipos (≤ 6)
 
-## Ordem de execução
+Comportamento praticamente idêntico ao atual: input fica visível mas discreto, todos os chips aparecem, sem "+N". Não regredimos a experiência atual quando a lista é pequena.
 
-1. Migration: nova tabela + seed + converter coluna + migrar `project_type_custom` + drop da coluna.
-2. Criar hook + componente de gerenciamento + rota em Configurações.
-3. Criar `ProjectTypeSelect` e plugar em `CrmDealDetail`.
-4. Adaptar leitura em `DealCard`, `DealHeader`, `CrmPipeline` (chip e filtros dinâmicos).
-5. Atualizar memória do projeto (`crm-reference-tables`) somando `project_types` à lista de tabelas no padrão.
+## Detalhes técnicos
 
-## Não muda
+**Arquivos a editar:**
 
-- Audit logs (label "Tipo de projeto" continua igual em `formatters.ts`).
-- Coluna legada `project_type` (texto livre, usada por `projects`) — fora do escopo.
-- Comportamento do handoff CRM→Projeto.
+- `src/components/crm/ProjectTypeSelect.tsx` — reescrita do layout e da lógica de ranking; mesma assinatura de props (`value`, `onChange`, `disabled`, `inlineLimit`).
+- `src/hooks/crm/useCrmProjectTypes.ts` — adicionar `useProjectTypeUsage()` (query agregada via `supabase.from('deals').select('project_type_v2')` e contagem client-side, cache 5 min). Sem migration nova.
+
+**Sem mudanças em:**
+
+- Schema (tabela `crm_project_types` continua igual).
+- `ProjectTypesManager` (página de configurações).
+- `DealCard` / `DealHeader` / filtros do pipeline (continuam consumindo o hook existente).
+
+**Limites:**
+
+- `inlineLimit` default sobe de 5 para 6 (cabe melhor em 2 linhas se necessário).
+- Threshold do "modo compacto": 20 tipos cadastrados.
+
+**Performance:** `useProjectTypeUsage` roda 1x e fica em cache; staleTime alto. Se a tabela `deals` ficar grande, trocamos por uma RPC/view materializada — mas para o volume atual, client-side basta.
+
+## Fora do escopo
+
+- Ranking por usuário/equipe (só global por enquanto).
+- Reordenar chips por drag manualmente no card (já existe na página de configurações).
+- Multi-select (tipo de projeto continua single-select; só "categorias da dor" é multi).
