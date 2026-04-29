@@ -77,7 +77,7 @@ export interface Deal {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null; origin_lead_id: string | null;
   stage: DealStage; estimated_value: number | null; estimated_implementation_value: number | null; estimated_mrr_value: number | null; probability_pct: number; expected_close_date: string | null;
   project_type: string | null;          // legacy enum (compartilhado com projects)
-  project_type_v2: DealProjectType | null;  // v2.1 — slug em crm_project_types (dinâmico)
+  project_type_v2: string[];                // v2.2 — slugs em crm_project_types (multi)
   scope_summary: string | null; proposal_url: string | null; notes: string | null; stage_changed_at: string; closed_at: string | null; lost_reason: string | null; generated_project_id: string | null;
 
   // v2.0 — descoberta enxuta

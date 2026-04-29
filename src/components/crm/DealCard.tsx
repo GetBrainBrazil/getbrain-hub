@@ -23,7 +23,7 @@ export function isDiscoveryComplete(deal: Deal): { complete: boolean; missing: s
   const hasCategory = (deal.pain_categories?.length ?? 0) > 0 || !!deal.pain_category;
   if (!hasCategory) missing.push('categoria da dor');
   if (!deal.pain_description || deal.pain_description.trim().length < 40) missing.push('descrição da dor (≥ 40 caracteres)');
-  if (!deal.project_type_v2) missing.push('tipo de projeto');
+  if (!deal.project_type_v2 || deal.project_type_v2.length === 0) missing.push('tipo de projeto');
   if (!deal.scope_summary || deal.scope_summary.trim().length < 40) missing.push('resumo do escopo (≥ 40 caracteres)');
   const dlv = (deal.deliverables ?? []).length;
   const ac = (deal.acceptance_criteria ?? []).length;
@@ -55,8 +55,11 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
   );
 
   const { data: projectTypes = [] } = useCrmProjectTypes();
-  const projectType = useMemo(
-    () => projectTypes.find((t) => t.slug === deal.project_type_v2) ?? null,
+  const projectTypeChips = useMemo(
+    () =>
+      (deal.project_type_v2 ?? [])
+        .map((slug) => projectTypes.find((t) => t.slug === slug))
+        .filter(Boolean) as typeof projectTypes,
     [projectTypes, deal.project_type_v2],
   );
 
@@ -78,9 +81,20 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
           <div className="flex items-center justify-between gap-2 text-[11px]">
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">{deal.code}</span>
             <div className="flex items-center gap-1.5">
-              {projectType && (
-                <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium', projectType.color ?? 'bg-muted text-muted-foreground border-border')}>
-                  {projectType.name}
+              {projectTypeChips.slice(0, 2).map((pt) => (
+                <span
+                  key={pt.slug}
+                  className={cn(
+                    'rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
+                    pt.color ?? 'bg-muted text-muted-foreground border-border',
+                  )}
+                >
+                  {pt.name}
+                </span>
+              ))}
+              {projectTypeChips.length > 2 && (
+                <span className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  +{projectTypeChips.length - 2}
                 </span>
               )}
               <Tooltip>

@@ -114,7 +114,7 @@ export function useDealsParados(filters: DashboardFilters) {
         .not('stage', 'in', '(fechado_ganho,fechado_perdido)');
 
       if (filters.ownerIds.length) q = q.in('owner_actor_id', filters.ownerIds);
-      if (filters.projectTypes.length) q = q.in('project_type_v2', filters.projectTypes);
+      if (filters.projectTypes.length) q = q.overlaps('project_type_v2', filters.projectTypes);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -196,7 +196,9 @@ export function useProximasAtividades(filters: DashboardFilters) {
       if (filters.ownerIds.length)
         rows = rows.filter((a: any) => filters.ownerIds.includes(a.deal.owner_actor_id));
       if (filters.projectTypes.length)
-        rows = rows.filter((a: any) => filters.projectTypes.includes(a.deal.project_type_v2));
+        rows = rows.filter((a: any) =>
+          (a.deal.project_type_v2 ?? []).some((s: string) => filters.projectTypes.includes(s)),
+        );
 
       rows = rows.slice(0, 10);
 

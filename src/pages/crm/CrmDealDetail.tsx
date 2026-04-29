@@ -442,7 +442,7 @@ function computeCompleteness(deal: Deal): { pct: number; painOk: boolean; soluca
   const hasCategory = (deal.pain_categories?.length ?? 0) > 0 || !!deal.pain_category;
   const painOk = hasCategory && (deal.pain_description?.trim().length ?? 0) >= 40;
   const solucaoOk =
-    !!deal.project_type_v2 &&
+    (deal.project_type_v2?.length ?? 0) > 0 &&
     (deal.scope_summary?.trim().length ?? 0) >= 40 &&
     ((deal.deliverables?.length ?? 0) >= 3 || (deal.acceptance_criteria?.length ?? 0) >= 3);
   // 2A só conta Dor + Solução (50% cada). Cliente/Comercial entram pelo refinamento posterior.

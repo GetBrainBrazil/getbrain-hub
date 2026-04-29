@@ -1335,7 +1335,7 @@ export type Database = {
           pricing_rationale: string | null
           probability_pct: number
           project_type: Database["public"]["Enums"]["project_type"] | null
-          project_type_v2: string | null
+          project_type_v2: string[]
           proposal_url: string | null
           scope_in: string | null
           scope_out: string | null
@@ -1396,7 +1396,7 @@ export type Database = {
           pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
-          project_type_v2?: string | null
+          project_type_v2?: string[]
           proposal_url?: string | null
           scope_in?: string | null
           scope_out?: string | null
@@ -1457,7 +1457,7 @@ export type Database = {
           pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
-          project_type_v2?: string | null
+          project_type_v2?: string[]
           proposal_url?: string | null
           scope_in?: string | null
           scope_out?: string | null

@@ -246,7 +246,11 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(deal.title);
   const { data: projectTypes = [] } = useCrmProjectTypes();
-  const projectType = projectTypes.find((t) => t.slug === deal.project_type_v2) ?? null;
+  const dealProjectTypeSlugs = deal.project_type_v2 ?? [];
+  const projectType = dealProjectTypeSlugs.length
+    ? projectTypes.find((t) => t.slug === dealProjectTypeSlugs[0]) ?? null
+    : null;
+  const extraProjectTypesCount = Math.max(0, dealProjectTypeSlugs.length - 1);
 
   useEffect(() => { setTitle(deal.title); }, [deal.id, deal.title]);
 
@@ -300,6 +304,7 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
         {projectType && (
           <InfoBadge className={projectType.color ?? ''}>
             {projectType.name}
+            {extraProjectTypesCount > 0 && ` +${extraProjectTypesCount}`}
           </InfoBadge>
         )}
         {deal.estimation_confidence && (
