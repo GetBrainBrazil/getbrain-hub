@@ -186,7 +186,7 @@ export default function CrmPipeline() {
     commitStage(deal, stage);
   };
 
-  const handleCreateProposalForDeal = async (estimatedValue?: number) => {
+  const handleCreateProposalForDeal = async ({ implementationValue, mrrValue }: { implementationValue: number; mrrValue?: number }) => {
     if (!needsProposal) return;
     const { deal, stage } = needsProposal;
     if (!deal.company_id) {
@@ -195,18 +195,27 @@ export default function CrmPipeline() {
     }
     setCreatingProposal(true);
     try {
-      // Se o usuário informou um valor, persiste no deal antes de criar a proposta
-      if (estimatedValue && !deal.estimated_value) {
-        const { error: updErr } = await supabase
-          .from('deals')
-          .update({ estimated_value: estimatedValue })
-          .eq('id', deal.id);
-        if (updErr) throw updErr;
+      // Persiste implementação + MRR no deal. estimated_value só é setado se ainda estiver vazio,
+      // para não sobrescrever uma estimativa anterior do usuário.
+      const dealUpdate: Record<string, any> = {
+        estimated_implementation_value: implementationValue,
+        estimated_mrr_value: mrrValue ?? null,
+      };
+      if (!deal.estimated_value) {
+        dealUpdate.estimated_value = implementationValue + (mrrValue ?? 0) * 12;
       }
+      const { error: updErr } = await supabase
+        .from('deals')
+        .update(dealUpdate)
+        .eq('id', deal.id);
+      if (updErr) throw updErr;
+
       const newId = await createDraftProposal({
         dealId: deal.id,
         companyId: deal.company_id,
         companyName: deal.company?.trade_name || deal.company?.legal_name || '',
+        implementationValue,
+        mrrValue: mrrValue ?? null,
       });
       commitStage(deal, stage);
       invalidateProposalCaches(qc, { dealId: deal.id });
