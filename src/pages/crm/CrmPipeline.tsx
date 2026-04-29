@@ -170,7 +170,6 @@ export default function CrmPipeline() {
     const stage = e.over?.id as DealStage | undefined;
     if (!deal || !stage || deal.stage === stage || !DEAL_STAGES.includes(stage)) return;
     if (stage === 'perdido') { setLost({ deal, stage }); return; }
-    if (stage === 'proposta_na_mesa' && !deal.estimated_value) { setValueRequired({ deal, stage }); return; }
     if (stage === 'ganho') { setWon({ deal, stage }); return; }
     if (stage === 'proposta_na_mesa') {
       const { count, error } = await supabase
@@ -182,12 +181,13 @@ export default function CrmPipeline() {
         toast.error('Erro ao verificar propostas vinculadas');
         return;
       }
+      // Sem proposta vinculada → abre o modal unificado (que também coleta valor se faltar)
       if (!count) { setNeedsProposal({ deal, stage }); return; }
     }
     commitStage(deal, stage);
   };
 
-  const handleCreateProposalForDeal = async () => {
+  const handleCreateProposalForDeal = async (estimatedValue?: number) => {
     if (!needsProposal) return;
     const { deal, stage } = needsProposal;
     if (!deal.company_id) {
@@ -196,6 +196,14 @@ export default function CrmPipeline() {
     }
     setCreatingProposal(true);
     try {
+      // Se o usuário informou um valor, persiste no deal antes de criar a proposta
+      if (estimatedValue && !deal.estimated_value) {
+        const { error: updErr } = await supabase
+          .from('deals')
+          .update({ estimated_value: estimatedValue })
+          .eq('id', deal.id);
+        if (updErr) throw updErr;
+      }
       const newId = await createDraftProposal({
         dealId: deal.id,
         companyId: deal.company_id,
