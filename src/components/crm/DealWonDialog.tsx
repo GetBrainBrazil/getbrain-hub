@@ -865,8 +865,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                 Deal {deal.code} · {loadingProposal
                   ? 'verificando propostas…'
                   : acceptedProposal
-                    ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) será vinculada`
-                    : 'Nenhuma proposta enviada/aceita encontrada'}
+                    ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status})${acceptedProposal.status === 'convertida' ? ' já vinculada' : ' será marcada como convertida e vinculada'}`
+                    : 'Nenhuma proposta vinculada encontrada'}
               </div>
             </div>
           </TabsContent>
