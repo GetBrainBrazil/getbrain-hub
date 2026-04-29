@@ -433,7 +433,11 @@ export default function CrmPipeline() {
 
       <NewDealQuickDialog open={createOpen} onOpenChange={setCreateOpen} initialStage={createStage} />
 
-      <Dialog open={!!lost} onOpenChange={(v) => !v && setLost(null)}>
+      <Dialog open={!!lost} onOpenChange={(v) => {
+        if (v || !lost) return;
+        setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[lost.deal.id]; return next; });
+        setLost(null);
+      }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Motivo da perda</DialogTitle></DialogHeader>
           <div className="space-y-2">
@@ -441,7 +445,10 @@ export default function CrmPipeline() {
             <Textarea value={lostReason} onChange={(e) => setLostReason(e.target.value)} />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setLost(null)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => {
+              if (lost) setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[lost.deal.id]; return next; });
+              setLost(null);
+            }}>Cancelar</Button>
             <Button disabled={!lostReason.trim()} onClick={() => { if (lost) commitStage(lost.deal, lost.stage, { lost_reason: lostReason }); setLost(null); setLostReason(''); }}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
