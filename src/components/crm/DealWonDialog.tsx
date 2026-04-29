@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Loader2, Plus, Trash2, ArrowRight, ChevronDown, Settings2,
-  Repeat, Percent, Wallet, PlusCircle,
+  Repeat, Percent, Wallet,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
+import { ComboboxCreate, type ComboOption } from '@/components/crm/ComboboxCreate';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateScopeTotal, formatBRL, type ScopeItem } from '@/lib/orcamentos/calculateTotal';
 import { PROJECT_TYPE_OPTIONS, PROJECT_TYPE_LABEL } from '@/constants/dealStages';
@@ -68,7 +69,7 @@ function fmtDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-type Option = { id: string; nome: string; tipo?: string | null };
+type Option = { id: string; nome: string };
 
 const FIN_DEFAULTS_KEY = 'crm.lastWonFinancialDefaults';
 
@@ -90,6 +91,10 @@ const RECURRENCE_LABEL: Record<ExtraCostDraft['recurrence'], string> = {
   monthly: 'Mensal',
   yearly: 'Anual',
 };
+
+function toComboOptions(list: Option[]): ComboOption[] {
+  return list.map((o) => ({ value: o.id, label: o.nome }));
+}
 
 export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const qc = useQueryClient();
@@ -124,11 +129,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const [contaId, setContaId] = useState<string>('');
   const [meioId, setMeioId] = useState<string>('');
   const [finOpen, setFinOpen] = useState(true);
-
-  // Mini-modal "+ Criar"
-  const [createTarget, setCreateTarget] = useState<null | 'categoria' | 'centro' | 'conta'>(null);
-  const [createName, setCreateName] = useState('');
-  const [creating, setCreating] = useState(false);
 
   // MRR / Manutenção
   const [mrrEnabled, setMrrEnabled] = useState(false);
@@ -173,9 +173,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     return () => { cancelled = true; };
   }, [open, deal?.id]);
 
-  async function reloadFinanceLists(selectAfterCreate?: { kind: 'categoria' | 'centro' | 'conta'; id: string }) {
+  async function reloadFinanceLists(selectAfterCreate?: { kind: 'categoria' | 'centro' | 'conta' | 'meio'; id: string }) {
     const [cats, ccs, cbs, mps] = await Promise.all([
-      sb.from('categorias').select('id, nome, tipo').eq('ativo', true).eq('tipo', 'receita').order('nome'),
+      // tipo no banco é "receitas" (plural) — antes estava "receita" e por isso vinha vazio
+      sb.from('categorias').select('id, nome').eq('ativo', true).eq('tipo', 'receitas').order('nome'),
       sb.from('centros_custo').select('id, nome').eq('ativo', true).order('nome'),
       sb.from('contas_bancarias').select('id, nome').eq('ativo', true).order('nome'),
       sb.from('meios_pagamento').select('id, nome').eq('ativo', true).order('nome'),
@@ -193,6 +194,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       if (selectAfterCreate.kind === 'categoria') setCategoriaId(selectAfterCreate.id);
       if (selectAfterCreate.kind === 'centro') setCentroId(selectAfterCreate.id);
       if (selectAfterCreate.kind === 'conta') setContaId(selectAfterCreate.id);
+      if (selectAfterCreate.kind === 'meio') setMeioId(selectAfterCreate.id);
     } else {
       const def = loadFinDefaults();
       setCategoriaId(def.categoria_id && cList.find((x) => x.id === def.categoria_id) ? def.categoria_id : '');
@@ -235,7 +237,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     ]);
     setCustomN('');
 
-    // MRR — habilita automaticamente se deal tem MRR
     const dealMrr = Number(deal.estimated_mrr_value ?? 0);
     setMrrEnabled(dealMrr > 0);
     setMrrValue(dealMrr > 0 ? String(dealMrr) : '');
@@ -249,7 +250,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setMrrDiscountMonths(dMonths != null ? String(dMonths) : '3');
     setMrrDiscountValue(dValue != null ? String(dValue) : '');
 
-    // Desconto
     const dAmount = (deal as any).discount_amount;
     setDiscountEnabled(dAmount != null && dAmount > 0);
     setDiscountKind(((deal as any).discount_kind as 'percent' | 'fixed') ?? 'percent');
@@ -257,7 +257,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setDiscountValidUntil((deal as any).discount_valid_until ?? '');
     setDiscountNotes((deal as any).discount_notes ?? '');
 
-    // Custos extras
     const ec = ((deal as any).extra_costs ?? []) as Array<any>;
     setExtraCosts(
       Array.isArray(ec)
@@ -355,99 +354,73 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setExtraCosts((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   }
 
-  // ============== Mini criar opção financeira ==============
-  async function handleCreateOption() {
-    if (!createTarget) return;
-    const name = createName.trim();
-    if (!name) {
-      toast.error('Informe um nome');
-      return;
-    }
-    setCreating(true);
-    try {
-      let inserted: { id: string } | null = null;
-      if (createTarget === 'categoria') {
-        const { data, error } = await sb
-          .from('categorias')
-          .insert({ nome: name, tipo: 'receita', ativo: true })
-          .select('id')
-          .single();
-        if (error) throw error;
-        inserted = data;
-      } else if (createTarget === 'centro') {
-        const { data, error } = await sb
-          .from('centros_custo')
-          .insert({ nome: name, ativo: true })
-          .select('id')
-          .single();
-        if (error) throw error;
-        inserted = data;
-      } else if (createTarget === 'conta') {
-        const { data, error } = await sb
-          .from('contas_bancarias')
-          .insert({ nome: name, ativo: true, moeda: 'BRL', tipo: 'corrente' })
-          .select('id')
-          .single();
-        if (error) throw error;
-        inserted = data;
-      }
-      if (inserted) {
-        await reloadFinanceLists({ kind: createTarget, id: inserted.id });
-        toast.success('Criado e selecionado');
-      }
-      setCreateTarget(null);
-      setCreateName('');
-    } catch (e: any) {
-      toast.error(`Erro ao criar: ${e?.message ?? 'tente novamente'}`);
-    } finally {
-      setCreating(false);
-    }
+  // ============== Criar inline (combobox) ==============
+  async function createCategoria(name: string) {
+    const { data, error } = await sb
+      .from('categorias')
+      .insert({ nome: name, tipo: 'receitas', ativo: true })
+      .select('id').single();
+    if (error) { toast.error(`Erro: ${error.message}`); return; }
+    await reloadFinanceLists({ kind: 'categoria', id: data.id });
+    toast.success(`Categoria "${name}" criada`);
+  }
+  async function createCentro(name: string) {
+    const { data, error } = await sb
+      .from('centros_custo')
+      .insert({ nome: name, ativo: true })
+      .select('id').single();
+    if (error) { toast.error(`Erro: ${error.message}`); return; }
+    await reloadFinanceLists({ kind: 'centro', id: data.id });
+    toast.success(`Centro "${name}" criado`);
+  }
+  async function createConta(name: string) {
+    const { data, error } = await sb
+      .from('contas_bancarias')
+      .insert({ nome: name, ativo: true, moeda: 'BRL', tipo: 'corrente' })
+      .select('id').single();
+    if (error) { toast.error(`Erro: ${error.message}`); return; }
+    await reloadFinanceLists({ kind: 'conta', id: data.id });
+    toast.success(`Conta "${name}" criada`);
+  }
+  async function createMeio(name: string) {
+    const { data, error } = await sb
+      .from('meios_pagamento')
+      .insert({ nome: name, ativo: true })
+      .select('id').single();
+    if (error) { toast.error(`Erro: ${error.message}`); return; }
+    await reloadFinanceLists({ kind: 'meio', id: data.id });
+    toast.success(`Meio "${name}" criado`);
   }
 
   // ============== Confirmar ==============
   async function handleConfirm() {
     if (!deal) return;
-    if (!projectName.trim()) {
-      toast.error('Informe o nome do projeto');
-      return;
-    }
-    if (!projectType) {
-      toast.error('Selecione o tipo de projeto');
-      return;
-    }
+    if (!projectName.trim()) { toast.error('Informe o nome do projeto'); return; }
+    if (!projectType) { toast.error('Selecione o tipo de projeto'); return; }
+
     const cleaned = installments
       .map((i) => ({ amount: Number(i.amount) || 0, due_date: i.due_date }))
       .filter((i) => i.amount > 0 && i.due_date);
-    if (cleaned.length === 0) {
-      toast.error('Adicione ao menos uma parcela válida');
-      return;
-    }
+    if (cleaned.length === 0) { toast.error('Adicione ao menos uma parcela válida'); return; }
 
     if (mrrEnabled) {
       if (!Number(mrrValue) || Number(mrrValue) <= 0) {
-        toast.error('Valor mensal do MRR deve ser maior que zero');
-        return;
+        toast.error('Valor mensal do MRR deve ser maior que zero'); return;
       }
-      if (!mrrStartDate) {
-        toast.error('Informe a data de início da manutenção (MRR)');
-        return;
-      }
+      if (!mrrStartDate) { toast.error('Informe a data de início da manutenção (MRR)'); return; }
     }
 
     for (const e of extraCosts) {
       if (e.description.trim() && (!Number(e.amount) || Number(e.amount) <= 0)) {
-        toast.error(`Valor inválido no custo extra "${e.description}"`);
-        return;
+        toast.error(`Valor inválido no custo extra "${e.description}"`); return;
       }
       if (Number(e.amount) > 0 && !e.description.trim()) {
-        toast.error('Custo extra precisa de descrição');
-        return;
+        toast.error('Custo extra precisa de descrição'); return;
       }
     }
 
     setSubmitting(true);
     try {
-      // 1. Persiste novos campos no deal (histórico)
       const dealPatch: Record<string, any> = {
         discount_amount: discountEnabled ? Number(discountAmount) || null : null,
         discount_kind: discountEnabled ? discountKind : null,
@@ -469,7 +442,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       };
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
-      // 2. Marca proposta enviada como aceita (mantém comportamento original)
       if (acceptedProposal && acceptedProposal.status === 'enviado') {
         await sb
           .from('proposals')
@@ -477,7 +449,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           .eq('id', acceptedProposal.id);
       }
 
-      // 3. Chama RPC com tudo
       const projectData: Record<string, any> = {
         name: projectName.trim(),
         project_type: projectType,
@@ -506,7 +477,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       });
       if (error) throw error;
 
-      // Defaults pra próxima conversão
       try {
         localStorage.setItem(FIN_DEFAULTS_KEY, JSON.stringify({
           categoria_id: categoriaId || undefined,
@@ -552,583 +522,480 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   if (!deal) return null;
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Fechar deal como ganho</DialogTitle>
-            <DialogDescription>
-              Vai criar o projeto, parcelas, contrato de manutenção (se houver MRR), custos extras e
-              vincular descoberta + anexos comerciais.
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Fechar deal como ganho</DialogTitle>
+          <DialogDescription>
+            Vai criar o projeto, parcelas, contrato de manutenção (se houver MRR), custos extras e
+            vincular descoberta + anexos comerciais.
+          </DialogDescription>
+        </DialogHeader>
 
-          {/* Resumo */}
-          <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
-            <div className="font-semibold text-foreground">O que será transferido:</div>
-            <ul className="space-y-0.5 text-muted-foreground">
-              <li>• Descoberta, contato principal, origem, contexto comercial</li>
-              <li>• Anexos do deal (organograma, mockup, documentos) e dependências</li>
-              <li>• Cliente financeiro: busca por CNPJ, cria automático se não existir</li>
+        {/* Resumo */}
+        <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
+          <div className="font-semibold text-foreground">O que será transferido:</div>
+          <ul className="space-y-0.5 text-muted-foreground">
+            <li>• Descoberta, contato principal, origem, contexto comercial</li>
+            <li>• Anotações livres, escopo estruturado, tipos múltiplos do projeto</li>
+            <li>• Anexos do deal (organograma, mockup, documentos) e dependências</li>
+            <li>• Cliente financeiro: busca por CNPJ, cria automático se não existir</li>
+            <li>
+              • Implementação: <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span> em{' '}
+              <span className="font-mono text-foreground">{installments.length}</span> parcela(s)
+              {discountEnabled && discountValue > 0 && (
+                <span className="text-warning"> (desc. {formatBRL(discountValue)})</span>
+              )}
+            </li>
+            {mrrEnabled && Number(mrrValue) > 0 && (
               <li>
-                • Implementação: <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span> em{' '}
-                <span className="font-mono text-foreground">{installments.length}</span> parcela(s)
-                {discountEnabled && discountValue > 0 && (
-                  <span className="text-warning"> (desc. {formatBRL(discountValue)})</span>
+                • Manutenção (MRR): <span className="font-mono text-foreground">{formatBRL(Number(mrrValue))}/mês</span>
+                {mrrStartDate ? ` a partir de ${mrrStartDate}` : ''}
+                {mrrIndefinite ? ' · indefinido' : ` por ${mrrDuration} meses`}
+                {mrrDiscountEnabled && Number(mrrDiscountValue) > 0 && (
+                  <span className="text-warning"> · desconto {formatBRL(Number(mrrDiscountValue))} nos primeiros {mrrDiscountMonths} meses</span>
                 )}
               </li>
-              {mrrEnabled && Number(mrrValue) > 0 && (
-                <li>
-                  • Manutenção (MRR): <span className="font-mono text-foreground">{formatBRL(Number(mrrValue))}/mês</span>
-                  {mrrStartDate ? ` a partir de ${mrrStartDate}` : ''}
-                  {mrrIndefinite ? ' · indefinido' : ` por ${mrrDuration} meses`}
-                  {mrrDiscountEnabled && Number(mrrDiscountValue) > 0 && (
-                    <span className="text-warning"> · desconto {formatBRL(Number(mrrDiscountValue))} nos primeiros {mrrDiscountMonths} meses</span>
-                  )}
-                </li>
-              )}
-              {extraCosts.length > 0 && (
-                <li>
-                  • Custos extras: <span className="font-mono text-foreground">{extraCosts.length}</span> item(s)
-                  {monthlyExtras > 0 && <> ({formatBRL(monthlyExtras)}/mês)</>}
-                </li>
-              )}
-              <li>
-                • {loadingProposal
-                  ? 'Verificando propostas…'
-                  : acceptedProposal
-                    ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) ${acceptedProposal.status === 'enviado' ? '→ será marcada como aceita e' : ''} vinculada ao projeto`
-                    : 'Nenhuma proposta enviada/aceita encontrada'}
-              </li>
-            </ul>
-            {expectedTotal > 0 && !installmentsMatchExpected && (
-              <div className="mt-2 rounded border border-warning/40 bg-warning/10 p-2 text-warning-foreground">
-                ⚠️ Total das parcelas ({formatBRL(totalInstallments)}) ≠ valor esperado ({formatBRL(expectedTotal)})
-              </div>
             )}
-          </div>
+            {extraCosts.length > 0 && (
+              <li>
+                • Custos extras: <span className="font-mono text-foreground">{extraCosts.length}</span> item(s)
+                {monthlyExtras > 0 && <> ({formatBRL(monthlyExtras)}/mês)</>}
+              </li>
+            )}
+            <li>
+              • {loadingProposal
+                ? 'Verificando propostas…'
+                : acceptedProposal
+                  ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) ${acceptedProposal.status === 'enviado' ? '→ será marcada como aceita e' : ''} vinculada ao projeto`
+                  : 'Nenhuma proposta enviada/aceita encontrada'}
+            </li>
+          </ul>
+          {expectedTotal > 0 && !installmentsMatchExpected && (
+            <div className="mt-2 rounded border border-warning/40 bg-warning/10 p-2 text-warning-foreground">
+              ⚠️ Total das parcelas ({formatBRL(totalInstallments)}) ≠ valor esperado ({formatBRL(expectedTotal)})
+            </div>
+          )}
+        </div>
 
-          {/* Dados do projeto */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Nome do projeto
-              </Label>
-              <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo</Label>
-              <Select value={projectType} onValueChange={setProjectType}>
-                <SelectTrigger><SelectValue placeholder="Escolha…" /></SelectTrigger>
-                <SelectContent>
-                  {PROJECT_TYPE_OPTIONS.map((p) => (
-                    <SelectItem key={p} value={p}>{PROJECT_TYPE_LABEL[p]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Início</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Entrega estimada (opcional)
-              </Label>
-              <Input type="date" value={estimatedDelivery} onChange={(e) => setEstimatedDelivery(e.target.value)} />
-            </div>
+        {/* Dados do projeto */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Nome do projeto
+            </Label>
+            <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
           </div>
-
-          {/* Parcelas */}
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Parcelas de implementação
-              </Label>
-              <div className="flex flex-wrap items-center gap-1">
-                {[1, 2, 3, 6, 12].map((n) => (
-                  <Button
-                    key={n}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 px-2 text-[11px]"
-                    onClick={() => splitEvenly(n)}
-                  >
-                    {n}x
-                  </Button>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo</Label>
+            <Select value={projectType} onValueChange={setProjectType}>
+              <SelectTrigger><SelectValue placeholder="Escolha…" /></SelectTrigger>
+              <SelectContent>
+                {PROJECT_TYPE_OPTIONS.map((p) => (
+                  <SelectItem key={p} value={p}>{PROJECT_TYPE_LABEL[p]}</SelectItem>
                 ))}
-                <div className="ml-1 flex items-center gap-1">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={60}
-                    placeholder="N"
-                    value={customN}
-                    onChange={(e) => setCustomN(e.target.value)}
-                    className="h-7 w-14 px-2 text-[11px]"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 px-2 text-[11px]"
-                    onClick={applyCustomN}
-                  >
-                    Aplicar
-                  </Button>
-                </div>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Início</Label>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Entrega estimada (opcional)
+            </Label>
+            <Input type="date" value={estimatedDelivery} onChange={(e) => setEstimatedDelivery(e.target.value)} />
+          </div>
+        </div>
+
+        {/* Configuração financeira (subiu para cima e usa ComboboxCreate) */}
+        <Collapsible open={finOpen} onOpenChange={setFinOpen} className="rounded-lg border border-border bg-muted/10">
+          <CollapsibleTrigger asChild>
+            <button type="button" className="flex w-full items-center justify-between p-3 text-left">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Settings2 className="h-3.5 w-3.5" />
+                Configuração financeira
+              </div>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${finOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-3 pb-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Categoria de receita</Label>
+                <ComboboxCreate
+                  value={categoriaId}
+                  options={toComboOptions(categorias)}
+                  onChange={setCategoriaId}
+                  onCreate={createCategoria}
+                  placeholder="Selecionar ou digitar para criar…"
+                  searchPlaceholder="Buscar ou digitar para criar…"
+                  createLabel={(t) => `+ Criar categoria "${t}"`}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Centro de custo</Label>
+                <ComboboxCreate
+                  value={centroId}
+                  options={toComboOptions(centros)}
+                  onChange={setCentroId}
+                  onCreate={createCentro}
+                  placeholder="Selecionar ou digitar para criar…"
+                  searchPlaceholder="Buscar ou digitar para criar…"
+                  createLabel={(t) => `+ Criar centro "${t}"`}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Conta bancária</Label>
+                <ComboboxCreate
+                  value={contaId}
+                  options={toComboOptions(contas)}
+                  onChange={setContaId}
+                  onCreate={createConta}
+                  placeholder="Selecionar ou digitar para criar…"
+                  searchPlaceholder="Buscar ou digitar para criar…"
+                  createLabel={(t) => `+ Criar conta "${t}"`}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Meio de pagamento</Label>
+                <ComboboxCreate
+                  value={meioId}
+                  options={toComboOptions(meios)}
+                  onChange={setMeioId}
+                  onCreate={createMeio}
+                  placeholder="Selecionar ou digitar para criar…"
+                  searchPlaceholder="Buscar ou digitar para criar…"
+                  createLabel={(t) => `+ Criar meio "${t}"`}
+                />
               </div>
             </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Aplicado a todas as parcelas geradas. Sua escolha fica salva pra próxima conversão. Pode digitar no campo
+              um nome novo e selecionar "Criar" — vira um registro real em Configurações → Financeiro.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
 
-            <div className="space-y-1.5">
-              {installments.map((inst, idx) => (
-                <div key={inst.id} className="flex items-center gap-2">
-                  <span className="w-6 text-center font-mono text-xs text-muted-foreground">{idx + 1}</span>
-                  <CurrencyInput
-                    value={inst.amount}
-                    onValueChange={(v) =>
-                      setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, amount: v } : i)))
-                    }
-                    withPrefix
-                    placeholder="R$ 0,00"
-                    className="flex-1"
-                  />
-                  <Input
-                    type="date"
-                    value={inst.due_date}
-                    onChange={(e) =>
-                      setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, due_date: e.target.value } : i)))
-                    }
-                    className="w-40"
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive"
-                    disabled={installments.length === 1}
-                    onClick={() => removeInstallment(inst.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+        {/* Parcelas */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Parcelas de implementação
+            </Label>
+            <div className="flex flex-wrap items-center gap-1">
+              {[1, 2, 3, 6, 12].map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => splitEvenly(n)}
+                >
+                  {n}x
+                </Button>
               ))}
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <Button type="button" size="sm" variant="outline" onClick={addInstallment}>
-                <Plus className="h-3.5 w-3.5" /> Adicionar parcela
-              </Button>
-              <span className="font-mono text-sm font-bold tabular-nums">
-                Total: {formatBRL(totalInstallments)}
-              </span>
+              <div className="ml-1 flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={1}
+                  max={60}
+                  placeholder="N"
+                  value={customN}
+                  onChange={(e) => setCustomN(e.target.value)}
+                  className="h-7 w-14 px-2 text-[11px]"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={applyCustomN}
+                >
+                  Aplicar
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* MRR / Manutenção */}
-          <Collapsible
-            open={mrrEnabled || Number(deal.estimated_mrr_value ?? 0) > 0}
-            className="rounded-lg border border-border bg-muted/10"
-          >
-            <div className="flex items-center justify-between p-3">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Repeat className="h-3.5 w-3.5" />
-                Manutenção mensal (MRR)
+          <div className="space-y-1.5">
+            {installments.map((inst, idx) => (
+              <div key={inst.id} className="flex items-center gap-2">
+                <span className="w-6 text-center font-mono text-xs text-muted-foreground">{idx + 1}</span>
+                <CurrencyInput
+                  value={inst.amount}
+                  onValueChange={(v) =>
+                    setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, amount: v } : i)))
+                  }
+                  withPrefix
+                  placeholder="R$ 0,00"
+                  className="flex-1"
+                />
+                <Input
+                  type="date"
+                  value={inst.due_date}
+                  onChange={(e) =>
+                    setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, due_date: e.target.value } : i)))
+                  }
+                  className="w-40"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive"
+                  disabled={installments.length === 1}
+                  onClick={() => removeInstallment(inst.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
-              <Switch checked={mrrEnabled} onCheckedChange={setMrrEnabled} />
-            </div>
-            {mrrEnabled && (
-              <CollapsibleContent forceMount className="px-3 pb-3 space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Valor mensal</Label>
-                    <CurrencyInput
-                      value={mrrValue}
-                      onValueChange={setMrrValue}
-                      withPrefix
-                      placeholder="R$ 0,00"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Início</Label>
-                    <Input
-                      type="date"
-                      value={mrrStartDate}
-                      onChange={(e) => setMrrStartDate(e.target.value)}
-                    />
-                  </div>
-                </div>
+            ))}
+          </div>
 
+          <div className="flex items-center justify-between pt-1">
+            <Button type="button" size="sm" variant="outline" onClick={addInstallment}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar parcela
+            </Button>
+            <span className="font-mono text-sm font-bold tabular-nums">
+              Total: {formatBRL(totalInstallments)}
+            </span>
+          </div>
+        </div>
+
+        {/* MRR */}
+        <Collapsible
+          open={mrrEnabled || Number(deal.estimated_mrr_value ?? 0) > 0}
+          className="rounded-lg border border-border bg-muted/10"
+        >
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Repeat className="h-3.5 w-3.5" />
+              Manutenção mensal (MRR)
+            </div>
+            <Switch checked={mrrEnabled} onCheckedChange={setMrrEnabled} />
+          </div>
+          {mrrEnabled && (
+            <CollapsibleContent forceMount className="px-3 pb-3 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Duração</Label>
-                  <RadioGroup
-                    value={mrrIndefinite ? 'indefinite' : 'fixed'}
-                    onValueChange={(v) => setMrrIndefinite(v === 'indefinite')}
-                    className="flex flex-wrap items-center gap-3"
-                  >
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <RadioGroupItem value="indefinite" id="mrr-indef" />
-                      Indefinido
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <RadioGroupItem value="fixed" id="mrr-fixed" />
-                      Por
+                  <Label className="text-[11px] text-muted-foreground">Valor mensal</Label>
+                  <CurrencyInput value={mrrValue} onValueChange={setMrrValue} withPrefix placeholder="R$ 0,00" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Início</Label>
+                  <Input type="date" value={mrrStartDate} onChange={(e) => setMrrStartDate(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Duração</Label>
+                <RadioGroup
+                  value={mrrIndefinite ? 'indefinite' : 'fixed'}
+                  onValueChange={(v) => setMrrIndefinite(v === 'indefinite')}
+                  className="flex flex-wrap items-center gap-3"
+                >
+                  <label className="flex items-center gap-1.5 text-xs">
+                    <RadioGroupItem value="indefinite" id="mrr-indef" />
+                    Indefinido
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs">
+                    <RadioGroupItem value="fixed" id="mrr-fixed" />
+                    Por
+                    <Input
+                      type="number"
+                      min={1}
+                      max={120}
+                      value={mrrDuration}
+                      onChange={(e) => setMrrDuration(e.target.value)}
+                      disabled={mrrIndefinite}
+                      className="h-7 w-16 px-2 text-xs"
+                    />
+                    meses
+                  </label>
+                </RadioGroup>
+              </div>
+
+              <div className="rounded border border-border/60 bg-background/40 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[11px] text-muted-foreground">Desconto promocional no MRR</Label>
+                  <Switch checked={mrrDiscountEnabled} onCheckedChange={setMrrDiscountEnabled} />
+                </div>
+                {mrrDiscountEnabled && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Primeiros (meses)</Label>
                       <Input
                         type="number"
                         min={1}
-                        max={120}
-                        value={mrrDuration}
-                        onChange={(e) => setMrrDuration(e.target.value)}
-                        disabled={mrrIndefinite}
-                        className="h-7 w-16 px-2 text-xs"
+                        max={60}
+                        value={mrrDiscountMonths}
+                        onChange={(e) => setMrrDiscountMonths(e.target.value)}
+                        className="h-8"
                       />
-                      meses
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Valor mensal com desconto</Label>
+                      <CurrencyInput
+                        value={mrrDiscountValue}
+                        onValueChange={setMrrDiscountValue}
+                        withPrefix
+                        placeholder="R$ 0,00"
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          )}
+        </Collapsible>
+
+        {/* Desconto */}
+        <Collapsible open={discountEnabled} className="rounded-lg border border-border bg-muted/10">
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Percent className="h-3.5 w-3.5" />
+              Desconto promocional na implementação
+            </div>
+            <Switch checked={discountEnabled} onCheckedChange={setDiscountEnabled} />
+          </div>
+          {discountEnabled && (
+            <CollapsibleContent forceMount className="px-3 pb-3 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Tipo</Label>
+                  <RadioGroup
+                    value={discountKind}
+                    onValueChange={(v) => setDiscountKind(v as 'percent' | 'fixed')}
+                    className="flex items-center gap-3"
+                  >
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <RadioGroupItem value="percent" id="disc-pct" /> Porcentagem (%)
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <RadioGroupItem value="fixed" id="disc-fix" /> Valor (R$)
                     </label>
                   </RadioGroup>
                 </div>
-
-                <div className="rounded border border-border/60 bg-background/40 p-2.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[11px] text-muted-foreground">Desconto promocional no MRR</Label>
-                    <Switch checked={mrrDiscountEnabled} onCheckedChange={setMrrDiscountEnabled} />
-                  </div>
-                  {mrrDiscountEnabled && (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Primeiros (meses)</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={60}
-                          value={mrrDiscountMonths}
-                          onChange={(e) => setMrrDiscountMonths(e.target.value)}
-                          className="h-8"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Valor mensal com desconto</Label>
-                        <CurrencyInput
-                          value={mrrDiscountValue}
-                          onValueChange={setMrrDiscountValue}
-                          withPrefix
-                          placeholder="R$ 0,00"
-                          className="h-8"
-                        />
-                      </div>
-                    </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">
+                    Valor {discountKind === 'percent' ? '(%)' : '(R$)'}
+                  </Label>
+                  {discountKind === 'percent' ? (
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      max={100}
+                      value={discountAmount}
+                      onChange={(e) => setDiscountAmount(e.target.value)}
+                      placeholder="10"
+                    />
+                  ) : (
+                    <CurrencyInput value={discountAmount} onValueChange={setDiscountAmount} withPrefix placeholder="R$ 0,00" />
                   )}
                 </div>
-              </CollapsibleContent>
-            )}
-          </Collapsible>
-
-          {/* Desconto promocional */}
-          <Collapsible open={discountEnabled} className="rounded-lg border border-border bg-muted/10">
-            <div className="flex items-center justify-between p-3">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Percent className="h-3.5 w-3.5" />
-                Desconto promocional na implementação
               </div>
-              <Switch checked={discountEnabled} onCheckedChange={setDiscountEnabled} />
-            </div>
-            {discountEnabled && (
-              <CollapsibleContent forceMount className="px-3 pb-3 space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Tipo</Label>
-                    <RadioGroup
-                      value={discountKind}
-                      onValueChange={(v) => setDiscountKind(v as 'percent' | 'fixed')}
-                      className="flex items-center gap-3"
-                    >
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <RadioGroupItem value="percent" id="disc-pct" /> Porcentagem (%)
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <RadioGroupItem value="fixed" id="disc-fix" /> Valor (R$)
-                      </label>
-                    </RadioGroup>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">
-                      Valor {discountKind === 'percent' ? '(%)' : '(R$)'}
-                    </Label>
-                    {discountKind === 'percent' ? (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        max={100}
-                        value={discountAmount}
-                        onChange={(e) => setDiscountAmount(e.target.value)}
-                        placeholder="10"
-                      />
-                    ) : (
-                      <CurrencyInput
-                        value={discountAmount}
-                        onValueChange={setDiscountAmount}
-                        withPrefix
-                        placeholder="R$ 0,00"
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Válido até</Label>
-                    <Input
-                      type="date"
-                      value={discountValidUntil}
-                      onChange={(e) => setDiscountValidUntil(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Observação</Label>
-                    <Input
-                      value={discountNotes}
-                      onChange={(e) => setDiscountNotes(e.target.value)}
-                      placeholder="Ex: campanha Q2"
-                    />
-                  </div>
-                </div>
-                {discountValue > 0 && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Aplicado: <span className="font-mono text-foreground">−{formatBRL(discountValue)}</span> sobre{' '}
-                    {formatBRL(baseImplementation)} → <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span>
-                  </p>
-                )}
-              </CollapsibleContent>
-            )}
-          </Collapsible>
-
-          {/* Custos extras */}
-          <div className="rounded-lg border border-border bg-muted/10 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Wallet className="h-3.5 w-3.5" />
-                Custos extras (APIs externas, infra, licenças)
-              </div>
-              <Button type="button" size="sm" variant="outline" className="h-7" onClick={addExtraCost}>
-                <Plus className="h-3.5 w-3.5" /> Adicionar
-              </Button>
-            </div>
-            {extraCosts.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">
-                Sem custos extras. Use pra registrar despesas recorrentes (OpenAI, AWS, licenças) ou setup único.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {extraCosts.map((e) => (
-                  <div key={e.id} className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
-                    <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px_36px]">
-                      <Input
-                        placeholder="Ex: API OpenAI"
-                        value={e.description}
-                        onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
-                        className="h-8"
-                      />
-                      <CurrencyInput
-                        value={e.amount}
-                        onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
-                        withPrefix
-                        placeholder="R$ 0,00"
-                        className="h-8"
-                      />
-                      <Select
-                        value={e.recurrence}
-                        onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
-                      >
-                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
-                          <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
-                          <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => removeExtraCost(e.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <Textarea
-                      placeholder="Observação (opcional)"
-                      value={e.notes}
-                      onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
-                      rows={1}
-                      className="text-xs"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Configuração financeira */}
-          <Collapsible open={finOpen} onOpenChange={setFinOpen} className="rounded-lg border border-border bg-muted/10">
-            <CollapsibleTrigger asChild>
-              <button type="button" className="flex w-full items-center justify-between p-3 text-left">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Settings2 className="h-3.5 w-3.5" />
-                  Configuração financeira (opcional)
-                </div>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${finOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="px-3 pb-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Categoria de receita</Label>
-                  <div className="flex gap-1">
-                    <Select value={categoriaId || 'none'} onValueChange={(v) => setCategoriaId(v === 'none' ? '' : v)}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— Sem categoria —</SelectItem>
-                        {categorias.map((o) => (
-                          <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      className="h-9 w-9 shrink-0"
-                      onClick={() => { setCreateTarget('categoria'); setCreateName(''); }}
-                      title="Criar categoria"
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  <Label className="text-[11px] text-muted-foreground">Válido até</Label>
+                  <Input type="date" value={discountValidUntil} onChange={(e) => setDiscountValidUntil(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Centro de custo</Label>
-                  <div className="flex gap-1">
-                    <Select value={centroId || 'none'} onValueChange={(v) => setCentroId(v === 'none' ? '' : v)}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— Sem centro —</SelectItem>
-                        {centros.map((o) => (
-                          <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      className="h-9 w-9 shrink-0"
-                      onClick={() => { setCreateTarget('centro'); setCreateName(''); }}
-                      title="Criar centro de custo"
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Conta bancária</Label>
-                  <div className="flex gap-1">
-                    <Select value={contaId || 'none'} onValueChange={(v) => setContaId(v === 'none' ? '' : v)}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— Sem conta —</SelectItem>
-                        {contas.map((o) => (
-                          <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      className="h-9 w-9 shrink-0"
-                      onClick={() => { setCreateTarget('conta'); setCreateName(''); }}
-                      title="Criar conta bancária"
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Meio de pagamento</Label>
-                  <Select value={meioId || 'none'} onValueChange={(v) => setMeioId(v === 'none' ? '' : v)}>
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— Sem meio —</SelectItem>
-                      {meios.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-[11px] text-muted-foreground">Observação</Label>
+                  <Input value={discountNotes} onChange={(e) => setDiscountNotes(e.target.value)} placeholder="Ex: campanha Q2" />
                 </div>
               </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">
-                Aplicado a todas as parcelas geradas. Sua escolha fica salva pra próxima conversão.
-              </p>
+              {discountValue > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Aplicado: <span className="font-mono text-foreground">−{formatBRL(discountValue)}</span> sobre{' '}
+                  {formatBRL(baseImplementation)} → <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span>
+                </p>
+              )}
             </CollapsibleContent>
-          </Collapsible>
+          )}
+        </Collapsible>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              Cancelar
+        {/* Custos extras */}
+        <div className="rounded-lg border border-border bg-muted/10 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Wallet className="h-3.5 w-3.5" />
+              Custos extras (APIs externas, infra, licenças)
+            </div>
+            <Button type="button" size="sm" variant="outline" className="h-7" onClick={addExtraCost}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar
             </Button>
-            <Button onClick={handleConfirm} disabled={submitting}>
-              {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Fechar deal e criar projeto <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mini-modal criar opção financeira */}
-      <Dialog open={!!createTarget} onOpenChange={(v) => !v && setCreateTarget(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {createTarget === 'categoria' && 'Nova categoria de receita'}
-              {createTarget === 'centro' && 'Novo centro de custo'}
-              {createTarget === 'conta' && 'Nova conta bancária'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label className="text-xs">Nome</Label>
-            <Input
-              autoFocus
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleCreateOption();
-                }
-              }}
-              placeholder={
-                createTarget === 'categoria' ? 'Ex: Implementação de projeto' :
-                createTarget === 'centro' ? 'Ex: Engenharia' :
-                'Ex: Inter — PJ'
-              }
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Será criado e selecionado automaticamente. Você pode editar mais detalhes depois em
-              Configurações → Financeiro.
-            </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateTarget(null)} disabled={creating}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateOption} disabled={creating || !createName.trim()}>
-              {creating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Criar e selecionar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          {extraCosts.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">
+              Sem custos extras. Use pra registrar despesas recorrentes (OpenAI, AWS, licenças) ou setup único.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {extraCosts.map((e) => (
+                <div key={e.id} className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px_36px]">
+                    <Input
+                      placeholder="Ex: API OpenAI"
+                      value={e.description}
+                      onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
+                      className="h-8"
+                    />
+                    <CurrencyInput
+                      value={e.amount}
+                      onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
+                      withPrefix
+                      placeholder="R$ 0,00"
+                      className="h-8"
+                    />
+                    <Select
+                      value={e.recurrence}
+                      onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
+                    >
+                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
+                        <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
+                        <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => removeExtraCost(e.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Observação (opcional)"
+                    value={e.notes}
+                    onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
+                    rows={1}
+                    className="text-xs"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirm} disabled={submitting}>
+            {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Fechar deal e criar projeto <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
