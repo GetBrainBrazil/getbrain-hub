@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +14,7 @@ import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
 import { NewDealQuickDialog } from '@/components/crm/NewDealQuickDialog';
+import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalForStageDialog';
 import { MultiFilter } from '@/components/crm/CrmFilters';
 import {
   DEAL_STAGE_LABEL,
@@ -118,8 +118,6 @@ export default function CrmPipeline() {
   const [createStage, setCreateStage] = useState<DealStage>('descoberta_marcada');
   const [lost, setLost] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [lostReason, setLostReason] = useState('');
-  const [valueRequired, setValueRequired] = useState<{ deal: Deal; stage: DealStage } | null>(null);
-  const [requiredValue, setRequiredValue] = useState('');
   const [won, setWon] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [needsProposal, setNeedsProposal] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [creatingProposal, setCreatingProposal] = useState(false);
@@ -171,7 +169,6 @@ export default function CrmPipeline() {
     const stage = e.over?.id as DealStage | undefined;
     if (!deal || !stage || deal.stage === stage || !DEAL_STAGES.includes(stage)) return;
     if (stage === 'perdido') { setLost({ deal, stage }); return; }
-    if (stage === 'proposta_na_mesa' && !deal.estimated_value) { setValueRequired({ deal, stage }); return; }
     if (stage === 'ganho') { setWon({ deal, stage }); return; }
     if (stage === 'proposta_na_mesa') {
       const { count, error } = await supabase
@@ -183,12 +180,13 @@ export default function CrmPipeline() {
         toast.error('Erro ao verificar propostas vinculadas');
         return;
       }
+      // Sem proposta vinculada → abre o modal unificado (que também coleta valor se faltar)
       if (!count) { setNeedsProposal({ deal, stage }); return; }
     }
     commitStage(deal, stage);
   };
 
-  const handleCreateProposalForDeal = async () => {
+  const handleCreateProposalForDeal = async (estimatedValue?: number) => {
     if (!needsProposal) return;
     const { deal, stage } = needsProposal;
     if (!deal.company_id) {
@@ -197,6 +195,14 @@ export default function CrmPipeline() {
     }
     setCreatingProposal(true);
     try {
+      // Se o usuário informou um valor, persiste no deal antes de criar a proposta
+      if (estimatedValue && !deal.estimated_value) {
+        const { error: updErr } = await supabase
+          .from('deals')
+          .update({ estimated_value: estimatedValue })
+          .eq('id', deal.id);
+        if (updErr) throw updErr;
+      }
       const newId = await createDraftProposal({
         dealId: deal.id,
         companyId: deal.company_id,
@@ -358,40 +364,13 @@ export default function CrmPipeline() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!valueRequired} onOpenChange={(v) => !v && setValueRequired(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Valor obrigatório</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label>Valor estimado do orçamento</Label>
-            <Input type="number" value={requiredValue} onChange={(e) => setRequiredValue(e.target.value)} />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setValueRequired(null)}>Cancelar</Button>
-            <Button disabled={!requiredValue} onClick={() => { if (valueRequired) commitStage(valueRequired.deal, valueRequired.stage, { estimated_value: Number(requiredValue) }); setValueRequired(null); setRequiredValue(''); }}>Confirmar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!needsProposal} onOpenChange={(v) => !v && !creatingProposal && setNeedsProposal(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar proposta para este deal?</DialogTitle>
-            <DialogDescription>
-              Este deal ainda não tem nenhuma proposta vinculada. Para movê-lo para
-              <span className="font-medium"> Proposta na Mesa</span>, crie um orçamento agora.
-              Você será levado direto para a tela de edição com o deal já preenchido.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNeedsProposal(null)} disabled={creatingProposal}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateProposalForDeal} disabled={creatingProposal}>
-              {creatingProposal ? 'Criando…' : 'Criar proposta'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateProposalForStageDialog
+        open={!!needsProposal}
+        deal={needsProposal?.deal ?? null}
+        onOpenChange={(v) => !v && setNeedsProposal(null)}
+        loading={creatingProposal}
+        onConfirm={handleCreateProposalForDeal}
+      />
 
       <DealWonDialog deal={won?.deal ?? null} open={!!won} onOpenChange={(v) => !v && setWon(null)} onSuccess={(projectId) => navigate(`/projetos/${projectId}`)} />
     </div>
