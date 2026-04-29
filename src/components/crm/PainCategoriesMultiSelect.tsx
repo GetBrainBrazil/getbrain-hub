@@ -63,7 +63,6 @@ export function PainCategoriesMultiSelect({ value, onChange, disabled }: Props) 
                 <span className={cn('h-2 w-2 rounded-full', dot)} />
                 <span className="max-w-[16rem] truncate">{cat.name}</span>
                 {!cat.is_active && <span className="text-[9px] opacity-70">(inativa)</span>}
-                <Check className="h-3 w-3 opacity-80" />
                 {!disabled && (
                   <button
                     type="button"
