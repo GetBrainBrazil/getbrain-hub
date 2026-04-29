@@ -13,14 +13,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import {
   useCrmProjectTypes,
   useCreateProjectType,
-  type CrmProjectType,
 } from '@/hooks/crm/useCrmProjectTypes';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  value: string | null;
-  onChange: (slug: string | null) => void;
+  value: string[];
+  onChange: (slugs: string[]) => void;
   disabled?: boolean;
 }
 
@@ -38,10 +37,17 @@ export function ProjectTypeSelect({ value, onChange, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  const selected = useMemo<CrmProjectType | null>(
-    () => (value ? all.find((c) => c.slug === value) ?? null : null),
+  const selectedItems = useMemo(
+    () => value.map((slug) => all.find((c) => c.slug === slug)).filter(Boolean) as typeof all,
     [value, all],
   );
+
+  const toggle = (slug: string) => {
+    if (value.includes(slug)) onChange(value.filter((s) => s !== slug));
+    else onChange([...value, slug]);
+  };
+
+  const remove = (slug: string) => onChange(value.filter((s) => s !== slug));
 
   const term = query.trim();
   const exact = term ? active.find((c) => c.name.toLowerCase() === term.toLowerCase()) : null;
@@ -50,37 +56,38 @@ export function ProjectTypeSelect({ value, onChange, disabled }: Props) {
   const handleCreate = async () => {
     if (!canCreate) return;
     const created = await create.mutateAsync({ name: term });
-    onChange(created.slug);
+    if (!value.includes(created.slug)) onChange([...value, created.slug]);
     setQuery('');
-    setOpen(false);
   };
 
   return (
     <div className="space-y-2">
-      {/* Chip do selecionado (em cima) */}
-      {selected && (
+      {/* Chips selecionados (em cima) */}
+      {selectedItems.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          <span
-            className={cn(
-              'group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm',
-              selected.color ?? 'bg-muted text-muted-foreground border-border',
-            )}
-          >
-            <span className={cn('h-2 w-2 rounded-full', bgDot(selected.color))} />
-            <span className="max-w-[16rem] truncate">{selected.name}</span>
-            {!selected.is_active && <span className="text-[9px] opacity-70">(inativo)</span>}
-            <Check className="h-3 w-3 opacity-80" />
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => onChange(null)}
-                className="ml-0.5 rounded-sm opacity-70 hover:bg-foreground/10 hover:opacity-100"
-                aria-label={`Remover ${selected.name}`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </span>
+          {selectedItems.map((cat) => (
+            <span
+              key={cat.slug}
+              className={cn(
+                'group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm',
+                cat.color ?? 'bg-muted text-muted-foreground border-border',
+              )}
+            >
+              <span className={cn('h-2 w-2 rounded-full', bgDot(cat.color))} />
+              <span className="max-w-[16rem] truncate">{cat.name}</span>
+              {!cat.is_active && <span className="text-[9px] opacity-70">(inativo)</span>}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => remove(cat.slug)}
+                  className="ml-0.5 rounded-sm opacity-70 hover:bg-foreground/10 hover:opacity-100"
+                  aria-label={`Remover ${cat.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </span>
+          ))}
         </div>
       )}
 
@@ -97,7 +104,9 @@ export function ProjectTypeSelect({ value, onChange, disabled }: Props) {
             className="h-8 w-full justify-between text-xs font-normal text-muted-foreground"
           >
             <span className="truncate">
-              {selected ? 'Trocar tipo de projeto...' : 'Selecionar tipo de projeto...'}
+              {selectedItems.length === 0
+                ? 'Selecionar tipo de projeto...'
+                : `${selectedItems.length} selecionado${selectedItems.length > 1 ? 's' : ''} — adicionar mais`}
             </span>
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>
@@ -142,17 +151,14 @@ export function ProjectTypeSelect({ value, onChange, disabled }: Props) {
               {active.length > 0 && (
                 <CommandGroup>
                   {active.map((cat) => {
-                    const isSel = cat.slug === value;
+                    const checked = value.includes(cat.slug);
                     return (
                       <CommandItem
                         key={cat.slug}
                         value={cat.name}
-                        onSelect={() => {
-                          onChange(isSel ? null : cat.slug);
-                          setOpen(false);
-                        }}
+                        onSelect={() => toggle(cat.slug)}
                       >
-                        <Check className={cn('mr-2 h-4 w-4', isSel ? 'opacity-100' : 'opacity-0')} />
+                        <Check className={cn('mr-2 h-4 w-4', checked ? 'opacity-100' : 'opacity-0')} />
                         <span className="flex-1 truncate">{cat.name}</span>
                         <span className={cn('ml-2 h-2 w-2 rounded-full', bgDot(cat.color))} />
                       </CommandItem>
