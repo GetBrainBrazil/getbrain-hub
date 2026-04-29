@@ -4325,11 +4325,7 @@ export type Database = {
       }
       cascade_delete_deal: { Args: { p_deal_id: string }; Returns: Json }
       close_deal_as_won: {
-        Args: {
-          p_deal_id: string
-          p_installments?: Json
-          p_project_data?: Json
-        }
+        Args: { p_deal_id: string; p_installments?: Json; p_project_data: Json }
         Returns: Json
       }
       convert_lead_to_deal: {
