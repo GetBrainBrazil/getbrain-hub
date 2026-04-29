@@ -450,12 +450,25 @@ export default function CrmPipeline() {
       <CreateProposalForStageDialog
         open={!!needsProposal}
         deal={needsProposal?.deal ?? null}
-        onOpenChange={(v) => !v && setNeedsProposal(null)}
+        onOpenChange={(v) => {
+          if (v || !needsProposal) return;
+          setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[needsProposal.deal.id]; return next; });
+          setNeedsProposal(null);
+        }}
         loading={creatingProposal}
         onConfirm={handleCreateProposalForDeal}
       />
 
-      <DealWonDialog deal={won?.deal ?? null} open={!!won} onOpenChange={(v) => !v && setWon(null)} onSuccess={(projectId) => navigate(`/projetos/${projectId}`)} />
+      <DealWonDialog
+        deal={won?.deal ?? null}
+        open={!!won}
+        onOpenChange={(v) => {
+          if (v || !won) return;
+          setVisualStageOverrides((prev) => { const next = { ...prev }; delete next[won.deal.id]; return next; });
+          setWon(null);
+        }}
+        onSuccess={(projectId) => navigate(`/projetos/${projectId}`)}
+      />
     </div>
   );
 }
