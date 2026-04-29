@@ -627,7 +627,7 @@ function ComplexitySlider({ value, onSave }: { value: number | null; onSave: (v:
   const [local, setLocal] = useState<number>(value ?? 3);
   useEffect(() => { setLocal(value ?? 3); }, [value]);
   return (
-    <div className="rounded-md border border-input bg-background/60 px-3 py-2.5">
+    <div className="h-full rounded-md border border-input bg-background/60 px-3 py-2.5">
       <div className="mb-2 flex items-baseline justify-between">
         <span className="font-mono text-lg font-semibold text-accent">{local}</span>
         <span className="text-[11px] text-muted-foreground">{COMPLEXITY_LABEL[local]}</span>
