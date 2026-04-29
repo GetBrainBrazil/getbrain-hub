@@ -19,9 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { ComboboxCreate, type ComboOption } from '@/components/crm/ComboboxCreate';
+import { ProjectTypeSelect } from '@/components/crm/ProjectTypeSelect';
+import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateScopeTotal, formatBRL, type ScopeItem } from '@/lib/orcamentos/calculateTotal';
-import { PROJECT_TYPE_OPTIONS, PROJECT_TYPE_LABEL } from '@/constants/dealStages';
 import type { Deal } from '@/types/crm';
 
 const sb = supabase as any;
