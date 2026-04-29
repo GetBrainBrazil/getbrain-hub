@@ -22,8 +22,6 @@ import {
   DEAL_STAGE_DOT,
   DEAL_STAGE_LABEL,
   DEAL_STAGE_PROBABILITY,
-  DEAL_STAGE_TEXT,
-  DEAL_STAGE_TONE,
   DEAL_STAGES,
 } from '@/constants/dealStages';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
