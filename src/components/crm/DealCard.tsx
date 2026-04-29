@@ -109,8 +109,8 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="inline-flex items-baseline gap-1" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/70">Impl</span>
-                          <span className="text-sm font-semibold text-foreground">{formatCurrency(Number(impl))}</span>
+                          <span className="text-[9px] font-semibold uppercase tracking-wider text-amber-500/90">Impl</span>
+                          <span className="text-sm font-semibold text-amber-500">{formatCurrency(Number(impl))}</span>
                         </span>
                       </TooltipTrigger>
                       <TooltipContent side="top">Valor de implementação (one-time)</TooltipContent>
@@ -128,9 +128,9 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
                     </Tooltip>
                   </div>
                 ) : hasImpl ? (
-                  <p className="text-base font-semibold text-foreground">
+                  <p className="text-base font-semibold text-amber-500">
                     {formatCurrency(Number(impl))}
-                    <span className="ml-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">impl</span>
+                    <span className="ml-1 text-[10px] font-medium uppercase tracking-wider text-amber-500/70">impl</span>
                   </p>
                 ) : hasMrr ? (
                   <p className="text-base font-semibold text-accent">
@@ -141,14 +141,27 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
                   <p className="text-base font-semibold text-foreground">{formatCurrency(fallback)}</p>
                 )}
                 <span className="shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">
-                  {deal.probability_pct}% · {daysLabel(deal.expected_close_date)}
+                  {daysLabel(deal.expected_close_date)}
                 </span>
               </div>
 
-              {/* Probability bar */}
-              <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
-                <div className={cn('h-full rounded-full', DEAL_STAGE_BAR[deal.stage])} style={{ width: `${deal.probability_pct}%` }} />
-              </div>
+              {/* Probability bar with explicit label */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 shrink-0">
+                      Chance
+                    </span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div className={cn('h-full rounded-full transition-all', DEAL_STAGE_BAR[deal.stage])} style={{ width: `${deal.probability_pct}%` }} />
+                    </div>
+                    <span className="text-[10px] font-semibold tabular-nums text-foreground/80 shrink-0">
+                      {deal.probability_pct}%
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">Probabilidade de fechamento (definida pela etapa)</TooltipContent>
+              </Tooltip>
             </div>
           );
         })()}
