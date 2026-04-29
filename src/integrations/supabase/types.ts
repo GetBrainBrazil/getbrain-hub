@@ -1163,16 +1163,24 @@ export type Database = {
             | null
           expected_close_date: string | null
           extra_costs: Json
+          first_installment_date: string | null
           generated_project_id: string | null
           id: string
           identified_risks: string[]
+          installments_count: number | null
           lost_reason: string | null
           mockup_screenshots: string[]
           mockup_url: string | null
+          mrr_discount_kind: string | null
           mrr_discount_months: number | null
+          mrr_discount_until_date: string | null
+          mrr_discount_until_stage:
+            | Database["public"]["Enums"]["project_status"]
+            | null
           mrr_discount_value: number | null
           mrr_duration_months: number | null
           mrr_start_date: string | null
+          mrr_start_trigger: string | null
           next_step: string | null
           next_step_date: string | null
           notes: string | null
@@ -1235,16 +1243,24 @@ export type Database = {
             | null
           expected_close_date?: string | null
           extra_costs?: Json
+          first_installment_date?: string | null
           generated_project_id?: string | null
           id?: string
           identified_risks?: string[]
+          installments_count?: number | null
           lost_reason?: string | null
           mockup_screenshots?: string[]
           mockup_url?: string | null
+          mrr_discount_kind?: string | null
           mrr_discount_months?: number | null
+          mrr_discount_until_date?: string | null
+          mrr_discount_until_stage?:
+            | Database["public"]["Enums"]["project_status"]
+            | null
           mrr_discount_value?: number | null
           mrr_duration_months?: number | null
           mrr_start_date?: string | null
+          mrr_start_trigger?: string | null
           next_step?: string | null
           next_step_date?: string | null
           notes?: string | null
@@ -1307,16 +1323,24 @@ export type Database = {
             | null
           expected_close_date?: string | null
           extra_costs?: Json
+          first_installment_date?: string | null
           generated_project_id?: string | null
           id?: string
           identified_risks?: string[]
+          installments_count?: number | null
           lost_reason?: string | null
           mockup_screenshots?: string[]
           mockup_url?: string | null
+          mrr_discount_kind?: string | null
           mrr_discount_months?: number | null
+          mrr_discount_until_date?: string | null
+          mrr_discount_until_stage?:
+            | Database["public"]["Enums"]["project_status"]
+            | null
           mrr_discount_value?: number | null
           mrr_duration_months?: number | null
           mrr_start_date?: string | null
+          mrr_start_trigger?: string | null
           next_step?: string | null
           next_step_date?: string | null
           notes?: string | null
@@ -1547,6 +1571,16 @@ export type Database = {
           deleted_at: string | null
           description: string
           direction: string
+          discount_active: boolean
+          discount_full_amount: number | null
+          discount_kind: string | null
+          discount_months: number | null
+          discount_started_at: string | null
+          discount_until_date: string | null
+          discount_until_stage:
+            | Database["public"]["Enums"]["project_status"]
+            | null
+          discount_value: number | null
           end_date: string | null
           fornecedor_id: string | null
           frequency: string
@@ -1576,6 +1610,16 @@ export type Database = {
           deleted_at?: string | null
           description: string
           direction: string
+          discount_active?: boolean
+          discount_full_amount?: number | null
+          discount_kind?: string | null
+          discount_months?: number | null
+          discount_started_at?: string | null
+          discount_until_date?: string | null
+          discount_until_stage?:
+            | Database["public"]["Enums"]["project_status"]
+            | null
+          discount_value?: number | null
           end_date?: string | null
           fornecedor_id?: string | null
           frequency: string
@@ -1605,6 +1649,16 @@ export type Database = {
           deleted_at?: string | null
           description?: string
           direction?: string
+          discount_active?: boolean
+          discount_full_amount?: number | null
+          discount_kind?: string | null
+          discount_months?: number | null
+          discount_started_at?: string | null
+          discount_until_date?: string | null
+          discount_until_stage?:
+            | Database["public"]["Enums"]["project_status"]
+            | null
+          discount_value?: number | null
           end_date?: string | null
           fornecedor_id?: string | null
           frequency?: string

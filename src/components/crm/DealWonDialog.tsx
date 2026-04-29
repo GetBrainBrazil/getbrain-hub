@@ -69,6 +69,25 @@ function fmtDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+function buildInstallments(n: number, firstDueDate: string, baseAmount: number): InstallmentDraft[] {
+  const safeN = Math.min(60, Math.max(1, Math.floor(n) || 1));
+  const base = baseAmount > 0 ? baseAmount : 0;
+  const per = base > 0 ? Math.round((base / safeN) * 100) / 100 : 0;
+  const remainder = base > 0 ? Math.round((base - per * safeN) * 100) / 100 : 0;
+  const start = firstDueDate ? new Date(`${firstDueDate}T12:00:00`) : addMonths(new Date(), 1);
+  const list: InstallmentDraft[] = [];
+  for (let i = 0; i < safeN; i++) {
+    const amount = i === 0 ? per + remainder : per;
+    const date = i === 0 ? start : addMonths(start, i);
+    list.push({
+      id: newId(),
+      amount: amount > 0 ? String(amount) : '',
+      due_date: fmtDateInput(date),
+    });
+  }
+  return list;
+}
+
 type Option = { id: string; nome: string };
 
 const FIN_DEFAULTS_KEY = 'crm.lastWonFinancialDefaults';
@@ -112,11 +131,12 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     deal?.desired_delivery_date ?? '',
   );
 
-  // Parcelas + input livre de N
+  // Parcelas — agora dirigido por N + data da 1ª (sem botões 1x/3x/etc.)
+  const [installmentsN, setInstallmentsN] = useState<string>('1');
+  const [firstDueDate, setFirstDueDate] = useState<string>(fmtDateInput(addMonths(new Date(), 1)));
   const [installments, setInstallments] = useState<InstallmentDraft[]>([
     { id: newId(), amount: '', due_date: fmtDateInput(addMonths(new Date(), 1)) },
   ]);
-  const [customN, setCustomN] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
   // Configuração financeira
@@ -139,6 +159,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const [mrrDiscountEnabled, setMrrDiscountEnabled] = useState(false);
   const [mrrDiscountMonths, setMrrDiscountMonths] = useState<string>('3');
   const [mrrDiscountValue, setMrrDiscountValue] = useState<string>('');
+  const [mrrDiscountKind, setMrrDiscountKind] = useState<'months' | 'until_date' | 'until_stage'>('months');
+  const [mrrDiscountUntilDate, setMrrDiscountUntilDate] = useState<string>('');
+  const [mrrDiscountUntilStage, setMrrDiscountUntilStage] = useState<string>('');
+  const [mrrStartTrigger, setMrrStartTrigger] = useState<'on_delivery' | 'before_delivery' | ''>('');
 
   // Desconto promocional (sobre implementação)
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -228,14 +252,13 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
     setEstimatedDelivery(deal.desired_delivery_date ?? '');
 
-    setInstallments([
-      {
-        id: newId(),
-        amount: baseImplementation > 0 ? String(baseImplementation) : '',
-        due_date: fmtDateInput(addMonths(new Date(), 1)),
-      },
-    ]);
-    setCustomN('');
+    const dealN = (deal as any).installments_count as number | null;
+    const dealFirst = (deal as any).first_installment_date as string | null;
+    const initialN = dealN && dealN > 0 ? dealN : 1;
+    const initialFirst = dealFirst || fmtDateInput(addMonths(new Date(), 1));
+    setInstallmentsN(String(initialN));
+    setFirstDueDate(initialFirst);
+    setInstallments(buildInstallments(initialN, initialFirst, baseImplementation));
 
     const dealMrr = Number(deal.estimated_mrr_value ?? 0);
     setMrrEnabled(dealMrr > 0);
@@ -246,9 +269,19 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setMrrDuration(dur != null ? String(dur) : '12');
     const dMonths = (deal as any).mrr_discount_months;
     const dValue = (deal as any).mrr_discount_value;
-    setMrrDiscountEnabled(dMonths != null && dMonths > 0);
+    const dKind = (deal as any).mrr_discount_kind as 'months' | 'until_date' | 'until_stage' | null;
+    const dUntilDate = (deal as any).mrr_discount_until_date as string | null;
+    const dUntilStage = (deal as any).mrr_discount_until_stage as string | null;
+    setMrrDiscountEnabled(
+      (dMonths != null && dMonths > 0) ||
+      Boolean(dUntilDate) || Boolean(dUntilStage) || (dValue != null && dValue > 0),
+    );
+    setMrrDiscountKind(dKind ?? 'months');
     setMrrDiscountMonths(dMonths != null ? String(dMonths) : '3');
     setMrrDiscountValue(dValue != null ? String(dValue) : '');
+    setMrrDiscountUntilDate(dUntilDate ?? '');
+    setMrrDiscountUntilStage(dUntilStage ?? '');
+    setMrrStartTrigger(((deal as any).mrr_start_trigger as 'on_delivery' | 'before_delivery' | null) ?? '');
 
     const dAmount = (deal as any).discount_amount;
     setDiscountEnabled(dAmount != null && dAmount > 0);
@@ -307,35 +340,9 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setInstallments((prev) => prev.filter((i) => i.id !== id));
   }
 
-  function splitEvenly(n: number) {
+  function regenerateInstallments(n: number, firstDate: string) {
     const base = expectedTotal > 0 ? expectedTotal : (baseImplementation > 0 ? baseImplementation : 0);
-    if (base <= 0) {
-      toast.error('Defina um valor de proposta ou estimativa do deal antes de dividir');
-      return;
-    }
-    if (n < 1 || n > 60) {
-      toast.error('Número de parcelas deve ficar entre 1 e 60');
-      return;
-    }
-    const per = Math.round((base / n) * 100) / 100;
-    const remainder = Math.round((base - per * n) * 100) / 100;
-    const list: InstallmentDraft[] = [];
-    let baseDate = new Date();
-    for (let i = 0; i < n; i++) {
-      const amount = i === 0 ? per + remainder : per;
-      baseDate = addMonths(baseDate, 1);
-      list.push({ id: newId(), amount: String(amount), due_date: fmtDateInput(baseDate) });
-    }
-    setInstallments(list);
-  }
-
-  function applyCustomN() {
-    const n = parseInt(customN, 10);
-    if (Number.isNaN(n)) {
-      toast.error('Digite um número de parcelas válido');
-      return;
-    }
-    splitEvenly(n);
+    setInstallments(buildInstallments(n, firstDate, base));
   }
 
   // ============== Custos extras ==============
@@ -437,8 +444,20 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         estimated_mrr_value: mrrEnabled ? Number(mrrValue) || null : null,
         mrr_start_date: mrrEnabled && mrrStartDate ? mrrStartDate : null,
         mrr_duration_months: mrrEnabled && !mrrIndefinite ? (parseInt(mrrDuration, 10) || null) : null,
-        mrr_discount_months: mrrEnabled && mrrDiscountEnabled ? (parseInt(mrrDiscountMonths, 10) || null) : null,
+        mrr_discount_months:
+          mrrEnabled && mrrDiscountEnabled && mrrDiscountKind === 'months'
+            ? (parseInt(mrrDiscountMonths, 10) || null) : null,
         mrr_discount_value: mrrEnabled && mrrDiscountEnabled ? (Number(mrrDiscountValue) || null) : null,
+        mrr_discount_kind: mrrEnabled && mrrDiscountEnabled ? mrrDiscountKind : null,
+        mrr_discount_until_date:
+          mrrEnabled && mrrDiscountEnabled && mrrDiscountKind === 'until_date'
+            ? (mrrDiscountUntilDate || null) : null,
+        mrr_discount_until_stage:
+          mrrEnabled && mrrDiscountEnabled && mrrDiscountKind === 'until_stage'
+            ? (mrrDiscountUntilStage || null) : null,
+        mrr_start_trigger: mrrEnabled && mrrStartTrigger ? mrrStartTrigger : null,
+        installments_count: parseInt(installmentsN, 10) || null,
+        first_installment_date: firstDueDate || null,
       };
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
@@ -459,13 +478,23 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         conta_bancaria_id: contaId || null,
         meio_pagamento_id: meioId || null,
         extra_costs: dealPatch.extra_costs,
+        mrr_start_trigger: dealPatch.mrr_start_trigger,
       };
       if (mrrEnabled) {
         projectData.mrr_value = Number(mrrValue);
         projectData.mrr_start_date = mrrStartDate;
         if (!mrrIndefinite) projectData.mrr_duration_months = parseInt(mrrDuration, 10);
         if (mrrDiscountEnabled) {
-          projectData.mrr_discount_months = parseInt(mrrDiscountMonths, 10);
+          if (mrrDiscountKind === 'months') {
+            projectData.mrr_discount_months = parseInt(mrrDiscountMonths, 10);
+          }
+          if (mrrDiscountKind === 'until_date' && mrrDiscountUntilDate) {
+            projectData.mrr_discount_until_date = mrrDiscountUntilDate;
+          }
+          if (mrrDiscountKind === 'until_stage' && mrrDiscountUntilStage) {
+            projectData.mrr_discount_until_stage = mrrDiscountUntilStage;
+          }
+          projectData.mrr_discount_kind = mrrDiscountKind;
           projectData.mrr_discount_value = Number(mrrDiscountValue) || Number(mrrValue);
         }
       }
@@ -678,47 +707,59 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Parcelas */}
+        {/* Parcelas — direto N + 1ª data, sem botões 1×/3× */}
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Parcelas de implementação
-            </Label>
-            <div className="flex flex-wrap items-center gap-1">
-              {[1, 2, 3, 6, 12].map((n) => (
-                <Button
-                  key={n}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-[11px]"
-                  onClick={() => splitEvenly(n)}
-                >
-                  {n}x
-                </Button>
-              ))}
-              <div className="ml-1 flex items-center gap-1">
-                <Input
-                  type="number"
-                  min={1}
-                  max={60}
-                  placeholder="N"
-                  value={customN}
-                  onChange={(e) => setCustomN(e.target.value)}
-                  className="h-7 w-14 px-2 text-[11px]"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-[11px]"
-                  onClick={applyCustomN}
-                >
-                  Aplicar
-                </Button>
-              </div>
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Parcelas de implementação
+          </Label>
+
+          <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Nº de parcelas</Label>
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={installmentsN}
+                onChange={(e) => {
+                  setInstallmentsN(e.target.value);
+                  const n = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(n) && n > 0) regenerateInstallments(n, firstDueDate);
+                }}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Data da 1ª parcela</Label>
+              <Input
+                type="date"
+                value={firstDueDate}
+                onChange={(e) => {
+                  setFirstDueDate(e.target.value);
+                  const n = parseInt(installmentsN, 10) || 1;
+                  regenerateInstallments(n, e.target.value);
+                }}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground opacity-0">.</Label>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9"
+                onClick={() => {
+                  const n = parseInt(installmentsN, 10) || 1;
+                  regenerateInstallments(n, firstDueDate);
+                }}
+              >
+                Regenerar
+              </Button>
             </div>
           </div>
+          <p className="text-[10px] text-muted-foreground">
+            As parcelas abaixo são geradas automaticamente. Você pode ajustar valor/data de cada uma.
+          </p>
 
           <div className="space-y-1.5">
             {installments.map((inst, idx) => (
@@ -818,34 +859,99 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                 </RadioGroup>
               </div>
 
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Início da cobrança</Label>
+                <Select
+                  value={mrrStartTrigger || ''}
+                  onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="(usar Início acima)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
+                    <SelectItem value="before_delivery">Antes da entrega</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="rounded border border-border/60 bg-background/40 p-2.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-[11px] text-muted-foreground">Desconto promocional no MRR</Label>
                   <Switch checked={mrrDiscountEnabled} onCheckedChange={setMrrDiscountEnabled} />
                 </div>
                 {mrrDiscountEnabled && (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Primeiros (meses)</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={60}
-                        value={mrrDiscountMonths}
-                        onChange={(e) => setMrrDiscountMonths(e.target.value)}
-                        className="h-8"
-                      />
+                  <div className="space-y-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Tipo de validade</Label>
+                        <Select
+                          value={mrrDiscountKind}
+                          onValueChange={(v) => setMrrDiscountKind(v as 'months' | 'until_date' | 'until_stage')}
+                        >
+                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="months">Por X meses</SelectItem>
+                            <SelectItem value="until_date">Até uma data</SelectItem>
+                            <SelectItem value="until_stage">Até estágio do projeto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Valor mensal com desconto</Label>
+                        <CurrencyInput
+                          value={mrrDiscountValue}
+                          onValueChange={setMrrDiscountValue}
+                          withPrefix
+                          placeholder="R$ 0,00"
+                          className="h-8"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Valor mensal com desconto</Label>
-                      <CurrencyInput
-                        value={mrrDiscountValue}
-                        onValueChange={setMrrDiscountValue}
-                        withPrefix
-                        placeholder="R$ 0,00"
-                        className="h-8"
-                      />
-                    </div>
+
+                    {mrrDiscountKind === 'months' && (
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Primeiros (meses)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={mrrDiscountMonths}
+                          onChange={(e) => setMrrDiscountMonths(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                    )}
+
+                    {mrrDiscountKind === 'until_date' && (
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Válido até</Label>
+                        <Input
+                          type="date"
+                          value={mrrDiscountUntilDate}
+                          onChange={(e) => setMrrDiscountUntilDate(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                    )}
+
+                    {mrrDiscountKind === 'until_stage' && (
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Encerra quando o projeto chegar em</Label>
+                        <Select value={mrrDiscountUntilStage} onValueChange={setMrrDiscountUntilStage}>
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Selecione um estágio…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="planning">Planejamento</SelectItem>
+                            <SelectItem value="em_desenvolvimento">Em desenvolvimento</SelectItem>
+                            <SelectItem value="em_homologacao">Em homologação</SelectItem>
+                            <SelectItem value="entregue">Entregue</SelectItem>
+                            <SelectItem value="em_manutencao">Em manutenção</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
