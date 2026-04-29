@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, Check, X, Save, ZoomIn, ZoomOut, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +11,15 @@ import { toast } from "sonner";
 import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
+import { useProposalItems, useReplaceProposalItems } from "@/hooks/orcamentos/useProposalItems";
 import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import { ScopeItemsEditor } from "@/components/orcamentos/ScopeItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
 import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBadge";
+import { MarcarComoEnviadaDialog } from "@/components/orcamentos/MarcarComoEnviadaDialog";
+import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
+import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 import {
   calculateScopeTotal,
   effectiveStatus,
@@ -33,6 +37,17 @@ import {
 import { listTemplates } from "@/lib/orcamentos/templates";
 
 const PDF_DOM_ID = "proposal-pdf-template-live";
+
+/** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
+function canonicalToScopeItems(
+  rows: Array<{ description: string; unit_price: number | string; quantity: number | string }>
+): ScopeItem[] {
+  return rows.map((r) => ({
+    title: r.description,
+    description: "",
+    value: (Number(r.unit_price) || 0) * (Number(r.quantity) || 1),
+  }));
+}
 
 export default function OrcamentoEditarDetalhe() {
   const { id } = useParams<{ id: string }>();
