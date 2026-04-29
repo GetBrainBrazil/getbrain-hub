@@ -98,7 +98,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         {/* Toolbar flutuante (focus-only) — posicionada absolute para não ocupar espaço no layout */}
         <div
           className={cn(
-            "absolute left-0 right-0 bottom-full z-20 mb-1.5 flex flex-wrap items-center gap-0.5 rounded-md border border-border bg-popover/95 p-1 shadow-md backdrop-blur-sm transition-all duration-150",
+            "absolute left-0 right-0 bottom-full z-20 mb-1 flex items-center gap-0.5 overflow-x-auto whitespace-nowrap rounded-md border border-border bg-popover/95 px-1 py-0.5 shadow-md backdrop-blur-sm transition-all duration-150 [scrollbar-width:thin]",
             focused
               ? "pointer-events-auto translate-y-0 opacity-100"
               : "pointer-events-none -translate-y-1 opacity-0",
