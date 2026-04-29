@@ -685,47 +685,59 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Parcelas */}
+        {/* Parcelas — direto N + 1ª data, sem botões 1×/3× */}
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Parcelas de implementação
-            </Label>
-            <div className="flex flex-wrap items-center gap-1">
-              {[1, 2, 3, 6, 12].map((n) => (
-                <Button
-                  key={n}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-[11px]"
-                  onClick={() => splitEvenly(n)}
-                >
-                  {n}x
-                </Button>
-              ))}
-              <div className="ml-1 flex items-center gap-1">
-                <Input
-                  type="number"
-                  min={1}
-                  max={60}
-                  placeholder="N"
-                  value={customN}
-                  onChange={(e) => setCustomN(e.target.value)}
-                  className="h-7 w-14 px-2 text-[11px]"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-[11px]"
-                  onClick={applyCustomN}
-                >
-                  Aplicar
-                </Button>
-              </div>
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Parcelas de implementação
+          </Label>
+
+          <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Nº de parcelas</Label>
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={installmentsN}
+                onChange={(e) => {
+                  setInstallmentsN(e.target.value);
+                  const n = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(n) && n > 0) regenerateInstallments(n, firstDueDate);
+                }}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Data da 1ª parcela</Label>
+              <Input
+                type="date"
+                value={firstDueDate}
+                onChange={(e) => {
+                  setFirstDueDate(e.target.value);
+                  const n = parseInt(installmentsN, 10) || 1;
+                  regenerateInstallments(n, e.target.value);
+                }}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground opacity-0">.</Label>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9"
+                onClick={() => {
+                  const n = parseInt(installmentsN, 10) || 1;
+                  regenerateInstallments(n, firstDueDate);
+                }}
+              >
+                Regenerar
+              </Button>
             </div>
           </div>
+          <p className="text-[10px] text-muted-foreground">
+            As parcelas abaixo são geradas automaticamente. Você pode ajustar valor/data de cada uma.
+          </p>
 
           <div className="space-y-1.5">
             {installments.map((inst, idx) => (
