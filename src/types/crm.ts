@@ -130,6 +130,17 @@ export interface Deal {
   desired_start_date: string | null;
   desired_delivery_date: string | null;
 
+  // v2.3 — desconto, custos extras, MRR detalhado
+  discount_amount: number | null;
+  discount_kind: 'percent' | 'fixed' | null;
+  discount_valid_until: string | null;
+  discount_notes: string | null;
+  extra_costs: Array<{ description: string; amount: number; recurrence: 'once' | 'monthly' | 'yearly'; notes?: string | null }>;
+  mrr_start_date: string | null;
+  mrr_duration_months: number | null;
+  mrr_discount_months: number | null;
+  mrr_discount_value: number | null;
+
   created_at?: string; company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; origin_source?: string | null; origin_code?: string | null; last_activity?: DealActivity | null;
 }
 

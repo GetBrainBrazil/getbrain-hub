@@ -1149,6 +1149,10 @@ export type Database = {
           deliverables: string[]
           desired_delivery_date: string | null
           desired_start_date: string | null
+          discount_amount: number | null
+          discount_kind: string | null
+          discount_notes: string | null
+          discount_valid_until: string | null
           estimated_complexity: number | null
           estimated_hours_total: number | null
           estimated_implementation_value: number | null
@@ -1158,12 +1162,17 @@ export type Database = {
             | Database["public"]["Enums"]["estimation_confidence"]
             | null
           expected_close_date: string | null
+          extra_costs: Json
           generated_project_id: string | null
           id: string
           identified_risks: string[]
           lost_reason: string | null
           mockup_screenshots: string[]
           mockup_url: string | null
+          mrr_discount_months: number | null
+          mrr_discount_value: number | null
+          mrr_duration_months: number | null
+          mrr_start_date: string | null
           next_step: string | null
           next_step_date: string | null
           notes: string | null
@@ -1211,6 +1220,10 @@ export type Database = {
           deliverables?: string[]
           desired_delivery_date?: string | null
           desired_start_date?: string | null
+          discount_amount?: number | null
+          discount_kind?: string | null
+          discount_notes?: string | null
+          discount_valid_until?: string | null
           estimated_complexity?: number | null
           estimated_hours_total?: number | null
           estimated_implementation_value?: number | null
@@ -1220,12 +1233,17 @@ export type Database = {
             | Database["public"]["Enums"]["estimation_confidence"]
             | null
           expected_close_date?: string | null
+          extra_costs?: Json
           generated_project_id?: string | null
           id?: string
           identified_risks?: string[]
           lost_reason?: string | null
           mockup_screenshots?: string[]
           mockup_url?: string | null
+          mrr_discount_months?: number | null
+          mrr_discount_value?: number | null
+          mrr_duration_months?: number | null
+          mrr_start_date?: string | null
           next_step?: string | null
           next_step_date?: string | null
           notes?: string | null
@@ -1273,6 +1291,10 @@ export type Database = {
           deliverables?: string[]
           desired_delivery_date?: string | null
           desired_start_date?: string | null
+          discount_amount?: number | null
+          discount_kind?: string | null
+          discount_notes?: string | null
+          discount_valid_until?: string | null
           estimated_complexity?: number | null
           estimated_hours_total?: number | null
           estimated_implementation_value?: number | null
@@ -1282,12 +1304,17 @@ export type Database = {
             | Database["public"]["Enums"]["estimation_confidence"]
             | null
           expected_close_date?: string | null
+          extra_costs?: Json
           generated_project_id?: string | null
           id?: string
           identified_risks?: string[]
           lost_reason?: string | null
           mockup_screenshots?: string[]
           mockup_url?: string | null
+          mrr_discount_months?: number | null
+          mrr_discount_value?: number | null
+          mrr_duration_months?: number | null
+          mrr_start_date?: string | null
           next_step?: string | null
           next_step_date?: string | null
           notes?: string | null
@@ -4285,19 +4312,14 @@ export type Database = {
         Returns: number
       }
       cascade_delete_deal: { Args: { p_deal_id: string }; Returns: Json }
-      close_deal_as_won:
-        | {
-            Args: { p_deal_id: string; p_project_data?: Json }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_deal_id: string
-              p_installments?: Json
-              p_project_data?: Json
-            }
-            Returns: Json
-          }
+      close_deal_as_won: {
+        Args: {
+          p_deal_id: string
+          p_installments?: Json
+          p_project_data?: Json
+        }
+        Returns: Json
+      }
       convert_lead_to_deal: {
         Args: { p_deal_data?: Json; p_lead_id: string }
         Returns: string
