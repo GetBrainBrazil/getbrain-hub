@@ -42,9 +42,7 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
   const initials = deal.owner?.display_name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'GB';
   const isLate = deal.next_step_date && deal.next_step_date < new Date().toISOString().slice(0, 10);
   const discovery = isDiscoveryComplete(deal);
-  const projectTypeV2 = deal.project_type_v2 as DealProjectType | null;
 
-  // Carregamos categorias só se houver alguma selecionada (cache compartilhado)
   const slugs = useMemo(() => {
     const arr = deal.pain_categories ?? [];
     if (arr.length) return arr;
@@ -54,6 +52,12 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
   const painChips = useMemo(
     () => slugs.map((s) => allCats.find((c) => c.slug === s)).filter(Boolean) as typeof allCats,
     [slugs, allCats],
+  );
+
+  const { data: projectTypes = [] } = useCrmProjectTypes();
+  const projectType = useMemo(
+    () => projectTypes.find((t) => t.slug === deal.project_type_v2) ?? null,
+    [projectTypes, deal.project_type_v2],
   );
 
   return (
@@ -74,9 +78,9 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
           <div className="flex items-center justify-between gap-2 text-[11px]">
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">{deal.code}</span>
             <div className="flex items-center gap-1.5">
-              {projectTypeV2 && (
-                <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium', PROJECT_TYPE_V2_COLOR[projectTypeV2])}>
-                  {PROJECT_TYPE_V2_LABEL[projectTypeV2]}
+              {projectType && (
+                <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium', projectType.color ?? 'bg-muted text-muted-foreground border-border')}>
+                  {projectType.name}
                 </span>
               )}
               <Tooltip>
