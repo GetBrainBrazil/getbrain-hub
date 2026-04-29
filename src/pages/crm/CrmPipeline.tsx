@@ -18,7 +18,7 @@ import {
   DEAL_STAGE_LABEL,
   DEAL_STAGES,
 } from '@/constants/dealStages';
-import { PROJECT_TYPE_V2_LABEL, PROJECT_TYPE_V2_OPTIONS } from '@/constants/dealEnumLabels';
+import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
 import { useDeals, useUpdateDealStage } from '@/hooks/crm/useDeals';
 import { useDealsIndicators } from '@/hooks/crm/useDealsIndicators';
 import { useCrmHubStore } from '@/hooks/useCrmHubStore';
