@@ -287,30 +287,113 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
 
 // ---------- Zona 3 — Solução ----------
 
+type AiScopePayload = {
+  deliverables: string[];
+  premises: string[];
+  acceptance_criteria: { text: string }[];
+  identified_risks: string[];
+  technical_stack: string[];
+};
+
+function normalizeKey(s: string) {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function dedupAppendStrings(existing: string[], incoming: string[]): { merged: string[]; added: number } {
+  const seen = new Set(existing.map(normalizeKey));
+  const newOnes = incoming.filter((i) => {
+    const k = normalizeKey(i);
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  return { merged: [...existing, ...newOnes], added: newOnes.length };
+}
+
+function dedupAppendCriteria(
+  existing: AcceptanceCriterion[],
+  incoming: { text: string }[],
+): { merged: AcceptanceCriterion[]; added: number } {
+  const seen = new Set(existing.map((c) => normalizeKey(c.text)));
+  const newOnes: AcceptanceCriterion[] = [];
+  for (const it of incoming) {
+    const k = normalizeKey(it.text);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    newOnes.push({
+      id: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : `ac-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      text: it.text,
+      checked: false,
+      checked_at: null,
+      checked_by: null,
+    });
+  }
+  return { merged: [...existing, ...newOnes], added: newOnes.length };
+}
+
+function criteriaFromAi(incoming: { text: string }[]): AcceptanceCriterion[] {
+  return incoming.map((it) => ({
+    id: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+      ? crypto.randomUUID()
+      : `ac-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    text: it.text,
+    checked: false,
+    checked_at: null,
+    checked_by: null,
+  }));
+}
+
 function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void }) {
   const [organizing, setOrganizing] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirm();
   const scopeText = (deal.scope_summary ?? '').trim();
-  const bullets = deal.scope_bullets ?? [];
   const canOrganize = scopeText.length >= 20 && !organizing;
 
   async function handleOrganize() {
     if (!canOrganize) return;
-    if (bullets.length > 0) {
-      const ok = await confirm({
-        title: 'Substituir bullets existentes?',
+
+    const hasExisting =
+      (deal.deliverables?.length ?? 0) > 0 ||
+      (deal.premises?.length ?? 0) > 0 ||
+      (deal.acceptance_criteria?.length ?? 0) > 0 ||
+      (deal.identified_risks?.length ?? 0) > 0 ||
+      (deal.technical_stack?.length ?? 0) > 0;
+
+    let mode: 'replace' | 'merge' = 'replace';
+    if (hasExisting) {
+      const goAhead = await confirm({
+        title: 'Já existe conteúdo nos campos do escopo',
         description:
-          'Os bullets atuais do "Resumo Escopo" serão substituídos pelos gerados pela IA a partir do texto do Escopo.',
-        confirmLabel: 'Substituir',
+          'A IA vai gerar Entregáveis, Premissas, Critérios de aceite, Riscos e Stack técnico a partir do texto do Escopo. Deseja continuar?',
+        confirmLabel: 'Continuar',
         cancelLabel: 'Cancelar',
         variant: 'default',
       });
-      if (!ok) return;
+      if (!goAhead) return;
+
+      const merge = await confirm({
+        title: 'Como aplicar o resultado?',
+        description:
+          'MESCLAR adiciona apenas itens novos (sem remover os atuais). SUBSTITUIR sobrescreve cada lista que a IA preencher.',
+        confirmLabel: 'Mesclar (adicionar)',
+        cancelLabel: 'Substituir tudo',
+        variant: 'default',
+      });
+      mode = merge ? 'merge' : 'replace';
     }
+
     setOrganizing(true);
     try {
       const { data, error } = await supabase.functions.invoke('organize-scope', {
-        body: { scope_text: scopeText },
+        body: {
+          scope_text: scopeText,
+          business_context: deal.business_context ?? '',
+          pain_description: deal.pain_description ?? '',
+          project_type: deal.project_type_v2 ?? '',
+          pain_categories: deal.pain_categories ?? [],
+        },
       });
       if (error) {
         const msg = (error as { message?: string }).message ?? '';
@@ -324,13 +407,77 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
         }
         return;
       }
-      const next: string[] = Array.isArray(data?.bullets) ? data.bullets : [];
-      if (!next.length) {
-        toast.warning('A IA não conseguiu extrair bullets. Tente detalhar mais o texto do Escopo.');
+      const ai = (data ?? {}) as Partial<AiScopePayload>;
+      const incoming: AiScopePayload = {
+        deliverables: Array.isArray(ai.deliverables) ? ai.deliverables : [],
+        premises: Array.isArray(ai.premises) ? ai.premises : [],
+        acceptance_criteria: Array.isArray(ai.acceptance_criteria) ? ai.acceptance_criteria : [],
+        identified_risks: Array.isArray(ai.identified_risks) ? ai.identified_risks : [],
+        technical_stack: Array.isArray(ai.technical_stack) ? ai.technical_stack : [],
+      };
+
+      const totalIncoming =
+        incoming.deliverables.length +
+        incoming.premises.length +
+        incoming.acceptance_criteria.length +
+        incoming.identified_risks.length +
+        incoming.technical_stack.length;
+
+      if (totalIncoming === 0) {
+        toast.warning('A IA não conseguiu extrair conteúdo. Tente detalhar mais o texto do Escopo.');
         return;
       }
-      save({ scope_bullets: next });
-      toast.success(`${next.length} bullet${next.length > 1 ? 's' : ''} gerado${next.length > 1 ? 's' : ''} pela IA.`);
+
+      const updates: Partial<Deal> = {};
+      const summary: string[] = [];
+
+      if (mode === 'replace') {
+        // Só sobrescreve campos não vazios devolvidos pela IA
+        if (incoming.deliverables.length) {
+          updates.deliverables = incoming.deliverables;
+          summary.push(`${incoming.deliverables.length} entregáveis`);
+        }
+        if (incoming.premises.length) {
+          updates.premises = incoming.premises;
+          summary.push(`${incoming.premises.length} premissas`);
+        }
+        if (incoming.acceptance_criteria.length) {
+          updates.acceptance_criteria = criteriaFromAi(incoming.acceptance_criteria);
+          summary.push(`${incoming.acceptance_criteria.length} critérios`);
+        }
+        if (incoming.identified_risks.length) {
+          updates.identified_risks = incoming.identified_risks;
+          summary.push(`${incoming.identified_risks.length} riscos`);
+        }
+        if (incoming.technical_stack.length) {
+          updates.technical_stack = incoming.technical_stack;
+          summary.push(`${incoming.technical_stack.length} no stack`);
+        }
+      } else {
+        // mesclar
+        const d = dedupAppendStrings(deal.deliverables ?? [], incoming.deliverables);
+        const p = dedupAppendStrings(deal.premises ?? [], incoming.premises);
+        const a = dedupAppendCriteria(
+          (deal.acceptance_criteria ?? []) as AcceptanceCriterion[],
+          incoming.acceptance_criteria,
+        );
+        const r = dedupAppendStrings(deal.identified_risks ?? [], incoming.identified_risks);
+        const s = dedupAppendStrings(deal.technical_stack ?? [], incoming.technical_stack);
+
+        if (d.added) { updates.deliverables = d.merged; summary.push(`+${d.added} entregáveis`); }
+        if (p.added) { updates.premises = p.merged; summary.push(`+${p.added} premissas`); }
+        if (a.added) { updates.acceptance_criteria = a.merged; summary.push(`+${a.added} critérios`); }
+        if (r.added) { updates.identified_risks = r.merged; summary.push(`+${r.added} riscos`); }
+        if (s.added) { updates.technical_stack = s.merged; summary.push(`+${s.added} no stack`); }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        toast.info('Nada novo para adicionar — todos os itens gerados já existiam.');
+        return;
+      }
+
+      save(updates);
+      toast.success(`Escopo atualizado pela IA: ${summary.join(', ')}.`);
     } finally {
       setOrganizing(false);
     }
@@ -360,7 +507,7 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <FieldLabel hint="descreva tudo aqui — depois organize em bullets com a IA">Escopo</FieldLabel>
+          <FieldLabel hint="descreva tudo aqui — depois clique em Organizar com IA para preencher os campos abaixo">Escopo</FieldLabel>
           <Button
             type="button"
             size="sm"
@@ -371,7 +518,7 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
             title={
               scopeText.length < 20
                 ? 'Escreva pelo menos 20 caracteres no Escopo para usar a IA'
-                : 'Organizar o texto do Escopo em bullets curtos'
+                : 'A IA vai estruturar Entregáveis, Premissas, Critérios, Riscos e Stack a partir deste texto'
             }
           >
             {organizing ? (
@@ -385,21 +532,9 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
         <InlineText
           value={deal.scope_summary}
           onSave={(v) => save({ scope_summary: v })}
-          placeholder="Descreva tudo o que o sistema/automação vai fazer. A IA pode organizar isso em bullets depois."
+          placeholder="Descreva tudo o que o sistema/automação vai fazer. A IA vai estruturar isso em entregáveis, premissas, critérios de aceite, riscos e stack técnico."
           multiline
-          minHeight={140}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <FieldLabel hint="bullets curtos, uma linha cada — gerados pela IA ou adicionados manualmente">
-          Resumo Escopo
-        </FieldLabel>
-        <StringListEditor
-          value={bullets}
-          onChange={(next) => save({ scope_bullets: next })}
-          placeholder="Novo bullet..."
-          emptyHint='Nenhum bullet ainda. Clique para adicionar manualmente, ou escreva no "Escopo" e use "Organizar com IA".'
+          minHeight={160}
         />
       </div>
 
@@ -409,7 +544,7 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
           value={deal.deliverables ?? []}
           onChange={(next) => save({ deliverables: next })}
           placeholder="Ex: API REST documentada, dashboard de métricas..."
-          emptyHint="Nenhum entregável listado. Clique pra adicionar o primeiro."
+          emptyHint='Nenhum entregável listado. Clique pra adicionar, ou use "Organizar com IA" no Escopo.'
         />
       </div>
 
@@ -505,7 +640,7 @@ function computeCompleteness(deal: Deal): { pct: number; painOk: boolean; soluca
   const painOk = hasCategory && (deal.pain_description?.trim().length ?? 0) >= 40;
   const solucaoOk =
     (deal.project_type_v2?.length ?? 0) > 0 &&
-    ((deal.scope_summary?.trim().length ?? 0) >= 40 || (deal.scope_bullets?.length ?? 0) >= 3) &&
+    (deal.scope_summary?.trim().length ?? 0) >= 40 &&
     ((deal.deliverables?.length ?? 0) >= 3 || (deal.acceptance_criteria?.length ?? 0) >= 3);
   // 2A só conta Dor + Solução (50% cada). Cliente/Comercial entram pelo refinamento posterior.
   const pct = (painOk ? 50 : 0) + (solucaoOk ? 50 : 0);
