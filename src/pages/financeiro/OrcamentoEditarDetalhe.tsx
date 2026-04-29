@@ -574,7 +574,28 @@ export default function OrcamentoEditarDetalhe() {
             />
           </Card>
 
-          {data.status === "recusada" && (
+          <Card className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                Mockup
+              </h2>
+              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/20 text-accent">
+                Beta
+              </span>
+            </div>
+            <div>
+              <Label className="text-xs">URL do mockup (Figma, Loom, vídeo, etc.)</Label>
+              <Input
+                value={mockupUrl}
+                onChange={(e) => markDirty(setMockupUrl)(e.target.value)}
+                className="h-9"
+                placeholder="https://figma.com/proto/…"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Aparecerá como CTA destacado na página pública e como QR code no PDF.
+              </p>
+            </div>
+          </Card>
             <Card className="p-4 space-y-2">
               <Label className="text-xs">Motivo da recusa (opcional)</Label>
               <Textarea
