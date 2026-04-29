@@ -32,12 +32,6 @@ export function isDiscoveryComplete(deal: Deal): { complete: boolean; missing: s
   return { complete: missing.length === 0, missing };
 }
 
-// Extrai a classe `bg-...` do token de cor para usar como pontinho
-function bgDot(colorClass?: string | null) {
-  if (!colorClass) return 'bg-muted-foreground/40';
-  const bg = colorClass.split(' ').find((c) => c.startsWith('bg-'));
-  return bg ?? 'bg-muted-foreground/40';
-}
 
 export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: Deal; dragging?: boolean; onClick?: () => void; onCompanyClick?: () => void }) {
   const initials = deal.owner?.display_name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'GB';
