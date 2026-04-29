@@ -367,7 +367,7 @@ function MarkdownToolbar({
 }
 
 function Divider() {
-  return <span className="mx-0.5 h-4 w-px bg-border/70" />;
+  return <span className="mx-0.5 h-4 w-px shrink-0 bg-border/70" />;
 }
 
 function ToolbarButton({
