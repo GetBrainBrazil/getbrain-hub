@@ -54,10 +54,10 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
   const columns = useMemo(() => {
     const buckets: Record<ColumnId, ProposalRow[]> = {
       rascunho: [],
-      enviado: [],
-      aceito: [],
-      recusado: [],
-      expirado: [],
+      enviada: [],
+      convertida: [],
+      recusada: [],
+      expirada: [],
     };
     for (const r of rows) {
       const eff = effectiveStatus(r.status, r.valid_until);
@@ -145,29 +145,29 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
             />
             <OrcamentoKanbanColumn
               id="enviada"
-              label="Enviado"
-              rows={columns.enviado}
+              label="Enviada"
+              rows={columns.enviada}
               onCardClick={onCardClick}
               accentClass="text-primary"
             />
             <OrcamentoKanbanColumn
               id="convertida"
-              label="Aceito"
-              rows={columns.aceito}
+              label="Convertida"
+              rows={columns.convertida}
               onCardClick={onCardClick}
               accentClass="text-success"
             />
             <OrcamentoKanbanColumn
               id="recusada"
-              label="Recusado"
-              rows={columns.recusado}
+              label="Recusada"
+              rows={columns.recusada}
               onCardClick={onCardClick}
               accentClass="text-destructive"
             />
             <OrcamentoKanbanColumn
               id="expirada"
-              label="Expirado"
-              rows={columns.expirado}
+              label="Expirada"
+              rows={columns.expirada}
               onCardClick={onCardClick}
               derived
               accentClass="text-amber-500"
@@ -210,10 +210,10 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
 
 const LABEL: Record<ColumnId, string> = {
   rascunho: "Rascunho",
-  enviado: "Enviado",
-  aceito: "Aceito",
-  recusado: "Recusado",
-  expirado: "Expirado",
+  enviada: "Enviada",
+  convertida: "Convertida",
+  recusada: "Recusada",
+  expirada: "Expirada",
 };
 
 function MoveDialogBody({
