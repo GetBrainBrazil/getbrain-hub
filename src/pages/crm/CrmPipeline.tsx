@@ -402,7 +402,13 @@ export default function CrmPipeline() {
           <p className="mt-1 text-xs text-muted-foreground">Crie um novo deal ou ajuste os filtros para visualizar.</p>
         </div>
       ) : (
-        <DndContext sensors={sensors} onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveId(null)}
+        >
           <div className="-mx-1 px-1 flex gap-3 sm:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
             {DEAL_STAGES.map((stage) => (
               <Column
