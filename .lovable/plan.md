@@ -1,59 +1,50 @@
-## Diagnóstico
+## Diagnóstico do flicker no Kanban do CRM
 
-A proposta **foi criada com sucesso** (verifiquei no banco: `PROP-0005`, status `rascunho`, deal vinculado, escopo + MRR corretos). O problema não é a criação. O que aconteceu foi:
+Quando você arrasta um card de uma coluna pra outra, por 1 frame ele "pisca" de volta na coluna antiga antes de aparecer na nova. Isso acontece porque:
 
-1. O `navigate('/financeiro/orcamentos/{id}/editar')` rodou normalmente.
-2. A página de edição **renderizou só o skeleton** e ficou travada — por isso o usuário viu "tela em branco" e clicou manualmente em "Propostas" no sidebar (o session replay confirma esse caminho).
+1. O Pipeline usa `DragOverlay` (uma cópia do card que segue o mouse) **e** o card original continua sendo renderizado na coluna antiga durante o arrasto.
+2. Quando você solta, o overlay desaparece imediatamente. O card original ainda está montado na coluna antiga, com o `transform` voltando a `(0,0)` — então ele "snap-back" para a posição inicial.
+3. No próximo frame, o React aplica o optimistic update do `useUpdateDealStage` (`onMutate`) e o card aparece na coluna nova. Esse delta de 1 frame é o flash que você vê.
 
-**Causa raiz da tela travada**: `OrcamentoEditarDetalhe` mostra skeleton enquanto `isLoading || !data` for verdade. O hook `useProposalDetail`:
+A causa raiz não é a query nem o backend (o optimistic update já está correto): é só o item original do dnd-kit ficando visível durante o arrasto.
 
-- Usa `.single()` (que lança erro se não vier exatamente 1 linha — risco quando RLS demora a propagar logo após o INSERT).
-- Não tem tratamento de erro: quando o query falha, `isLoading` vira `false` e `data` permanece `undefined`, então a tela fica eternamente em skeleton (sem mensagem, sem retry, sem navegação).
-- Adicionalmente, o detalhe seleciona `*` e estende `ProposalRow` esperando campos que estavam em refactor. Pequenos descompassos não derrubam a query, mas não há fallback visual.
+## Correção
 
-**Causa raiz secundária (UX)**: o `CreateProposalForStageDialog` não tem `try/catch` visível para o usuário quando algo falha pós-INSERT (ex: erro no `commitStage` do deal), e o handler `handleCreateProposalForDeal` faz `commitStage → invalidate → navigate` em sequência: se uma dessas etapas der throw entre o INSERT e o navigate, a proposta fica órfã (criada, mas sem redirect). Foi exatamente esse cenário no PROP-0005.
+Em `src/pages/crm/CrmPipeline.tsx`, ajustar o componente `DraggableDeal` para que **enquanto `isDragging` for verdadeiro o card original fique invisível e com altura zero** — quem se move visualmente é só o `DragOverlay`. Quando você solta, o overlay some no mesmo instante em que o React reposiciona o card real na nova coluna (via optimistic update já existente). Sem dois cards na tela ao mesmo tempo, sem snap-back, sem flicker.
 
-Há também 2 ruídos menores que não causam o bug, mas convém limpar:
+Mudança pontual:
 
-- `normalizeProposalStatus` em `calculateTotal.ts` tem cases duplicados no `switch` (`enviada`, `expirada`, `convertida`, `recusada` aparecem 2x). TS aceita, mas é dead code confuso.
-- Warning de `forwardRef` no `NovoOrcamentoModal` — apenas warning, não quebra.
+```tsx
+function DraggableDeal({ deal, onOpen, onCompanyOpen }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
 
----
+  if (isDragging) {
+    // Item real "colapsa" — visualização fica a cargo do DragOverlay.
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="opacity-0 pointer-events-none"
+        style={{ height: 0, margin: 0, overflow: 'hidden' }}
+        aria-hidden
+      />
+    );
+  }
 
-## Plano de correção
+  return (
+    <div ref={setNodeRef} {...attributes} {...listeners}>
+      <DealCard deal={deal} onClick={onOpen} onCompanyClick={onCompanyOpen} />
+    </div>
+  );
+}
+```
 
-### 1. Tornar a tela de edição resiliente
-
-`src/hooks/orcamentos/useProposalDetail.ts`
-- Trocar `.single()` por `.maybeSingle()`.
-- Expor `error` e tratar "não encontrado" como estado distinto (retornar `null`).
-
-`src/pages/financeiro/OrcamentoEditarDetalhe.tsx`
-- Distinguir 3 estados: carregando (skeleton atual), erro/não-encontrado (card com mensagem + botão "Voltar para propostas") e sucesso.
-- Garantir que `!isLoading && !data` nunca caia em loop de skeleton.
-
-### 2. Tornar o fluxo do pipeline atômico/seguro
-
-`src/pages/crm/CrmPipeline.tsx → handleCreateProposalForDeal`
-- Envolver a sequência pós-`createDraftProposal` em try/catch específico: se o `commitStage` falhar **depois** que a proposta já foi criada, ainda assim navegar para a tela de edição (a proposta existe; usuário não fica perdido) e mostrar toast warning explicando que o estágio não avançou.
-- Logar `console.error` com o ID da proposta criada para facilitar debug futuro.
-
-### 3. Limpar ruído
-
-`src/lib/orcamentos/calculateTotal.ts`
-- Remover os cases duplicados de `normalizeProposalStatus` (manter só os mapeamentos de legado + default).
-
-`src/components/orcamentos/NovoOrcamentoModal.tsx`
-- Remover ou substituir o uso que está gerando o warning de `forwardRef` (provavelmente um filho do `Dialog` recebendo ref via composição). Investigar e ajustar para não passar ref por componente function-based.
-
-### 4. Validar visualmente
-
-- Abrir `PROP-0005` (que ficou orfão no banco) em `/financeiro/orcamentos/30d5a7c8-578d-42ca-a053-7fb437b8be4e/editar` — deve abrir normal após o fix.
-- Refazer o fluxo: arrastar um deal para "Proposta na Mesa", preencher implementação + MRR, confirmar que abre direto a tela de edição (sem skeleton infinito).
-
----
+Mantém:
+- `DragOverlay` com `dropAnimation={null}` (já está assim — sem animação de retorno).
+- `useUpdateDealStage` com optimistic update (já está correto).
+- Toda a lógica de drag/drop, gates de proposta/perda/ganho.
 
 ## Resultado esperado
 
-- Arrastar card → modal → "Criar e abrir" → cai direto na tela de edição da proposta nova com os valores pré-preenchidos. Sem tela em branco. Sem redirect inesperado para a lista.
-- Em qualquer falha pós-INSERT, o usuário ainda chega à proposta (não fica órfã invisível) e vê um toast explicando o que falhou.
+Você arrasta o card → ele segue o mouse via overlay → solta na nova coluna → ele aparece direto lá, sem "voltar e ir" visual. Transição suave, sem bug.

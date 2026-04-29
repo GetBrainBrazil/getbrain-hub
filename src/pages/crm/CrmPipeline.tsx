@@ -35,10 +35,25 @@ import type { Deal, DealStage } from '@/types/crm';
 const ACTIVE_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando'];
 
 function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: () => void; onCompanyOpen: () => void }) {
-  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({ id: deal.id });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
+  // Enquanto arrasta, o item real fica invisível e com altura zero — quem se
+  // move visualmente é o DragOverlay. Isso evita o "snap-back" de 1 frame
+  // quando o usuário solta o card em outra coluna.
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="opacity-0 pointer-events-none"
+        style={{ height: 0, margin: 0, overflow: 'hidden' }}
+        aria-hidden
+      />
+    );
+  }
   return (
-    <div ref={setNodeRef} style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined} {...attributes} {...listeners}>
-      <DealCard deal={deal} dragging={isDragging} onClick={() => !isDragging && onOpen()} onCompanyClick={onCompanyOpen} />
+    <div ref={setNodeRef} {...attributes} {...listeners}>
+      <DealCard deal={deal} onClick={onOpen} onCompanyClick={onCompanyOpen} />
     </div>
   );
 }
