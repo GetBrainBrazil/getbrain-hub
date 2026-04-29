@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useUpdateDealField } from '@/hooks/crm/useCrmDetails';
 import { cn } from '@/lib/utils';
@@ -59,13 +60,17 @@ function InlineText({
   };
   if (multiline) {
     return (
-      <Textarea
+      <RichTextEditor
         value={local}
+        onChange={setLocal}
+        onSave={(v) => {
+          const trimmed = v.trim();
+          const next = trimmed === '' ? null : trimmed;
+          if (next !== (value ?? null)) onSave(next);
+        }}
         placeholder={placeholder}
-        onChange={(e) => setLocal(e.target.value)}
-        onBlur={commit}
-        style={minHeight ? { minHeight } : undefined}
-        className="resize-none bg-background/60"
+        minHeight={minHeight}
+        autoFocus={false}
       />
     );
   }
