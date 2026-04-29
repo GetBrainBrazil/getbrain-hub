@@ -1,5 +1,4 @@
 import type {
-  DealProjectType,
   DealPainCategory,
   EstimationConfidence,
   DealDependencyType,
@@ -27,25 +26,8 @@ export const PAIN_CATEGORY_COLOR: Record<DealPainCategory, string> = {
   outra: 'bg-muted text-muted-foreground border-border',
 };
 
-export const PROJECT_TYPE_V2_LABEL: Record<DealProjectType, string> = {
-  whatsapp_chatbot: 'Chatbot WhatsApp',
-  ai_sdr: 'SDR com IA',
-  sistema_gestao: 'Sistema de gestão',
-  automacao_processo: 'Automação de processo',
-  integracao_sistemas: 'Integração de sistemas',
-  outro: 'Outro',
-};
-export const PROJECT_TYPE_V2_OPTIONS: DealProjectType[] = [
-  'whatsapp_chatbot', 'ai_sdr', 'sistema_gestao', 'automacao_processo', 'integracao_sistemas', 'outro',
-];
-export const PROJECT_TYPE_V2_COLOR: Record<DealProjectType, string> = {
-  whatsapp_chatbot: 'bg-success/15 text-success border-success/30',
-  ai_sdr: 'bg-accent/15 text-accent border-accent/30',
-  sistema_gestao: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
-  automacao_processo: 'bg-chart-5/15 text-chart-5 border-chart-5/30',
-  integracao_sistemas: 'bg-warning/15 text-warning border-warning/30',
-  outro: 'bg-muted text-muted-foreground border-border',
-};
+// PROJECT_TYPE_V2 — agora é dinâmico via crm_project_types.
+// Use o hook useCrmProjectTypes para listar/labels/cores.
 
 export const ESTIMATION_CONFIDENCE_LABEL: Record<EstimationConfidence, string> = {
   alta: 'Alta',

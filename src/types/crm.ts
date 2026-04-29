@@ -3,10 +3,9 @@ export type LeadStatus = 'novo' | 'triagem_agendada' | 'triagem_feita' | 'descar
 export type DealStage = 'presencial_agendada' | 'presencial_feita' | 'orcamento_enviado' | 'em_negociacao' | 'fechado_ganho' | 'fechado_perdido';
 export type ActivityType = 'reuniao_presencial' | 'reuniao_virtual' | 'ligacao' | 'email' | 'whatsapp' | 'outro';
 
-// v2.0 — descoberta enxuta
-export type DealProjectType =
-  | 'whatsapp_chatbot' | 'ai_sdr' | 'sistema_gestao'
-  | 'automacao_processo' | 'integracao_sistemas' | 'outro';
+// v2.1 — slugs vêm de crm_project_types (dinâmico). Mantém type como string
+// p/ compat com slugs antigos (whatsapp_chatbot, ai_sdr, etc.).
+export type DealProjectType = string;
 
 // Dynamic — slugs vêm de crm_pain_categories. Mantemos o type como string
 // (slugs do sistema antigo continuam válidos: operacional, comercial, etc.)
@@ -78,8 +77,7 @@ export interface Deal {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null; origin_lead_id: string | null;
   stage: DealStage; estimated_value: number | null; estimated_implementation_value: number | null; estimated_mrr_value: number | null; probability_pct: number; expected_close_date: string | null;
   project_type: string | null;          // legacy enum (compartilhado com projects)
-  project_type_v2: DealProjectType | null;  // novo enum específico de deals (v2.0)
-  project_type_custom: string | null;
+  project_type_v2: DealProjectType | null;  // v2.1 — slug em crm_project_types (dinâmico)
   scope_summary: string | null; proposal_url: string | null; notes: string | null; stage_changed_at: string; closed_at: string | null; lost_reason: string | null; generated_project_id: string | null;
 
   // v2.0 — descoberta enxuta

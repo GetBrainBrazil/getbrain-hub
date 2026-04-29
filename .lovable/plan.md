@@ -1,81 +1,69 @@
-# Categoria da Dor → tabela editável + combobox criável
+## Objetivo
 
-## Problema
+Tornar **Tipo de projeto** (`project_type_v2`) um campo dinâmico, igual ao que fizemos com **Categorias da dor**: gerenciável em Configurações, criável on-the-fly e com cores customizáveis. Diferença principal de UX: **continua sendo seleção única** (um deal tem um tipo) e o campo `project_type_custom` deixa de existir (vira só "criar nova opção").
 
-Hoje "Categoria da dor" é um enum fixo no código (`pain_category` com 6 valores: operacional, comercial, estratégica, compliance, experiência, outra), renderizado como chips. Para adicionar/editar/remover categorias, precisa mudar código e migration. Você quer:
+Aproveito a oportunidade pra refinar o que ficou meio cru no campo de dores:
 
-1. UI igual ao "tipo de cliente" não — você quer **mais leve**: um combobox (select) com busca onde, se digitar algo que não existe, oferece "Criar nova".
-2. Categorias viram **dado editável**: nova página em Configurações → Pessoas & Empresas → "Categorias de dor" com listagem, criar/editar/excluir/reordenar/ativar-desativar.
-3. Padrão idêntico ao já usado em **Origens de lead** (`crm_lead_sources` + `LeadSourcesManager`) — manter consistência.
+- **Trocar os chips estáticos** que ocupam uma linha enorme por um seletor compacto que sempre mostra a opção atual com sua cor — sem precisar abrir popover só pra ver o que está selecionado.
+- **Quick-pick + busca no mesmo lugar**: as opções mais usadas continuam visíveis como atalhos (1 clique), mas com busca/criação acessível por um botão "Mais opções..." que abre o combobox completo. Evita o problema atual das dores onde tudo é escondido atrás de um popover.
+- **Indicador visual de cor** consistente: pontinho colorido + label, igual padrão de status do GitHub/Linear.
 
-## Solução
+## Mudanças no banco
 
-### 1. Banco de dados (migration)
+1. Nova tabela `crm_project_types` (mesmo schema das outras de referência: `name`, `slug`, `color`, `display_order`, `is_active`, `is_system`).
+2. Seed com os 6 tipos atuais (`whatsapp_chatbot`, `ai_sdr`, `sistema_gestao`, `automacao_processo`, `integracao_sistemas`) preservando as cores existentes. **"Outro" entra desativado** (mesma decisão das dores — quem quiser cria um tipo específico).
+3. Converter `deals.project_type_v2` de enum para `text` (preservando os slugs existentes).
+4. Migrar `project_type_custom`: para deals que tinham `project_type_v2='outro'` + `project_type_custom` preenchido, criar registros em `crm_project_types` (slugificados) e apontar `project_type_v2` pra eles. Depois, dropar a coluna `project_type_custom`.
+5. RLS no padrão das outras tabelas de referência (select autenticado, write só admin, sem deletar `is_system=true`).
+6. Atualizar a função `close_deal_as_won` (já lida com `project_type` como string, então o impacto é mínimo — só garantir que o slug é repassado).
 
-Criar tabela `crm_pain_categories` espelhando `crm_lead_sources`:
+## Mudanças no front
+
+### Componente novo `ProjectTypeSelect`
+
+Substitui o `ChipGroup` atual em `CrmDealDetail.tsx`. Layout proposto:
 
 ```text
-crm_pain_categories
-├── id uuid pk
-├── name text         -- "Operacional"
-├── slug text unique  -- "operacional"
-├── color text        -- classe Tailwind ou hex
-├── display_order int
-├── is_active bool
-├── is_system bool    -- true para as 6 padrão (não permite delete)
-├── created_at, updated_at
+TIPO DE PROJETO
+[● Chatbot WhatsApp] [● SDR com IA] [● Sistema de gestão]  [+ mais opções ▾]
+                  ^selecionado (com ring + cor cheia)        ^abre combobox c/ busca + criar
 ```
 
-- Seed das 6 categorias atuais com `is_system=true`, mantendo os mesmos slugs do enum.
-- Mudar coluna `deals.pain_category` de enum → `text` referenciando `slug` (mantém compatibilidade total — slugs idênticos).
-- RLS: leitura pra todo autenticado; escrita só admin.
-- Trigger `updated_at`.
+- Mostra até **5 opções como chips** (as `display_order` mais altas / mais usadas) — clique alterna seleção.
+- O selecionado fica destacado com ring e a cor própria; os demais ficam como outline sutil.
+- Botão **"Mais opções"** abre o `ComboboxCreate` (mesmo já usado nas dores) com busca e criação inline para admins.
+- Se o tipo selecionado não está entre os chips (ex: criado custom), ele aparece automaticamente entre os chips visíveis.
 
-### 2. Hook `useCrmPainCategories`
+### Página de gerenciamento
 
-Cópia do `useCrmLeadSources` com queries `list / create / update / delete / reorder`. Invalida cache de deals quando muda.
+`/configuracoes/pessoas/tipos-de-projeto` — copia 1:1 o padrão do `PainCategoriesManager` (drag-and-drop ordem, editar nome/cor, ativar/desativar, proteger `is_system`).
 
-### 3. Combobox no DealDetail
+### Hook `useCrmProjectTypes`
 
-Substituir `<ChipGroup>` por um novo componente `PainCategoryCombobox`:
+Espelho de `useCrmPainCategories`: list, create, update, delete, reorder. Cache invalidado via `invalidateCrmCaches`.
 
-- Baseado em shadcn `Command` + `Popover` (mesmo padrão do `ComboboxCreate.tsx` já existente no projeto).
-- Mostra categorias **ativas** ordenadas por `display_order`.
-- Busca por nome.
-- Quando o termo digitado não bate com nenhuma → mostra opção destacada **"+ Criar 'Texto digitado'"** (apenas pra usuários que podem criar — todos podem, mas só admin edita).
-- Selecionar grava o `slug` em `deals.pain_category`.
-- Mostra a categoria selecionada como chip colorido (mesma cor da config) dentro do botão do combobox.
+### Limpeza dos lugares que usam o enum
 
-### 4. Página de Configurações
+| Arquivo | Mudança |
+|---|---|
+| `src/types/crm.ts` | `DealProjectType` vira `string`; remover `project_type_custom` do `Deal`. |
+| `src/constants/dealEnumLabels.ts` | Remover `PROJECT_TYPE_V2_LABEL/OPTIONS/COLOR` (vira dinâmico). Manter um `getProjectTypeMeta(slug, list)` helper se útil. |
+| `src/pages/crm/CrmDealDetail.tsx` | Trocar `ChipGroup` + bloco `isOutro/project_type_custom` pelo novo `ProjectTypeSelect`. |
+| `src/pages/crm/CrmPipeline.tsx` | Filtro lateral passa a usar lista vinda do hook (não mais constante). |
+| `src/components/crm/DealCard.tsx` | Chip do header lê cor/label da lista carregada (igual já faz com dores agora). |
+| `src/components/crm/DealHeader.tsx` | Mesma adaptação. |
+| `src/hooks/crm/useCrmDashboardExec.ts` | Filtro `projectTypes` continua igual (já usa string). |
 
-Nova página em `/configuracoes/pessoas/categorias-dor` (`PainCategoriesPage.tsx`) usando um manager espelhado de `LeadSourcesManager`:
+## Ordem de execução
 
-- Tabela com: drag-handle (reordenar), nome editável inline, cor (color picker), ativo (switch), ações (excluir).
-- Botão "Nova categoria" no topo.
-- Categorias `is_system=true` mostram badge "padrão" e não podem ser excluídas, só desativadas/renomeadas.
-- Adicionar item ao menu lateral de Configurações → Pessoas & Empresas, ao lado de "Origens de lead" e "Papéis de contato".
+1. Migration: nova tabela + seed + converter coluna + migrar `project_type_custom` + drop da coluna.
+2. Criar hook + componente de gerenciamento + rota em Configurações.
+3. Criar `ProjectTypeSelect` e plugar em `CrmDealDetail`.
+4. Adaptar leitura em `DealCard`, `DealHeader`, `CrmPipeline` (chip e filtros dinâmicos).
+5. Atualizar memória do projeto (`crm-reference-tables`) somando `project_types` à lista de tabelas no padrão.
 
-### 5. Limpeza
+## Não muda
 
-- Remover `PAIN_CATEGORY_LABEL/OPTIONS/COLOR` de `dealEnumLabels.ts` (ou deixar como fallback inicial enquanto não carrega).
-- Onde mostrar a categoria em outros lugares (`isDiscoveryComplete`, eventuais badges), buscar do hook em vez do enum.
-
-## Arquivos
-
-**Novos:**
-- `supabase/migrations/<ts>_crm_pain_categories.sql`
-- `src/hooks/crm/useCrmPainCategories.ts`
-- `src/components/crm/PainCategoryCombobox.tsx`
-- `src/components/crm/settings/PainCategoriesManager.tsx`
-- `src/pages/configuracoes/pessoas/CategoriasDorPage.tsx`
-
-**Editados:**
-- `src/pages/crm/CrmDealDetail.tsx` — trocar `ChipGroup` por `PainCategoryCombobox` em `ZoneDor`.
-- `src/components/AppSidebar.tsx` ou onde estiver o submenu de Configurações → Pessoas & Empresas — adicionar link.
-- `src/App.tsx` — registrar rota `/configuracoes/pessoas/categorias-dor`.
-- `src/components/crm/DealCard.tsx` — `isDiscoveryComplete` continua válido (testa só `!!deal.pain_category`).
-
-## Compatibilidade
-
-- Slugs são preservados: deals existentes com `pain_category='operacional'` continuam funcionando sem migração de dados.
-- Caso a coluna seja enum no Postgres, a migration faz `ALTER COLUMN pain_category TYPE text USING pain_category::text` antes de remover o enum (se enum não for usado em outro lugar).
+- Audit logs (label "Tipo de projeto" continua igual em `formatters.ts`).
+- Coluna legada `project_type` (texto livre, usada por `projects`) — fora do escopo.
+- Comportamento do handoff CRM→Projeto.

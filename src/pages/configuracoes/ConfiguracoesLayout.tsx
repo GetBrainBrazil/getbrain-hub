@@ -15,7 +15,7 @@ import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Lock, Settings2, Building2, Users, Tag, Briefcase, Wallet,
   Shield, History, FolderTree, UserRound, Truck, Landmark,
-  Tags, Target,
+  Tags, Target, Layers,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,7 @@ const SECTIONS: Section[] = [
       { key: "papeis-contato", label: "Papéis de Contato", path: "/configuracoes/pessoas/papeis-contato", icon: Users },
       { key: "origens", label: "Origens de Lead", path: "/configuracoes/pessoas/origens", icon: Tag },
       { key: "categorias-dor", label: "Categorias de Dor", path: "/configuracoes/pessoas/categorias-dor", icon: Tags },
+      { key: "tipos-projeto", label: "Tipos de Projeto", path: "/configuracoes/pessoas/tipos-projeto", icon: Layers },
       { key: "cargos", label: "Cargos Internos", path: "/configuracoes/pessoas/cargos", icon: Briefcase },
     ],
   },

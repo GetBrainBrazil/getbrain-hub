@@ -1070,6 +1070,42 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_project_types: {
+        Row: {
+          color: string | null
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deal_activities: {
         Row: {
           created_at: string
@@ -1299,10 +1335,7 @@ export type Database = {
           pricing_rationale: string | null
           probability_pct: number
           project_type: Database["public"]["Enums"]["project_type"] | null
-          project_type_custom: string | null
-          project_type_v2:
-            | Database["public"]["Enums"]["deal_project_type"]
-            | null
+          project_type_v2: string | null
           proposal_url: string | null
           scope_in: string | null
           scope_out: string | null
@@ -1363,10 +1396,7 @@ export type Database = {
           pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
-          project_type_custom?: string | null
-          project_type_v2?:
-            | Database["public"]["Enums"]["deal_project_type"]
-            | null
+          project_type_v2?: string | null
           proposal_url?: string | null
           scope_in?: string | null
           scope_out?: string | null
@@ -1427,10 +1457,7 @@ export type Database = {
           pricing_rationale?: string | null
           probability_pct?: number
           project_type?: Database["public"]["Enums"]["project_type"] | null
-          project_type_custom?: string | null
-          project_type_v2?:
-            | Database["public"]["Enums"]["deal_project_type"]
-            | null
+          project_type_v2?: string | null
           proposal_url?: string | null
           scope_in?: string | null
           scope_out?: string | null
@@ -4844,13 +4871,6 @@ export type Database = {
         | "hardware"
         | "autorizacao_legal"
         | "outro"
-      deal_project_type:
-        | "whatsapp_chatbot"
-        | "ai_sdr"
-        | "sistema_gestao"
-        | "automacao_processo"
-        | "integracao_sistemas"
-        | "outro"
       deal_stage:
         | "presencial_agendada"
         | "presencial_feita"
@@ -5140,14 +5160,6 @@ export const Constants = {
         "pessoa",
         "hardware",
         "autorizacao_legal",
-        "outro",
-      ],
-      deal_project_type: [
-        "whatsapp_chatbot",
-        "ai_sdr",
-        "sistema_gestao",
-        "automacao_processo",
-        "integracao_sistemas",
         "outro",
       ],
       deal_stage: [
