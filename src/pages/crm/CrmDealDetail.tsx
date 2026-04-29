@@ -192,8 +192,8 @@ function InlineMoney({
 }
 
 function InlineInteger({
-  value, onSave, placeholder, suffix,
-}: { value: number | null; onSave: (v: number | null) => void; placeholder?: string; suffix?: string }) {
+  value, onSave, placeholder, suffix, fullHeight,
+}: { value: number | null; onSave: (v: number | null) => void; placeholder?: string; suffix?: string; fullHeight?: boolean }) {
   const [local, setLocal] = useState(value === null ? '' : String(value));
   useEffect(() => { setLocal(value === null ? '' : String(value)); }, [value]);
   const commit = () => {
@@ -206,7 +206,10 @@ function InlineInteger({
     if (Number.isFinite(n) && n !== value) onSave(n);
   };
   return (
-    <div className="flex items-center rounded-md border border-input bg-background/60 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+    <div className={cn(
+      "flex items-center rounded-md border border-input bg-background/60 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background",
+      fullHeight && "h-full"
+    )}>
       <IntegerInput
         value={local}
         onValueChange={setLocal}
@@ -214,7 +217,10 @@ function InlineInteger({
         onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
         placeholder={placeholder}
         withSeparator
-        className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+        className={cn(
+          "border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
+          fullHeight && "h-full"
+        )}
       />
       {suffix && <span className="pr-2.5 text-xs text-muted-foreground">{suffix}</span>}
     </div>
@@ -589,22 +595,27 @@ function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => v
 
       <div className="rounded-md border border-border/60 bg-background/40 p-4">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estimativa grossa</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-stretch">
+          <div className="flex flex-col space-y-2">
             <FieldLabel>Horas totais</FieldLabel>
-            <InlineInteger
-              value={deal.estimated_hours_total}
-              onSave={(v) => save({ estimated_hours_total: v })}
-              placeholder="0"
-              suffix="h"
-            />
+            <div className="flex-1">
+              <InlineInteger
+                value={deal.estimated_hours_total}
+                onSave={(v) => save({ estimated_hours_total: v })}
+                placeholder="0"
+                suffix="h"
+                fullHeight
+              />
+            </div>
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-col space-y-2">
             <FieldLabel>Complexidade</FieldLabel>
-            <ComplexitySlider
-              value={deal.estimated_complexity}
-              onSave={(v) => save({ estimated_complexity: v })}
-            />
+            <div className="flex-1">
+              <ComplexitySlider
+                value={deal.estimated_complexity}
+                onSave={(v) => save({ estimated_complexity: v })}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -616,7 +627,7 @@ function ComplexitySlider({ value, onSave }: { value: number | null; onSave: (v:
   const [local, setLocal] = useState<number>(value ?? 3);
   useEffect(() => { setLocal(value ?? 3); }, [value]);
   return (
-    <div className="rounded-md border border-input bg-background/60 px-3 py-2.5">
+    <div className="h-full rounded-md border border-input bg-background/60 px-3 py-2.5">
       <div className="mb-2 flex items-baseline justify-between">
         <span className="font-mono text-lg font-semibold text-accent">{local}</span>
         <span className="text-[11px] text-muted-foreground">{COMPLEXITY_LABEL[local]}</span>
