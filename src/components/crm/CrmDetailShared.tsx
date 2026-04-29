@@ -9,7 +9,7 @@ import type { DealStage } from '@/types/crm';
 
 // Etapas em progresso, na ordem do funil. Ganho/Perdido ficam fora do stepper
 // para evitar cliques acidentais que abrem o modal de fechamento.
-const PROGRESS_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando'];
+const PROGRESS_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando', 'gelado'];
 
 export function DetailShell({ children }: { children: React.ReactNode }) { return <div className="mx-auto max-w-[1600px] px-1 pb-12 animate-fade-in">{children}</div>; }
 export function DetailBreadcrumb({ items, closeTo }: { items: { label: string; to?: string }[]; closeTo: string }) {
