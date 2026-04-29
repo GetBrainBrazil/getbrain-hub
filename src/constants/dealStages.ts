@@ -2,56 +2,84 @@ import type { ActivityType, DealStage } from '@/types/crm';
 
 /**
  * Estágios oficiais do funil (ordem de exibição no Kanban).
- * Ganho/Perdido/Gelado ficam no fim e podem ser ocultados em algumas visões.
+ *
+ * NOTA: o slug `gelado` foi reaproveitado como o estágio "Negociação",
+ * posicionado entre "Proposta Enviada" e "Convertido", para evitar
+ * migration do enum no banco. Cards antigos marcados como `gelado`
+ * passam a aparecer como "Negociação".
  */
 export const DEAL_STAGES: DealStage[] = [
   'descoberta_marcada',
   'descobrindo',
   'proposta_na_mesa',
   'ajustando',
+  'gelado',
   'ganho',
   'perdido',
-  'gelado',
 ];
 
 export const DEAL_STAGE_PROBABILITY: Record<DealStage, number> = {
-  descoberta_marcada: 20,
-  descobrindo: 40,
-  proposta_na_mesa: 60,
-  ajustando: 75,
+  descoberta_marcada: 10,
+  descobrindo: 25,
+  proposta_na_mesa: 50,
+  ajustando: 70,
+  gelado: 85,
   ganho: 100,
   perdido: 0,
-  gelado: 10,
 };
 
 export const DEAL_STAGE_LABEL: Record<DealStage, string> = {
-  descoberta_marcada: 'Novos Contatos',
-  descobrindo: 'Em Qualificação',
-  proposta_na_mesa: 'Proposta',
+  descoberta_marcada: 'Novo Lead',
+  descobrindo: 'Primeiro Contato',
+  proposta_na_mesa: 'Qualificado',
   ajustando: 'Proposta Enviada',
-  ganho: 'Ganho',
+  gelado: 'Negociação',
+  ganho: 'Convertido',
   perdido: 'Perdido',
-  gelado: 'Gelado',
 };
 
+/** Borda lateral esquerda usada nos cards / colunas. */
 export const DEAL_STAGE_TONE: Record<DealStage, string> = {
   descoberta_marcada: 'border-l-accent',
-  descobrindo: 'border-l-chart-5',
-  proposta_na_mesa: 'border-l-warning',
-  ajustando: 'border-l-chart-4',
-  ganho: 'border-l-success',
-  perdido: 'border-l-muted-foreground',
+  descobrindo: 'border-l-warning',
+  proposta_na_mesa: 'border-l-chart-orange',
+  ajustando: 'border-l-chart-5',
   gelado: 'border-l-chart-2',
+  ganho: 'border-l-success',
+  perdido: 'border-l-destructive',
 };
 
+/** Faixa/barra cheia (ex: top da coluna). */
 export const DEAL_STAGE_BAR: Record<DealStage, string> = {
   descoberta_marcada: 'bg-accent',
-  descobrindo: 'bg-chart-5',
-  proposta_na_mesa: 'bg-warning',
-  ajustando: 'bg-chart-4',
-  ganho: 'bg-success',
-  perdido: 'bg-muted-foreground',
+  descobrindo: 'bg-warning',
+  proposta_na_mesa: 'bg-chart-orange',
+  ajustando: 'bg-chart-5',
   gelado: 'bg-chart-2',
+  ganho: 'bg-success',
+  perdido: 'bg-destructive',
+};
+
+/** Bolinha colorida no header da coluna (Kanban). */
+export const DEAL_STAGE_DOT: Record<DealStage, string> = {
+  descoberta_marcada: 'bg-accent',
+  descobrindo: 'bg-warning',
+  proposta_na_mesa: 'bg-chart-orange',
+  ajustando: 'bg-chart-5',
+  gelado: 'bg-chart-2',
+  ganho: 'bg-success',
+  perdido: 'bg-destructive',
+};
+
+/** Cor do texto do nome (matching com o dot, mais sutil). */
+export const DEAL_STAGE_TEXT: Record<DealStage, string> = {
+  descoberta_marcada: 'text-accent',
+  descobrindo: 'text-warning',
+  proposta_na_mesa: 'text-chart-orange',
+  ajustando: 'text-chart-5',
+  gelado: 'text-chart-2',
+  ganho: 'text-success',
+  perdido: 'text-destructive',
 };
 
 /**

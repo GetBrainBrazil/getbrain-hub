@@ -54,6 +54,7 @@
     --chart-3: 0 84% 60%;
     --chart-4: 38 92% 50%;
     --chart-5: 262 83% 58%;
+    --chart-orange: 25 95% 53%;
   }
 
   .dark {
@@ -90,6 +91,8 @@
     --border: 222 47% 18%;
     --input: 222 47% 18%;
     --ring: 187 82% 55%;
+
+    --chart-orange: 25 95% 53%;
 
     --sidebar-background: 222 84% 5%;
     --sidebar-foreground: 210 40% 96%;
