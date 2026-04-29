@@ -306,7 +306,7 @@ export default function Movimentacoes() {
     const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rProjetos, rMeios] = await Promise.all([
       supabase.from("clientes").select("*").eq("ativo", true).order("nome"),
       supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
-      supabase.from("colaboradores").select("*").eq("ativo", true).order("nome"),
+      supabase.rpc("get_colaboradores_minimal" as any),
       supabase.from("categorias").select("*").eq("ativo", true),
       supabase.from("contas_bancarias").select("*").eq("ativo", true).order("nome"),
       supabase.from("projects").select("id, name, code").is("deleted_at", null).order("name"),
