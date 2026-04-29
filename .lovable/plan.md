@@ -1,66 +1,72 @@
-# Color picker visual unificado para configurações do CRM
+## Objetivo
 
-Substituir os swatches fixos de cor por um **color picker visual completo** (área de saturação/brilho + slider de matiz + campo HEX), aplicado de forma idêntica em **Categorias da dor**, **Tipos de projeto**, **Origens de lead** e **Papéis de contato**.
+Na zona "Solução & Escopo" do CRM Deal Detail (`/crm/deals/:code`):
+- Renomear **"Resumo do escopo"** → **"Escopo"** (campo de texto livre, onde o usuário escreve tudo).
+- Remover os campos **Escopo IN** e **Escopo OUT**.
+- Adicionar abaixo um bloco **"Resumo Escopo"** em **bullet points editáveis (CRUD)**.
+- Adicionar botão **"Organizar com IA"** que lê o texto livre de "Escopo" e gera bullets curtos (≈1 linha por etapa) no "Resumo Escopo".
+- Permitir adicionar bullets manualmente também.
 
-## Comportamento UX
+## O que vai mudar
 
-- Clicar no círculo colorido (no formulário de adicionar ou em cada item da lista) abre um **popover compacto** contendo:
-  - Quadrado de **saturação × brilho** (arrastar para escolher tom)
-  - Slider de **matiz (hue)** abaixo
-  - Linha com **8 swatches sugeridos** (paleta vibrante curada para acesso rápido)
-  - Campo **HEX** editável (`#22D3EE`) com validação
-- Mudanças aplicadas em tempo real (preview) e persistidas ao soltar/sair (`onBlur`/`onCommit` debounced).
-- Popover com largura ~240 px, fundo `popover`, sombra suave, arredondado.
+### 1. Banco (migration)
+- Adicionar coluna `scope_bullets jsonb DEFAULT '[]'::jsonb` na tabela `deals` (lista de strings).
+- Manter `scope_in` / `scope_out` na tabela por compatibilidade (RPCs `close_deal_as_won` referenciam), mas a UI deixa de usar/editar.
+- Atualizar `src/lib/audit/formatters.ts` com label para `scope_bullets` ("Resumo do escopo (bullets)").
 
-## Padronização de armazenamento (HEX)
+### 2. Edge Function — `organize-scope`
+Nova function em `supabase/functions/organize-scope/index.ts`:
+- Recebe `{ scope_text: string }`.
+- Chama Lovable AI Gateway (`google/gemini-3-flash-preview`) via tool calling para garantir saída estruturada `{ bullets: string[] }`.
+- Prompt do sistema (pt-BR): "Você organiza descrições de escopo em bullets curtos. **Cada bullet deve ter no máximo uma linha** resumindo uma etapa/entrega. Use mais de uma linha apenas se for absolutamente necessário. Não invente itens que não estejam no texto. Responda em português."
+- Trata 429 (rate-limit) e 402 (créditos) devolvendo mensagem amigável.
+- `verify_jwt = true` (padrão; usuário autenticado).
 
-Hoje há inconsistência:
-- `crm_pain_categories.color` e `crm_project_types.color` guardam **classes Tailwind** (`bg-accent/15 text-accent border-accent/30`).
-- `crm_lead_sources.color` e `crm_contact_roles.color` guardam **HEX** (`#22D3EE`).
+### 3. UI — `src/pages/crm/CrmDealDetail.tsx`
+Substituir o bloco atual (linhas ~310-342):
 
-Padronizar tudo em **HEX**. Itens antigos com classes Tailwind continuam sendo lidos: um helper `tokenToHex()` converte os ~6 tokens existentes em HEX equivalente para retro-compatibilidade na renderização. Quando o usuário escolher uma nova cor pelo picker, o valor salvo será HEX puro.
+```text
+[ Escopo ] (textarea grande, multiline)
+                                    [ ✨ Organizar com IA ]
 
-## Renderização dos chips
+[ Resumo Escopo ]
+ • bullet 1                            [✏️] [🗑️]
+ • bullet 2                            [✏️] [🗑️]
+ [+ Adicionar manualmente]
+```
 
-`PainCategoriesMultiSelect` e `ProjectTypeSelect` hoje aplicam a string como `className`. Trocar para **estilo inline** baseado em HEX:
-- `background: hexToRgba(hex, 0.15)`
-- `color: hex`
-- `border-color: hexToRgba(hex, 0.3)`
-- Bolinha lateral: `background: hex`
+- Campo "Escopo" continua salvando em `deal.scope_summary` (mantém histórico de auditoria).
+- Botão "Organizar com IA" (ícone Sparkles, variant outline):
+  - Desabilitado se `scope_summary` < 20 chars.
+  - Estado `loading` com spinner enquanto a edge function responde.
+  - Se já existirem bullets, abre `useConfirm()` perguntando "Substituir os bullets existentes?" (Substituir / Mesclar / Cancelar).
+  - Em sucesso: faz `save({ scope_bullets: novosBullets })` e mostra toast de sucesso.
+  - Em erro 402/429: toast com mensagem específica.
 
-Funciona tanto para HEX novo quanto para HEX derivado dos tokens antigos.
+### 4. Componente — `ScopeBulletsEditor`
+Novo `src/components/crm/ScopeBulletsEditor.tsx`, reaproveitando o padrão do já existente `StringListEditor` (CRUD de lista de strings: add, edit inline, remove, reordenar opcional). Estilo consistente com os outros blocos da zona.
+
+### 5. Tipos
+- `src/types/crm.ts`: adicionar `scope_bullets: string[] | null` ao tipo `Deal`.
+- `src/integrations/supabase/types.ts` é regenerado automaticamente após a migration.
+
+### 6. computeCompleteness
+Atualizar `computeCompleteness` (linha 441) para aceitar bullets como sinal de "solução pronta":
+```text
+solucaoOk = project_type_v2 preenchido
+         && (scope_summary >= 40 chars OU scope_bullets.length >= 3)
+         && (deliverables >= 3 OU acceptance_criteria >= 3)
+```
+
+### 7. Cache invalidation
+Após mutações, chamar `invalidateCrmCaches` (já em uso pelo `useDealAutosave`).
+
+## Fora de escopo
+- Não alterar `AbaEscopo.tsx` de Projetos (mantém `scope_in`/`scope_out` lá; usuário pediu mudança no CRM, conforme screenshot).
+- Não remover colunas `scope_in`/`scope_out` do banco (RPCs dependem; remoção pode vir depois).
 
 ## Arquivos
-
-**Novo**
-- `src/lib/crm/colorUtils.ts` — `tokenToHex`, `hexToRgba`, `randomVividHex`, `SUGGESTED_HEX_PALETTE`, `isValidHex`.
-- `src/components/ui/color-picker-popover.tsx` — componente reutilizável (trigger = bolinha, conteúdo = picker visual + paleta + HEX).
-
-**Editados**
-- `src/lib/crm/presetColors.ts` — `randomPresetColor()` passa a retornar HEX.
-- `src/hooks/crm/useCrmPainCategories.ts` e `useCrmProjectTypes.ts` — defaults de cor em HEX.
-- `src/components/crm/settings/PainCategoriesManager.tsx`, `ProjectTypesManager.tsx`, `LeadSourcesManager.tsx`, `ContactRolesManager.tsx` — trocar swatches+popover atuais pelo `ColorPickerPopover` único.
-- `src/components/crm/PainCategoriesMultiSelect.tsx` e `ProjectTypeSelect.tsx` — renderizar chips via estilo inline (HEX), removendo dependência das classes Tailwind salvas.
-
-## Dependência
-
-Adicionar `react-colorful` (~3 kB, sem deps, headless, customizável via CSS). Usaremos `HexColorPicker` (área SV + slider hue) e `HexColorInput`.
-
-## Detalhes técnicos
-
-- `tokenToHex` mapeia exatamente os 6 tokens legados:
-  - `bg-accent/...` → `#22D3EE`
-  - `bg-success/...` → `#10B981`
-  - `bg-warning/...` → `#F59E0B`
-  - `bg-chart-4/...` → `#A855F7`
-  - `bg-chart-5/...` → `#EC4899`
-  - `bg-muted ...` → `#94A3B8`
-  - Fallback: `#94A3B8`.
-- `SUGGESTED_HEX_PALETTE`: `["#22D3EE","#10B981","#F59E0B","#EF4444","#A855F7","#EC4899","#6366F1","#94A3B8"]`.
-- `randomVividHex()`: sorteia da paleta exceto cinza.
-- Picker: usar `<HexColorPicker color={value} onChange={onChange} />` com CSS override para 200×120 px, bordas arredondadas, ponteiros cyan.
-- Salvar com pequeno debounce (200ms) enquanto arrasta, evitando inundar o backend; commit final no `onMouseUp`/`onBlur`.
-
-## Sem mudanças de banco
-
-Coluna `color text` já aceita HEX. Migração não é necessária — apenas convivência via `tokenToHex` na renderização.
+- **Novo**: `supabase/migrations/<timestamp>_deal_scope_bullets.sql`
+- **Nova edge function**: `supabase/functions/organize-scope/index.ts`
+- **Novo componente**: `src/components/crm/ScopeBulletsEditor.tsx`
+- **Editar**: `src/pages/crm/CrmDealDetail.tsx`, `src/types/crm.ts`, `src/lib/audit/formatters.ts`
