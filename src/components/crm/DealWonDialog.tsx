@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Loader2, Plus, Trash2, ArrowRight, ChevronDown, Settings2,
-  Repeat, Percent, Wallet,
+  Loader2, Plus, Trash2, ArrowRight, ArrowLeft,
+  Repeat, Percent, Wallet, FolderOpen, Banknote,
+  ClipboardCheck, AlertTriangle, CheckCircle2, Settings2,
 } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,7 @@ import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiS
 import { supabase } from '@/integrations/supabase/client';
 import { calculateScopeTotal, formatBRL, type ScopeItem } from '@/lib/orcamentos/calculateTotal';
 import type { Deal } from '@/types/crm';
+import { cn } from '@/lib/utils';
 
 const sb = supabase as any;
 
@@ -54,6 +56,11 @@ interface ExtraCostDraft {
   amount: string;
   recurrence: 'once' | 'monthly' | 'yearly';
   notes: string;
+  // categorização opcional por item
+  categoria_id?: string;
+  centro_custo_id?: string;
+  conta_bancaria_id?: string;
+  meio_pagamento_id?: string;
 }
 
 function newId() {
@@ -91,19 +98,27 @@ function buildInstallments(n: number, firstDueDate: string, baseAmount: number):
 
 type Option = { id: string; nome: string };
 
-const FIN_DEFAULTS_KEY = 'crm.lastWonFinancialDefaults';
+const FIN_DEFAULTS_KEY_IMPL = 'crm.lastWonFinancialDefaults.implementation';
+const FIN_DEFAULTS_KEY_MRR = 'crm.lastWonFinancialDefaults.mrr';
+const FIN_DEFAULTS_KEY_LEGACY = 'crm.lastWonFinancialDefaults';
 
-function loadFinDefaults(): {
+interface FinDefaults {
   categoria_id?: string;
   centro_custo_id?: string;
   conta_bancaria_id?: string;
   meio_pagamento_id?: string;
-} {
+}
+
+function loadDefaults(key: string): FinDefaults {
   try {
-    return JSON.parse(localStorage.getItem(FIN_DEFAULTS_KEY) || '{}');
+    return JSON.parse(localStorage.getItem(key) || '{}');
   } catch {
     return {};
   }
+}
+
+function saveDefaults(key: string, def: FinDefaults) {
+  try { localStorage.setItem(key, JSON.stringify(def)); } catch {}
 }
 
 const RECURRENCE_LABEL: Record<ExtraCostDraft['recurrence'], string> = {
@@ -116,11 +131,114 @@ function toComboOptions(list: Option[]): ComboOption[] {
   return list.map((o) => ({ value: o.id, label: o.nome }));
 }
 
+function findByName(list: Option[], regex: RegExp): string | undefined {
+  return list.find((o) => regex.test(o.nome))?.id;
+}
+
+// ============================================================
+// Card reutilizável de categorização financeira
+// ============================================================
+interface FinCardProps {
+  title: string;
+  subtitle?: string;
+  hint?: string;
+  tone?: 'income' | 'expense';
+  categoriaId: string; setCategoriaId: (v: string) => void;
+  centroId: string; setCentroId: (v: string) => void;
+  contaId: string; setContaId: (v: string) => void;
+  meioId: string; setMeioId: (v: string) => void;
+  categorias: Option[];
+  centros: Option[];
+  contas: Option[];
+  meios: Option[];
+  onCreateCategoria: (name: string) => Promise<void>;
+  onCreateCentro: (name: string) => Promise<void>;
+  onCreateConta: (name: string) => Promise<void>;
+  onCreateMeio: (name: string) => Promise<void>;
+}
+
+function FinanceCategorizationCard(p: FinCardProps) {
+  const accent = p.tone === 'expense' ? 'border-destructive/30' : 'border-primary/30';
+  return (
+    <div className={cn('rounded-lg border bg-muted/10 p-3 space-y-2', accent)}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Settings2 className="h-3.5 w-3.5" />
+            {p.title}
+          </div>
+          {p.subtitle && <p className="text-[11px] text-muted-foreground mt-0.5">{p.subtitle}</p>}
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label className="text-[11px] text-muted-foreground">
+            Categoria {p.tone === 'expense' ? 'de despesa' : 'de receita'}
+          </Label>
+          <ComboboxCreate
+            value={p.categoriaId}
+            options={toComboOptions(p.categorias)}
+            onChange={p.setCategoriaId}
+            onCreate={p.onCreateCategoria}
+            placeholder="Selecionar ou digitar para criar…"
+            searchPlaceholder="Buscar ou digitar para criar…"
+            createLabel={(t) => `+ Criar categoria "${t}"`}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[11px] text-muted-foreground">Centro de custo</Label>
+          <ComboboxCreate
+            value={p.centroId}
+            options={toComboOptions(p.centros)}
+            onChange={p.setCentroId}
+            onCreate={p.onCreateCentro}
+            placeholder="Selecionar ou digitar para criar…"
+            searchPlaceholder="Buscar ou digitar para criar…"
+            createLabel={(t) => `+ Criar centro "${t}"`}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[11px] text-muted-foreground">Conta bancária</Label>
+          <ComboboxCreate
+            value={p.contaId}
+            options={toComboOptions(p.contas)}
+            onChange={p.setContaId}
+            onCreate={p.onCreateConta}
+            placeholder="Selecionar ou digitar para criar…"
+            searchPlaceholder="Buscar ou digitar para criar…"
+            createLabel={(t) => `+ Criar conta "${t}"`}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[11px] text-muted-foreground">Meio de pagamento</Label>
+          <ComboboxCreate
+            value={p.meioId}
+            options={toComboOptions(p.meios)}
+            onChange={p.setMeioId}
+            onCreate={p.onCreateMeio}
+            placeholder="Selecionar ou digitar para criar…"
+            searchPlaceholder="Buscar ou digitar para criar…"
+            createLabel={(t) => `+ Criar meio "${t}"`}
+          />
+        </div>
+      </div>
+      {p.hint && <p className="text-[11px] text-muted-foreground">{p.hint}</p>}
+    </div>
+  );
+}
+
+// ============================================================
+// Componente principal
+// ============================================================
 export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [acceptedProposal, setAcceptedProposal] = useState<ProposalLite | null>(null);
   const [loadingProposal, setLoadingProposal] = useState(false);
+
+  // Wizard
+  const [step, setStep] = useState<'projeto' | 'receita' | 'custos' | 'revisao'>('projeto');
 
   // Projeto
   const [projectName, setProjectName] = useState(deal?.title ?? '');
@@ -135,7 +253,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     deal?.desired_delivery_date ?? '',
   );
 
-  // Parcelas — agora dirigido por N + data da 1ª (sem botões 1x/3x/etc.)
+  // Parcelas
   const [installmentsN, setInstallmentsN] = useState<string>('1');
   const [firstDueDate, setFirstDueDate] = useState<string>(fmtDateInput(addMonths(new Date(), 1)));
   const [installments, setInstallments] = useState<InstallmentDraft[]>([
@@ -143,16 +261,30 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   ]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Configuração financeira
-  const [categorias, setCategorias] = useState<Option[]>([]);
+  // Listas financeiras
+  const [categoriasReceita, setCategoriasReceita] = useState<Option[]>([]);
+  const [categoriasDespesa, setCategoriasDespesa] = useState<Option[]>([]);
   const [centros, setCentros] = useState<Option[]>([]);
   const [contas, setContas] = useState<Option[]>([]);
   const [meios, setMeios] = useState<Option[]>([]);
-  const [categoriaId, setCategoriaId] = useState<string>('');
-  const [centroId, setCentroId] = useState<string>('');
-  const [contaId, setContaId] = useState<string>('');
-  const [meioId, setMeioId] = useState<string>('');
-  const [finOpen, setFinOpen] = useState(true);
+
+  // Categorização — implementação
+  const [implCategoriaId, setImplCategoriaId] = useState<string>('');
+  const [implCentroId, setImplCentroId] = useState<string>('');
+  const [implContaId, setImplContaId] = useState<string>('');
+  const [implMeioId, setImplMeioId] = useState<string>('');
+
+  // Categorização — MRR (separada da implementação)
+  const [mrrCategoriaId, setMrrCategoriaId] = useState<string>('');
+  const [mrrCentroId, setMrrCentroId] = useState<string>('');
+  const [mrrContaId, setMrrContaId] = useState<string>('');
+  const [mrrMeioId, setMrrMeioId] = useState<string>('');
+
+  // Categorização — padrão para custos extras
+  const [extraCategoriaId, setExtraCategoriaId] = useState<string>('');
+  const [extraCentroId, setExtraCentroId] = useState<string>('');
+  const [extraContaId, setExtraContaId] = useState<string>('');
+  const [extraMeioId, setExtraMeioId] = useState<string>('');
 
   // MRR / Manutenção
   const [mrrEnabled, setMrrEnabled] = useState(false);
@@ -201,39 +333,77 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     return () => { cancelled = true; };
   }, [open, deal?.id]);
 
-  async function reloadFinanceLists(selectAfterCreate?: { kind: 'categoria' | 'centro' | 'conta' | 'meio'; id: string }) {
-    const [cats, ccs, cbs, mps] = await Promise.all([
-      // tipo no banco é "receitas" (plural) — antes estava "receita" e por isso vinha vazio
+  async function reloadFinanceLists(selectAfterCreate?: { kind: 'cat-receita' | 'cat-despesa' | 'centro' | 'conta' | 'meio'; id: string; group?: 'impl' | 'mrr' | 'extra' }) {
+    const [catsRec, catsDesp, ccs, cbs, mps] = await Promise.all([
       sb.from('categorias').select('id, nome').eq('ativo', true).eq('tipo', 'receitas').order('nome'),
+      sb.from('categorias').select('id, nome').eq('ativo', true).eq('tipo', 'despesas').order('nome'),
       sb.from('centros_custo').select('id, nome').eq('ativo', true).order('nome'),
       sb.from('contas_bancarias').select('id, nome').eq('ativo', true).order('nome'),
       sb.from('meios_pagamento').select('id, nome').eq('ativo', true).order('nome'),
     ]);
-    const cList = (cats.data ?? []) as Option[];
+    const recList = (catsRec.data ?? []) as Option[];
+    const despList = (catsDesp.data ?? []) as Option[];
     const ccList = (ccs.data ?? []) as Option[];
     const cbList = (cbs.data ?? []) as Option[];
     const mpList = (mps.data ?? []) as Option[];
-    setCategorias(cList);
+    setCategoriasReceita(recList);
+    setCategoriasDespesa(despList);
     setCentros(ccList);
     setContas(cbList);
     setMeios(mpList);
 
     if (selectAfterCreate) {
-      if (selectAfterCreate.kind === 'categoria') setCategoriaId(selectAfterCreate.id);
-      if (selectAfterCreate.kind === 'centro') setCentroId(selectAfterCreate.id);
-      if (selectAfterCreate.kind === 'conta') setContaId(selectAfterCreate.id);
-      if (selectAfterCreate.kind === 'meio') setMeioId(selectAfterCreate.id);
-    } else {
-      const def = loadFinDefaults();
-      setCategoriaId(def.categoria_id && cList.find((x) => x.id === def.categoria_id) ? def.categoria_id : '');
-      setCentroId(def.centro_custo_id && ccList.find((x) => x.id === def.centro_custo_id) ? def.centro_custo_id : '');
-      setContaId(def.conta_bancaria_id && cbList.find((x) => x.id === def.conta_bancaria_id) ? def.conta_bancaria_id : '');
-      setMeioId(def.meio_pagamento_id && mpList.find((x) => x.id === def.meio_pagamento_id) ? def.meio_pagamento_id : '');
+      const grp = selectAfterCreate.group ?? 'impl';
+      if (selectAfterCreate.kind === 'cat-receita') {
+        if (grp === 'impl') setImplCategoriaId(selectAfterCreate.id);
+        if (grp === 'mrr') setMrrCategoriaId(selectAfterCreate.id);
+      }
+      if (selectAfterCreate.kind === 'cat-despesa') setExtraCategoriaId(selectAfterCreate.id);
+      if (selectAfterCreate.kind === 'centro') {
+        if (grp === 'impl') setImplCentroId(selectAfterCreate.id);
+        if (grp === 'mrr') setMrrCentroId(selectAfterCreate.id);
+        if (grp === 'extra') setExtraCentroId(selectAfterCreate.id);
+      }
+      if (selectAfterCreate.kind === 'conta') {
+        if (grp === 'impl') setImplContaId(selectAfterCreate.id);
+        if (grp === 'mrr') setMrrContaId(selectAfterCreate.id);
+        if (grp === 'extra') setExtraContaId(selectAfterCreate.id);
+      }
+      if (selectAfterCreate.kind === 'meio') {
+        if (grp === 'impl') setImplMeioId(selectAfterCreate.id);
+        if (grp === 'mrr') setMrrMeioId(selectAfterCreate.id);
+        if (grp === 'extra') setExtraMeioId(selectAfterCreate.id);
+      }
+      return;
     }
+
+    // Defaults — implementação (com migração do legado)
+    const implDef = loadDefaults(FIN_DEFAULTS_KEY_IMPL);
+    const legacyDef = loadDefaults(FIN_DEFAULTS_KEY_LEGACY);
+    const implSource: FinDefaults = Object.keys(implDef).length ? implDef : legacyDef;
+    setImplCategoriaId(implSource.categoria_id && recList.find((x) => x.id === implSource.categoria_id) ? implSource.categoria_id : '');
+    setImplCentroId(implSource.centro_custo_id && ccList.find((x) => x.id === implSource.centro_custo_id) ? implSource.centro_custo_id : '');
+    setImplContaId(implSource.conta_bancaria_id && cbList.find((x) => x.id === implSource.conta_bancaria_id) ? implSource.conta_bancaria_id : '');
+    setImplMeioId(implSource.meio_pagamento_id && mpList.find((x) => x.id === implSource.meio_pagamento_id) ? implSource.meio_pagamento_id : '');
+
+    // Defaults — MRR (sugere categoria com "MRR"/"Manutenção"/"Recorrente" se não houver default salvo)
+    const mrrDef = loadDefaults(FIN_DEFAULTS_KEY_MRR);
+    const mrrCatSuggest = findByName(recList, /\b(mrr|manuten[çc][aã]o|recorrente)\b/i);
+    setMrrCategoriaId(mrrDef.categoria_id && recList.find((x) => x.id === mrrDef.categoria_id) ? mrrDef.categoria_id : (mrrCatSuggest ?? ''));
+    setMrrCentroId(mrrDef.centro_custo_id && ccList.find((x) => x.id === mrrDef.centro_custo_id) ? mrrDef.centro_custo_id : '');
+    setMrrContaId(mrrDef.conta_bancaria_id && cbList.find((x) => x.id === mrrDef.conta_bancaria_id) ? mrrDef.conta_bancaria_id : '');
+    setMrrMeioId(mrrDef.meio_pagamento_id && mpList.find((x) => x.id === mrrDef.meio_pagamento_id) ? mrrDef.meio_pagamento_id : '');
+
+    // Defaults — extras: vazios (usuário escolhe). Conta/meio podem ser sugeridos da implementação.
+    setExtraCategoriaId('');
+    setExtraCentroId('');
+    setExtraContaId('');
+    setExtraMeioId('');
   }
 
   useEffect(() => {
     if (!open) return;
+    setStep('projeto');
     reloadFinanceLists();
   }, [open]);
 
@@ -304,6 +474,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
             amount: e.amount != null ? String(e.amount) : '',
             recurrence: (e.recurrence as ExtraCostDraft['recurrence']) ?? 'once',
             notes: e.notes ?? '',
+            categoria_id: e.categoria_id ?? undefined,
+            centro_custo_id: e.centro_custo_id ?? undefined,
+            conta_bancaria_id: e.conta_bancaria_id ?? undefined,
+            meio_pagamento_id: e.meio_pagamento_id ?? undefined,
           }))
         : [],
     );
@@ -329,6 +503,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const monthlyExtras = extraCosts
     .filter((e) => e.recurrence === 'monthly')
     .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  const mrrDiscountInvalid =
+    mrrEnabled && mrrDiscountEnabled &&
+    Number(mrrDiscountValue) > 0 && Number(mrrDiscountValue) >= Number(mrrValue);
 
   // ============== Ações de parcelas ==============
   function addInstallment() {
@@ -367,85 +545,136 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   }
 
   // ============== Criar inline (combobox) ==============
-  async function createCategoria(name: string) {
-    const { data, error } = await sb
-      .from('categorias')
-      .insert({ nome: name, tipo: 'receitas', ativo: true })
-      .select('id').single();
-    if (error) { toast.error(`Erro: ${error.message}`); return; }
-    await reloadFinanceLists({ kind: 'categoria', id: data.id });
-    toast.success(`Categoria "${name}" criada`);
+  function makeCreateCategoria(tipo: 'receitas' | 'despesas', group: 'impl' | 'mrr' | 'extra') {
+    return async (name: string) => {
+      const { data, error } = await sb
+        .from('categorias')
+        .insert({ nome: name, tipo, ativo: true })
+        .select('id').single();
+      if (error) { toast.error(`Erro: ${error.message}`); return; }
+      await reloadFinanceLists({ kind: tipo === 'receitas' ? 'cat-receita' : 'cat-despesa', id: data.id, group });
+      toast.success(`Categoria "${name}" criada`);
+    };
   }
-  async function createCentro(name: string) {
-    const { data, error } = await sb
-      .from('centros_custo')
-      .insert({ nome: name, ativo: true })
-      .select('id').single();
-    if (error) { toast.error(`Erro: ${error.message}`); return; }
-    await reloadFinanceLists({ kind: 'centro', id: data.id });
-    toast.success(`Centro "${name}" criado`);
+  function makeCreateCentro(group: 'impl' | 'mrr' | 'extra') {
+    return async (name: string) => {
+      const { data, error } = await sb
+        .from('centros_custo').insert({ nome: name, ativo: true }).select('id').single();
+      if (error) { toast.error(`Erro: ${error.message}`); return; }
+      await reloadFinanceLists({ kind: 'centro', id: data.id, group });
+      toast.success(`Centro "${name}" criado`);
+    };
   }
-  async function createConta(name: string) {
-    const { data, error } = await sb
-      .from('contas_bancarias')
-      .insert({ nome: name, ativo: true, moeda: 'BRL', tipo: 'corrente' })
-      .select('id').single();
-    if (error) { toast.error(`Erro: ${error.message}`); return; }
-    await reloadFinanceLists({ kind: 'conta', id: data.id });
-    toast.success(`Conta "${name}" criada`);
+  function makeCreateConta(group: 'impl' | 'mrr' | 'extra') {
+    return async (name: string) => {
+      const { data, error } = await sb
+        .from('contas_bancarias').insert({ nome: name, ativo: true, moeda: 'BRL', tipo: 'corrente' }).select('id').single();
+      if (error) { toast.error(`Erro: ${error.message}`); return; }
+      await reloadFinanceLists({ kind: 'conta', id: data.id, group });
+      toast.success(`Conta "${name}" criada`);
+    };
   }
-  async function createMeio(name: string) {
-    const { data, error } = await sb
-      .from('meios_pagamento')
-      .insert({ nome: name, ativo: true })
-      .select('id').single();
-    if (error) { toast.error(`Erro: ${error.message}`); return; }
-    await reloadFinanceLists({ kind: 'meio', id: data.id });
-    toast.success(`Meio "${name}" criado`);
+  function makeCreateMeio(group: 'impl' | 'mrr' | 'extra') {
+    return async (name: string) => {
+      const { data, error } = await sb
+        .from('meios_pagamento').insert({ nome: name, ativo: true }).select('id').single();
+      if (error) { toast.error(`Erro: ${error.message}`); return; }
+      await reloadFinanceLists({ kind: 'meio', id: data.id, group });
+      toast.success(`Meio "${name}" criado`);
+    };
+  }
+
+  // ============== Helpers de exibição ==============
+  function nameById(list: Option[], id?: string) {
+    if (!id) return '—';
+    return list.find((o) => o.id === id)?.nome ?? '—';
+  }
+
+  // ============== Validação por passo ==============
+  function validateProjeto(): string | null {
+    if (!projectName.trim()) return 'Informe o nome do projeto';
+    if (projectTypeSlugs.length === 0) return 'Selecione ao menos um tipo de projeto';
+    return null;
+  }
+
+  function validateReceita(): string | null {
+    const cleaned = installments.filter((i) => Number(i.amount) > 0 && i.due_date);
+    if (cleaned.length === 0) return 'Adicione ao menos uma parcela com valor e data';
+    if (mrrEnabled) {
+      if (!Number(mrrValue) || Number(mrrValue) <= 0) return 'Valor mensal do MRR deve ser maior que zero';
+      if (!mrrStartDate) return 'Informe a data de início da manutenção (MRR)';
+      if (mrrDiscountInvalid) return 'Desconto do MRR não pode ser ≥ valor cheio';
+    }
+    return null;
+  }
+
+  function validateCustos(): string | null {
+    for (const e of extraCosts) {
+      if (e.description.trim() && (!Number(e.amount) || Number(e.amount) <= 0)) {
+        return `Valor inválido no custo extra "${e.description}"`;
+      }
+      if (Number(e.amount) > 0 && !e.description.trim()) {
+        return 'Custo extra precisa de descrição';
+      }
+    }
+    return null;
+  }
+
+  function goNext() {
+    if (step === 'projeto') {
+      const err = validateProjeto(); if (err) { toast.error(err); return; }
+      setStep('receita');
+    } else if (step === 'receita') {
+      const err = validateReceita(); if (err) { toast.error(err); return; }
+      setStep('custos');
+    } else if (step === 'custos') {
+      const err = validateCustos(); if (err) { toast.error(err); return; }
+      setStep('revisao');
+    }
+  }
+
+  function goBack() {
+    if (step === 'receita') setStep('projeto');
+    else if (step === 'custos') setStep('receita');
+    else if (step === 'revisao') setStep('custos');
   }
 
   // ============== Confirmar ==============
   async function handleConfirm() {
     if (!deal) return;
-    if (!projectName.trim()) { toast.error('Informe o nome do projeto'); return; }
-    if (projectTypeSlugs.length === 0) { toast.error('Selecione ao menos um tipo de projeto'); return; }
+    const errors = [validateProjeto(), validateReceita(), validateCustos()].filter(Boolean) as string[];
+    if (errors.length) { toast.error(errors[0]); return; }
 
     const cleaned = installments
-      .map((i) => ({ amount: Number(i.amount) || 0, due_date: i.due_date }))
+      .map((i) => ({
+        amount: Number(i.amount) || 0,
+        due_date: i.due_date,
+        // por enquanto a UI usa categorização global da implementação para todas as parcelas;
+        // a RPC já aceita override por parcela — basta preencher esses campos quando expusermos UI.
+      }))
       .filter((i) => i.amount > 0 && i.due_date);
-    if (cleaned.length === 0) { toast.error('Adicione ao menos uma parcela válida'); return; }
-
-    if (mrrEnabled) {
-      if (!Number(mrrValue) || Number(mrrValue) <= 0) {
-        toast.error('Valor mensal do MRR deve ser maior que zero'); return;
-      }
-      if (!mrrStartDate) { toast.error('Informe a data de início da manutenção (MRR)'); return; }
-    }
-
-    for (const e of extraCosts) {
-      if (e.description.trim() && (!Number(e.amount) || Number(e.amount) <= 0)) {
-        toast.error(`Valor inválido no custo extra "${e.description}"`); return;
-      }
-      if (Number(e.amount) > 0 && !e.description.trim()) {
-        toast.error('Custo extra precisa de descrição'); return;
-      }
-    }
 
     setSubmitting(true);
     try {
+      const cleanedExtras = extraCosts
+        .filter((e) => e.description.trim() && Number(e.amount) > 0)
+        .map((e) => ({
+          description: e.description.trim(),
+          amount: Number(e.amount),
+          recurrence: e.recurrence,
+          notes: e.notes || null,
+          categoria_id: e.categoria_id || extraCategoriaId || null,
+          centro_custo_id: e.centro_custo_id || extraCentroId || null,
+          conta_bancaria_id: e.conta_bancaria_id || extraContaId || null,
+          meio_pagamento_id: e.meio_pagamento_id || extraMeioId || null,
+        }));
+
       const dealPatch: Record<string, any> = {
         discount_amount: discountEnabled ? Number(discountAmount) || null : null,
         discount_kind: discountEnabled ? discountKind : null,
         discount_valid_until: discountEnabled && discountValidUntil ? discountValidUntil : null,
         discount_notes: discountEnabled ? (discountNotes || null) : null,
-        extra_costs: extraCosts
-          .filter((e) => e.description.trim() && Number(e.amount) > 0)
-          .map((e) => ({
-            description: e.description.trim(),
-            amount: Number(e.amount),
-            recurrence: e.recurrence,
-            notes: e.notes || null,
-          })),
+        extra_costs: cleanedExtras,
         estimated_mrr_value: mrrEnabled ? Number(mrrValue) || null : null,
         mrr_start_date: mrrEnabled && mrrStartDate ? mrrStartDate : null,
         mrr_duration_months: mrrEnabled && !mrrIndefinite ? (parseInt(mrrDuration, 10) || null) : null,
@@ -463,31 +692,36 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         mrr_start_trigger: mrrEnabled && mrrStartTrigger ? mrrStartTrigger : null,
         installments_count: parseInt(installmentsN, 10) || null,
         first_installment_date: firstDueDate || null,
-        // Tipos e dores ajustados no modal — fonte de verdade que a RPC vai copiar p/ projects
         project_type_v2: projectTypeSlugs,
         pain_categories: painCategorySlugs,
       };
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
+      let proposalMarked = false;
       if (acceptedProposal && acceptedProposal.status === 'enviada') {
         await sb
           .from('proposals')
           .update({ status: 'convertida', accepted_at: new Date().toISOString() })
           .eq('id', acceptedProposal.id);
+        proposalMarked = true;
       }
 
       const projectData: Record<string, any> = {
         name: projectName.trim(),
-        // project_type legado (single) — mantém o do deal por compatibilidade.
-        // A fonte de verdade visual é project_type_v2 (multi), copiado do deal pela RPC.
         project_type: deal.project_type ?? null,
         start_date: startDate || null,
         estimated_delivery_date: estimatedDelivery || null,
-        categoria_id: categoriaId || null,
-        centro_custo_id: centroId || null,
-        conta_bancaria_id: contaId || null,
-        meio_pagamento_id: meioId || null,
-        extra_costs: dealPatch.extra_costs,
+        // Defaults globais (implementação) — fallback para parcelas/MRR/extras na RPC
+        categoria_id: implCategoriaId || null,
+        centro_custo_id: implCentroId || null,
+        conta_bancaria_id: implContaId || null,
+        meio_pagamento_id: implMeioId || null,
+        // Específicos do MRR
+        mrr_categoria_id: mrrCategoriaId || null,
+        mrr_centro_custo_id: mrrCentroId || null,
+        mrr_conta_bancaria_id: mrrContaId || null,
+        mrr_meio_pagamento_id: mrrMeioId || null,
+        extra_costs: cleanedExtras,
         mrr_start_trigger: dealPatch.mrr_start_trigger,
       };
       if (mrrEnabled) {
@@ -516,23 +750,26 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       });
       if (error) throw error;
 
-      try {
-        localStorage.setItem(FIN_DEFAULTS_KEY, JSON.stringify({
-          categoria_id: categoriaId || undefined,
-          centro_custo_id: centroId || undefined,
-          conta_bancaria_id: contaId || undefined,
-          meio_pagamento_id: meioId || undefined,
-        }));
-      } catch {}
+      saveDefaults(FIN_DEFAULTS_KEY_IMPL, {
+        categoria_id: implCategoriaId || undefined,
+        centro_custo_id: implCentroId || undefined,
+        conta_bancaria_id: implContaId || undefined,
+        meio_pagamento_id: implMeioId || undefined,
+      });
+      saveDefaults(FIN_DEFAULTS_KEY_MRR, {
+        categoria_id: mrrCategoriaId || undefined,
+        centro_custo_id: mrrCentroId || undefined,
+        conta_bancaria_id: mrrContaId || undefined,
+        meio_pagamento_id: mrrMeioId || undefined,
+      });
 
-      const parts: string[] = [
-        `Deal fechado · projeto ${data?.project_code ?? ''}`,
-        `${data?.installments_created ?? cleaned.length} parcela(s)`,
-      ];
-      if (data?.mrr_installments_created > 0) parts.push(`MRR: ${data.mrr_installments_created}x`);
-      if (data?.extras_recurring > 0 || data?.extras_once > 0) {
-        parts.push(`extras: ${(data.extras_recurring ?? 0) + (data.extras_once ?? 0)}`);
-      }
+      const parts: string[] = [`Projeto ${data?.project_code ?? ''} criado`];
+      if (typeof data?.installments_created === 'number') parts.push(`${data.installments_created} parcela(s)`);
+      if (data?.mrr_installments_created) parts.push('MRR ativo');
+      const ex = (data?.extras_recurring ?? 0) + (data?.extras_once ?? 0);
+      if (ex > 0) parts.push(`${ex} custo(s) extra(s)`);
+      if (data?.tasks_created > 0) parts.push(`${data.tasks_created} tarefa(s)`);
+      if (proposalMarked) parts.push('proposta marcada como aceita');
       toast.success(parts.join(' · '));
 
       qc.invalidateQueries({ queryKey: ['deal', deal.code] });
@@ -560,555 +797,582 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   if (!deal) return null;
 
+  // ============== Render ==============
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Fechar deal como ganho</DialogTitle>
+          <DialogTitle>Fechar deal como ganho — {deal.code}</DialogTitle>
           <DialogDescription>
-            Vai criar o projeto, parcelas, contrato de manutenção (se houver MRR), custos extras e
-            vincular descoberta + anexos comerciais.
+            Revisão em 4 passos. Configure projeto, receita (implementação + MRR), custos extras e confira tudo antes de criar.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Resumo */}
-        <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
-          <div className="font-semibold text-foreground">O que será transferido:</div>
-          <ul className="space-y-0.5 text-muted-foreground">
-            <li>• Descoberta, contato principal, origem, contexto comercial</li>
-            <li>• Anotações livres, escopo estruturado, tipos múltiplos do projeto</li>
-            <li>• Anexos do deal (organograma, mockup, documentos) e dependências</li>
-            <li>• Cliente financeiro: busca por CNPJ, cria automático se não existir</li>
-            <li>
-              • Implementação: <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span> em{' '}
-              <span className="font-mono text-foreground">{installments.length}</span> parcela(s)
-              {discountEnabled && discountValue > 0 && (
-                <span className="text-warning"> (desc. {formatBRL(discountValue)})</span>
-              )}
-            </li>
-            {mrrEnabled && Number(mrrValue) > 0 && (
-              <li>
-                • Manutenção (MRR): <span className="font-mono text-foreground">{formatBRL(Number(mrrValue))}/mês</span>
-                {mrrStartDate ? ` a partir de ${mrrStartDate}` : ''}
-                {mrrIndefinite ? ' · indefinido' : ` por ${mrrDuration} meses`}
-                {mrrDiscountEnabled && Number(mrrDiscountValue) > 0 && (
-                  <span className="text-warning"> · desconto {formatBRL(Number(mrrDiscountValue))} nos primeiros {mrrDiscountMonths} meses</span>
-                )}
-              </li>
-            )}
-            {extraCosts.length > 0 && (
-              <li>
-                • Custos extras: <span className="font-mono text-foreground">{extraCosts.length}</span> item(s)
-                {monthlyExtras > 0 && <> ({formatBRL(monthlyExtras)}/mês)</>}
-              </li>
-            )}
-            <li>
-              • {loadingProposal
-                ? 'Verificando propostas…'
-                : acceptedProposal
-                  ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) ${acceptedProposal.status === 'enviada' ? '→ será marcada como aceita e' : ''} vinculada ao projeto`
-                  : 'Nenhuma proposta enviada/aceita encontrada'}
-            </li>
-          </ul>
-          {expectedTotal > 0 && !installmentsMatchExpected && (
-            <div className="mt-2 rounded border border-warning/40 bg-warning/10 p-2 text-warning-foreground">
-              ⚠️ Total das parcelas ({formatBRL(totalInstallments)}) ≠ valor esperado ({formatBRL(expectedTotal)})
-            </div>
-          )}
-        </div>
+        <Tabs value={step} onValueChange={(v) => setStep(v as any)} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="projeto" className="gap-1.5">
+              <FolderOpen className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Projeto</span>
+            </TabsTrigger>
+            <TabsTrigger value="receita" className="gap-1.5">
+              <Banknote className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Receita</span>
+            </TabsTrigger>
+            <TabsTrigger value="custos" className="gap-1.5">
+              <Wallet className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Custos</span>
+            </TabsTrigger>
+            <TabsTrigger value="revisao" className="gap-1.5">
+              <ClipboardCheck className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Revisão</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Dados do projeto */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2 space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Nome do projeto
-            </Label>
-            <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
-          </div>
-          <div className="sm:col-span-2 space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de projeto</Label>
-            <ProjectTypeSelect value={projectTypeSlugs} onChange={setProjectTypeSlugs} />
-          </div>
-          <div className="sm:col-span-2 space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dores</Label>
-            <PainCategoriesMultiSelect value={painCategorySlugs} onChange={setPainCategorySlugs} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Início</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Entrega estimada (opcional)
-            </Label>
-            <Input type="date" value={estimatedDelivery} onChange={(e) => setEstimatedDelivery(e.target.value)} />
-          </div>
-        </div>
-
-        {/* Configuração financeira (subiu para cima e usa ComboboxCreate) */}
-        <Collapsible open={finOpen} onOpenChange={setFinOpen} className="rounded-lg border border-border bg-muted/10">
-          <CollapsibleTrigger asChild>
-            <button type="button" className="flex w-full items-center justify-between p-3 text-left">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Settings2 className="h-3.5 w-3.5" />
-                Configuração financeira
-              </div>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${finOpen ? 'rotate-180' : ''}`} />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-3 pb-3">
+          {/* ============== PASSO 1 — PROJETO ============== */}
+          <TabsContent value="projeto" className="space-y-4 mt-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Categoria de receita</Label>
-                <ComboboxCreate
-                  value={categoriaId}
-                  options={toComboOptions(categorias)}
-                  onChange={setCategoriaId}
-                  onCreate={createCategoria}
-                  placeholder="Selecionar ou digitar para criar…"
-                  searchPlaceholder="Buscar ou digitar para criar…"
-                  createLabel={(t) => `+ Criar categoria "${t}"`}
-                />
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Nome do projeto
+                </Label>
+                <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+              </div>
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de projeto</Label>
+                <ProjectTypeSelect value={projectTypeSlugs} onChange={setProjectTypeSlugs} />
+              </div>
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dores</Label>
+                <PainCategoriesMultiSelect value={painCategorySlugs} onChange={setPainCategorySlugs} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Centro de custo</Label>
-                <ComboboxCreate
-                  value={centroId}
-                  options={toComboOptions(centros)}
-                  onChange={setCentroId}
-                  onCreate={createCentro}
-                  placeholder="Selecionar ou digitar para criar…"
-                  searchPlaceholder="Buscar ou digitar para criar…"
-                  createLabel={(t) => `+ Criar centro "${t}"`}
-                />
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Início</Label>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Conta bancária</Label>
-                <ComboboxCreate
-                  value={contaId}
-                  options={toComboOptions(contas)}
-                  onChange={setContaId}
-                  onCreate={createConta}
-                  placeholder="Selecionar ou digitar para criar…"
-                  searchPlaceholder="Buscar ou digitar para criar…"
-                  createLabel={(t) => `+ Criar conta "${t}"`}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Meio de pagamento</Label>
-                <ComboboxCreate
-                  value={meioId}
-                  options={toComboOptions(meios)}
-                  onChange={setMeioId}
-                  onCreate={createMeio}
-                  placeholder="Selecionar ou digitar para criar…"
-                  searchPlaceholder="Buscar ou digitar para criar…"
-                  createLabel={(t) => `+ Criar meio "${t}"`}
-                />
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Entrega estimada (opcional)
+                </Label>
+                <Input type="date" value={estimatedDelivery} onChange={(e) => setEstimatedDelivery(e.target.value)} />
               </div>
             </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Aplicado a todas as parcelas geradas. Sua escolha fica salva pra próxima conversão. Pode digitar no campo
-              um nome novo e selecionar "Criar" — vira um registro real em Configurações → Financeiro.
-            </p>
-          </CollapsibleContent>
-        </Collapsible>
 
-        {/* Parcelas — direto N + 1ª data, sem botões 1×/3× */}
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Parcelas de implementação
-          </Label>
-
-          <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Nº de parcelas</Label>
-              <Input
-                type="number"
-                min={1}
-                max={60}
-                value={installmentsN}
-                onChange={(e) => {
-                  setInstallmentsN(e.target.value);
-                  const n = parseInt(e.target.value, 10);
-                  if (!Number.isNaN(n) && n > 0) regenerateInstallments(n, firstDueDate);
-                }}
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Data da 1ª parcela</Label>
-              <Input
-                type="date"
-                value={firstDueDate}
-                onChange={(e) => {
-                  setFirstDueDate(e.target.value);
-                  const n = parseInt(installmentsN, 10) || 1;
-                  regenerateInstallments(n, e.target.value);
-                }}
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground opacity-0">.</Label>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9"
-                onClick={() => {
-                  const n = parseInt(installmentsN, 10) || 1;
-                  regenerateInstallments(n, firstDueDate);
-                }}
-              >
-                Regenerar
-              </Button>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            As parcelas abaixo são geradas automaticamente. Você pode ajustar valor/data de cada uma.
-          </p>
-
-          <div className="space-y-1.5">
-            {installments.map((inst, idx) => (
-              <div key={inst.id} className="flex items-center gap-2">
-                <span className="w-6 text-center font-mono text-xs text-muted-foreground">{idx + 1}</span>
-                <CurrencyInput
-                  value={inst.amount}
-                  onValueChange={(v) =>
-                    setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, amount: v } : i)))
-                  }
-                  withPrefix
-                  placeholder="R$ 0,00"
-                  className="flex-1"
-                />
-                <Input
-                  type="date"
-                  value={inst.due_date}
-                  onChange={(e) =>
-                    setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, due_date: e.target.value } : i)))
-                  }
-                  className="w-40"
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 text-destructive"
-                  disabled={installments.length === 1}
-                  onClick={() => removeInstallment(inst.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+            <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1">
+              <div className="font-semibold text-foreground">Origem</div>
+              <div className="text-muted-foreground">
+                Deal {deal.code} · {loadingProposal
+                  ? 'verificando propostas…'
+                  : acceptedProposal
+                    ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status}) será vinculada`
+                    : 'Nenhuma proposta enviada/aceita encontrada'}
               </div>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between pt-1">
-            <Button type="button" size="sm" variant="outline" onClick={addInstallment}>
-              <Plus className="h-3.5 w-3.5" /> Adicionar parcela
-            </Button>
-            <span className="font-mono text-sm font-bold tabular-nums">
-              Total: {formatBRL(totalInstallments)}
-            </span>
-          </div>
-        </div>
-
-        {/* MRR */}
-        <Collapsible
-          open={mrrEnabled || Number(deal.estimated_mrr_value ?? 0) > 0}
-          className="rounded-lg border border-border bg-muted/10"
-        >
-          <div className="flex items-center justify-between p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Repeat className="h-3.5 w-3.5" />
-              Manutenção mensal (MRR)
             </div>
-            <Switch checked={mrrEnabled} onCheckedChange={setMrrEnabled} />
-          </div>
-          {mrrEnabled && (
-            <CollapsibleContent forceMount className="px-3 pb-3 space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Valor mensal</Label>
-                  <CurrencyInput value={mrrValue} onValueChange={setMrrValue} withPrefix placeholder="R$ 0,00" />
+          </TabsContent>
+
+          {/* ============== PASSO 2 — RECEITA ============== */}
+          <TabsContent value="receita" className="space-y-4 mt-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Coluna A — Implementação */}
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                  <Banknote className="h-3.5 w-3.5 text-primary" />
+                  Implementação (one-shot)
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Início</Label>
-                  <Input type="date" value={mrrStartDate} onChange={(e) => setMrrStartDate(e.target.value)} />
-                </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Duração</Label>
-                <RadioGroup
-                  value={mrrIndefinite ? 'indefinite' : 'fixed'}
-                  onValueChange={(v) => setMrrIndefinite(v === 'indefinite')}
-                  className="flex flex-wrap items-center gap-3"
-                >
-                  <label className="flex items-center gap-1.5 text-xs">
-                    <RadioGroupItem value="indefinite" id="mrr-indef" />
-                    Indefinido
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs">
-                    <RadioGroupItem value="fixed" id="mrr-fixed" />
-                    Por
+                <div className="rounded border border-border/60 bg-muted/20 p-2 text-[11px] text-muted-foreground">
+                  Total esperado: <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span>
+                  {discountEnabled && discountValue > 0 && (
+                    <> · desconto <span className="text-warning">−{formatBRL(discountValue)}</span></>
+                  )}
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Nº de parcelas</Label>
                     <Input
                       type="number"
                       min={1}
-                      max={120}
-                      value={mrrDuration}
-                      onChange={(e) => setMrrDuration(e.target.value)}
-                      disabled={mrrIndefinite}
-                      className="h-7 w-16 px-2 text-xs"
+                      max={60}
+                      value={installmentsN}
+                      onChange={(e) => {
+                        setInstallmentsN(e.target.value);
+                        const n = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(n) && n > 0) regenerateInstallments(n, firstDueDate);
+                      }}
+                      className="h-9"
                     />
-                    meses
-                  </label>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Início da cobrança</Label>
-                <Select
-                  value={mrrStartTrigger || ''}
-                  onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
-                >
-                  <SelectTrigger className="h-8">
-                    <SelectValue placeholder="(usar Início acima)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
-                    <SelectItem value="before_delivery">Antes da entrega</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="rounded border border-border/60 bg-background/40 p-2.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[11px] text-muted-foreground">Desconto promocional no MRR</Label>
-                  <Switch checked={mrrDiscountEnabled} onCheckedChange={setMrrDiscountEnabled} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Data da 1ª parcela</Label>
+                    <Input
+                      type="date"
+                      value={firstDueDate}
+                      onChange={(e) => {
+                        setFirstDueDate(e.target.value);
+                        const n = parseInt(installmentsN, 10) || 1;
+                        regenerateInstallments(n, e.target.value);
+                      }}
+                      className="h-9"
+                    />
+                  </div>
                 </div>
-                {mrrDiscountEnabled && (
-                  <div className="space-y-2">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Tipo de validade</Label>
-                        <Select
-                          value={mrrDiscountKind}
-                          onValueChange={(v) => setMrrDiscountKind(v as 'months' | 'until_date' | 'until_stage')}
+
+                <div className="space-y-1.5">
+                  {installments.map((inst, idx) => (
+                    <div key={inst.id} className="flex items-center gap-2">
+                      <span className="w-6 text-center font-mono text-xs text-muted-foreground">{idx + 1}</span>
+                      <CurrencyInput
+                        value={inst.amount}
+                        onValueChange={(v) =>
+                          setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, amount: v } : i)))
+                        }
+                        withPrefix
+                        placeholder="R$ 0,00"
+                        className="flex-1"
+                      />
+                      <Input
+                        type="date"
+                        value={inst.due_date}
+                        onChange={(e) =>
+                          setInstallments((prev) => prev.map((i) => (i.id === inst.id ? { ...i, due_date: e.target.value } : i)))
+                        }
+                        className="w-36"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive"
+                        disabled={installments.length === 1}
+                        onClick={() => removeInstallment(inst.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <Button type="button" size="sm" variant="outline" onClick={addInstallment}>
+                    <Plus className="h-3.5 w-3.5" /> Adicionar parcela
+                  </Button>
+                  <span className="font-mono text-sm font-bold tabular-nums">
+                    Total: {formatBRL(totalInstallments)}
+                  </span>
+                </div>
+
+                {expectedTotal > 0 && !installmentsMatchExpected && (
+                  <div className="rounded border border-warning/40 bg-warning/10 p-2 text-[11px] text-warning-foreground">
+                    ⚠️ Total das parcelas ({formatBRL(totalInstallments)}) ≠ valor esperado ({formatBRL(expectedTotal)})
+                  </div>
+                )}
+
+                {/* Desconto promocional sobre implementação */}
+                <div className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Percent className="h-3 w-3" /> Desconto promocional
+                    </Label>
+                    <Switch checked={discountEnabled} onCheckedChange={setDiscountEnabled} />
+                  </div>
+                  {discountEnabled && (
+                    <div className="space-y-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <RadioGroup
+                          value={discountKind}
+                          onValueChange={(v) => setDiscountKind(v as 'percent' | 'fixed')}
+                          className="flex items-center gap-3"
                         >
-                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="months">Por X meses</SelectItem>
-                            <SelectItem value="until_date">Até uma data</SelectItem>
-                            <SelectItem value="until_stage">Até estágio do projeto</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <RadioGroupItem value="percent" id="disc-pct" /> %
+                          </label>
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <RadioGroupItem value="fixed" id="disc-fix" /> R$
+                          </label>
+                        </RadioGroup>
+                        {discountKind === 'percent' ? (
+                          <Input
+                            type="number" step="0.01" min={0} max={100}
+                            value={discountAmount}
+                            onChange={(e) => setDiscountAmount(e.target.value)}
+                            placeholder="10"
+                            className="h-8"
+                          />
+                        ) : (
+                          <CurrencyInput
+                            value={discountAmount} onValueChange={setDiscountAmount}
+                            withPrefix placeholder="R$ 0,00" className="h-8"
+                          />
+                        )}
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Valor mensal com desconto</Label>
-                        <CurrencyInput
-                          value={mrrDiscountValue}
-                          onValueChange={setMrrDiscountValue}
-                          withPrefix
-                          placeholder="R$ 0,00"
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Input
+                          type="date" value={discountValidUntil}
+                          onChange={(e) => setDiscountValidUntil(e.target.value)}
+                          className="h-8"
+                          placeholder="Válido até"
+                        />
+                        <Input
+                          value={discountNotes}
+                          onChange={(e) => setDiscountNotes(e.target.value)}
+                          placeholder="Observação"
                           className="h-8"
                         />
                       </div>
                     </div>
+                  )}
+                </div>
 
-                    {mrrDiscountKind === 'months' && (
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Primeiros (meses)</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={60}
-                          value={mrrDiscountMonths}
-                          onChange={(e) => setMrrDiscountMonths(e.target.value)}
-                          className="h-8"
-                        />
-                      </div>
-                    )}
+                <FinanceCategorizationCard
+                  title="Categorização — implementação"
+                  subtitle="Aplicada a todas as parcelas geradas"
+                  tone="income"
+                  categoriaId={implCategoriaId} setCategoriaId={setImplCategoriaId}
+                  centroId={implCentroId} setCentroId={setImplCentroId}
+                  contaId={implContaId} setContaId={setImplContaId}
+                  meioId={implMeioId} setMeioId={setImplMeioId}
+                  categorias={categoriasReceita}
+                  centros={centros} contas={contas} meios={meios}
+                  onCreateCategoria={makeCreateCategoria('receitas', 'impl')}
+                  onCreateCentro={makeCreateCentro('impl')}
+                  onCreateConta={makeCreateConta('impl')}
+                  onCreateMeio={makeCreateMeio('impl')}
+                />
+              </div>
 
-                    {mrrDiscountKind === 'until_date' && (
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Válido até</Label>
-                        <Input
-                          type="date"
-                          value={mrrDiscountUntilDate}
-                          onChange={(e) => setMrrDiscountUntilDate(e.target.value)}
-                          className="h-8"
-                        />
-                      </div>
-                    )}
+              {/* Coluna B — MRR */}
+              <div className={cn('space-y-3 rounded-lg border p-3', mrrEnabled ? 'border-border' : 'border-border/40')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    <Repeat className="h-3.5 w-3.5 text-primary" />
+                    Manutenção mensal (MRR)
+                  </div>
+                  <Switch checked={mrrEnabled} onCheckedChange={setMrrEnabled} />
+                </div>
 
-                    {mrrDiscountKind === 'until_stage' && (
+                {!mrrEnabled && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Ative para criar contrato de manutenção mensal recorrente em paralelo à implementação.
+                  </p>
+                )}
+
+                {mrrEnabled && (
+                  <div className="space-y-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Encerra quando o projeto chegar em</Label>
-                        <Select value={mrrDiscountUntilStage} onValueChange={setMrrDiscountUntilStage}>
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Selecione um estágio…" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="planning">Planejamento</SelectItem>
-                            <SelectItem value="em_desenvolvimento">Em desenvolvimento</SelectItem>
-                            <SelectItem value="em_homologacao">Em homologação</SelectItem>
-                            <SelectItem value="entregue">Entregue</SelectItem>
-                            <SelectItem value="em_manutencao">Em manutenção</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-[10px] text-muted-foreground">Valor mensal</Label>
+                        <CurrencyInput value={mrrValue} onValueChange={setMrrValue} withPrefix placeholder="R$ 0,00" className="h-9" />
                       </div>
-                    )}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Início</Label>
+                        <Input type="date" value={mrrStartDate} onChange={(e) => setMrrStartDate(e.target.value)} className="h-9" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Duração</Label>
+                      <RadioGroup
+                        value={mrrIndefinite ? 'indefinite' : 'fixed'}
+                        onValueChange={(v) => setMrrIndefinite(v === 'indefinite')}
+                        className="flex flex-wrap items-center gap-3"
+                      >
+                        <label className="flex items-center gap-1.5 text-xs">
+                          <RadioGroupItem value="indefinite" id="mrr-indef" /> Indefinido
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs">
+                          <RadioGroupItem value="fixed" id="mrr-fixed" /> Por
+                          <Input
+                            type="number" min={1} max={120}
+                            value={mrrDuration} onChange={(e) => setMrrDuration(e.target.value)}
+                            disabled={mrrIndefinite}
+                            className="h-7 w-16 px-2 text-xs"
+                          /> meses
+                        </label>
+                      </RadioGroup>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Início da cobrança</Label>
+                      <Select
+                        value={mrrStartTrigger || ''}
+                        onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
+                      >
+                        <SelectTrigger className="h-8"><SelectValue placeholder="(usar Início acima)" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
+                          <SelectItem value="before_delivery">Antes da entrega</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <Percent className="h-3 w-3" /> Desconto promocional no MRR
+                        </Label>
+                        <Switch checked={mrrDiscountEnabled} onCheckedChange={setMrrDiscountEnabled} />
+                      </div>
+                      {mrrDiscountEnabled && (
+                        <div className="space-y-2">
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Select
+                              value={mrrDiscountKind}
+                              onValueChange={(v) => setMrrDiscountKind(v as 'months' | 'until_date' | 'until_stage')}
+                            >
+                              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="months">Por X meses</SelectItem>
+                                <SelectItem value="until_date">Até uma data</SelectItem>
+                                <SelectItem value="until_stage">Até estágio do projeto</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <CurrencyInput
+                              value={mrrDiscountValue} onValueChange={setMrrDiscountValue}
+                              withPrefix placeholder="Valor c/ desc" className="h-8"
+                            />
+                          </div>
+                          {mrrDiscountKind === 'months' && (
+                            <Input
+                              type="number" min={1} max={60}
+                              value={mrrDiscountMonths} onChange={(e) => setMrrDiscountMonths(e.target.value)}
+                              className="h-8" placeholder="Primeiros (meses)"
+                            />
+                          )}
+                          {mrrDiscountKind === 'until_date' && (
+                            <Input
+                              type="date" value={mrrDiscountUntilDate}
+                              onChange={(e) => setMrrDiscountUntilDate(e.target.value)} className="h-8"
+                            />
+                          )}
+                          {mrrDiscountKind === 'until_stage' && (
+                            <Select value={mrrDiscountUntilStage} onValueChange={setMrrDiscountUntilStage}>
+                              <SelectTrigger className="h-8"><SelectValue placeholder="Selecione um estágio…" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="planning">Planejamento</SelectItem>
+                                <SelectItem value="em_desenvolvimento">Em desenvolvimento</SelectItem>
+                                <SelectItem value="em_homologacao">Em homologação</SelectItem>
+                                <SelectItem value="entregue">Entregue</SelectItem>
+                                <SelectItem value="em_manutencao">Em manutenção</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {mrrDiscountInvalid && (
+                            <div className="rounded border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive">
+                              Desconto inválido — valor com desconto deve ser MENOR que o valor cheio.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <FinanceCategorizationCard
+                      title="Categorização — MRR"
+                      subtitle="Pode ser diferente da implementação (ex: categoria 'MRR / Manutenção')"
+                      tone="income"
+                      categoriaId={mrrCategoriaId} setCategoriaId={setMrrCategoriaId}
+                      centroId={mrrCentroId} setCentroId={setMrrCentroId}
+                      contaId={mrrContaId} setContaId={setMrrContaId}
+                      meioId={mrrMeioId} setMeioId={setMrrMeioId}
+                      categorias={categoriasReceita}
+                      centros={centros} contas={contas} meios={meios}
+                      onCreateCategoria={makeCreateCategoria('receitas', 'mrr')}
+                      onCreateCentro={makeCreateCentro('mrr')}
+                      onCreateConta={makeCreateConta('mrr')}
+                      onCreateMeio={makeCreateMeio('mrr')}
+                    />
                   </div>
                 )}
               </div>
-            </CollapsibleContent>
-          )}
-        </Collapsible>
-
-        {/* Desconto */}
-        <Collapsible open={discountEnabled} className="rounded-lg border border-border bg-muted/10">
-          <div className="flex items-center justify-between p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Percent className="h-3.5 w-3.5" />
-              Desconto promocional na implementação
             </div>
-            <Switch checked={discountEnabled} onCheckedChange={setDiscountEnabled} />
-          </div>
-          {discountEnabled && (
-            <CollapsibleContent forceMount className="px-3 pb-3 space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Tipo</Label>
-                  <RadioGroup
-                    value={discountKind}
-                    onValueChange={(v) => setDiscountKind(v as 'percent' | 'fixed')}
-                    className="flex items-center gap-3"
-                  >
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <RadioGroupItem value="percent" id="disc-pct" /> Porcentagem (%)
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <RadioGroupItem value="fixed" id="disc-fix" /> Valor (R$)
-                    </label>
-                  </RadioGroup>
+          </TabsContent>
+
+          {/* ============== PASSO 3 — CUSTOS EXTRAS ============== */}
+          <TabsContent value="custos" className="space-y-4 mt-4">
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                  <Wallet className="h-3.5 w-3.5 text-destructive" />
+                  Custos extras (APIs, infra, licenças)
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">
-                    Valor {discountKind === 'percent' ? '(%)' : '(R$)'}
-                  </Label>
-                  {discountKind === 'percent' ? (
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      max={100}
-                      value={discountAmount}
-                      onChange={(e) => setDiscountAmount(e.target.value)}
-                      placeholder="10"
-                    />
-                  ) : (
-                    <CurrencyInput value={discountAmount} onValueChange={setDiscountAmount} withPrefix placeholder="R$ 0,00" />
-                  )}
-                </div>
+                <Button type="button" size="sm" variant="outline" onClick={addExtraCost}>
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </Button>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Válido até</Label>
-                  <Input type="date" value={discountValidUntil} onChange={(e) => setDiscountValidUntil(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">Observação</Label>
-                  <Input value={discountNotes} onChange={(e) => setDiscountNotes(e.target.value)} placeholder="Ex: campanha Q2" />
-                </div>
-              </div>
-              {discountValue > 0 && (
+
+              <FinanceCategorizationCard
+                title="Padrão para custos extras"
+                subtitle="Aplicado quando o item não tiver categorização própria"
+                tone="expense"
+                categoriaId={extraCategoriaId} setCategoriaId={setExtraCategoriaId}
+                centroId={extraCentroId} setCentroId={setExtraCentroId}
+                contaId={extraContaId} setContaId={setExtraContaId}
+                meioId={extraMeioId} setMeioId={setExtraMeioId}
+                categorias={categoriasDespesa}
+                centros={centros} contas={contas} meios={meios}
+                onCreateCategoria={makeCreateCategoria('despesas', 'extra')}
+                onCreateCentro={makeCreateCentro('extra')}
+                onCreateConta={makeCreateConta('extra')}
+                onCreateMeio={makeCreateMeio('extra')}
+              />
+
+              {extraCosts.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground">
-                  Aplicado: <span className="font-mono text-foreground">−{formatBRL(discountValue)}</span> sobre{' '}
-                  {formatBRL(baseImplementation)} → <span className="font-mono text-foreground">{formatBRL(expectedTotal)}</span>
+                  Sem custos extras. Use pra registrar despesas recorrentes (OpenAI, AWS, licenças) ou setup único.
                 </p>
-              )}
-            </CollapsibleContent>
-          )}
-        </Collapsible>
-
-        {/* Custos extras */}
-        <div className="rounded-lg border border-border bg-muted/10 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Wallet className="h-3.5 w-3.5" />
-              Custos extras (APIs externas, infra, licenças)
-            </div>
-            <Button type="button" size="sm" variant="outline" className="h-7" onClick={addExtraCost}>
-              <Plus className="h-3.5 w-3.5" /> Adicionar
-            </Button>
-          </div>
-          {extraCosts.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground">
-              Sem custos extras. Use pra registrar despesas recorrentes (OpenAI, AWS, licenças) ou setup único.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {extraCosts.map((e) => (
-                <div key={e.id} className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
-                  <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px_36px]">
-                    <Input
-                      placeholder="Ex: API OpenAI"
-                      value={e.description}
-                      onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
-                      className="h-8"
-                    />
-                    <CurrencyInput
-                      value={e.amount}
-                      onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
-                      withPrefix
-                      placeholder="R$ 0,00"
-                      className="h-8"
-                    />
-                    <Select
-                      value={e.recurrence}
-                      onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
-                    >
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
-                        <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
-                        <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => removeExtraCost(e.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <Textarea
-                    placeholder="Observação (opcional)"
-                    value={e.notes}
-                    onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
-                    rows={1}
-                    className="text-xs"
-                  />
+              ) : (
+                <div className="space-y-2">
+                  {extraCosts.map((e) => (
+                    <div key={e.id} className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
+                      <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px_36px]">
+                        <Input
+                          placeholder="Ex: API OpenAI" value={e.description}
+                          onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
+                          className="h-8"
+                        />
+                        <CurrencyInput
+                          value={e.amount}
+                          onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
+                          withPrefix placeholder="R$ 0,00" className="h-8"
+                        />
+                        <Select
+                          value={e.recurrence}
+                          onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
+                        >
+                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
+                            <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
+                            <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button" size="icon" variant="ghost"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => removeExtraCost(e.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <ComboboxCreate
+                          value={e.categoria_id ?? ''}
+                          options={toComboOptions(categoriasDespesa)}
+                          onChange={(v) => updateExtraCost(e.id, { categoria_id: v })}
+                          onCreate={makeCreateCategoria('despesas', 'extra')}
+                          placeholder={extraCategoriaId ? `Padrão: ${nameById(categoriasDespesa, extraCategoriaId)}` : 'Categoria (opcional)'}
+                          searchPlaceholder="Buscar ou criar…"
+                          createLabel={(t) => `+ Criar categoria "${t}"`}
+                        />
+                        <ComboboxCreate
+                          value={e.centro_custo_id ?? ''}
+                          options={toComboOptions(centros)}
+                          onChange={(v) => updateExtraCost(e.id, { centro_custo_id: v })}
+                          onCreate={makeCreateCentro('extra')}
+                          placeholder={extraCentroId ? `Padrão: ${nameById(centros, extraCentroId)}` : 'Centro de custo (opcional)'}
+                          searchPlaceholder="Buscar ou criar…"
+                          createLabel={(t) => `+ Criar centro "${t}"`}
+                        />
+                      </div>
+                      <Textarea
+                        placeholder="Observação (opcional)"
+                        value={e.notes}
+                        onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
+                        rows={1}
+                        className="text-xs"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
+          </TabsContent>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancelar
-          </Button>
-          <Button onClick={handleConfirm} disabled={submitting}>
-            {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Fechar deal e criar projeto <ArrowRight className="h-3.5 w-3.5" />
-          </Button>
+          {/* ============== PASSO 4 — REVISÃO ============== */}
+          <TabsContent value="revisao" className="space-y-3 mt-4">
+            <div className="rounded-lg border border-border bg-muted/10 p-3 space-y-2 text-xs">
+              <ReviewLine ok label="Projeto" value={`${projectName} · status planejamento`} />
+              <ReviewLine ok label="Tipos / Dores" value={`${projectTypeSlugs.length} tipo(s) · ${painCategorySlugs.length} dor(es)`} />
+              <ReviewLine
+                ok
+                label="Implementação"
+                value={`${installments.length} parcela(s) · total ${formatBRL(totalInstallments)} · cat: ${nameById(categoriasReceita, implCategoriaId)} / cc: ${nameById(centros, implCentroId)}`}
+              />
+              {discountEnabled && discountValue > 0 && (
+                <ReviewLine ok label="Desconto" value={`−${formatBRL(discountValue)} sobre implementação`} />
+              )}
+              {mrrEnabled && (
+                <ReviewLine
+                  ok
+                  label="MRR"
+                  value={`${formatBRL(Number(mrrValue))}/mês · cat: ${nameById(categoriasReceita, mrrCategoriaId)} / cc: ${nameById(centros, mrrCentroId)}${mrrIndefinite ? ' · indefinido' : ` · ${mrrDuration} meses`}${mrrDiscountEnabled && Number(mrrDiscountValue) > 0 ? ` · desc. ${formatBRL(Number(mrrDiscountValue))}` : ''}`}
+                />
+              )}
+              {extraCosts.filter((e) => e.description.trim() && Number(e.amount) > 0).length > 0 && (
+                <ReviewLine
+                  ok
+                  label="Custos extras"
+                  value={`${extraCosts.filter((e) => e.description.trim() && Number(e.amount) > 0).length} item(s)${monthlyExtras > 0 ? ` · ${formatBRL(monthlyExtras)}/mês` : ''}`}
+                />
+              )}
+              <ReviewLine ok label="Anexos" value="serão movidos do deal para o projeto" />
+              <ReviewLine ok label="Dependências" value="viram tarefas do projeto" />
+              <ReviewLine
+                ok
+                label="Cliente financeiro"
+                value="busca por CNPJ; cria automático se não existir"
+              />
+              {acceptedProposal ? (
+                <ReviewLine ok label="Proposta" value={`${acceptedProposal.code} → marcada como aceita e vinculada`} />
+              ) : (
+                <ReviewLine warn label="Proposta" value="nenhuma proposta enviada/aceita encontrada" />
+              )}
+              {expectedTotal > 0 && !installmentsMatchExpected && (
+                <ReviewLine warn label="Atenção" value={`Total das parcelas (${formatBRL(totalInstallments)}) ≠ valor esperado (${formatBRL(expectedTotal)})`} />
+              )}
+              {mrrDiscountInvalid && (
+                <ReviewLine warn label="Desconto MRR" value="inválido — não será aplicado" />
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+          <div>
+            {step !== 'projeto' && (
+              <Button variant="outline" onClick={goBack} disabled={submitting}>
+                <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
+              Cancelar
+            </Button>
+            {step !== 'revisao' ? (
+              <Button onClick={goNext}>
+                Próximo <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button onClick={handleConfirm} disabled={submitting}>
+                {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Fechar como ganho e criar projeto <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ReviewLine({ label, value, ok, warn }: { label: string; value: string; ok?: boolean; warn?: boolean }) {
+  return (
+    <div className="flex items-start gap-2">
+      {warn ? (
+        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+      ) : (
+        <CheckCircle2 className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', ok ? 'text-primary' : 'text-muted-foreground')} />
+      )}
+      <div>
+        <span className="font-semibold text-foreground">{label}:</span>{' '}
+        <span className="text-muted-foreground">{value}</span>
+      </div>
+    </div>
   );
 }
