@@ -34,8 +34,16 @@ export interface DealDependency {
   description: string;
   responsible_person_name: string | null;
   responsible_person_role: string | null;
+  responsible_email: string | null;
+  responsible_phone: string | null;
   agreed_deadline: string | null;
+  requested_at: string | null;
   status: DealDependencyStatus;
+  priority: DealDependencyPriority;
+  is_blocker: boolean;
+  internal_owner_actor_id: string | null;
+  impact_if_missing: string | null;
+  links: string[];
   notes: string | null;
   created_at?: string;
   updated_at?: string;
