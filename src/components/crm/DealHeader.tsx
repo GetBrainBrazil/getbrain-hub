@@ -245,6 +245,8 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
   const update = useUpdateDealField(deal.code);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(deal.title);
+  const { data: projectTypes = [] } = useCrmProjectTypes();
+  const projectType = projectTypes.find((t) => t.slug === deal.project_type_v2) ?? null;
 
   useEffect(() => { setTitle(deal.title); }, [deal.id, deal.title]);
 
@@ -295,9 +297,9 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
             </Link>
           </InfoBadge>
         )}
-        {deal.project_type_v2 && (
-          <InfoBadge className={PROJECT_TYPE_V2_COLOR[deal.project_type_v2]}>
-            {PROJECT_TYPE_V2_LABEL[deal.project_type_v2]}
+        {projectType && (
+          <InfoBadge className={projectType.color ?? ''}>
+            {projectType.name}
           </InfoBadge>
         )}
         {deal.estimation_confidence && (
