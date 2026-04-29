@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, closestCorners, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
-import { ArrowUpDown, ChevronsLeft, ChevronsRight, LayoutGrid, List, Plus, Search } from 'lucide-react';
+import { ArrowUpDown, LayoutGrid, List, Plus, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -19,8 +19,10 @@ import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalFor
 import { MultiFilter, ValueRangeFilter } from '@/components/crm/CrmFilters';
 import { useCrmActors, useDistinctLeadSources } from '@/hooks/crm/useCrmReference';
 import {
+  DEAL_STAGE_DOT,
   DEAL_STAGE_LABEL,
   DEAL_STAGE_PROBABILITY,
+  DEAL_STAGE_TONE,
   DEAL_STAGES,
 } from '@/constants/dealStages';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
@@ -35,7 +37,7 @@ import { createDraftProposal } from '@/components/orcamentos/createDraftProposal
 import { invalidateProposalCaches } from '@/lib/cacheInvalidation';
 import type { Deal, DealStage } from '@/types/crm';
 
-const ACTIVE_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando'];
+const ACTIVE_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando', 'gelado'];
 
 function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: () => void; onCompanyOpen: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
@@ -56,26 +58,26 @@ function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: ()
 function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyOpen, onAdd }: { stage: DealStage; deals: Deal[]; collapsed: boolean; onToggleCollapsed: () => void; onOpen: (deal: Deal) => void; onCompanyOpen: (deal: Deal) => void; onAdd: (stage: DealStage) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const total = deals.reduce((sum, d) => sum + Number(d.estimated_value ?? 0), 0);
+  const dotClass = DEAL_STAGE_DOT[stage];
+  const toneClass = DEAL_STAGE_TONE[stage]; // border-l-*
 
   if (collapsed) {
     return (
       <div
         ref={setNodeRef}
+        role="button"
+        tabIndex={0}
+        onClick={onToggleCollapsed}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleCollapsed(); } }}
+        aria-label={`Expandir ${DEAL_STAGE_LABEL[stage]}`}
+        title="Clique para expandir"
         className={cn(
-          'flex w-12 shrink-0 flex-col items-center gap-2 rounded-lg bg-muted/20 p-2 transition-colors',
+          'group flex w-12 shrink-0 cursor-pointer flex-col items-center gap-2 rounded-lg border-l-4 bg-muted/20 p-2 transition-colors hover:bg-muted/40',
+          toneClass,
           isOver && 'bg-accent/10 ring-2 ring-accent/40',
         )}
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={onToggleCollapsed}
-          aria-label={`Expandir ${DEAL_STAGE_LABEL[stage]}`}
-          title="Expandir coluna"
-        >
-          <ChevronsRight className="h-4 w-4" />
-        </Button>
+        <span className={cn('mt-1 h-2.5 w-2.5 rounded-full', dotClass)} aria-hidden />
         <div
           className="flex flex-1 items-center justify-center"
           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
@@ -92,29 +94,39 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   }
 
   return (
-    <div className="flex w-[85vw] sm:w-80 shrink-0 flex-col rounded-lg bg-muted/20 p-3 snap-start sm:snap-align-none">
-      <div className="mb-3 space-y-2 px-1">
+    <div className={cn('flex w-[85vw] sm:w-80 shrink-0 flex-col rounded-lg border-l-4 bg-muted/20 p-3 snap-start sm:snap-align-none', toneClass)}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggleCollapsed}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleCollapsed(); } }}
+        aria-label={`Recolher ${DEAL_STAGE_LABEL[stage]}`}
+        title="Clique para recolher"
+        className="mb-3 -mx-1 cursor-pointer rounded-md px-1 py-1 transition-colors hover:bg-muted/40"
+      >
         <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold text-foreground">{DEAL_STAGE_LABEL[stage]}</h3>
-            <p className="text-xs text-muted-foreground">{formatCurrency(total)} · {deals.length} deals</p>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', dotClass)} aria-hidden />
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-semibold text-foreground">{DEAL_STAGE_LABEL[stage]}</h3>
+              <p className="text-xs text-muted-foreground">{formatCurrency(total)} · {deals.length} deals</p>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <span className="rounded-full bg-background/60 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+              {deals.length}
+            </span>
             {!stage.startsWith('fechado') && (
-              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7" onClick={() => onAdd(stage)} aria-label="Adicionar deal">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 sm:h-7 sm:w-7"
+                onClick={(e) => { e.stopPropagation(); onAdd(stage); }}
+                aria-label="Adicionar deal"
+              >
                 <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 sm:h-7 sm:w-7"
-              onClick={onToggleCollapsed}
-              aria-label={`Recolher ${DEAL_STAGE_LABEL[stage]}`}
-              title="Recolher coluna"
-            >
-              <ChevronsLeft className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            </Button>
           </div>
         </div>
       </div>
