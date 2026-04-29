@@ -53,7 +53,7 @@ export default function OrcamentoEditarDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { confirm, dialog: confirmDialog } = useConfirm();
-  const { data, isLoading } = useProposalDetail(id);
+  const { data, isLoading, error } = useProposalDetail(id);
   const { data: itemsRows } = useProposalItems(id);
   const replaceItems = useReplaceProposalItems();
   const update = useUpdateProposal();
@@ -274,11 +274,27 @@ export default function OrcamentoEditarDetalhe() {
     });
   }
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 p-6">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
+        <h2 className="text-lg font-semibold">Proposta não encontrada</h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          {error
+            ? "Ocorreu um erro ao carregar esta proposta. Ela pode ter sido excluída ou você não tem permissão para vê-la."
+            : "Esta proposta não existe mais ou foi removida."}
+        </p>
+        <Button onClick={() => navigate("/financeiro/orcamentos")}>
+          <ArrowLeft className="h-4 w-4" /> Voltar para propostas
+        </Button>
       </div>
     );
   }

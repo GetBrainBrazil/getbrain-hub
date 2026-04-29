@@ -28,9 +28,11 @@ export function useProposalDetail(id: string | undefined) {
           project:projects(id, code, name)`
         )
         .eq("id", id!)
-        .single();
+        .is("deleted_at", null)
+        .maybeSingle();
       if (error) throw error;
-      return data as unknown as ProposalDetail;
+      return (data ?? null) as unknown as ProposalDetail | null;
     },
+    retry: 1,
   });
 }

@@ -194,6 +194,7 @@ export default function CrmPipeline() {
       return;
     }
     setCreatingProposal(true);
+    let newProposalId: string | null = null;
     try {
       // Persiste implementação + MRR no deal. estimated_value só é setado se ainda estiver vazio,
       // para não sobrescrever uma estimativa anterior do usuário.
@@ -214,19 +215,38 @@ export default function CrmPipeline() {
         .eq('id', deal.id);
       if (updErr) throw updErr;
 
-      const newId = await createDraftProposal({
+      newProposalId = await createDraftProposal({
         dealId: deal.id,
         companyId: deal.company_id,
         companyName: deal.company?.trade_name || deal.company?.legal_name || '',
         implementationValue,
         mrrValue: mrrValue ?? null,
       });
-      commitStage(deal, stage);
-      invalidateProposalCaches(qc, { dealId: deal.id });
+
+      // Pós-criação: tudo aqui é "best effort". Se algo falhar, não devemos
+      // bloquear a navegação — a proposta já existe e o usuário precisa chegar nela.
+      try {
+        commitStage(deal, stage);
+        invalidateProposalCaches(qc, { dealId: deal.id });
+      } catch (postErr: any) {
+        console.error('[Pipeline] proposta criada mas etapa pós-criação falhou', {
+          proposalId: newProposalId,
+          dealId: deal.id,
+          error: postErr,
+        });
+        toast.warning('Proposta criada, mas o estágio do deal não avançou. Ajuste manualmente se necessário.');
+      }
+
       setNeedsProposal(null);
-      navigate(`/financeiro/orcamentos/${newId}/editar`);
+      navigate(`/financeiro/orcamentos/${newProposalId}/editar`);
     } catch (err: any) {
+      console.error('[Pipeline] falha ao criar proposta', { dealId: deal.id, newProposalId, error: err });
       toast.error(err?.message || 'Erro ao criar proposta');
+      // Se a proposta foi criada mas algo logo depois explodiu, ainda navega
+      if (newProposalId) {
+        setNeedsProposal(null);
+        navigate(`/financeiro/orcamentos/${newProposalId}/editar`);
+      }
     } finally {
       setCreatingProposal(false);
     }
