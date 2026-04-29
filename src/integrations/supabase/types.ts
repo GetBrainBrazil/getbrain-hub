@@ -4177,12 +4177,12 @@ export type Database = {
           deal_win_rate_30d: number | null
           deals_created_30d: number | null
           deals_created_90d: number | null
-          deals_ajustando_current: number | null
+          deals_em_negociacao_current: number | null
           deals_lost_90d: number | null
-          deals_proposta_na_mesa_current: number | null
+          deals_orcamento_enviado_current: number | null
           deals_overdue: number | null
-          deals_descoberta_marcada_current: number | null
-          deals_descobrindo_current: number | null
+          deals_presencial_agendada_current: number | null
+          deals_presencial_feita_current: number | null
           deals_stalled_14d: number | null
           deals_won_30d: number | null
           deals_won_90d: number | null
@@ -4781,12 +4781,12 @@ export type Database = {
         | "autorizacao_legal"
         | "outro"
       deal_stage:
-        | "descoberta_marcada"
-        | "descobrindo"
-        | "proposta_na_mesa"
-        | "ajustando"
-        | "ganho"
-        | "perdido"
+        | "presencial_agendada"
+        | "presencial_feita"
+        | "orcamento_enviado"
+        | "em_negociacao"
+        | "fechado_ganho"
+        | "fechado_perdido"
         | "descoberta_marcada"
         | "descobrindo"
         | "proposta_na_mesa"
@@ -5080,12 +5080,12 @@ export const Constants = {
         "outro",
       ],
       deal_stage: [
-        "descoberta_marcada",
-        "descobrindo",
-        "proposta_na_mesa",
-        "ajustando",
-        "ganho",
-        "perdido",
+        "presencial_agendada",
+        "presencial_feita",
+        "orcamento_enviado",
+        "em_negociacao",
+        "fechado_ganho",
+        "fechado_perdido",
         "descoberta_marcada",
         "descobrindo",
         "proposta_na_mesa",
