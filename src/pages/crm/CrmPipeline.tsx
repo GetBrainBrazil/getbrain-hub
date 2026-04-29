@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, closestCorners, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
-import { ChevronsLeft, ChevronsRight, LayoutGrid, List, Plus } from 'lucide-react';
+import { ArrowUpDown, ChevronsLeft, ChevronsRight, LayoutGrid, List, Plus, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
