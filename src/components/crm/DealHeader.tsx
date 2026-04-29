@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { InfoBadge, StageStepper } from '@/components/crm/CrmDetailShared';
 import { DEAL_STAGE_PROBABILITY } from '@/constants/dealStages';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
+import { chipStyleFromHex } from '@/lib/crm/colorUtils';
 import { useUpdateDealField } from '@/hooks/crm/useCrmDetails';
 import { formatCurrency, maskCurrencyBRL, parseCurrencyBRL } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
