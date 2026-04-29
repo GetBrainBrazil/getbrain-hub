@@ -704,7 +704,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
       let proposalMarked = false;
-      if (acceptedProposal && acceptedProposal.status === 'enviada') {
+      if (acceptedProposal && acceptedProposal.status !== 'convertida') {
         await sb
           .from('proposals')
           .update({ status: 'convertida', accepted_at: new Date().toISOString() })
