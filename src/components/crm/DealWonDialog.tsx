@@ -233,14 +233,13 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
     setEstimatedDelivery(deal.desired_delivery_date ?? '');
 
-    setInstallments([
-      {
-        id: newId(),
-        amount: baseImplementation > 0 ? String(baseImplementation) : '',
-        due_date: fmtDateInput(addMonths(new Date(), 1)),
-      },
-    ]);
-    setCustomN('');
+    const dealN = (deal as any).installments_count as number | null;
+    const dealFirst = (deal as any).first_installment_date as string | null;
+    const initialN = dealN && dealN > 0 ? dealN : 1;
+    const initialFirst = dealFirst || fmtDateInput(addMonths(new Date(), 1));
+    setInstallmentsN(String(initialN));
+    setFirstDueDate(initialFirst);
+    setInstallments(buildInstallments(initialN, initialFirst, baseImplementation));
 
     const dealMrr = Number(deal.estimated_mrr_value ?? 0);
     setMrrEnabled(dealMrr > 0);
@@ -251,9 +250,19 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setMrrDuration(dur != null ? String(dur) : '12');
     const dMonths = (deal as any).mrr_discount_months;
     const dValue = (deal as any).mrr_discount_value;
-    setMrrDiscountEnabled(dMonths != null && dMonths > 0);
+    const dKind = (deal as any).mrr_discount_kind as 'months' | 'until_date' | 'until_stage' | null;
+    const dUntilDate = (deal as any).mrr_discount_until_date as string | null;
+    const dUntilStage = (deal as any).mrr_discount_until_stage as string | null;
+    setMrrDiscountEnabled(
+      (dMonths != null && dMonths > 0) ||
+      Boolean(dUntilDate) || Boolean(dUntilStage) || (dValue != null && dValue > 0),
+    );
+    setMrrDiscountKind(dKind ?? 'months');
     setMrrDiscountMonths(dMonths != null ? String(dMonths) : '3');
     setMrrDiscountValue(dValue != null ? String(dValue) : '');
+    setMrrDiscountUntilDate(dUntilDate ?? '');
+    setMrrDiscountUntilStage(dUntilStage ?? '');
+    setMrrStartTrigger(((deal as any).mrr_start_trigger as 'on_delivery' | 'before_delivery' | null) ?? '');
 
     const dAmount = (deal as any).discount_amount;
     setDiscountEnabled(dAmount != null && dAmount > 0);
