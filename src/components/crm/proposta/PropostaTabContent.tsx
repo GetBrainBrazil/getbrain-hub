@@ -299,12 +299,32 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
               </Button>
             )}
             {proposal.status === 'rascunho' && (
-              <Button size="sm" onClick={handleSend} disabled={saving}>
+              <Button size="sm" onClick={handleOpenSend} disabled={saving}>
                 <Send className="h-3.5 w-3.5" /> Marcar como enviada
               </Button>
             )}
             {proposal.status === 'enviada' && (
               <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if ((proposal as any).access_token) {
+                      setGeneratedTokenInfo({
+                        accessToken: (proposal as any).access_token,
+                        expiresAt: validUntil,
+                      });
+                      setLinkDialogOpen(true);
+                    } else {
+                      toast.error('Esta proposta não tem link de acesso');
+                    }
+                  }}
+                >
+                  Ver link
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setPwdDialogOpen(true)}>
+                  Redefinir senha
+                </Button>
                 <Button
                   size="sm"
                   className="bg-success text-success-foreground hover:bg-success/90"
@@ -329,6 +349,33 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
           {proposal.rejected_at && <span>Recusada em <span className="font-mono">{formatDateBR(proposal.rejected_at)}</span></span>}
         </div>
       </div>
+
+      {/* Modais 10A — senha + link */}
+      <MarcarComoEnviadaDialog
+        proposalId={proposal.id}
+        proposalCode={proposal.code}
+        expiresAt={validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        onSent={(info) => {
+          setGeneratedTokenInfo(info);
+          setLinkDialogOpen(true);
+          setValidUntil(info.expiresAt);
+          onChanged();
+        }}
+      />
+      <LinkGeradoDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        accessToken={generatedTokenInfo?.accessToken ?? null}
+        expiresAt={generatedTokenInfo?.expiresAt ?? validUntil}
+      />
+      <RedefinirSenhaDialog
+        proposalId={proposal.id}
+        proposalCode={proposal.code}
+        open={pwdDialogOpen}
+        onOpenChange={setPwdDialogOpen}
+      />
     </div>
   );
 }
