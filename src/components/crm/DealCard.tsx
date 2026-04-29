@@ -81,9 +81,20 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
           <div className="flex items-center justify-between gap-2 text-[11px]">
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">{deal.code}</span>
             <div className="flex items-center gap-1.5">
-              {projectType && (
-                <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium', projectType.color ?? 'bg-muted text-muted-foreground border-border')}>
-                  {projectType.name}
+              {projectTypeChips.slice(0, 2).map((pt) => (
+                <span
+                  key={pt.slug}
+                  className={cn(
+                    'rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
+                    pt.color ?? 'bg-muted text-muted-foreground border-border',
+                  )}
+                >
+                  {pt.name}
+                </span>
+              ))}
+              {projectTypeChips.length > 2 && (
+                <span className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  +{projectTypeChips.length - 2}
                 </span>
               )}
               <Tooltip>
