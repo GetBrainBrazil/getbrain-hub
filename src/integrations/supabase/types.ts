@@ -4231,6 +4231,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles_public: {
+        Row: {
+          ativo: boolean | null
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          ultimo_acesso: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          ultimo_acesso?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          ultimo_acesso?: string | null
+        }
+        Relationships: []
+      }
       project_metrics: {
         Row: {
           actors_allocated: number | null
@@ -4530,6 +4560,18 @@ export type Database = {
           receita: number
           resultado: number
           saldo_fim_mes: number
+        }[]
+      }
+      get_profiles_public: {
+        Args: never
+        Returns: {
+          ativo: boolean
+          avatar_url: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          ultimo_acesso: string
         }[]
       }
       get_project_health_summary: {
