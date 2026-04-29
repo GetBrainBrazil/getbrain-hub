@@ -860,14 +860,88 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
               </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1">
-              <div className="font-semibold text-foreground">Origem</div>
-              <div className="text-muted-foreground">
-                Deal {deal.code} · {loadingProposal
-                  ? 'verificando propostas…'
-                  : acceptedProposal
-                    ? `Proposta ${acceptedProposal.code} (${acceptedProposal.status})${acceptedProposal.status === 'convertida' ? ' já vinculada' : ' será marcada como convertida e vinculada'}`
-                    : 'Nenhuma proposta vinculada encontrada'}
+            {/* ============== ORIGEM / VÍNCULOS ============== */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+                <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  O que será vinculado a este projeto
+                </span>
+              </div>
+
+              <div className="divide-y divide-border">
+                {/* Linha 1 — Deal */}
+                <div className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Negociação (CRM)</div>
+                    <div className="text-sm font-medium text-foreground truncate">
+                      Deal <span className="font-mono">{deal.code}</span>
+                      <span className="text-muted-foreground font-normal"> — {deal.title}</span>
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-500">
+                    Vinculado
+                  </span>
+                </div>
+
+                {/* Linha 2 — Proposta */}
+                <div className="flex items-center gap-3 px-3 py-2.5">
+                  <div
+                    className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+                      loadingProposal && 'bg-muted text-muted-foreground',
+                      !loadingProposal && acceptedProposal && 'bg-emerald-500/15 text-emerald-500',
+                      !loadingProposal && !acceptedProposal && 'bg-amber-500/15 text-amber-500',
+                    )}
+                  >
+                    {loadingProposal ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : acceptedProposal ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                      <FileText className="h-3 w-3" /> Proposta comercial
+                    </div>
+                    {loadingProposal ? (
+                      <div className="text-sm text-muted-foreground">Verificando propostas…</div>
+                    ) : acceptedProposal ? (
+                      <div className="text-sm font-medium text-foreground truncate">
+                        Proposta <span className="font-mono">{acceptedProposal.code}</span>
+                        <span className="text-muted-foreground font-normal">
+                          {' '}— {acceptedProposal.status === 'convertida'
+                            ? 'já marcada como aceita'
+                            : `está como “${acceptedProposal.status}” e será marcada como aceita ao confirmar`}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-foreground">
+                        Nenhuma proposta vinculada
+                        <span className="text-muted-foreground font-normal"> — o projeto será criado apenas a partir do deal</span>
+                      </div>
+                    )}
+                  </div>
+                  {!loadingProposal && (
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                        acceptedProposal
+                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500'
+                          : 'border-amber-500/30 bg-amber-500/10 text-amber-500',
+                      )}
+                    >
+                      {acceptedProposal
+                        ? acceptedProposal.status === 'convertida' ? 'Aceita' : 'Será aceita'
+                        : 'Nenhuma'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </TabsContent>
