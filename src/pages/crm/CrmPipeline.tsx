@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { LayoutGrid, List, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +27,9 @@ import { useCrmHubStore } from '@/hooks/useCrmHubStore';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { createDraftProposal } from '@/components/orcamentos/createDraftProposal';
+import { invalidateProposalCaches } from '@/lib/cacheInvalidation';
 import type { Deal, DealStage } from '@/types/crm';
 
 const ACTIVE_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando'];
@@ -85,6 +90,7 @@ function HomeKpi({ label, value, tone }: { label: string; value: string; tone?: 
 
 export default function CrmPipeline() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const ownerFilter = useCrmHubStore((s) => s.ownerFilter);
   const sourceFilter = useCrmHubStore((s) => s.sourceFilter);
   const valueRange = useCrmHubStore((s) => s.valueRange);
@@ -115,6 +121,8 @@ export default function CrmPipeline() {
   const [valueRequired, setValueRequired] = useState<{ deal: Deal; stage: DealStage } | null>(null);
   const [requiredValue, setRequiredValue] = useState('');
   const [won, setWon] = useState<{ deal: Deal; stage: DealStage } | null>(null);
+  const [needsProposal, setNeedsProposal] = useState<{ deal: Deal; stage: DealStage } | null>(null);
+  const [creatingProposal, setCreatingProposal] = useState(false);
 
   const openCreateDialog = (stage: DealStage = 'descoberta_marcada') => {
     setCreateStage(stage);
@@ -157,7 +165,7 @@ export default function CrmPipeline() {
   );
   const activeDeal = activeId ? rawDeals.find((d) => d.id === activeId) ?? null : null;
   const commitStage = (deal: Deal, stage: DealStage, extra?: { lost_reason?: string; estimated_value?: number }) => updateStage.mutate({ id: deal.id, stage, ...extra });
-  const handleDragEnd = (e: DragEndEvent) => {
+  const handleDragEnd = async (e: DragEndEvent) => {
     setActiveId(null);
     const deal = rawDeals.find((d) => d.id === String(e.active.id));
     const stage = e.over?.id as DealStage | undefined;
@@ -165,7 +173,44 @@ export default function CrmPipeline() {
     if (stage === 'perdido') { setLost({ deal, stage }); return; }
     if (stage === 'proposta_na_mesa' && !deal.estimated_value) { setValueRequired({ deal, stage }); return; }
     if (stage === 'ganho') { setWon({ deal, stage }); return; }
+    if (stage === 'proposta_na_mesa') {
+      const { count, error } = await supabase
+        .from('proposals' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('deal_id', deal.id)
+        .is('deleted_at', null);
+      if (error) {
+        toast.error('Erro ao verificar propostas vinculadas');
+        return;
+      }
+      if (!count) { setNeedsProposal({ deal, stage }); return; }
+    }
     commitStage(deal, stage);
+  };
+
+  const handleCreateProposalForDeal = async () => {
+    if (!needsProposal) return;
+    const { deal, stage } = needsProposal;
+    if (!deal.company_id) {
+      toast.error('Deal sem empresa vinculada — não é possível criar proposta.');
+      return;
+    }
+    setCreatingProposal(true);
+    try {
+      const newId = await createDraftProposal({
+        dealId: deal.id,
+        companyId: deal.company_id,
+        companyName: deal.company?.trade_name || deal.company?.legal_name || '',
+      });
+      commitStage(deal, stage);
+      invalidateProposalCaches(qc, { dealId: deal.id });
+      setNeedsProposal(null);
+      navigate(`/financeiro/orcamentos/${newId}/editar`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao criar proposta');
+    } finally {
+      setCreatingProposal(false);
+    }
   };
 
   const clearPageFilters = () => { setStageFilter([]); setProjectTypeFilter([]); };
@@ -323,6 +368,27 @@ export default function CrmPipeline() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setValueRequired(null)}>Cancelar</Button>
             <Button disabled={!requiredValue} onClick={() => { if (valueRequired) commitStage(valueRequired.deal, valueRequired.stage, { estimated_value: Number(requiredValue) }); setValueRequired(null); setRequiredValue(''); }}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!needsProposal} onOpenChange={(v) => !v && !creatingProposal && setNeedsProposal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar proposta para este deal?</DialogTitle>
+            <DialogDescription>
+              Este deal ainda não tem nenhuma proposta vinculada. Para movê-lo para
+              <span className="font-medium"> Proposta na Mesa</span>, crie um orçamento agora.
+              Você será levado direto para a tela de edição com o deal já preenchido.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNeedsProposal(null)} disabled={creatingProposal}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateProposalForDeal} disabled={creatingProposal}>
+              {creatingProposal ? 'Criando…' : 'Criar proposta'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
