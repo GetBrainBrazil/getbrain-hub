@@ -4405,6 +4405,15 @@ export type Database = {
           ultimo_pagamento: string
         }[]
       }
+      get_colaboradores_minimal: {
+        Args: never
+        Returns: {
+          ativo: boolean
+          cargo: string
+          id: string
+          nome: string
+        }[]
+      }
       get_crm_owner_performance: {
         Args: { p_days_back?: number }
         Returns: {
@@ -4518,6 +4527,15 @@ export type Database = {
           receita_pendente: number
           receita_realizada: number
           resultado: number
+        }[]
+      }
+      get_humans_minimal: {
+        Args: never
+        Returns: {
+          actor_id: string
+          auth_user_id: string
+          email: string
+          id: string
         }[]
       }
       get_monthly_evolution: {

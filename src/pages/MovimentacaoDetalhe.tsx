@@ -235,7 +235,7 @@ export default function MovimentacaoDetalhe() {
     const [rClientes, rFornecedores, rColaboradores, rCategorias, rContas, rMeios, rCentros, rProjetos] = await Promise.all([
       supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
-      supabase.from("colaboradores").select("id, nome, cargo").eq("ativo", true).order("nome"),
+      supabase.rpc("get_colaboradores_minimal" as any),
       supabase.from("categorias").select("id, nome, tipo, categoria_pai_id, ativo").eq("ativo", true).order("nome"),
       supabase.from("contas_bancarias").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("meios_pagamento").select("id, nome").eq("ativo", true).order("nome"),
@@ -244,7 +244,7 @@ export default function MovimentacaoDetalhe() {
     ]);
     setClientes(rClientes.data || []);
     setFornecedores(rFornecedores.data || []);
-    setColaboradores(rColaboradores.data || []);
+    setColaboradores(((rColaboradores.data as any[]) || []).filter((c) => c.ativo));
     setCategorias(rCategorias.data || []);
     setContas(rContas.data || []);
     setMeios(rMeios.data || []);
