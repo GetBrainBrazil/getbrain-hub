@@ -288,8 +288,57 @@ function ZoneDor({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void 
 // ---------- Zona 3 — Solução ----------
 
 function ZoneSolucao({ deal, save }: { deal: Deal; save: (u: Partial<Deal>) => void }) {
+  const [organizing, setOrganizing] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+  const scopeText = (deal.scope_summary ?? '').trim();
+  const bullets = deal.scope_bullets ?? [];
+  const canOrganize = scopeText.length >= 20 && !organizing;
+
+  async function handleOrganize() {
+    if (!canOrganize) return;
+    if (bullets.length > 0) {
+      const ok = await confirm({
+        title: 'Substituir bullets existentes?',
+        description:
+          'Os bullets atuais do "Resumo Escopo" serão substituídos pelos gerados pela IA a partir do texto do Escopo.',
+        confirmLabel: 'Substituir',
+        cancelLabel: 'Cancelar',
+        variant: 'default',
+      });
+      if (!ok) return;
+    }
+    setOrganizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('organize-scope', {
+        body: { scope_text: scopeText },
+      });
+      if (error) {
+        const msg = (error as { message?: string }).message ?? '';
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 402) {
+          toast.error('Sem créditos de IA disponíveis. Adicione créditos em Configurações → Workspace → Uso.');
+        } else if (status === 429) {
+          toast.error('Limite de requisições atingido. Tente novamente em instantes.');
+        } else {
+          toast.error(`Falha ao organizar com IA: ${msg || 'tente novamente'}`);
+        }
+        return;
+      }
+      const next: string[] = Array.isArray(data?.bullets) ? data.bullets : [];
+      if (!next.length) {
+        toast.warning('A IA não conseguiu extrair bullets. Tente detalhar mais o texto do Escopo.');
+        return;
+      }
+      save({ scope_bullets: next });
+      toast.success(`${next.length} bullet${next.length > 1 ? 's' : ''} gerado${next.length > 1 ? 's' : ''} pela IA.`);
+    } finally {
+      setOrganizing(false);
+    }
+  }
+
   return (
     <ZoneSection id="zona-solucao" number={3} title="Solução & Escopo" hint="O que vamos entregar">
+      {confirmDialog}
       <div className="space-y-2">
         <FieldLabel hint="tipos gerenciados em Configurações → Pessoas & Empresas">Tipo de projeto</FieldLabel>
         <ProjectTypeSelect
