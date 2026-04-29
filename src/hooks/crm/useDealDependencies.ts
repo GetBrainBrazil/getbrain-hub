@@ -1,9 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { DealDependency, DealDependencyStatus, DealDependencyType } from '@/types/crm';
+import type {
+  DealDependency, DealDependencyStatus, DealDependencyType, DealDependencyPriority,
+} from '@/types/crm';
 
 const sb = supabase as any;
 const ORG_ID = '00000000-0000-0000-0000-000000000001';
+
+export interface DependencyMutationPayload {
+  dependency_type: DealDependencyType;
+  description: string;
+  responsible_person_name?: string | null;
+  responsible_person_role?: string | null;
+  responsible_email?: string | null;
+  responsible_phone?: string | null;
+  agreed_deadline?: string | null;
+  requested_at?: string | null;
+  status?: DealDependencyStatus;
+  priority?: DealDependencyPriority;
+  is_blocker?: boolean;
+  internal_owner_actor_id?: string | null;
+  impact_if_missing?: string | null;
+  links?: string[];
+  notes?: string | null;
+}
 
 export function useDealDependencies(dealId?: string) {
   return useQuery({
@@ -17,7 +37,6 @@ export function useDealDependencies(dealId?: string) {
         .is('deleted_at', null)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      // Auto-flag overdue: agreed_deadline < today AND status != liberado
       const today = new Date().toISOString().slice(0, 10);
       return ((data ?? []) as DealDependency[]).map((d) => {
         if (
@@ -37,28 +56,28 @@ export function useDealDependencies(dealId?: string) {
 export function useCreateDealDependency() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: {
-      deal_id: string;
-      dependency_type: DealDependencyType;
-      description: string;
-      responsible_person_name?: string | null;
-      responsible_person_role?: string | null;
-      agreed_deadline?: string | null;
-      status?: DealDependencyStatus;
-      notes?: string | null;
-    }) => {
+    mutationFn: async (payload: { deal_id: string } & DependencyMutationPayload) => {
+      const { deal_id, ...rest } = payload;
       const { data, error } = await sb
         .from('deal_dependencies')
         .insert({
           organization_id: ORG_ID,
-          deal_id: payload.deal_id,
-          dependency_type: payload.dependency_type,
-          description: payload.description.trim(),
-          responsible_person_name: payload.responsible_person_name ?? null,
-          responsible_person_role: payload.responsible_person_role ?? null,
-          agreed_deadline: payload.agreed_deadline ?? null,
-          status: payload.status ?? 'aguardando_combinar',
-          notes: payload.notes ?? null,
+          deal_id,
+          dependency_type: rest.dependency_type,
+          description: rest.description.trim(),
+          responsible_person_name: rest.responsible_person_name ?? null,
+          responsible_person_role: rest.responsible_person_role ?? null,
+          responsible_email: rest.responsible_email ?? null,
+          responsible_phone: rest.responsible_phone ?? null,
+          agreed_deadline: rest.agreed_deadline ?? null,
+          requested_at: rest.requested_at ?? null,
+          status: rest.status ?? 'aguardando_combinar',
+          priority: rest.priority ?? 'media',
+          is_blocker: rest.is_blocker ?? false,
+          internal_owner_actor_id: rest.internal_owner_actor_id ?? null,
+          impact_if_missing: rest.impact_if_missing ?? null,
+          links: rest.links ?? [],
+          notes: rest.notes ?? null,
         })
         .select()
         .single();
