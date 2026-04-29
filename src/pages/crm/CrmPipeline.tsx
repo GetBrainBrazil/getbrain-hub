@@ -11,13 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
 import { NewDealQuickDialog } from '@/components/crm/NewDealQuickDialog';
 import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalForStageDialog';
-import { UnifiedFiltersPopover } from '@/components/crm/UnifiedFiltersPopover';
+import { MultiFilter, ValueRangeFilter } from '@/components/crm/CrmFilters';
 import { useCrmActors, useDistinctLeadSources } from '@/hooks/crm/useCrmReference';
 import {
   DEAL_STAGE_LABEL,
@@ -386,12 +385,11 @@ export default function CrmPipeline() {
   }
 
   return (
-    <TooltipProvider delayDuration={250}>
-      <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-4 sm:space-y-5">
         {/* Toolbar de comando */}
-        <div className="rounded-lg border border-border bg-card/40 p-2 sm:p-2.5">
+        <div className="space-y-2 rounded-lg border border-border bg-card/40 p-2 sm:p-2.5">
+          {/* Linha 1: busca + ações */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-            {/* Busca */}
             <div className="relative flex-1 min-w-0">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -403,30 +401,7 @@ export default function CrmPipeline() {
               />
             </div>
 
-            {/* Ações à direita */}
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <UnifiedFiltersPopover
-                value={{
-                  owners: ownerFilter,
-                  sources: sourceFilter,
-                  valueRange,
-                  stages: stageFilter,
-                  projectTypes: projectTypeFilter,
-                }}
-                onChange={(next) => {
-                  setOwnerFilter(next.owners);
-                  setSourceFilter(next.sources);
-                  setValueRange(next.valueRange);
-                  setStageFilter(next.stages as DealStage[]);
-                  setProjectTypeFilter(next.projectTypes);
-                }}
-                ownerOptions={actors.map((a) => ({ value: a.id, label: a.display_name }))}
-                sourceOptions={[{ value: 'direto', label: 'Direto' }, ...leadSources.map((s) => ({ value: s, label: s }))]}
-                stageOptions={DEAL_STAGES.map((s) => ({ value: s, label: DEAL_STAGE_LABEL[s] }))}
-                projectTypeOptions={activeProjectTypes.map((t) => ({ value: t.slug, label: t.name }))}
-                onClearAll={clearAllFilters}
-              />
-
               {viewMode === 'lista' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -447,69 +422,87 @@ export default function CrmPipeline() {
               )}
 
               <Button
+                variant="outline"
                 size="sm"
                 onClick={() => openCreateDialog()}
-                className="h-9 gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
+                className="h-9 gap-1.5 border-accent/40 text-accent hover:bg-accent/10 hover:text-accent"
               >
-                <Plus className="h-4 w-4" /> <span className="hidden xs:inline">Novo Deal</span><span className="xs:hidden">Deal</span>
+                <Plus className="h-4 w-4" /> Novo Deal
               </Button>
 
-              {/* Toggle Lista/Kanban — segmented control compacto, só ícones */}
-              <div className="inline-flex h-9 overflow-hidden rounded-md border border-border bg-background p-0.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('lista')}
-                      aria-label="Visualizar em lista"
-                      aria-pressed={viewMode === 'lista'}
-                      className={cn(
-                        'flex h-full w-9 items-center justify-center rounded-sm transition-colors',
-                        viewMode === 'lista'
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:bg-muted',
-                      )}
-                    >
-                      <List className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Lista</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('kanban')}
-                      aria-label="Visualizar em kanban"
-                      aria-pressed={viewMode === 'kanban'}
-                      className={cn(
-                        'flex h-full w-9 items-center justify-center rounded-sm transition-colors',
-                        viewMode === 'kanban'
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:bg-muted',
-                      )}
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Kanban</TooltipContent>
-                </Tooltip>
+              {/* Toggle Kanban / Lista — segmented control com rótulos */}
+              <div className="inline-flex h-9 items-center overflow-hidden rounded-md border border-border bg-background p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('kanban')}
+                  aria-pressed={viewMode === 'kanban'}
+                  className={cn(
+                    'flex h-full items-center gap-1.5 rounded-sm px-2.5 text-xs font-medium transition-colors',
+                    viewMode === 'kanban'
+                      ? 'bg-accent/15 text-accent'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" /> Kanban
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('lista')}
+                  aria-pressed={viewMode === 'lista'}
+                  className={cn(
+                    'flex h-full items-center gap-1.5 rounded-sm px-2.5 text-xs font-medium transition-colors',
+                    viewMode === 'lista'
+                      ? 'bg-accent/15 text-accent'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <List className="h-3.5 w-3.5" /> Lista
+                </button>
               </div>
             </div>
           </div>
 
-          {hasAnyFilters && (
-            <div className="mt-2 flex items-center justify-end">
+          {/* Linha 2: filtros lado a lado */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Filtros:
+            </span>
+            <MultiFilter
+              label="Estágio"
+              selected={stageFilter}
+              onChange={(v) => setStageFilter(v as DealStage[])}
+              options={DEAL_STAGES.map((s) => ({ value: s, label: DEAL_STAGE_LABEL[s] }))}
+            />
+            <MultiFilter
+              label="Tipo"
+              selected={projectTypeFilter}
+              onChange={setProjectTypeFilter}
+              options={activeProjectTypes.map((t) => ({ value: t.slug, label: t.name }))}
+            />
+            <MultiFilter
+              label="Dono"
+              selected={ownerFilter}
+              onChange={setOwnerFilter}
+              options={actors.map((a) => ({ value: a.id, label: a.display_name }))}
+            />
+            <MultiFilter
+              label="Origem"
+              selected={sourceFilter}
+              onChange={setSourceFilter}
+              options={[{ value: 'direto', label: 'Direto' }, ...leadSources.map((s) => ({ value: s, label: s }))]}
+            />
+            <ValueRangeFilter value={valueRange} onChange={setValueRange} />
+            {hasAnyFilters && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                className="h-9 text-xs text-muted-foreground hover:text-foreground"
                 onClick={clearAllFilters}
               >
-                Limpar todos os filtros
+                Limpar
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* KPIs */}
@@ -609,7 +602,6 @@ export default function CrmPipeline() {
         }}
         onSuccess={(projectId) => navigate(`/projetos/${projectId}`)}
       />
-      </div>
-    </TooltipProvider>
+    </div>
   );
 }
