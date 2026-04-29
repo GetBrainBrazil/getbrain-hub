@@ -242,7 +242,7 @@ function CompletenessBadge({ pct, painOk, solucaoOk }: { pct: number; painOk: bo
 /* Header                                                              */
 /* ------------------------------------------------------------------ */
 
-export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRequest }: Props) {
+export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onStageChange }: Props) {
   const update = useUpdateDealField(deal.code);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(deal.title);
@@ -279,12 +279,8 @@ export function DealHeader({ deal, completenessPct, painOk, solucaoOk, onCloseRe
   };
 
   const stageChange = (s: DealStage) => {
-    if (s === 'ganho') return onCloseRequest('won');
-    if (s === 'perdido') return onCloseRequest('lost');
-    update.mutate(
-      { id: deal.id, updates: { stage: s, probability_pct: DEAL_STAGE_PROBABILITY[s], closed_at: null } },
-      { onError: (err: any) => toast.error(`Erro: ${err?.message ?? 'falhou'}`) },
-    );
+    if (s === deal.stage) return;
+    onStageChange(s);
   };
 
   const fmtDate = (d: string | null) => d ? new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '—';
