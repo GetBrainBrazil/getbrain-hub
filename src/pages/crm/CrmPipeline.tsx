@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragOverlay, PointerSensor, closestCorners, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { LayoutGrid, List, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ import { CreateProposalForStageDialog } from '@/components/crm/CreateProposalFor
 import { MultiFilter } from '@/components/crm/CrmFilters';
 import {
   DEAL_STAGE_LABEL,
+  DEAL_STAGE_PROBABILITY,
   DEAL_STAGES,
 } from '@/constants/dealStages';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
@@ -36,23 +37,15 @@ const ACTIVE_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'propos
 
 function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: () => void; onCompanyOpen: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
-  // Enquanto arrasta, o item real fica invisível e com altura zero — quem se
-  // move visualmente é o DragOverlay. Isso evita o "snap-back" de 1 frame
-  // quando o usuário solta o card em outra coluna.
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        className="opacity-0 pointer-events-none"
-        style={{ height: 0, margin: 0, overflow: 'hidden' }}
-        aria-hidden
-      />
-    );
-  }
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn('transition-opacity duration-150', isDragging && 'pointer-events-none opacity-0')}
+      style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+      aria-hidden={isDragging}
+    >
       <DealCard deal={deal} onClick={onOpen} onCompanyClick={onCompanyOpen} />
     </div>
   );
