@@ -1,12 +1,12 @@
 import { ArrowRight, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 import { DEAL_STAGE_BAR, DEAL_STAGE_TONE } from '@/constants/dealStages';
-import { PROJECT_TYPE_V2_COLOR, PROJECT_TYPE_V2_LABEL } from '@/constants/dealEnumLabels';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCrmPainCategories } from '@/hooks/crm/useCrmPainCategories';
+import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
-import type { Deal, DealProjectType } from '@/types/crm';
+import type { Deal } from '@/types/crm';
 
 function daysLabel(date: string | null) {
   if (!date) return 'sem previsão';
