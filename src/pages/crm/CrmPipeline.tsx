@@ -61,6 +61,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   const total = deals.reduce((sum, d) => sum + Number(d.estimated_value ?? 0), 0);
   const dotClass = DEAL_STAGE_DOT[stage];
   const toneClass = DEAL_STAGE_TONE[stage]; // border-l-*
+  const textClass = DEAL_STAGE_TEXT[stage];
 
   if (collapsed) {
     return (
@@ -83,7 +84,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
           className="flex flex-1 items-center justify-center"
           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
         >
-          <span className="whitespace-nowrap text-xs font-semibold text-foreground">
+          <span className={cn('whitespace-nowrap text-xs font-semibold', textClass)}>
             {DEAL_STAGE_LABEL[stage]}
           </span>
         </div>
@@ -109,7 +110,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
           <div className="flex min-w-0 items-center gap-2">
             <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', dotClass)} aria-hidden />
             <div className="min-w-0">
-              <h3 className="truncate text-sm font-semibold text-foreground">{DEAL_STAGE_LABEL[stage]}</h3>
+              <h3 className={cn('truncate text-sm font-semibold', textClass)}>{DEAL_STAGE_LABEL[stage]}</h3>
               <p className="text-xs text-muted-foreground">{formatCurrency(total)} · {deals.length} deals</p>
             </div>
           </div>
