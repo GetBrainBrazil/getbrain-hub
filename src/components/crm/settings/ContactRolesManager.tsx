@@ -198,9 +198,9 @@ export function ContactRolesManager({ canEdit }: { canEdit: boolean }) {
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-destructive opacity-0 transition group-hover:opacity-100 disabled:opacity-0"
-                disabled={!canEdit || r.is_system}
+                disabled={!canEdit}
                 onClick={() => handleDelete(r)}
-                title={r.is_system ? "Papéis do sistema só podem ser desativados" : "Remover"}
+                title="Remover"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
