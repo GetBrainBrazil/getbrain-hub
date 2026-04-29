@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Plus, MoreHorizontal } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useCrmProjectTypes, useCreateProjectType, type CrmProjectType } from '@/hooks/crm/useCrmProjectTypes';
+import {
+  useCrmProjectTypes,
+  useCreateProjectType,
+  useProjectTypeUsage,
+  type CrmProjectType,
+} from '@/hooks/crm/useCrmProjectTypes';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -12,177 +15,296 @@ interface Props {
   value: string | null;
   onChange: (slug: string | null) => void;
   disabled?: boolean;
-  /** Quantos chips mostrar inline antes do botão "Mais opções". Default: 5. */
+  /** Quantos chips mostrar inline. Default: 6. */
   inlineLimit?: number;
 }
+
+/** Threshold em que entramos no "modo compacto" (esconde chips, foca na busca). */
+const COMPACT_THRESHOLD = 20;
 
 function bgDot(colorClass?: string | null) {
   if (!colorClass) return 'bg-muted-foreground/40';
   return colorClass.split(' ').find((c) => c.startsWith('bg-')) ?? 'bg-muted-foreground/40';
 }
 
-export function ProjectTypeSelect({ value, onChange, disabled, inlineLimit = 5 }: Props) {
+function normalize(s: string) {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+interface ChipProps {
+  type: CrmProjectType;
+  selected: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  onClear?: () => void;
+}
+
+function TypeChip({ type, selected, disabled, onClick, onClear }: ChipProps) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        'group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-all',
+        selected
+          ? cn(
+              type.color ?? 'bg-muted text-muted-foreground border-border',
+              'shadow-sm ring-2 ring-current/30 ring-offset-1 ring-offset-background',
+            )
+          : 'border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground',
+        disabled && 'cursor-not-allowed opacity-50',
+      )}
+    >
+      <span
+        className={cn(
+          'h-2 w-2 rounded-full transition',
+          selected ? bgDot(type.color) : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/60',
+        )}
+      />
+      <span className="max-w-[14rem] truncate">{type.name}</span>
+      {!type.is_active && <span className="ml-0.5 text-[9px] opacity-60">(inativo)</span>}
+      {selected && onClear ? (
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClear();
+          }}
+          className="ml-0.5 rounded-sm opacity-70 hover:bg-foreground/10 hover:opacity-100"
+          aria-label="Remover seleção"
+        >
+          <X className="h-3 w-3" />
+        </span>
+      ) : selected ? (
+        <Check className="h-3 w-3 opacity-80" />
+      ) : null}
+    </button>
+  );
+}
+
+export function ProjectTypeSelect({ value, onChange, disabled, inlineLimit = 6 }: Props) {
   const { isAdmin } = useAuth();
   const { data: active = [], isLoading } = useCrmProjectTypes({ onlyActive: true });
   const { data: all = [] } = useCrmProjectTypes();
+  const { data: usage = {} } = useProjectTypeUsage();
   const create = useCreateProjectType();
 
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Garante que o item selecionado SEMPRE aparece como chip (mesmo se inativo
-  // ou fora dos primeiros N), pra usuário ver o estado atual sem abrir popover.
+  const compactMode = all.length >= COMPACT_THRESHOLD;
+  const selectedType = value ? all.find((c) => c.slug === value) ?? null : null;
+
+  // Ranking inline: selecionado > top usados > resto pela ordem da tabela
   const inlineChips = useMemo<CrmProjectType[]>(() => {
-    const base = active.slice(0, inlineLimit);
-    if (!value) return base;
-    if (base.find((c) => c.slug === value)) return base;
-    const selected = all.find((c) => c.slug === value);
-    if (!selected) return base;
-    // Se estiver ativo mas fora do limite, troca o último
-    if (selected.is_active) {
-      return [...active.filter((c) => c.slug !== selected.slug).slice(0, inlineLimit - 1), selected];
+    if (compactMode) return selectedType ? [selectedType] : [];
+
+    const sorted = [...active].sort((a, b) => {
+      const ua = usage[a.slug] ?? 0;
+      const ub = usage[b.slug] ?? 0;
+      if (ua !== ub) return ub - ua;
+      return a.display_order - b.display_order;
+    });
+
+    const base = sorted.slice(0, inlineLimit);
+    if (!selectedType) return base;
+    if (base.find((c) => c.slug === selectedType.slug)) return base;
+    if (selectedType.is_active) {
+      return [
+        selectedType,
+        ...sorted.filter((c) => c.slug !== selectedType.slug).slice(0, inlineLimit - 1),
+      ];
     }
-    // Se inativo (histórico), prepende
-    return [selected, ...base];
-  }, [active, all, value, inlineLimit]);
+    return [selectedType, ...base];
+  }, [active, usage, selectedType, inlineLimit, compactMode]);
 
-  const restCount = Math.max(0, active.length - inlineChips.filter((c) => c.is_active).length);
+  // Filtragem por busca (aplica em todos os ativos, não só inline)
+  const term = normalize(query);
+  const filtered = useMemo(() => {
+    if (!term) return null;
+    return active.filter((c) => normalize(c.name).includes(term));
+  }, [term, active]);
 
-  const term = query.trim();
-  const exact = term ? active.find((c) => c.name.toLowerCase() === term.toLowerCase()) : null;
+  const exact = term ? active.find((c) => normalize(c.name) === term) : null;
   const canCreate = !!isAdmin && !!term && !exact;
+
+  // Lista de overflow (para o popover "+N outros")
+  const overflowItems = useMemo(() => {
+    const inlineSlugs = new Set(inlineChips.map((c) => c.slug));
+    return active.filter((c) => !inlineSlugs.has(c.slug));
+  }, [active, inlineChips]);
 
   const handleCreate = async () => {
     if (!canCreate) return;
-    const created = await create.mutateAsync({ name: term });
+    const created = await create.mutateAsync({ name: query.trim() });
     onChange(created.slug);
     setQuery('');
-    setOpen(false);
   };
 
+  const handleSelectFirstFiltered = () => {
+    if (filtered && filtered.length > 0) {
+      onChange(filtered[0].slug);
+      setQuery('');
+      inputRef.current?.blur();
+    } else if (canCreate) {
+      handleCreate();
+    }
+  };
+
+  // Fecha overflow quando começa a digitar (busca já cobre tudo)
+  useEffect(() => {
+    if (term) setOverflowOpen(false);
+  }, [term]);
+
   if (isLoading) {
-    return <div className="h-8 w-48 animate-pulse rounded-md bg-muted/40" />;
+    return <div className="h-16 w-full animate-pulse rounded-md bg-muted/40" />;
   }
 
+  // O que renderizar como chips (ou resultado de busca)
+  const displayChips = filtered ?? inlineChips;
+
   return (
-    <TooltipProvider delayDuration={200}>
+    <div className="space-y-2">
+      {/* Input de busca sempre visível */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          disabled={disabled}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSelectFirstFiltered();
+            } else if (e.key === 'Escape') {
+              setQuery('');
+            }
+          }}
+          placeholder={
+            isAdmin
+              ? compactMode
+                ? `Buscar entre ${active.length} tipos ou criar novo...`
+                : 'Buscar tipo ou digitar para criar...'
+              : compactMode
+                ? `Buscar entre ${active.length} tipos...`
+                : 'Buscar tipo...'
+          }
+          className={cn(
+            'h-8 w-full rounded-md border border-border bg-background pl-8 pr-8 text-xs outline-none transition',
+            'placeholder:text-muted-foreground/70 focus:border-primary/50 focus:ring-1 focus:ring-primary/30',
+            disabled && 'cursor-not-allowed opacity-50',
+          )}
+          aria-label="Buscar tipo de projeto"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Limpar busca"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      {/* Linha de chips */}
       <div className="flex flex-wrap items-center gap-1.5">
-        {inlineChips.map((cat) => {
+        {displayChips.length === 0 && term && (
+          <div className="flex w-full items-center justify-between rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+            <span>Nenhum tipo encontrado.</span>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={handleCreate}
+                className="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10"
+              >
+                <Plus className="h-3 w-3" /> Criar "{query.trim()}"
+              </button>
+            )}
+          </div>
+        )}
+
+        {displayChips.map((cat) => {
           const selected = cat.slug === value;
           return (
-            <button
+            <TypeChip
               key={cat.slug}
-              type="button"
+              type={cat}
+              selected={selected}
               disabled={disabled}
               onClick={() => onChange(selected ? null : cat.slug)}
-              className={cn(
-                'group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-all',
-                selected
-                  ? cn(cat.color ?? 'bg-muted text-muted-foreground border-border', 'ring-2 ring-offset-1 ring-offset-background ring-current/40 shadow-sm')
-                  : 'border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground',
-                disabled && 'cursor-not-allowed opacity-50',
-              )}
-              aria-pressed={selected}
-            >
-              <span
-                className={cn(
-                  'h-2 w-2 rounded-full transition',
-                  selected ? bgDot(cat.color) : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/60',
-                )}
-              />
-              <span>{cat.name}</span>
-              {selected && <Check className="h-3 w-3 opacity-80" />}
-              {!cat.is_active && (
-                <span className="ml-0.5 text-[9px] opacity-60">(inativo)</span>
-              )}
-            </button>
+              onClear={selected ? () => onChange(null) : undefined}
+            />
           );
         })}
 
-        {/* Botão "Mais opções / criar" */}
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={disabled}
-                  className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                  {restCount > 0 ? `Mais ${restCount}` : isAdmin ? 'Criar novo' : 'Buscar'}
-                  <ChevronDown className="h-3 w-3 opacity-60" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {isAdmin ? 'Buscar tipo ou criar um novo' : 'Buscar entre todos os tipos'}
-              </TooltipContent>
-            </Tooltip>
-          </PopoverTrigger>
-          <PopoverContent className="w-72 p-0" align="start" sideOffset={6}>
-            <Command shouldFilter>
-              <CommandInput
-                placeholder={isAdmin ? 'Buscar ou digitar para criar...' : 'Buscar tipo...'}
-                value={query}
-                onValueChange={setQuery}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && canCreate) {
-                    e.preventDefault();
-                    handleCreate();
-                  }
-                }}
-              />
-              <CommandList>
-                <CommandEmpty>
-                  {canCreate ? (
-                    <button
-                      type="button"
-                      onClick={handleCreate}
-                      className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Plus className="h-4 w-4" /> Criar tipo "{term}"
-                    </button>
-                  ) : (
-                    <span className="block px-2 py-3 text-center text-sm text-muted-foreground">
-                      {isAdmin ? 'Digite para criar um novo' : 'Nenhum tipo — peça a um admin para criar'}
-                    </span>
-                  )}
-                </CommandEmpty>
-                {active.length > 0 && (
-                  <CommandGroup heading="Tipos disponíveis">
-                    {active.map((cat) => {
-                      const selected = cat.slug === value;
-                      return (
-                        <CommandItem
-                          key={cat.slug}
-                          value={cat.name}
-                          onSelect={() => {
-                            onChange(selected ? null : cat.slug);
-                            setOpen(false);
-                          }}
-                        >
-                          <span className={cn('mr-2 h-2 w-2 rounded-full', bgDot(cat.color))} />
-                          <span className="flex-1 truncate">{cat.name}</span>
-                          {selected && <Check className="h-4 w-4 opacity-80" />}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                )}
-                {canCreate && active.length > 0 && (
-                  <CommandGroup heading="Criar novo">
-                    <CommandItem value={`__create__${term}`} onSelect={handleCreate}>
-                      <Plus className="mr-2 h-4 w-4" /> Criar "{term}"
-                    </CommandItem>
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        {/* "+N outros" — só quando NÃO está buscando e há overflow */}
+        {!term && overflowItems.length > 0 && (
+          <Popover open={overflowOpen} onOpenChange={setOverflowOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                +{overflowItems.length} {overflowItems.length === 1 ? 'outro' : 'outros'}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-3" align="start" sideOffset={6}>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Todos os tipos ({active.length})
+              </div>
+              <div className="flex max-h-[280px] flex-wrap gap-1.5 overflow-y-auto pr-1">
+                {active.map((cat) => {
+                  const selected = cat.slug === value;
+                  return (
+                    <TypeChip
+                      key={cat.slug}
+                      type={cat}
+                      selected={selected}
+                      disabled={disabled}
+                      onClick={() => {
+                        onChange(selected ? null : cat.slug);
+                        setOverflowOpen(false);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              {isAdmin && (
+                <div className="mt-2 border-t border-border pt-2 text-[10px] text-muted-foreground">
+                  Para criar um novo tipo, digite o nome no campo de busca acima.
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {/* Sugestão de criar quando há busca ativa e nenhuma correspondência exata */}
+        {term && filtered && filtered.length > 0 && canCreate && (
+          <button
+            type="button"
+            onClick={handleCreate}
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-primary/40 px-2 text-xs font-medium text-primary hover:bg-primary/10"
+          >
+            <Plus className="h-3 w-3" /> Criar "{query.trim()}"
+          </button>
+        )}
       </div>
-    </TooltipProvider>
+    </div>
   );
 }
