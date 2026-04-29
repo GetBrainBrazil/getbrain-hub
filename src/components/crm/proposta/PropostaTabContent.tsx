@@ -63,6 +63,10 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   );
   const [validUntil, setValidUntil] = useState(proposal.valid_until);
   const [saving, setSaving] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
+  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string } | null>(null);
 
   useEffect(() => {
     setItems(proposal.scope_items ?? []);
@@ -119,19 +123,18 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
     }
   }
 
-  async function handleSend() {
+  async function handleOpenSend() {
     if (items.length === 0) {
       toast.error('Adicione pelo menos um item antes de enviar');
       return;
     }
-    const ok = await confirm({
-      title: 'Marcar como enviada?',
-      description: 'A proposta passa pra status "enviada". Edições continuam permitidas.',
-      confirmLabel: 'Marcar como enviada',
-    });
-    if (!ok) return;
-    await persist({ status: 'enviada', sent_at: new Date().toISOString() });
-    toast.success('Proposta enviada');
+    if (!validUntil) {
+      toast.error('Defina a validade antes de enviar');
+      return;
+    }
+    // Garante que itens recentes estejam persistidos antes de exigir senha
+    await persist();
+    setSendDialogOpen(true);
   }
 
   async function handleAccept() {
