@@ -51,9 +51,10 @@ export async function createDraftProposal({
       company_id: companyId,
       status: "rascunho",
       client_company_name: companyName,
-      scope_items: scopeItems,
+      scope_items: scopeItems, // legado — mantido por compat com PDF preview
       maintenance_monthly_value: maintenanceMonthly,
       valid_until: validUntil,
+      expires_at: validUntil,
       created_by: uid,
       updated_by: uid,
     })
@@ -61,5 +62,21 @@ export async function createDraftProposal({
     .single();
 
   if (error) throw error;
-  return (data as any).id as string;
+  const proposalId = (data as any).id as string;
+
+  // Espelha em proposal_items (tabela canônica do schema 10A)
+  if (scopeItems.length > 0) {
+    const itemRows = scopeItems.map((it, i) => ({
+      proposal_id: proposalId,
+      description: it.title,
+      quantity: 1,
+      unit_price: it.value,
+      order_index: i,
+      created_by: uid,
+      updated_by: uid,
+    }));
+    await supabase.from("proposal_items" as any).insert(itemRows);
+  }
+
+  return proposalId;
 }
