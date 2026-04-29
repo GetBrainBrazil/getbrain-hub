@@ -57,6 +57,7 @@ import PapeisContatoPage from "./pages/configuracoes/pessoas/PapeisContatoPage";
 import OrigensLeadPage from "./pages/configuracoes/pessoas/OrigensLeadPage";
 import CargosPage from "./pages/configuracoes/pessoas/CargosPage";
 import CategoriasDorPage from "./pages/configuracoes/pessoas/CategoriasDorPage";
+import TiposProjetoPage from "./pages/configuracoes/pessoas/TiposProjetoPage";
 import FinContasPage from "./pages/configuracoes/financeiro/FinContasPage";
 import FinCategoriasPage from "./pages/configuracoes/financeiro/FinCategoriasPage";
 import FinCentrosPage from "./pages/configuracoes/financeiro/FinCentrosPage";
@@ -155,6 +156,7 @@ const App = () => (
               <Route path="pessoas/papeis-contato" element={<PapeisContatoPage />} />
               <Route path="pessoas/origens" element={<OrigensLeadPage />} />
               <Route path="pessoas/categorias-dor" element={<CategoriasDorPage />} />
+              <Route path="pessoas/tipos-projeto" element={<TiposProjetoPage />} />
               <Route path="pessoas/cargos" element={<CargosPage />} />
               <Route path="financeiro/contas" element={<FinContasPage />} />
               <Route path="financeiro/categorias" element={<FinCategoriasPage />} />
