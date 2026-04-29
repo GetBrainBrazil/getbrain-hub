@@ -140,6 +140,10 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   const [mrrDiscountEnabled, setMrrDiscountEnabled] = useState(false);
   const [mrrDiscountMonths, setMrrDiscountMonths] = useState<string>('3');
   const [mrrDiscountValue, setMrrDiscountValue] = useState<string>('');
+  const [mrrDiscountKind, setMrrDiscountKind] = useState<'months' | 'until_date' | 'until_stage'>('months');
+  const [mrrDiscountUntilDate, setMrrDiscountUntilDate] = useState<string>('');
+  const [mrrDiscountUntilStage, setMrrDiscountUntilStage] = useState<string>('');
+  const [mrrStartTrigger, setMrrStartTrigger] = useState<'on_delivery' | 'before_delivery' | ''>('');
 
   // Desconto promocional (sobre implementação)
   const [discountEnabled, setDiscountEnabled] = useState(false);
