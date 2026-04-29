@@ -444,8 +444,20 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         estimated_mrr_value: mrrEnabled ? Number(mrrValue) || null : null,
         mrr_start_date: mrrEnabled && mrrStartDate ? mrrStartDate : null,
         mrr_duration_months: mrrEnabled && !mrrIndefinite ? (parseInt(mrrDuration, 10) || null) : null,
-        mrr_discount_months: mrrEnabled && mrrDiscountEnabled ? (parseInt(mrrDiscountMonths, 10) || null) : null,
+        mrr_discount_months:
+          mrrEnabled && mrrDiscountEnabled && mrrDiscountKind === 'months'
+            ? (parseInt(mrrDiscountMonths, 10) || null) : null,
         mrr_discount_value: mrrEnabled && mrrDiscountEnabled ? (Number(mrrDiscountValue) || null) : null,
+        mrr_discount_kind: mrrEnabled && mrrDiscountEnabled ? mrrDiscountKind : null,
+        mrr_discount_until_date:
+          mrrEnabled && mrrDiscountEnabled && mrrDiscountKind === 'until_date'
+            ? (mrrDiscountUntilDate || null) : null,
+        mrr_discount_until_stage:
+          mrrEnabled && mrrDiscountEnabled && mrrDiscountKind === 'until_stage'
+            ? (mrrDiscountUntilStage || null) : null,
+        mrr_start_trigger: mrrEnabled && mrrStartTrigger ? mrrStartTrigger : null,
+        installments_count: parseInt(installmentsN, 10) || null,
+        first_installment_date: firstDueDate || null,
       };
       await sb.from('deals').update(dealPatch).eq('id', deal.id);
 
@@ -466,13 +478,23 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         conta_bancaria_id: contaId || null,
         meio_pagamento_id: meioId || null,
         extra_costs: dealPatch.extra_costs,
+        mrr_start_trigger: dealPatch.mrr_start_trigger,
       };
       if (mrrEnabled) {
         projectData.mrr_value = Number(mrrValue);
         projectData.mrr_start_date = mrrStartDate;
         if (!mrrIndefinite) projectData.mrr_duration_months = parseInt(mrrDuration, 10);
         if (mrrDiscountEnabled) {
-          projectData.mrr_discount_months = parseInt(mrrDiscountMonths, 10);
+          if (mrrDiscountKind === 'months') {
+            projectData.mrr_discount_months = parseInt(mrrDiscountMonths, 10);
+          }
+          if (mrrDiscountKind === 'until_date' && mrrDiscountUntilDate) {
+            projectData.mrr_discount_until_date = mrrDiscountUntilDate;
+          }
+          if (mrrDiscountKind === 'until_stage' && mrrDiscountUntilStage) {
+            projectData.mrr_discount_until_stage = mrrDiscountUntilStage;
+          }
+          projectData.mrr_discount_kind = mrrDiscountKind;
           projectData.mrr_discount_value = Number(mrrDiscountValue) || Number(mrrValue);
         }
       }
