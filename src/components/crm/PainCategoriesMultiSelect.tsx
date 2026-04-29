@@ -50,28 +50,33 @@ export function PainCategoriesMultiSelect({ value, onChange, disabled }: Props) 
       {/* Chips selecionados */}
       {selectedItems.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {selectedItems.map((cat) => (
-            <span
-              key={cat.slug}
-              className={cn(
-                'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium',
-                cat.color ?? 'bg-muted text-muted-foreground border-border',
-              )}
-            >
-              {cat.name}
-              {!cat.is_active && <span className="text-[9px] opacity-70">(inativa)</span>}
-              {!disabled && (
-                <button
-                  type="button"
-                  onClick={() => remove(cat.slug)}
-                  className="ml-0.5 rounded-sm hover:bg-foreground/10"
-                  aria-label={`Remover ${cat.name}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </span>
-          ))}
+          {selectedItems.map((cat) => {
+            const dot = cat.color?.split(' ').find((c) => c.startsWith('bg-')) ?? 'bg-muted-foreground/40';
+            return (
+              <span
+                key={cat.slug}
+                className={cn(
+                  'group inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm',
+                  cat.color ?? 'bg-muted text-muted-foreground border-border',
+                )}
+              >
+                <span className={cn('h-2 w-2 rounded-full', dot)} />
+                <span className="max-w-[16rem] truncate">{cat.name}</span>
+                {!cat.is_active && <span className="text-[9px] opacity-70">(inativa)</span>}
+                <Check className="h-3 w-3 opacity-80" />
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => remove(cat.slug)}
+                    className="ml-0.5 rounded-sm opacity-70 hover:bg-foreground/10 hover:opacity-100"
+                    aria-label={`Remover ${cat.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -83,14 +88,15 @@ export function PainCategoriesMultiSelect({ value, onChange, disabled }: Props) 
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="w-full justify-between font-normal text-muted-foreground"
+            size="sm"
+            className="h-8 w-full justify-between text-xs font-normal text-muted-foreground"
           >
             <span className="truncate">
               {selectedItems.length === 0
                 ? 'Selecionar categorias de dor...'
                 : `${selectedItems.length} selecionada${selectedItems.length > 1 ? 's' : ''} — adicionar mais`}
             </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start" sideOffset={4}>
