@@ -20,6 +20,7 @@ import { ZoneComercial } from '@/components/crm/ZoneComercial';
 import { ZoneDependencias } from '@/components/crm/ZoneDependencias';
 import { PropostaTabContent } from '@/components/crm/proposta/PropostaTabContent';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
+import { PainCategoryCombobox } from '@/components/crm/PainCategoryCombobox';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
   PAIN_CATEGORY_LABEL, PAIN_CATEGORY_OPTIONS, PAIN_CATEGORY_COLOR,
