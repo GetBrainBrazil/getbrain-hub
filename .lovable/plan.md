@@ -1,56 +1,37 @@
-## Objetivo
+## Problema
 
-Fazer o seletor "Quando começa a cobrar" do MRR (modal de fechar deal) realmente controlar duas coisas:
+Os 4 KPIs no topo de `/crm/pipeline` ("Pipeline total", "Forecast ponderado", "Deals ativos", "Deps atrasadas") têm dois problemas:
 
-1. **"Na entrega da implementação"** → o início efetivo da cobrança do MRR fica suspenso até que o projeto correspondente seja movido para o status `entregue` na tela `/projetos`. Nesse momento, automaticamente, a recorrência MRR começa a ser cobrada (ativada e com `start_date` ajustada para a data real de entrega).
-2. **"Antes da entrega"** → libera/exibe um campo de **data de início da cobrança** (já existe no topo do bloco MRR, mas hoje aparece sempre). Esse campo só deve aparecer quando essa opção for selecionada.
-3. Quando **"Na entrega da implementação"** estiver selecionado, o campo "Início" da cobrança MRR deve **sumir** (a data será definida automaticamente pelo backend na entrega).
+1. **Não respondem aos filtros** — são calculados a partir de `rawDeals.filter(active)`, ignorando os filtros de Estágio, Tipo, Dono, Origem, Valor e Busca aplicados na página.
+2. **Pouco acionáveis** — "Deals ativos" é só uma contagem repetida das colunas; "Deps atrasadas" é um indicador secundário que faz mais sentido por card do que como KPI agregado.
 
-## Mudanças no UI (`src/components/crm/DealWonDialog.tsx`)
+## Novos KPIs (mais práticos para análise diária do CRM)
 
-- Reorganizar o bloco MRR para que o seletor **"Quando começa a cobrar"** venha **antes** do campo "Início".
-- Tornar o campo **"Início"** condicional:
-  - Mostrar somente se `mrrStartTrigger === 'before_delivery'`.
-  - Esconder se `mrrStartTrigger === 'on_delivery'` (mostrar uma linha informativa: "A cobrança começará automaticamente quando o projeto for marcado como Entregue.").
-- Ajustar a validação (linha 612): só exigir `mrrStartDate` quando trigger for `before_delivery`. Para `on_delivery`, não exigir.
-- Ao salvar:
-  - Se `on_delivery`: enviar `mrr_start_date = null` e gravar a recorrência criada como **inativa/pendente** (status `pausada`) até a entrega.
-  - Se `before_delivery`: comportamento atual (cria ativa com a data informada).
+Manter 4 cards (mesmo grid `md:grid-cols-4`), trocando a composição:
 
-## Mudanças no backend (migration nova)
+1. **Pipeline** — soma de `estimated_value` dos deals **visíveis** (após filtros).
+2. **Forecast ponderado** — `Σ(estimated_value × probability_pct/100)` dos visíveis. Tom `accent` (cyan) — métrica chave de previsão.
+3. **Ticket médio** — `pipeline / nº de deals visíveis com valor > 0`. Substitui "Deals ativos" — mais útil para entender o porte da carteira filtrada.
+4. **Próximo passo atrasado** — quantos deals visíveis têm `next_step_date < hoje`. Substitui "Deps atrasadas" — é um alerta acionável que aparece no próprio dia a dia (qual deal está parado). Tom `destructive` quando > 0.
 
-### A) `close_deal_as_won` (atualizar a recorrência MRR)
+Cada card mostra também um sub-rótulo discreto com o **nº total de deals visíveis** (ex.: "12 deals" abaixo do valor de Pipeline) para dar contexto, especialmente quando o usuário aplica filtros.
 
-Quando `mrr_start_trigger = 'on_delivery'` ao criar a `financial_recurrences` do MRR:
-- Inserir com `status = 'pausada'` (em vez de `'ativa'`).
-- `start_date` fica como placeholder (ex.: `CURRENT_DATE`) mas a recorrência fica pausada — não gera movimentações até ativação.
-- Marcar `commercial_context.mrr_start_trigger = 'on_delivery'` no projeto (já é feito).
+## Reatividade aos filtros
 
-### B) Novo trigger `activate_mrr_on_delivery`
+O `useMemo` `homeKpis` passa a depender de:
+- `listDeals` quando `viewMode === 'lista'` (já respeita o comportamento de ocultar fechados quando não há filtro de estágio).
+- `filteredDeals` quando `viewMode === 'kanban'` (representa o que está visível nas colunas, incluindo ganhos/perdidos se filtrados).
 
-Trigger `AFTER UPDATE OF status ON public.projects` que, quando `NEW.status = 'entregue'` e `OLD.status` era diferente:
-- Para cada `financial_recurrences` com `projeto_id = NEW.id`, `type = 'recorrente'`, `direction = 'entrada'`, `status = 'pausada'` e cujo deal de origem tenha `mrr_start_trigger = 'on_delivery'` (ou marcador equivalente no `commercial_context` do projeto):
-  - Atualizar `start_date = NEW.actual_delivery_date` (ou `CURRENT_DATE` se nulo).
-  - Atualizar `status = 'ativa'`.
-  - `updated_at = now()`.
-
-Para identificar o vínculo com `on_delivery`, ler de `projects.commercial_context->>'mrr_start_trigger'` (já gravado pela função `close_deal_as_won`), evitando depender de FK do deal.
-
-### C) Garantir `actual_delivery_date`
-
-Adicionar trigger leve em `projects` para preencher `actual_delivery_date = CURRENT_DATE` automaticamente quando o status muda para `entregue` e o campo está vazio (caso ainda não exista esse comportamento).
-
-## Comunicação ao usuário
-
-Adicionar um pequeno banner informativo no bloco MRR quando `on_delivery` estiver selecionado:
-> "A cobrança da manutenção começará automaticamente quando este projeto for movido para a coluna **Entregue**."
+Assim, ao alternar Estágio / Tipo / Dono / Origem / faixa de Valor / Busca, os 4 KPIs recalculam em tempo real para refletir exatamente o que está na tela.
 
 ## Arquivos afetados
 
-- `src/components/crm/DealWonDialog.tsx` — UI condicional + validação.
-- Nova migration SQL — atualiza `close_deal_as_won` (status pausada quando on_delivery) + cria trigger `activate_mrr_on_delivery` + trigger de `actual_delivery_date`.
+- `src/pages/crm/CrmPipeline.tsx`:
+  - Reescrever `homeKpis` (linhas ~229–240) para usar `listDeals`/`filteredDeals` e calcular os 4 novos KPIs.
+  - Atualizar a grid de KPIs (linhas ~524–529) com os novos rótulos, tons e sub-rótulos.
+  - Estender `HomeKpi` (linha 142) para aceitar `hint?: string` opcional renderizado em fonte menor abaixo do valor.
 
 ## Fora do escopo
 
-- Não alterar o fluxo de parcelas de implementação.
-- Não alterar lógica de descontos MRR (`until_stage` continua funcionando independentemente).
+- Não remover `useDealsIndicators` — ainda é usado por `DealsList` para mostrar deps atrasadas por card.
+- Não alterar a lógica de filtros nem a estrutura do Kanban/Lista.

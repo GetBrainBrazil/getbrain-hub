@@ -139,7 +139,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   );
 }
 
-function HomeKpi({ label, value, tone }: { label: string; value: string; tone?: 'destructive' | 'success' | 'accent' }) {
+function HomeKpi({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: 'destructive' | 'success' | 'accent' }) {
   return (
     <div className="rounded-lg border border-border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3">
       <p className="text-[10px] sm:text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -150,6 +150,7 @@ function HomeKpi({ label, value, tone }: { label: string; value: string; tone?: 
         tone === 'accent' && 'text-accent',
         !tone && 'text-foreground',
       )}>{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
