@@ -204,72 +204,129 @@ interface FinCardProps {
 }
 
 function FinanceCategorizationCard(p: FinCardProps) {
-  const accent = p.tone === 'expense' ? 'border-destructive/30' : 'border-primary/30';
+  const isExpense = p.tone === 'expense';
+  const accentBorder = isExpense ? 'border-destructive/25' : 'border-primary/25';
+  const accentBg = isExpense ? 'bg-destructive/[0.03]' : 'bg-primary/[0.03]';
+  const accentIconBg = isExpense ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary';
+  const filled = [p.categoriaId, p.centroId, p.contaId, p.meioId].filter(Boolean).length;
+
+  const fieldRow = (
+    label: string,
+    value: string,
+    Icon: React.ComponentType<{ className?: string }>,
+    combo: React.ReactNode,
+  ) => (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <Icon className="h-3 w-3" />
+          {label}
+        </Label>
+        {value && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+      </div>
+      {combo}
+    </div>
+  );
+
   return (
-    <div className={cn('rounded-lg border bg-muted/10 p-3 space-y-2', accent)}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className={cn('rounded-xl border overflow-hidden', accentBorder, accentBg)}>
+      <div className={cn(
+        'flex items-center justify-between gap-2 border-b px-3 py-2',
+        accentBorder,
+      )}>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md', accentIconBg)}>
             <Settings2 className="h-3.5 w-3.5" />
-            {p.title}
           </div>
-          {p.subtitle && <p className="text-[11px] text-muted-foreground mt-0.5">{p.subtitle}</p>}
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground truncate">
+              {p.title}
+            </div>
+            {p.subtitle && (
+              <p className="text-[10px] leading-tight text-muted-foreground truncate">{p.subtitle}</p>
+            )}
+          </div>
         </div>
+        <Badge
+          variant="outline"
+          className={cn(
+            'shrink-0 gap-1 px-1.5 py-0 text-[10px] font-semibold',
+            filled === 4
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              : filled > 0
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : 'border-border text-muted-foreground',
+          )}
+        >
+          {filled === 4 && <CheckCircle2 className="h-2.5 w-2.5" />}
+          {filled}/4
+        </Badge>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground">
-            Categoria {p.tone === 'expense' ? 'de despesa' : 'de receita'}
-          </Label>
+      <div className="grid gap-3 p-3 sm:grid-cols-2">
+        {fieldRow(
+          isExpense ? 'Categoria de despesa' : 'Categoria de receita',
+          p.categoriaId,
+          FolderOpen,
           <ComboboxCreate
             value={p.categoriaId}
             options={toComboOptions(p.categorias)}
             onChange={p.setCategoriaId}
             onCreate={p.onCreateCategoria}
-            placeholder="Selecionar ou digitar para criar…"
-            searchPlaceholder="Buscar ou digitar para criar…"
+            placeholder="Selecionar ou criar…"
+            searchPlaceholder="Buscar ou criar…"
             createLabel={(t) => `+ Criar categoria "${t}"`}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground">Centro de custo</Label>
+          />,
+        )}
+        {fieldRow(
+          'Centro de custo',
+          p.centroId,
+          Wallet,
           <ComboboxCreate
             value={p.centroId}
             options={toComboOptions(p.centros)}
             onChange={p.setCentroId}
             onCreate={p.onCreateCentro}
-            placeholder="Selecionar ou digitar para criar…"
-            searchPlaceholder="Buscar ou digitar para criar…"
+            placeholder="Selecionar ou criar…"
+            searchPlaceholder="Buscar ou criar…"
             createLabel={(t) => `+ Criar centro "${t}"`}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground">Conta bancária</Label>
+          />,
+        )}
+        {fieldRow(
+          'Conta bancária',
+          p.contaId,
+          Banknote,
           <ComboboxCreate
             value={p.contaId}
             options={toComboOptions(p.contas)}
             onChange={p.setContaId}
             onCreate={p.onCreateConta}
-            placeholder="Selecionar ou digitar para criar…"
-            searchPlaceholder="Buscar ou digitar para criar…"
+            placeholder="Selecionar ou criar…"
+            searchPlaceholder="Buscar ou criar…"
             createLabel={(t) => `+ Criar conta "${t}"`}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground">Meio de pagamento</Label>
+          />,
+        )}
+        {fieldRow(
+          'Meio de pagamento',
+          p.meioId,
+          Repeat,
           <ComboboxCreate
             value={p.meioId}
             options={toComboOptions(p.meios)}
             onChange={p.setMeioId}
             onCreate={p.onCreateMeio}
-            placeholder="Selecionar ou digitar para criar…"
-            searchPlaceholder="Buscar ou digitar para criar…"
+            placeholder="Selecionar ou criar…"
+            searchPlaceholder="Buscar ou criar…"
             createLabel={(t) => `+ Criar meio "${t}"`}
-          />
-        </div>
+          />,
+        )}
       </div>
-      {p.hint && <p className="text-[11px] text-muted-foreground">{p.hint}</p>}
+
+      {p.hint && (
+        <p className="border-t border-border/40 bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground">
+          {p.hint}
+        </p>
+      )}
     </div>
   );
 }
