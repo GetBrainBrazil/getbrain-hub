@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Loader2, Plus, Trash2, ArrowRight, ArrowLeft,
   Repeat, Percent, Wallet, FolderOpen, Banknote,
   ClipboardCheck, AlertTriangle, CheckCircle2, Settings2,
-  Link2, FileText,
+  Link2, FileText, ChevronDown, ChevronRight, Sparkles, FileSearch,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -120,6 +122,49 @@ function loadDefaults(key: string): FinDefaults {
 
 function saveDefaults(key: string, def: FinDefaults) {
   try { localStorage.setItem(key, JSON.stringify(def)); } catch {}
+}
+
+// ============== Draft (rascunho do modal por deal) ==============
+const DRAFT_VERSION = 1;
+const draftKey = (dealId: string) => `crm.dealWonDraft:${dealId}`;
+
+interface DealWonDraft {
+  __v: number;
+  savedAt: string;
+  step: 'projeto' | 'receita' | 'custos' | 'revisao';
+  projectName: string;
+  projectTypeSlugs: string[];
+  painCategorySlugs: string[];
+  startDate: string;
+  estimatedDelivery: string;
+  installmentsN: string;
+  firstDueDate: string;
+  installments: InstallmentDraft[];
+  implCategoriaId: string; implCentroId: string; implContaId: string; implMeioId: string;
+  mrrCategoriaId: string; mrrCentroId: string; mrrContaId: string; mrrMeioId: string;
+  extraCategoriaId: string; extraCentroId: string; extraContaId: string; extraMeioId: string;
+  mrrEnabled: boolean; mrrValue: string; mrrStartDate: string; mrrIndefinite: boolean;
+  mrrDuration: string; mrrDiscountEnabled: boolean; mrrDiscountMonths: string;
+  mrrDiscountValue: string; mrrDiscountKind: 'months' | 'until_date' | 'until_stage';
+  mrrDiscountUntilDate: string; mrrDiscountUntilStage: string;
+  mrrStartTrigger: 'on_delivery' | 'before_delivery' | '';
+  discountEnabled: boolean; discountKind: 'percent' | 'fixed';
+  discountAmount: string; discountValidUntil: string; discountNotes: string;
+  extraCosts: ExtraCostDraft[];
+}
+
+function readDraft(dealId: string): DealWonDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(dealId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.__v !== DRAFT_VERSION) return null;
+    return parsed as DealWonDraft;
+  } catch { return null; }
+}
+
+function clearDraft(dealId: string) {
+  try { localStorage.removeItem(draftKey(dealId)); } catch {}
 }
 
 const RECURRENCE_LABEL: Record<ExtraCostDraft['recurrence'], string> = {
@@ -408,11 +453,21 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setExtraMeioId('');
   }
 
+  // ============== Draft (rascunho) ==============
+  const [draftRestored, setDraftRestored] = useState(false);
+  const restoreDraftRef = useRef<DealWonDraft | null>(null);
+  const skipNextAutosaveRef = useRef(true);
+
   useEffect(() => {
     if (!open) return;
-    setStep('projeto');
+    // Tenta carregar draft antes do pré-preenchimento
+    const dft = deal ? readDraft(deal.id) : null;
+    restoreDraftRef.current = dft;
+    setDraftRestored(Boolean(dft));
+    skipNextAutosaveRef.current = true;
+    setStep(dft?.step ?? 'projeto');
     reloadFinanceLists();
-  }, [open]);
+  }, [open, deal?.id]);
 
   // ============== Pré-preencher do deal ==============
   const proposalTotal = useMemo(
@@ -427,6 +482,52 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   useEffect(() => {
     if (!open || !deal) return;
+
+    const dft = restoreDraftRef.current;
+    if (dft) {
+      // Restaura tudo do rascunho
+      setProjectName(dft.projectName);
+      setProjectTypeSlugs(dft.projectTypeSlugs);
+      setPainCategorySlugs(dft.painCategorySlugs);
+      setStartDate(dft.startDate);
+      setEstimatedDelivery(dft.estimatedDelivery);
+      setInstallmentsN(dft.installmentsN);
+      setFirstDueDate(dft.firstDueDate);
+      setInstallments(dft.installments);
+      setMrrEnabled(dft.mrrEnabled);
+      setMrrValue(dft.mrrValue);
+      setMrrStartDate(dft.mrrStartDate);
+      setMrrIndefinite(dft.mrrIndefinite);
+      setMrrDuration(dft.mrrDuration);
+      setMrrDiscountEnabled(dft.mrrDiscountEnabled);
+      setMrrDiscountKind(dft.mrrDiscountKind);
+      setMrrDiscountMonths(dft.mrrDiscountMonths);
+      setMrrDiscountValue(dft.mrrDiscountValue);
+      setMrrDiscountUntilDate(dft.mrrDiscountUntilDate);
+      setMrrDiscountUntilStage(dft.mrrDiscountUntilStage);
+      setMrrStartTrigger(dft.mrrStartTrigger);
+      setDiscountEnabled(dft.discountEnabled);
+      setDiscountKind(dft.discountKind);
+      setDiscountAmount(dft.discountAmount);
+      setDiscountValidUntil(dft.discountValidUntil);
+      setDiscountNotes(dft.discountNotes);
+      setExtraCosts(dft.extraCosts);
+      // Categorizações também (mas só sobrescreve se não-vazio para não atropelar defaults globais que carregam async)
+      if (dft.implCategoriaId) setImplCategoriaId(dft.implCategoriaId);
+      if (dft.implCentroId) setImplCentroId(dft.implCentroId);
+      if (dft.implContaId) setImplContaId(dft.implContaId);
+      if (dft.implMeioId) setImplMeioId(dft.implMeioId);
+      if (dft.mrrCategoriaId) setMrrCategoriaId(dft.mrrCategoriaId);
+      if (dft.mrrCentroId) setMrrCentroId(dft.mrrCentroId);
+      if (dft.mrrContaId) setMrrContaId(dft.mrrContaId);
+      if (dft.mrrMeioId) setMrrMeioId(dft.mrrMeioId);
+      if (dft.extraCategoriaId) setExtraCategoriaId(dft.extraCategoriaId);
+      if (dft.extraCentroId) setExtraCentroId(dft.extraCentroId);
+      if (dft.extraContaId) setExtraContaId(dft.extraContaId);
+      if (dft.extraMeioId) setExtraMeioId(dft.extraMeioId);
+      restoreDraftRef.current = null;
+      return;
+    }
 
     setProjectName(deal.title);
     setProjectTypeSlugs(deal.project_type_v2 ?? []);
@@ -511,9 +612,82 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     .filter((e) => e.recurrence === 'monthly')
     .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
+  const onceExtras = extraCosts
+    .filter((e) => e.recurrence === 'once')
+    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  const yearlyExtras = extraCosts
+    .filter((e) => e.recurrence === 'yearly')
+    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
   const mrrDiscountInvalid =
     mrrEnabled && mrrDiscountEnabled &&
     Number(mrrDiscountValue) > 0 && Number(mrrDiscountValue) >= Number(mrrValue);
+
+  // ============== Autosave do rascunho ==============
+  useEffect(() => {
+    if (!open || !deal) return;
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      const draft: DealWonDraft = {
+        __v: DRAFT_VERSION,
+        savedAt: new Date().toISOString(),
+        step,
+        projectName, projectTypeSlugs, painCategorySlugs, startDate, estimatedDelivery,
+        installmentsN, firstDueDate, installments,
+        implCategoriaId, implCentroId, implContaId, implMeioId,
+        mrrCategoriaId, mrrCentroId, mrrContaId, mrrMeioId,
+        extraCategoriaId, extraCentroId, extraContaId, extraMeioId,
+        mrrEnabled, mrrValue, mrrStartDate, mrrIndefinite, mrrDuration,
+        mrrDiscountEnabled, mrrDiscountMonths, mrrDiscountValue, mrrDiscountKind,
+        mrrDiscountUntilDate, mrrDiscountUntilStage, mrrStartTrigger,
+        discountEnabled, discountKind, discountAmount, discountValidUntil, discountNotes,
+        extraCosts,
+      };
+      try { localStorage.setItem(draftKey(deal.id), JSON.stringify(draft)); } catch {}
+    }, 400);
+    return () => clearTimeout(t);
+  }, [
+    open, deal?.id, step,
+    projectName, projectTypeSlugs, painCategorySlugs, startDate, estimatedDelivery,
+    installmentsN, firstDueDate, installments,
+    implCategoriaId, implCentroId, implContaId, implMeioId,
+    mrrCategoriaId, mrrCentroId, mrrContaId, mrrMeioId,
+    extraCategoriaId, extraCentroId, extraContaId, extraMeioId,
+    mrrEnabled, mrrValue, mrrStartDate, mrrIndefinite, mrrDuration,
+    mrrDiscountEnabled, mrrDiscountMonths, mrrDiscountValue, mrrDiscountKind,
+    mrrDiscountUntilDate, mrrDiscountUntilStage, mrrStartTrigger,
+    discountEnabled, discountKind, discountAmount, discountValidUntil, discountNotes,
+    extraCosts,
+  ]);
+
+  function discardDraft() {
+    if (!deal) return;
+    clearDraft(deal.id);
+    setDraftRestored(false);
+    // Recarrega valores originais do deal
+    restoreDraftRef.current = null;
+    skipNextAutosaveRef.current = true;
+    // Força re-execução do effect de pré-preenchimento via toggle artificial:
+    // a forma simples é fechar/reabrir; mas como não queremos isso, replicamos defaults aqui.
+    setProjectName(deal.title);
+    setProjectTypeSlugs(deal.project_type_v2 ?? []);
+    setPainCategorySlugs(deal.pain_categories ?? (deal.pain_category ? [deal.pain_category] : []));
+    setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
+    setEstimatedDelivery(deal.desired_delivery_date ?? '');
+    const dealN = (deal as any).installments_count as number | null;
+    const dealFirst = (deal as any).first_installment_date as string | null;
+    const initialN = dealN && dealN > 0 ? dealN : 1;
+    const initialFirst = dealFirst || fmtDateInput(addMonths(new Date(), 1));
+    setInstallmentsN(String(initialN));
+    setFirstDueDate(initialFirst);
+    setInstallments(buildInstallments(initialN, initialFirst, baseImplementation));
+    setExtraCosts([]);
+    toast.success('Rascunho descartado');
+  }
 
   // ============== Ações de parcelas ==============
   function addInstallment() {
@@ -791,6 +965,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       qc.invalidateQueries({ queryKey: ['clientes'] });
       qc.invalidateQueries({ queryKey: ['projects'] });
 
+      // Sucesso: limpa o rascunho deste deal
+      clearDraft(deal.id);
       onOpenChange(false);
       if (data?.project_id) {
         if (onSuccess) onSuccess(data.project_id);
@@ -815,6 +991,21 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
             Revisão em 4 passos. Configure projeto, receita (implementação + MRR), custos extras e confira tudo antes de criar.
           </DialogDescription>
         </DialogHeader>
+
+        {draftRestored && (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px]">
+            <div className="flex items-center gap-2 text-foreground">
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              <span>
+                <span className="font-semibold">Rascunho restaurado.</span>{' '}
+                Continuamos do último ponto. Salvamos suas alterações automaticamente.
+              </span>
+            </div>
+            <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={discardDraft}>
+              Descartar rascunho
+            </Button>
+          </div>
+        )}
 
         <Tabs value={step} onValueChange={(v) => setStep(v as any)} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
@@ -1385,99 +1576,268 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           {/* ============== PASSO 3 — CUSTOS EXTRAS ============== */}
           <TabsContent value="custos" className="space-y-4 mt-4">
             <div className="rounded-lg border border-border p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
-                  <Wallet className="h-3.5 w-3.5 text-destructive" />
-                  Custos extras (APIs, infra, licenças)
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    <Wallet className="h-3.5 w-3.5 text-destructive" />
+                    Custos extras (APIs, infra, licenças)
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Liste o que esse projeto vai consumir (recorrente ou setup único).
+                    A categorização financeira pode ficar no <span className="font-medium">padrão</span>{' '}
+                    abaixo — só sobrescreva por item se for diferente.
+                  </p>
                 </div>
                 <Button type="button" size="sm" variant="outline" onClick={addExtraCost}>
-                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                  <Plus className="h-3.5 w-3.5" /> Adicionar item
                 </Button>
               </div>
 
-              <FinanceCategorizationCard
-                title="Padrão para custos extras"
-                subtitle="Aplicado quando o item não tiver categorização própria"
-                tone="expense"
-                categoriaId={extraCategoriaId} setCategoriaId={setExtraCategoriaId}
-                centroId={extraCentroId} setCentroId={setExtraCentroId}
-                contaId={extraContaId} setContaId={setExtraContaId}
-                meioId={extraMeioId} setMeioId={setExtraMeioId}
-                categorias={categoriasDespesa}
-                centros={centros} contas={contas} meios={meios}
-                onCreateCategoria={makeCreateCategoria('despesas', 'extra')}
-                onCreateCentro={makeCreateCentro('extra')}
-                onCreateConta={makeCreateConta('extra')}
-                onCreateMeio={makeCreateMeio('extra')}
-              />
-
+              {/* ───── Lista de itens ───── */}
               {extraCosts.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground">
-                  Sem custos extras. Use pra registrar despesas recorrentes (OpenAI, AWS, licenças) ou setup único.
-                </p>
+                <button
+                  type="button"
+                  onClick={addExtraCost}
+                  className="w-full rounded-lg border border-dashed border-border bg-muted/10 px-4 py-6 text-center transition-colors hover:border-accent/40 hover:bg-card"
+                >
+                  <FileSearch className="mx-auto h-5 w-5 text-muted-foreground/70" />
+                  <p className="mt-2 text-xs font-medium text-foreground">Nenhum custo extra ainda</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Clique para adicionar — ex: <span className="font-mono">API OpenAI · R$ 200/mês</span>
+                  </p>
+                </button>
               ) : (
                 <div className="space-y-2">
-                  {extraCosts.map((e) => (
-                    <div key={e.id} className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
-                      <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px_36px]">
-                        <Input
-                          placeholder="Ex: API OpenAI" value={e.description}
-                          onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
-                          className="h-8"
+                  {extraCosts.map((e, idx) => {
+                    const hasOwnCategoria = Boolean(e.categoria_id || e.centro_custo_id || e.conta_bancaria_id || e.meio_pagamento_id);
+                    const catName = e.categoria_id ? nameById(categoriasDespesa, e.categoria_id) : (extraCategoriaId ? nameById(categoriasDespesa, extraCategoriaId) : null);
+                    const ccName = e.centro_custo_id ? nameById(centros, e.centro_custo_id) : (extraCentroId ? nameById(centros, extraCentroId) : null);
+                    const contaName = e.conta_bancaria_id ? nameById(contas, e.conta_bancaria_id) : (extraContaId ? nameById(contas, extraContaId) : null);
+                    const meioName = e.meio_pagamento_id ? nameById(meios, e.meio_pagamento_id) : (extraMeioId ? nameById(meios, extraMeioId) : null);
+                    const summaryParts = [catName, ccName, contaName, meioName].filter(Boolean) as string[];
+                    const incomplete = !e.description.trim() || !(Number(e.amount) > 0);
+                    return (
+                      <div
+                        key={e.id}
+                        className={cn(
+                          'rounded-lg border bg-background/40 p-2.5 space-y-2 transition-colors',
+                          incomplete ? 'border-amber-500/40' : 'border-border/60',
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-muted px-1 font-mono">{idx + 1}</span>
+                          <span>Item</span>
+                          <div className="flex-1" />
+                          <Button
+                            type="button" size="icon" variant="ghost"
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                            onClick={() => removeExtraCost(e.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px]">
+                          <Input
+                            placeholder="Ex: API OpenAI" value={e.description}
+                            onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
+                            className="h-9"
+                          />
+                          <CurrencyInput
+                            value={e.amount}
+                            onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
+                            withPrefix placeholder="R$ 0,00" className="h-9"
+                          />
+                          <Select
+                            value={e.recurrence}
+                            onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
+                          >
+                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
+                              <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
+                              <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Categorização individual — colapsada com chip de resumo */}
+                        <Collapsible>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <CollapsibleTrigger asChild>
+                              <button
+                                type="button"
+                                className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              >
+                                <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
+                                {hasOwnCategoria ? 'Editar categorização deste item' : 'Personalizar categorização (opcional)'}
+                              </button>
+                            </CollapsibleTrigger>
+                            {summaryParts.length > 0 && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'gap-1 px-1.5 py-0 text-[10px] font-normal',
+                                  hasOwnCategoria ? 'border-accent/40 text-foreground' : 'text-muted-foreground',
+                                )}
+                              >
+                                <span className="font-semibold uppercase tracking-wide">
+                                  {hasOwnCategoria ? 'Própria' : 'Padrão'}
+                                </span>
+                                <span>·</span>
+                                <span className="truncate max-w-[420px]">{summaryParts.join(' · ')}</span>
+                              </Badge>
+                            )}
+                          </div>
+
+                          <CollapsibleContent className="pt-2">
+                            <div className="rounded border border-dashed border-border/60 bg-muted/10 p-2 space-y-2">
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                <ComboboxCreate
+                                  value={e.categoria_id ?? ''}
+                                  options={toComboOptions(categoriasDespesa)}
+                                  onChange={(v) => updateExtraCost(e.id, { categoria_id: v })}
+                                  onCreate={makeCreateCategoria('despesas', 'extra')}
+                                  placeholder={extraCategoriaId ? `Padrão: ${nameById(categoriasDespesa, extraCategoriaId)}` : 'Categoria de despesa'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar categoria "${t}"`}
+                                />
+                                <ComboboxCreate
+                                  value={e.centro_custo_id ?? ''}
+                                  options={toComboOptions(centros)}
+                                  onChange={(v) => updateExtraCost(e.id, { centro_custo_id: v })}
+                                  onCreate={makeCreateCentro('extra')}
+                                  placeholder={extraCentroId ? `Padrão: ${nameById(centros, extraCentroId)}` : 'Centro de custo'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar centro "${t}"`}
+                                />
+                                <ComboboxCreate
+                                  value={e.conta_bancaria_id ?? ''}
+                                  options={toComboOptions(contas)}
+                                  onChange={(v) => updateExtraCost(e.id, { conta_bancaria_id: v })}
+                                  onCreate={makeCreateConta('extra')}
+                                  placeholder={extraContaId ? `Padrão: ${nameById(contas, extraContaId)}` : 'Conta bancária'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar conta "${t}"`}
+                                />
+                                <ComboboxCreate
+                                  value={e.meio_pagamento_id ?? ''}
+                                  options={toComboOptions(meios)}
+                                  onChange={(v) => updateExtraCost(e.id, { meio_pagamento_id: v })}
+                                  onCreate={makeCreateMeio('extra')}
+                                  placeholder={extraMeioId ? `Padrão: ${nameById(meios, extraMeioId)}` : 'Meio de pagamento'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar meio "${t}"`}
+                                />
+                              </div>
+                              {hasOwnCategoria && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateExtraCost(e.id, {
+                                    categoria_id: undefined, centro_custo_id: undefined,
+                                    conta_bancaria_id: undefined, meio_pagamento_id: undefined,
+                                  })}
+                                  className="text-[11px] text-muted-foreground underline hover:text-foreground"
+                                >
+                                  Voltar a usar o padrão
+                                </button>
+                              )}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        <Textarea
+                          placeholder="Observação (opcional)"
+                          value={e.notes}
+                          onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
+                          rows={1}
+                          className="text-xs"
                         />
-                        <CurrencyInput
-                          value={e.amount}
-                          onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
-                          withPrefix placeholder="R$ 0,00" className="h-8"
-                        />
-                        <Select
-                          value={e.recurrence}
-                          onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
-                        >
-                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
-                            <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
-                            <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          type="button" size="icon" variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => removeExtraCost(e.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+
+                        {incomplete && (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-500">
+                            Preencha descrição e valor para que esse item seja salvo.
+                          </p>
+                        )}
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <ComboboxCreate
-                          value={e.categoria_id ?? ''}
-                          options={toComboOptions(categoriasDespesa)}
-                          onChange={(v) => updateExtraCost(e.id, { categoria_id: v })}
-                          onCreate={makeCreateCategoria('despesas', 'extra')}
-                          placeholder={extraCategoriaId ? `Padrão: ${nameById(categoriasDespesa, extraCategoriaId)}` : 'Categoria (opcional)'}
-                          searchPlaceholder="Buscar ou criar…"
-                          createLabel={(t) => `+ Criar categoria "${t}"`}
-                        />
-                        <ComboboxCreate
-                          value={e.centro_custo_id ?? ''}
-                          options={toComboOptions(centros)}
-                          onChange={(v) => updateExtraCost(e.id, { centro_custo_id: v })}
-                          onCreate={makeCreateCentro('extra')}
-                          placeholder={extraCentroId ? `Padrão: ${nameById(centros, extraCentroId)}` : 'Centro de custo (opcional)'}
-                          searchPlaceholder="Buscar ou criar…"
-                          createLabel={(t) => `+ Criar centro "${t}"`}
-                        />
+                    );
+                  })}
+
+                  <Button
+                    type="button" size="sm" variant="ghost"
+                    onClick={addExtraCost}
+                    className="w-full justify-center text-muted-foreground hover:text-foreground"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Adicionar outro item
+                  </Button>
+                </div>
+              )}
+
+              {/* ───── Padrão de categorização (colapsado quando há itens) ───── */}
+              <Collapsible defaultOpen={extraCosts.length === 0}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="group flex w-full items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-left transition-colors hover:bg-muted/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-foreground">
+                          Padrão de categorização
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          Aplicado a todos os itens que não tiverem categorização própria
+                        </div>
                       </div>
-                      <Textarea
-                        placeholder="Observação (opcional)"
-                        value={e.notes}
-                        onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
-                        rows={1}
-                        className="text-xs"
-                      />
                     </div>
-                  ))}
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <FinanceCategorizationCard
+                    title="Padrão para custos extras"
+                    subtitle="Defina aqui pra não repetir em cada item"
+                    tone="expense"
+                    categoriaId={extraCategoriaId} setCategoriaId={setExtraCategoriaId}
+                    centroId={extraCentroId} setCentroId={setExtraCentroId}
+                    contaId={extraContaId} setContaId={setExtraContaId}
+                    meioId={extraMeioId} setMeioId={setExtraMeioId}
+                    categorias={categoriasDespesa}
+                    centros={centros} contas={contas} meios={meios}
+                    onCreateCategoria={makeCreateCategoria('despesas', 'extra')}
+                    onCreateCentro={makeCreateCentro('extra')}
+                    onCreateConta={makeCreateConta('extra')}
+                    onCreateMeio={makeCreateMeio('extra')}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* ───── Resumo de totais ───── */}
+              {extraCosts.filter((e) => e.description.trim() && Number(e.amount) > 0).length > 0 && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border/60 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-wide text-foreground">Resumo</span>
+                  <span>
+                    <span className="font-mono text-foreground">
+                      {extraCosts.filter((e) => e.description.trim() && Number(e.amount) > 0).length}
+                    </span>{' '}
+                    item(s)
+                  </span>
+                  {monthlyExtras > 0 && (
+                    <span>
+                      Mensal: <span className="font-mono text-foreground">{formatBRL(monthlyExtras)}</span>
+                    </span>
+                  )}
+                  {yearlyExtras > 0 && (
+                    <span>
+                      Anual: <span className="font-mono text-foreground">{formatBRL(yearlyExtras)}</span>
+                    </span>
+                  )}
+                  {onceExtras > 0 && (
+                    <span>
+                      Único: <span className="font-mono text-foreground">{formatBRL(onceExtras)}</span>
+                    </span>
+                  )}
                 </div>
               )}
             </div>
