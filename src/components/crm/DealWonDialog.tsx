@@ -1201,18 +1201,48 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                   </div>
                 ) : (
                   <div className="p-4 space-y-4">
-                    {/* Hero — Valor mensal + Início */}
+                    {/* Hero — Valor mensal */}
                     <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-1.5">
-                          <Label className="text-[11px] font-medium text-muted-foreground">Valor mensal</Label>
-                          <CurrencyInput value={mrrValue} onValueChange={setMrrValue} withPrefix placeholder="R$ 0,00" className="h-9" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[11px] font-medium text-muted-foreground">Início</Label>
-                          <Input type="date" value={mrrStartDate} onChange={(e) => setMrrStartDate(e.target.value)} className="h-9" />
-                        </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-medium text-muted-foreground">Valor mensal</Label>
+                        <CurrencyInput value={mrrValue} onValueChange={setMrrValue} withPrefix placeholder="R$ 0,00" className="h-9" />
                       </div>
+                    </div>
+
+                    {/* Início da cobrança (vem antes pois define se mostra a data) */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-muted-foreground">Quando começa a cobrar</Label>
+                      <Select
+                        value={mrrStartTrigger || ''}
+                        onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
+                      >
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
+                          <SelectItem value="before_delivery">Antes da entrega (data específica)</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {mrrStartTrigger === 'on_delivery' && (
+                        <div className="mt-2 flex items-start gap-2 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-[11px] text-foreground">
+                          <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-cyan-500 shrink-0" />
+                          <span>
+                            A cobrança da manutenção começará <strong>automaticamente</strong> quando este projeto for movido para a coluna <strong>Entregue</strong> em /projetos.
+                          </span>
+                        </div>
+                      )}
+
+                      {mrrStartTrigger === 'before_delivery' && (
+                        <div className="mt-2 space-y-1.5">
+                          <Label className="text-[11px] font-medium text-muted-foreground">Data de início da cobrança</Label>
+                          <Input
+                            type="date"
+                            value={mrrStartDate}
+                            onChange={(e) => setMrrStartDate(e.target.value)}
+                            className="h-9"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Duração */}
@@ -1246,21 +1276,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                           <span className="text-muted-foreground">meses</span>
                         </label>
                       </RadioGroup>
-                    </div>
-
-                    {/* Início da cobrança */}
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-muted-foreground">Quando começa a cobrar</Label>
-                      <Select
-                        value={mrrStartTrigger || ''}
-                        onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
-                      >
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Usar a data de início acima" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
-                          <SelectItem value="before_delivery">Antes da entrega</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     {/* Desconto MRR */}
