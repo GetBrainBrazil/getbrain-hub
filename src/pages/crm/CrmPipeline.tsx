@@ -533,12 +533,30 @@ export default function CrmPipeline() {
           </div>
         </div>
 
-        {/* KPIs */}
+        {/* KPIs — recalculados conforme filtros aplicados */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
-          <HomeKpi label="Pipeline total" value={formatCurrency(homeKpis.pipeline)} />
-          <HomeKpi label="Forecast ponderado" value={formatCurrency(homeKpis.forecast)} tone="accent" />
-          <HomeKpi label="Deals ativos" value={String(homeKpis.activeCount)} />
-          <HomeKpi label="Deps atrasadas" value={String(homeKpis.overdueDeps)} tone={homeKpis.overdueDeps > 0 ? 'destructive' : undefined} />
+          <HomeKpi
+            label="Pipeline"
+            value={formatCurrency(homeKpis.pipeline)}
+            hint={`${homeKpis.dealsCount} ${homeKpis.dealsCount === 1 ? 'deal' : 'deals'}`}
+          />
+          <HomeKpi
+            label="Forecast ponderado"
+            value={formatCurrency(homeKpis.forecast)}
+            tone="accent"
+            hint="ajustado pela probabilidade"
+          />
+          <HomeKpi
+            label="Ticket médio"
+            value={formatCurrency(homeKpis.ticketMedio)}
+            hint="por deal com valor"
+          />
+          <HomeKpi
+            label="Próximo passo atrasado"
+            value={String(homeKpis.overdueNextStep)}
+            tone={homeKpis.overdueNextStep > 0 ? 'destructive' : undefined}
+            hint={homeKpis.overdueNextStep === 1 ? 'deal parado' : 'deals parados'}
+          />
         </div>
 
       {/* View body */}
