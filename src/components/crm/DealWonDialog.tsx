@@ -788,10 +788,28 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   // ============== Custos extras ==============
   function addExtraCost() {
-    setExtraCosts((prev) => [
-      ...prev,
-      { id: newId(), description: '', amount: '', recurrence: 'monthly', notes: '' },
-    ]);
+    setExtraCosts((prev) => {
+      const last = prev[prev.length - 1];
+      // Herda categorização do último item, ou do padrão legado se ainda existir no draft
+      const inheritedCat = last?.categoria_id ?? extraCategoriaId ?? undefined;
+      const inheritedCc = last?.centro_custo_id ?? extraCentroId ?? undefined;
+      const inheritedConta = last?.conta_bancaria_id ?? extraContaId ?? undefined;
+      const inheritedMeio = last?.meio_pagamento_id ?? extraMeioId ?? undefined;
+      return [
+        ...prev,
+        {
+          id: newId(),
+          description: '',
+          amount: '',
+          recurrence: 'monthly',
+          notes: '',
+          categoria_id: inheritedCat || undefined,
+          centro_custo_id: inheritedCc || undefined,
+          conta_bancaria_id: inheritedConta || undefined,
+          meio_pagamento_id: inheritedMeio || undefined,
+        },
+      ];
+    });
   }
 
   function removeExtraCost(id: string) {
@@ -800,6 +818,52 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   function updateExtraCost(id: string, patch: Partial<ExtraCostDraft>) {
     setExtraCosts((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }
+
+  function duplicateExtraCost(id: string) {
+    setExtraCosts((prev) => {
+      const idx = prev.findIndex((e) => e.id === id);
+      if (idx < 0) return prev;
+      const src = prev[idx];
+      const copy: ExtraCostDraft = {
+        ...src,
+        id: newId(),
+        description: src.description ? `${src.description} (cópia)` : '',
+      };
+      return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
+    });
+  }
+
+  function applyCategorizationFrom(sourceId: string) {
+    setExtraCosts((prev) => {
+      const src = prev.find((e) => e.id === sourceId);
+      if (!src) return prev;
+      const { categoria_id, centro_custo_id, conta_bancaria_id, meio_pagamento_id } = src;
+      const hasAny = Boolean(categoria_id || centro_custo_id || conta_bancaria_id || meio_pagamento_id);
+      if (!hasAny) {
+        toast.info('Defina ao menos um campo de categorização para aplicar aos demais.');
+        return prev;
+      }
+      let appliedCount = 0;
+      const next = prev.map((e) => {
+        if (e.id === sourceId) return e;
+        const itemHasAny = Boolean(e.categoria_id || e.centro_custo_id || e.conta_bancaria_id || e.meio_pagamento_id);
+        if (itemHasAny) return e;
+        appliedCount++;
+        return { ...e, categoria_id, centro_custo_id, conta_bancaria_id, meio_pagamento_id };
+      });
+      if (appliedCount === 0) toast.info('Os outros itens já têm categorização própria.');
+      else toast.success(`Categorização aplicada a ${appliedCount} item(s).`);
+      return next;
+    });
+  }
+
+  function clearItemCategorization(id: string) {
+    setExtraCosts((prev) => prev.map((e) => e.id === id ? {
+      ...e,
+      categoria_id: undefined, centro_custo_id: undefined,
+      conta_bancaria_id: undefined, meio_pagamento_id: undefined,
+    } : e));
   }
 
   // ============== Criar inline (combobox) ==============
