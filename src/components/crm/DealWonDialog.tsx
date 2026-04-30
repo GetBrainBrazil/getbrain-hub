@@ -684,7 +684,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
         discount_notes: discountEnabled ? (discountNotes || null) : null,
         extra_costs: cleanedExtras,
         estimated_mrr_value: mrrEnabled ? Number(mrrValue) || null : null,
-        mrr_start_date: mrrEnabled && mrrStartDate ? mrrStartDate : null,
+        mrr_start_date: mrrEnabled && mrrStartTrigger === 'before_delivery' && mrrStartDate ? mrrStartDate : null,
         mrr_duration_months: mrrEnabled && !mrrIndefinite ? (parseInt(mrrDuration, 10) || null) : null,
         mrr_discount_months:
           mrrEnabled && mrrDiscountEnabled && mrrDiscountKind === 'months'
