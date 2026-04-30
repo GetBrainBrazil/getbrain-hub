@@ -734,7 +734,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       };
       if (mrrEnabled) {
         projectData.mrr_value = Number(mrrValue);
-        projectData.mrr_start_date = mrrStartDate;
+        projectData.mrr_start_date = mrrStartTrigger === 'before_delivery' && mrrStartDate ? mrrStartDate : null;
         if (!mrrIndefinite) projectData.mrr_duration_months = parseInt(mrrDuration, 10);
         if (mrrDiscountEnabled) {
           if (mrrDiscountKind === 'months') {
