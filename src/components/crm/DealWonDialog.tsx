@@ -5,6 +5,7 @@ import {
   Repeat, Percent, Wallet, FolderOpen, Banknote,
   ClipboardCheck, AlertTriangle, CheckCircle2, Settings2,
   Link2, FileText, ChevronDown, ChevronRight, Sparkles, FileSearch,
+  Copy, CopyCheck, Eraser,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -201,6 +202,8 @@ interface FinCardProps {
   onCreateCentro: (name: string) => Promise<void>;
   onCreateConta: (name: string) => Promise<void>;
   onCreateMeio: (name: string) => Promise<void>;
+  compact?: boolean;
+  onClear?: () => void;
 }
 
 function FinanceCategorizationCard(p: FinCardProps) {
@@ -231,12 +234,17 @@ function FinanceCategorizationCard(p: FinCardProps) {
   return (
     <div className={cn('rounded-xl border overflow-hidden', accentBorder, accentBg)}>
       <div className={cn(
-        'flex items-center justify-between gap-2 border-b px-3 py-2',
+        'flex items-center justify-between gap-2 border-b',
         accentBorder,
+        p.compact ? 'px-2.5 py-1.5' : 'px-3 py-2',
       )}>
         <div className="flex items-center gap-2 min-w-0">
-          <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md', accentIconBg)}>
-            <Settings2 className="h-3.5 w-3.5" />
+          <div className={cn(
+            'flex shrink-0 items-center justify-center rounded-md',
+            accentIconBg,
+            p.compact ? 'h-6 w-6' : 'h-7 w-7',
+          )}>
+            <Settings2 className={p.compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
           </div>
           <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground truncate">
@@ -247,23 +255,35 @@ function FinanceCategorizationCard(p: FinCardProps) {
             )}
           </div>
         </div>
-        <Badge
-          variant="outline"
-          className={cn(
-            'shrink-0 gap-1 px-1.5 py-0 text-[10px] font-semibold',
-            filled === 4
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-              : filled > 0
-                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                : 'border-border text-muted-foreground',
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Badge
+            variant="outline"
+            className={cn(
+              'gap-1 px-1.5 py-0 text-[10px] font-semibold',
+              filled === 4
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : filled > 0
+                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  : 'border-border text-muted-foreground',
+            )}
+          >
+            {filled === 4 && <CheckCircle2 className="h-2.5 w-2.5" />}
+            {filled}/4
+          </Badge>
+          {p.onClear && filled > 0 && (
+            <Button
+              type="button" size="sm" variant="ghost"
+              className="h-6 gap-1 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+              onClick={p.onClear}
+            >
+              <Eraser className="h-3 w-3" />
+              <span className="hidden sm:inline">Limpar</span>
+            </Button>
           )}
-        >
-          {filled === 4 && <CheckCircle2 className="h-2.5 w-2.5" />}
-          {filled}/4
-        </Badge>
+        </div>
       </div>
 
-      <div className="grid gap-3 p-3 sm:grid-cols-2">
+      <div className={cn('grid gap-3 sm:grid-cols-2', p.compact ? 'p-2.5' : 'p-3')}>
         {fieldRow(
           isExpense ? 'Categoria de despesa' : 'Categoria de receita',
           p.categoriaId,
@@ -768,10 +788,28 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   // ============== Custos extras ==============
   function addExtraCost() {
-    setExtraCosts((prev) => [
-      ...prev,
-      { id: newId(), description: '', amount: '', recurrence: 'monthly', notes: '' },
-    ]);
+    setExtraCosts((prev) => {
+      const last = prev[prev.length - 1];
+      // Herda categorização do último item, ou do padrão legado se ainda existir no draft
+      const inheritedCat = last?.categoria_id ?? extraCategoriaId ?? undefined;
+      const inheritedCc = last?.centro_custo_id ?? extraCentroId ?? undefined;
+      const inheritedConta = last?.conta_bancaria_id ?? extraContaId ?? undefined;
+      const inheritedMeio = last?.meio_pagamento_id ?? extraMeioId ?? undefined;
+      return [
+        ...prev,
+        {
+          id: newId(),
+          description: '',
+          amount: '',
+          recurrence: 'monthly',
+          notes: '',
+          categoria_id: inheritedCat || undefined,
+          centro_custo_id: inheritedCc || undefined,
+          conta_bancaria_id: inheritedConta || undefined,
+          meio_pagamento_id: inheritedMeio || undefined,
+        },
+      ];
+    });
   }
 
   function removeExtraCost(id: string) {
@@ -780,6 +818,52 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
 
   function updateExtraCost(id: string, patch: Partial<ExtraCostDraft>) {
     setExtraCosts((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }
+
+  function duplicateExtraCost(id: string) {
+    setExtraCosts((prev) => {
+      const idx = prev.findIndex((e) => e.id === id);
+      if (idx < 0) return prev;
+      const src = prev[idx];
+      const copy: ExtraCostDraft = {
+        ...src,
+        id: newId(),
+        description: src.description ? `${src.description} (cópia)` : '',
+      };
+      return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
+    });
+  }
+
+  function applyCategorizationFrom(sourceId: string) {
+    setExtraCosts((prev) => {
+      const src = prev.find((e) => e.id === sourceId);
+      if (!src) return prev;
+      const { categoria_id, centro_custo_id, conta_bancaria_id, meio_pagamento_id } = src;
+      const hasAny = Boolean(categoria_id || centro_custo_id || conta_bancaria_id || meio_pagamento_id);
+      if (!hasAny) {
+        toast.info('Defina ao menos um campo de categorização para aplicar aos demais.');
+        return prev;
+      }
+      let appliedCount = 0;
+      const next = prev.map((e) => {
+        if (e.id === sourceId) return e;
+        const itemHasAny = Boolean(e.categoria_id || e.centro_custo_id || e.conta_bancaria_id || e.meio_pagamento_id);
+        if (itemHasAny) return e;
+        appliedCount++;
+        return { ...e, categoria_id, centro_custo_id, conta_bancaria_id, meio_pagamento_id };
+      });
+      if (appliedCount === 0) toast.info('Os outros itens já têm categorização própria.');
+      else toast.success(`Categorização aplicada a ${appliedCount} item(s).`);
+      return next;
+    });
+  }
+
+  function clearItemCategorization(id: string) {
+    setExtraCosts((prev) => prev.map((e) => e.id === id ? {
+      ...e,
+      categoria_id: undefined, centro_custo_id: undefined,
+      conta_bancaria_id: undefined, meio_pagamento_id: undefined,
+    } : e));
   }
 
   // ============== Criar inline (combobox) ==============
@@ -1762,9 +1846,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                     Custos extras (APIs, infra, licenças)
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Liste o que esse projeto vai consumir (recorrente ou setup único).
-                    A categorização financeira pode ficar no <span className="font-medium">padrão</span>{' '}
-                    abaixo — só sobrescreva por item se for diferente.
+                    Liste o que esse projeto vai consumir. Cada item tem sua própria categorização —
+                    use <span className="font-medium">Duplicar</span> ou <span className="font-medium">Aplicar a todos</span> para acelerar.
                   </p>
                 </div>
                 <Button type="button" size="sm" variant="outline" onClick={addExtraCost}>
@@ -1786,31 +1869,49 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                   </p>
                 </button>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {extraCosts.map((e, idx) => {
-                    const hasOwnCategoria = Boolean(e.categoria_id || e.centro_custo_id || e.conta_bancaria_id || e.meio_pagamento_id);
-                    const catName = e.categoria_id ? nameById(categoriasDespesa, e.categoria_id) : (extraCategoriaId ? nameById(categoriasDespesa, extraCategoriaId) : null);
-                    const ccName = e.centro_custo_id ? nameById(centros, e.centro_custo_id) : (extraCentroId ? nameById(centros, extraCentroId) : null);
-                    const contaName = e.conta_bancaria_id ? nameById(contas, e.conta_bancaria_id) : (extraContaId ? nameById(contas, extraContaId) : null);
-                    const meioName = e.meio_pagamento_id ? nameById(meios, e.meio_pagamento_id) : (extraMeioId ? nameById(meios, extraMeioId) : null);
-                    const summaryParts = [catName, ccName, contaName, meioName].filter(Boolean) as string[];
+                    const filledCat = [e.categoria_id, e.centro_custo_id, e.conta_bancaria_id, e.meio_pagamento_id].filter(Boolean).length;
                     const incomplete = !e.description.trim() || !(Number(e.amount) > 0);
+                    const canApplyToAll = extraCosts.length > 1 && filledCat > 0;
                     return (
                       <div
                         key={e.id}
                         className={cn(
-                          'rounded-lg border bg-background/40 p-2.5 space-y-2 transition-colors',
+                          'rounded-lg border bg-card/40 p-2.5 space-y-2.5 transition-colors',
                           incomplete ? 'border-amber-500/40' : 'border-border/60',
                         )}
                       >
                         <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-muted px-1 font-mono">{idx + 1}</span>
+                          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded bg-muted px-1.5 font-mono text-foreground">
+                            {idx + 1}
+                          </span>
                           <span>Item</span>
                           <div className="flex-1" />
+                          {canApplyToAll && (
+                            <Button
+                              type="button" size="sm" variant="ghost"
+                              className="h-7 gap-1 px-2 text-[10px] hover:bg-primary/10 hover:text-primary"
+                              onClick={() => applyCategorizationFrom(e.id)}
+                              title="Aplica a categorização deste item aos demais itens vazios"
+                            >
+                              <CopyCheck className="h-3 w-3" />
+                              <span className="hidden sm:inline">Aplicar a todos</span>
+                            </Button>
+                          )}
+                          <Button
+                            type="button" size="icon" variant="ghost"
+                            className="h-7 w-7 hover:bg-muted"
+                            onClick={() => duplicateExtraCost(e.id)}
+                            title="Duplicar item"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
                           <Button
                             type="button" size="icon" variant="ghost"
                             className="h-7 w-7 text-destructive hover:bg-destructive/10"
                             onClick={() => removeExtraCost(e.id)}
+                            title="Remover item"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -1840,90 +1941,28 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                           </Select>
                         </div>
 
-                        {/* Categorização individual — colapsada com chip de resumo */}
-                        <Collapsible>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <CollapsibleTrigger asChild>
-                              <button
-                                type="button"
-                                className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                              >
-                                <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
-                                {hasOwnCategoria ? 'Editar categorização deste item' : 'Personalizar categorização (opcional)'}
-                              </button>
-                            </CollapsibleTrigger>
-                            {summaryParts.length > 0 && (
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'gap-1 px-1.5 py-0 text-[10px] font-normal',
-                                  hasOwnCategoria ? 'border-accent/40 text-foreground' : 'text-muted-foreground',
-                                )}
-                              >
-                                <span className="font-semibold uppercase tracking-wide">
-                                  {hasOwnCategoria ? 'Própria' : 'Padrão'}
-                                </span>
-                                <span>·</span>
-                                <span className="truncate max-w-[420px]">{summaryParts.join(' · ')}</span>
-                              </Badge>
-                            )}
-                          </div>
-
-                          <CollapsibleContent className="pt-2">
-                            <div className="rounded border border-dashed border-border/60 bg-muted/10 p-2 space-y-2">
-                              <div className="grid gap-2 sm:grid-cols-2">
-                                <ComboboxCreate
-                                  value={e.categoria_id ?? ''}
-                                  options={toComboOptions(categoriasDespesa)}
-                                  onChange={(v) => updateExtraCost(e.id, { categoria_id: v })}
-                                  onCreate={makeCreateCategoria('despesas', 'extra')}
-                                  placeholder={extraCategoriaId ? `Padrão: ${nameById(categoriasDespesa, extraCategoriaId)}` : 'Categoria de despesa'}
-                                  searchPlaceholder="Buscar ou criar…"
-                                  createLabel={(t) => `+ Criar categoria "${t}"`}
-                                />
-                                <ComboboxCreate
-                                  value={e.centro_custo_id ?? ''}
-                                  options={toComboOptions(centros)}
-                                  onChange={(v) => updateExtraCost(e.id, { centro_custo_id: v })}
-                                  onCreate={makeCreateCentro('extra')}
-                                  placeholder={extraCentroId ? `Padrão: ${nameById(centros, extraCentroId)}` : 'Centro de custo'}
-                                  searchPlaceholder="Buscar ou criar…"
-                                  createLabel={(t) => `+ Criar centro "${t}"`}
-                                />
-                                <ComboboxCreate
-                                  value={e.conta_bancaria_id ?? ''}
-                                  options={toComboOptions(contas)}
-                                  onChange={(v) => updateExtraCost(e.id, { conta_bancaria_id: v })}
-                                  onCreate={makeCreateConta('extra')}
-                                  placeholder={extraContaId ? `Padrão: ${nameById(contas, extraContaId)}` : 'Conta bancária'}
-                                  searchPlaceholder="Buscar ou criar…"
-                                  createLabel={(t) => `+ Criar conta "${t}"`}
-                                />
-                                <ComboboxCreate
-                                  value={e.meio_pagamento_id ?? ''}
-                                  options={toComboOptions(meios)}
-                                  onChange={(v) => updateExtraCost(e.id, { meio_pagamento_id: v })}
-                                  onCreate={makeCreateMeio('extra')}
-                                  placeholder={extraMeioId ? `Padrão: ${nameById(meios, extraMeioId)}` : 'Meio de pagamento'}
-                                  searchPlaceholder="Buscar ou criar…"
-                                  createLabel={(t) => `+ Criar meio "${t}"`}
-                                />
-                              </div>
-                              {hasOwnCategoria && (
-                                <button
-                                  type="button"
-                                  onClick={() => updateExtraCost(e.id, {
-                                    categoria_id: undefined, centro_custo_id: undefined,
-                                    conta_bancaria_id: undefined, meio_pagamento_id: undefined,
-                                  })}
-                                  className="text-[11px] text-muted-foreground underline hover:text-foreground"
-                                >
-                                  Voltar a usar o padrão
-                                </button>
-                              )}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
+                        {/* Categorização — direta no item, sem collapsible */}
+                        <FinanceCategorizationCard
+                          title="Categorização financeira"
+                          subtitle={idx === 0 ? 'Onde esse custo será lançado' : 'Pode ser diferente do item anterior'}
+                          tone="expense"
+                          compact
+                          onClear={() => clearItemCategorization(e.id)}
+                          categoriaId={e.categoria_id ?? ''}
+                          setCategoriaId={(v) => updateExtraCost(e.id, { categoria_id: v || undefined })}
+                          centroId={e.centro_custo_id ?? ''}
+                          setCentroId={(v) => updateExtraCost(e.id, { centro_custo_id: v || undefined })}
+                          contaId={e.conta_bancaria_id ?? ''}
+                          setContaId={(v) => updateExtraCost(e.id, { conta_bancaria_id: v || undefined })}
+                          meioId={e.meio_pagamento_id ?? ''}
+                          setMeioId={(v) => updateExtraCost(e.id, { meio_pagamento_id: v || undefined })}
+                          categorias={categoriasDespesa}
+                          centros={centros} contas={contas} meios={meios}
+                          onCreateCategoria={makeCreateCategoria('despesas', 'extra')}
+                          onCreateCentro={makeCreateCentro('extra')}
+                          onCreateConta={makeCreateConta('extra')}
+                          onCreateMeio={makeCreateMeio('extra')}
+                        />
 
                         <Textarea
                           placeholder="Observação (opcional)"
@@ -1948,49 +1987,12 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                     className="w-full justify-center text-muted-foreground hover:text-foreground"
                   >
                     <Plus className="h-3.5 w-3.5" /> Adicionar outro item
+                    <span className="ml-1 text-[10px] text-muted-foreground/70">
+                      (herda do anterior)
+                    </span>
                   </Button>
                 </div>
               )}
-
-              {/* ───── Padrão de categorização (colapsado quando há itens) ───── */}
-              <Collapsible defaultOpen={extraCosts.length === 0}>
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="group flex w-full items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-left transition-colors hover:bg-muted/30"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-foreground">
-                          Padrão de categorização
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          Aplicado a todos os itens que não tiverem categorização própria
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2">
-                  <FinanceCategorizationCard
-                    title="Padrão para custos extras"
-                    subtitle="Defina aqui pra não repetir em cada item"
-                    tone="expense"
-                    categoriaId={extraCategoriaId} setCategoriaId={setExtraCategoriaId}
-                    centroId={extraCentroId} setCentroId={setExtraCentroId}
-                    contaId={extraContaId} setContaId={setExtraContaId}
-                    meioId={extraMeioId} setMeioId={setExtraMeioId}
-                    categorias={categoriasDespesa}
-                    centros={centros} contas={contas} meios={meios}
-                    onCreateCategoria={makeCreateCategoria('despesas', 'extra')}
-                    onCreateCentro={makeCreateCentro('extra')}
-                    onCreateConta={makeCreateConta('extra')}
-                    onCreateMeio={makeCreateMeio('extra')}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
 
               {/* ───── Resumo de totais ───── */}
               {extraCosts.filter((e) => e.description.trim() && Number(e.amount) > 0).length > 0 && (

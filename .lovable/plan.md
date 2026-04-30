@@ -1,87 +1,63 @@
-## Melhorar UX/UI da aba "Custos" + persistir rascunho do modal inteiro
+## Reformular UX/UI de "Custos extras" — sem padrão global, com herança inteligente
 
-### Problemas atuais
-1. **Confuso**: O bloco "Padrão para custos extras" (categoria, centro, conta, meio) aparece **antes** dos itens, então o usuário preenche 4 campos sem saber pra quê e ainda tem que escolher de novo "Padrão: APIs/Ferramentas" embaixo de cada item.
-2. **Redundância visual**: cada item mostra Categoria + Centro de custo de novo, mesmo quando o padrão já cobre.
-3. **Ordem invertida** com o que se espera: deveria ser "adicione seus itens → defina o padrão (opcional) → ajuste exceções".
-4. **Sem persistência**: ao fechar/reabrir o modal, todo o preenchimento (projeto, parcelas, MRR, custos, desconto) é perdido. Estado vive só em `useState`.
+### O que muda na lógica
 
----
+1. **Remover o bloco "Padrão de categorização"** colapsado no fim. Ele criava confusão (preenche tudo lá, depois precisa preencher de novo no item).
+2. **Cada item passa a ter sua categorização visível e independente**, exposta direto no card (não fica mais escondida em collapsible).
+3. **Herança automática ao adicionar item**: o novo item já vem com a categorização do **último item criado**. Se você adicionou "API OpenAI · Categoria: APIs/Ferramentas · Conta: BTG", o próximo item já vem com isso preenchido — mas livre para mudar.
+4. **Botão "Aplicar a todos"** dentro de cada item: propaga a categorização daquele item para todos os outros itens **que ainda estão vazios** (não atropela quem já tem própria). Toast confirma quantos foram afetados.
+5. **Botão "Duplicar item"** ao lado da lixeira: copia o item inteiro (categorização + valores) — útil para criar variações rápidas (ex: 3 APIs do mesmo provedor).
+6. **Botão "Limpar categorização"** no card quando ele tem alguma categorização preenchida.
+7. Os state legados (`extraCategoriaId`, etc.) continuam existindo em memória apenas para **migração de drafts antigos** — o `addExtraCost` os usa como fallback inicial. Mas a UI deles some.
 
-### Mudanças no UI/UX da aba Custos
-
-**Nova estrutura (top → bottom):**
+### O que muda no UI
 
 ```text
 ┌─ CUSTOS EXTRAS (APIs, infra, licenças)        [+ Adicionar item] ┐
+│ Liste o que esse projeto vai consumir. Cada item tem sua          │
+│ própria categorização — você pode duplicar ou aplicar a todos.    │
 │                                                                   │
-│  [estado vazio: ilustração leve + "Adicione APIs, infra,         │
-│   licenças que esse projeto vai consumir mensalmente"]           │
+│ ┌─ 1 ITEM                            [📋 Aplicar p/ todos] [⎘][🗑]┐│
+│ │ [Descrição: API OpenAI]    [R$ 200,00]    [Mensal ▾]           ││
+│ │                                                                 ││
+│ │ ┌─ Categorização ─────────────── 4/4 ✓ [Limpar] ────────────┐  ││
+│ │ │ 📁 Categoria      [APIs/Ferramentas ▾]                    │  ││
+│ │ │ 💰 Centro custo   [Operações ▾]                            │  ││
+│ │ │ 🏦 Conta          [BTG ▾]                                  │  ││
+│ │ │ 🔁 Meio pagamento [Cartão ▾]                               │  ││
+│ │ └────────────────────────────────────────────────────────────┘  ││
+│ │ [Observação opcional]                                          ││
+│ └─────────────────────────────────────────────────────────────────┘│
 │                                                                   │
-│  — OU lista de itens (cards compactos) —                         │
+│              + Adicionar outro item (herda do anterior)           │
 │                                                                   │
-│  ┌─ Item 1 ────────────────────────────────────── [⋯] [🗑] ───┐ │
-│  │ [Descrição: API OpenAI]      [R$ 200,00]  [Mensal ▾]      │ │
-│  │ ▸ Categorização específica (colapsado, abre on demand)    │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│  ▾ Padrão de categorização (aplica a todos os itens sem          │
-│     categoria própria)  — colapsado por padrão                   │
-│     └─ [Categoria] [Centro] [Conta] [Meio de pagamento]          │
-│                                                                   │
-│  Total mensal: R$ X,XX · Único: R$ Y,YY                          │
+│ Resumo: 3 itens · Mensal: R$ 450 · Único: R$ 1.200                │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-**Pontos-chave:**
-
-- **Inverter ordem**: itens primeiro, padrão por último (e colapsado). O padrão vira "configuração avançada" — o caminho rápido é só descrição + valor + recorrência.
-- **Padrão colapsável** (`Collapsible` do shadcn): fica fechado se ainda não houver itens; abre automaticamente após o 1º item ser adicionado, com hint "Defina aqui pra não repetir em cada item".
-- **Categorização do item também colapsada** dentro de cada card ("▸ Personalizar categorização deste item"). Quando fechado, mostra um chip discreto: `Usa padrão: APIs/Ferramentas · BTG · Cartão`. Reduz drasticamente o ruído visual.
-- **Estado vazio melhor**: ícone + microcopy explicando que custos extras são opcionais e pra que servem (recorrentes vs setup).
-- **Resumo de totais no rodapé** do bloco: "3 itens · R$ 450/mês · R$ 1.200 únicos".
-- **Botão Adicionar** continua no topo, mas também aparece um secundário no fim da lista quando já tem itens.
-- **Validação inline**: item sem descrição ou valor 0 fica com borda âmbar e aviso "Preencha descrição e valor para salvar".
-- Mobile: cards empilham, recorrência vira `Select` full-width abaixo do valor.
-
----
-
-### Persistência do rascunho do modal inteiro
-
-O modal `DealWonDialog` perde todo input ao fechar. Vamos persistir um **draft por deal** em `localStorage` via `usePersistedState` (padrão já adotado no projeto).
-
-**Chave**: `deal-won-draft:${deal.id}`
-
-**O que persiste**:
-- Aba "Projeto": `projectName`, `projectTypeSlugs`, `painCategorySlugs`, `startDate`, `estimatedDelivery`
-- Aba "Receita": `installmentsN`, `firstDueDate`, `installments[]`, `mrrEnabled`, `mrrValue`, `mrrStartDate`, `mrrIndefinite`, `mrrDuration`, `mrrDiscount*`, `mrrStartTrigger`, `discountEnabled`, `discountKind`, `discountAmount`, `discountValidUntil`, `discountNotes`
-- Aba "Custos": `extraCategoriaId`, `extraCentroId`, `extraContaId`, `extraMeioId`, `extraCosts[]`
-- Aba ativa (`step`)
-
-**Comportamento**:
-- Ao abrir o modal: se existir draft pra esse deal **e** o draft for mais novo que `deal.updated_at`, restaura o draft. Caso contrário, usa os dados atuais do deal (comportamento atual).
-- Banner discreto no topo do modal: "📝 Rascunho restaurado — [Descartar rascunho]" quando aplicado.
-- Salva no `localStorage` em cada mudança (debounce 400 ms pra não martelar).
-- Ao concluir com sucesso (`close_deal_as_won` retorna ok), **limpa** o draft.
-- Ao clicar "Cancelar" ou fechar: mantém o draft (volta de onde parou).
-- Botão "Descartar rascunho" volta tudo aos defaults do deal e apaga a chave.
-
----
+**Detalhes visuais:**
+- Card de categorização interno reutiliza o `FinanceCategorizationCard` melhorado (header com badge `4/4`, ícones, checks verdes).
+- Botão **"Aplicar p/ todos"** só aparece no header do item quando há **mais de 1 item** E o item atual tem alguma categorização preenchida. Ícone de copy/duplicate.
+- Botão **"Duplicar"** sempre visível (ícone Copy).
+- Quando o item é **incompleto** (sem descrição ou valor), borda âmbar permanece.
+- Estado vazio (sem nenhum item) continua igual.
+- Resumo no rodapé continua igual.
 
 ### Detalhes técnicos
 
-**Arquivos a editar:**
-- `src/components/crm/DealWonDialog.tsx` — reorganizar JSX da `TabsContent value="custos"`, adicionar `Collapsible` do shadcn pro padrão e pra categorização individual de cada item; trocar bloco "Categoria + Centro" inline por chip de resumo + botão de expandir.
-- `src/components/crm/DealWonDialog.tsx` — encapsular todos os `useState` do modal em um único objeto persistido com `usePersistedState<DraftV1>(`deal-won-draft:${deal.id}`, ...)`. Manter os setters individuais como wrappers pra minimizar diff. Adicionar versionamento (`__v: 1`) pra invalidar drafts antigos no futuro.
-- Adicionar effect que limpa `localStorage.removeItem('deal-won-draft:${dealId}')` no `onSuccess` de `close_deal_as_won`.
+**Arquivo:** `src/components/crm/DealWonDialog.tsx`
 
-**Sem mudanças no banco** — toda a persistência é client-side (rascunho).
-
-**Componentes shadcn já existentes** que serão usados: `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent`, `Badge` (pro chip de resumo da categorização).
-
----
+- `addExtraCost()` herda categorização do último item (ou dos `extraCategoriaId`/etc. legados se não houver itens ainda).
+- Novas funções: `duplicateExtraCost(id)`, `applyCategorizationFrom(id)`, `clearItemCategorization(id)`.
+- `applyCategorizationFrom`: só sobrescreve itens **vazios** de categorização (proteção). Toast informa quantos foram afetados; toast info se nenhum.
+- Substituir todo o JSX da `TabsContent value="custos"`:
+  - Remover o `<Collapsible>` "Padrão de categorização" do final.
+  - Substituir o collapsible interno do item ("Personalizar categorização") pelo `FinanceCategorizationCard` direto, em modo compacto, com botão "Limpar" no header quando há valores.
+  - Adicionar botões "Aplicar p/ todos" e "Duplicar" no header do item.
+- Manter os state legados (`extraCategoriaId` etc.) e os campos no draft para retrocompatibilidade — só remove a UI de configurá-los.
+- Manter o fallback no submit (`e.categoria_id || extraCategoriaId || null`) — assim drafts antigos com padrão definido continuam funcionando, mas novos itens já vêm com categorização própria.
+- Pequena adição no `FinanceCategorizationCard`: aceitar prop `compact?: boolean` para diminuir paddings quando renderizado dentro de um item, e prop `onClear?: () => void` para mostrar botão "Limpar" no header.
 
 ### Fora do escopo
-- Mudanças no schema `extra_costs` no banco.
-- Mudar UX das abas Projeto/Receita/Revisão (só persistência).
-- Auto-sugestão de itens recorrentes baseada em projetos anteriores (pode virar próximo passo).
+- Mudar o schema de `extra_costs` no banco.
+- Auto-sugestão de itens recorrentes baseada em projetos anteriores.
