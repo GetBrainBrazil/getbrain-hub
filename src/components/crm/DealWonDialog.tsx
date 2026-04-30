@@ -1561,99 +1561,268 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           {/* ============== PASSO 3 — CUSTOS EXTRAS ============== */}
           <TabsContent value="custos" className="space-y-4 mt-4">
             <div className="rounded-lg border border-border p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
-                  <Wallet className="h-3.5 w-3.5 text-destructive" />
-                  Custos extras (APIs, infra, licenças)
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    <Wallet className="h-3.5 w-3.5 text-destructive" />
+                    Custos extras (APIs, infra, licenças)
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Liste o que esse projeto vai consumir (recorrente ou setup único).
+                    A categorização financeira pode ficar no <span className="font-medium">padrão</span>{' '}
+                    abaixo — só sobrescreva por item se for diferente.
+                  </p>
                 </div>
                 <Button type="button" size="sm" variant="outline" onClick={addExtraCost}>
-                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                  <Plus className="h-3.5 w-3.5" /> Adicionar item
                 </Button>
               </div>
 
-              <FinanceCategorizationCard
-                title="Padrão para custos extras"
-                subtitle="Aplicado quando o item não tiver categorização própria"
-                tone="expense"
-                categoriaId={extraCategoriaId} setCategoriaId={setExtraCategoriaId}
-                centroId={extraCentroId} setCentroId={setExtraCentroId}
-                contaId={extraContaId} setContaId={setExtraContaId}
-                meioId={extraMeioId} setMeioId={setExtraMeioId}
-                categorias={categoriasDespesa}
-                centros={centros} contas={contas} meios={meios}
-                onCreateCategoria={makeCreateCategoria('despesas', 'extra')}
-                onCreateCentro={makeCreateCentro('extra')}
-                onCreateConta={makeCreateConta('extra')}
-                onCreateMeio={makeCreateMeio('extra')}
-              />
-
+              {/* ───── Lista de itens ───── */}
               {extraCosts.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground">
-                  Sem custos extras. Use pra registrar despesas recorrentes (OpenAI, AWS, licenças) ou setup único.
-                </p>
+                <button
+                  type="button"
+                  onClick={addExtraCost}
+                  className="w-full rounded-lg border border-dashed border-border bg-muted/10 px-4 py-6 text-center transition-colors hover:border-accent/40 hover:bg-card"
+                >
+                  <FileSearch className="mx-auto h-5 w-5 text-muted-foreground/70" />
+                  <p className="mt-2 text-xs font-medium text-foreground">Nenhum custo extra ainda</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Clique para adicionar — ex: <span className="font-mono">API OpenAI · R$ 200/mês</span>
+                  </p>
+                </button>
               ) : (
                 <div className="space-y-2">
-                  {extraCosts.map((e) => (
-                    <div key={e.id} className="rounded border border-border/60 bg-background/40 p-2 space-y-2">
-                      <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px_36px]">
-                        <Input
-                          placeholder="Ex: API OpenAI" value={e.description}
-                          onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
-                          className="h-8"
+                  {extraCosts.map((e, idx) => {
+                    const hasOwnCategoria = Boolean(e.categoria_id || e.centro_custo_id || e.conta_bancaria_id || e.meio_pagamento_id);
+                    const catName = e.categoria_id ? nameById(categoriasDespesa, e.categoria_id) : (extraCategoriaId ? nameById(categoriasDespesa, extraCategoriaId) : null);
+                    const ccName = e.centro_custo_id ? nameById(centros, e.centro_custo_id) : (extraCentroId ? nameById(centros, extraCentroId) : null);
+                    const contaName = e.conta_bancaria_id ? nameById(contas, e.conta_bancaria_id) : (extraContaId ? nameById(contas, extraContaId) : null);
+                    const meioName = e.meio_pagamento_id ? nameById(meios, e.meio_pagamento_id) : (extraMeioId ? nameById(meios, extraMeioId) : null);
+                    const summaryParts = [catName, ccName, contaName, meioName].filter(Boolean) as string[];
+                    const incomplete = !e.description.trim() || !(Number(e.amount) > 0);
+                    return (
+                      <div
+                        key={e.id}
+                        className={cn(
+                          'rounded-lg border bg-background/40 p-2.5 space-y-2 transition-colors',
+                          incomplete ? 'border-amber-500/40' : 'border-border/60',
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-muted px-1 font-mono">{idx + 1}</span>
+                          <span>Item</span>
+                          <div className="flex-1" />
+                          <Button
+                            type="button" size="icon" variant="ghost"
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                            onClick={() => removeExtraCost(e.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px]">
+                          <Input
+                            placeholder="Ex: API OpenAI" value={e.description}
+                            onChange={(ev) => updateExtraCost(e.id, { description: ev.target.value })}
+                            className="h-9"
+                          />
+                          <CurrencyInput
+                            value={e.amount}
+                            onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
+                            withPrefix placeholder="R$ 0,00" className="h-9"
+                          />
+                          <Select
+                            value={e.recurrence}
+                            onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
+                          >
+                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
+                              <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
+                              <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Categorização individual — colapsada com chip de resumo */}
+                        <Collapsible>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <CollapsibleTrigger asChild>
+                              <button
+                                type="button"
+                                className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              >
+                                <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
+                                {hasOwnCategoria ? 'Editar categorização deste item' : 'Personalizar categorização (opcional)'}
+                              </button>
+                            </CollapsibleTrigger>
+                            {summaryParts.length > 0 && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'gap-1 px-1.5 py-0 text-[10px] font-normal',
+                                  hasOwnCategoria ? 'border-accent/40 text-foreground' : 'text-muted-foreground',
+                                )}
+                              >
+                                <span className="font-semibold uppercase tracking-wide">
+                                  {hasOwnCategoria ? 'Própria' : 'Padrão'}
+                                </span>
+                                <span>·</span>
+                                <span className="truncate max-w-[420px]">{summaryParts.join(' · ')}</span>
+                              </Badge>
+                            )}
+                          </div>
+
+                          <CollapsibleContent className="pt-2">
+                            <div className="rounded border border-dashed border-border/60 bg-muted/10 p-2 space-y-2">
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                <ComboboxCreate
+                                  value={e.categoria_id ?? ''}
+                                  options={toComboOptions(categoriasDespesa)}
+                                  onChange={(v) => updateExtraCost(e.id, { categoria_id: v })}
+                                  onCreate={makeCreateCategoria('despesas', 'extra')}
+                                  placeholder={extraCategoriaId ? `Padrão: ${nameById(categoriasDespesa, extraCategoriaId)}` : 'Categoria de despesa'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar categoria "${t}"`}
+                                />
+                                <ComboboxCreate
+                                  value={e.centro_custo_id ?? ''}
+                                  options={toComboOptions(centros)}
+                                  onChange={(v) => updateExtraCost(e.id, { centro_custo_id: v })}
+                                  onCreate={makeCreateCentro('extra')}
+                                  placeholder={extraCentroId ? `Padrão: ${nameById(centros, extraCentroId)}` : 'Centro de custo'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar centro "${t}"`}
+                                />
+                                <ComboboxCreate
+                                  value={e.conta_bancaria_id ?? ''}
+                                  options={toComboOptions(contas)}
+                                  onChange={(v) => updateExtraCost(e.id, { conta_bancaria_id: v })}
+                                  onCreate={makeCreateConta('extra')}
+                                  placeholder={extraContaId ? `Padrão: ${nameById(contas, extraContaId)}` : 'Conta bancária'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar conta "${t}"`}
+                                />
+                                <ComboboxCreate
+                                  value={e.meio_pagamento_id ?? ''}
+                                  options={toComboOptions(meios)}
+                                  onChange={(v) => updateExtraCost(e.id, { meio_pagamento_id: v })}
+                                  onCreate={makeCreateMeio('extra')}
+                                  placeholder={extraMeioId ? `Padrão: ${nameById(meios, extraMeioId)}` : 'Meio de pagamento'}
+                                  searchPlaceholder="Buscar ou criar…"
+                                  createLabel={(t) => `+ Criar meio "${t}"`}
+                                />
+                              </div>
+                              {hasOwnCategoria && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateExtraCost(e.id, {
+                                    categoria_id: undefined, centro_custo_id: undefined,
+                                    conta_bancaria_id: undefined, meio_pagamento_id: undefined,
+                                  })}
+                                  className="text-[11px] text-muted-foreground underline hover:text-foreground"
+                                >
+                                  Voltar a usar o padrão
+                                </button>
+                              )}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        <Textarea
+                          placeholder="Observação (opcional)"
+                          value={e.notes}
+                          onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
+                          rows={1}
+                          className="text-xs"
                         />
-                        <CurrencyInput
-                          value={e.amount}
-                          onValueChange={(v) => updateExtraCost(e.id, { amount: v })}
-                          withPrefix placeholder="R$ 0,00" className="h-8"
-                        />
-                        <Select
-                          value={e.recurrence}
-                          onValueChange={(v) => updateExtraCost(e.id, { recurrence: v as ExtraCostDraft['recurrence'] })}
-                        >
-                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="once">{RECURRENCE_LABEL.once}</SelectItem>
-                            <SelectItem value="monthly">{RECURRENCE_LABEL.monthly}</SelectItem>
-                            <SelectItem value="yearly">{RECURRENCE_LABEL.yearly}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          type="button" size="icon" variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => removeExtraCost(e.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+
+                        {incomplete && (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-500">
+                            Preencha descrição e valor para que esse item seja salvo.
+                          </p>
+                        )}
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <ComboboxCreate
-                          value={e.categoria_id ?? ''}
-                          options={toComboOptions(categoriasDespesa)}
-                          onChange={(v) => updateExtraCost(e.id, { categoria_id: v })}
-                          onCreate={makeCreateCategoria('despesas', 'extra')}
-                          placeholder={extraCategoriaId ? `Padrão: ${nameById(categoriasDespesa, extraCategoriaId)}` : 'Categoria (opcional)'}
-                          searchPlaceholder="Buscar ou criar…"
-                          createLabel={(t) => `+ Criar categoria "${t}"`}
-                        />
-                        <ComboboxCreate
-                          value={e.centro_custo_id ?? ''}
-                          options={toComboOptions(centros)}
-                          onChange={(v) => updateExtraCost(e.id, { centro_custo_id: v })}
-                          onCreate={makeCreateCentro('extra')}
-                          placeholder={extraCentroId ? `Padrão: ${nameById(centros, extraCentroId)}` : 'Centro de custo (opcional)'}
-                          searchPlaceholder="Buscar ou criar…"
-                          createLabel={(t) => `+ Criar centro "${t}"`}
-                        />
+                    );
+                  })}
+
+                  <Button
+                    type="button" size="sm" variant="ghost"
+                    onClick={addExtraCost}
+                    className="w-full justify-center text-muted-foreground hover:text-foreground"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Adicionar outro item
+                  </Button>
+                </div>
+              )}
+
+              {/* ───── Padrão de categorização (colapsado quando há itens) ───── */}
+              <Collapsible defaultOpen={extraCosts.length === 0}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="group flex w-full items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-left transition-colors hover:bg-muted/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-foreground">
+                          Padrão de categorização
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          Aplicado a todos os itens que não tiverem categorização própria
+                        </div>
                       </div>
-                      <Textarea
-                        placeholder="Observação (opcional)"
-                        value={e.notes}
-                        onChange={(ev) => updateExtraCost(e.id, { notes: ev.target.value })}
-                        rows={1}
-                        className="text-xs"
-                      />
                     </div>
-                  ))}
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <FinanceCategorizationCard
+                    title="Padrão para custos extras"
+                    subtitle="Defina aqui pra não repetir em cada item"
+                    tone="expense"
+                    categoriaId={extraCategoriaId} setCategoriaId={setExtraCategoriaId}
+                    centroId={extraCentroId} setCentroId={setExtraCentroId}
+                    contaId={extraContaId} setContaId={setExtraContaId}
+                    meioId={extraMeioId} setMeioId={setExtraMeioId}
+                    categorias={categoriasDespesa}
+                    centros={centros} contas={contas} meios={meios}
+                    onCreateCategoria={makeCreateCategoria('despesas', 'extra')}
+                    onCreateCentro={makeCreateCentro('extra')}
+                    onCreateConta={makeCreateConta('extra')}
+                    onCreateMeio={makeCreateMeio('extra')}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* ───── Resumo de totais ───── */}
+              {extraCosts.filter((e) => e.description.trim() && Number(e.amount) > 0).length > 0 && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border/60 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-wide text-foreground">Resumo</span>
+                  <span>
+                    <span className="font-mono text-foreground">
+                      {extraCosts.filter((e) => e.description.trim() && Number(e.amount) > 0).length}
+                    </span>{' '}
+                    item(s)
+                  </span>
+                  {monthlyExtras > 0 && (
+                    <span>
+                      Mensal: <span className="font-mono text-foreground">{formatBRL(monthlyExtras)}</span>
+                    </span>
+                  )}
+                  {yearlyExtras > 0 && (
+                    <span>
+                      Anual: <span className="font-mono text-foreground">{formatBRL(yearlyExtras)}</span>
+                    </span>
+                  )}
+                  {onceExtras > 0 && (
+                    <span>
+                      Único: <span className="font-mono text-foreground">{formatBRL(onceExtras)}</span>
+                    </span>
+                  )}
                 </div>
               )}
             </div>
