@@ -5,6 +5,7 @@ import {
   Repeat, Percent, Wallet, FolderOpen, Banknote,
   ClipboardCheck, AlertTriangle, CheckCircle2, Settings2,
   Link2, FileText, ChevronDown, ChevronRight, Sparkles, FileSearch,
+  Copy, CopyCheck, Eraser,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
