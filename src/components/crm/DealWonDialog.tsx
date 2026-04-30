@@ -483,6 +483,52 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   useEffect(() => {
     if (!open || !deal) return;
 
+    const dft = restoreDraftRef.current;
+    if (dft) {
+      // Restaura tudo do rascunho
+      setProjectName(dft.projectName);
+      setProjectTypeSlugs(dft.projectTypeSlugs);
+      setPainCategorySlugs(dft.painCategorySlugs);
+      setStartDate(dft.startDate);
+      setEstimatedDelivery(dft.estimatedDelivery);
+      setInstallmentsN(dft.installmentsN);
+      setFirstDueDate(dft.firstDueDate);
+      setInstallments(dft.installments);
+      setMrrEnabled(dft.mrrEnabled);
+      setMrrValue(dft.mrrValue);
+      setMrrStartDate(dft.mrrStartDate);
+      setMrrIndefinite(dft.mrrIndefinite);
+      setMrrDuration(dft.mrrDuration);
+      setMrrDiscountEnabled(dft.mrrDiscountEnabled);
+      setMrrDiscountKind(dft.mrrDiscountKind);
+      setMrrDiscountMonths(dft.mrrDiscountMonths);
+      setMrrDiscountValue(dft.mrrDiscountValue);
+      setMrrDiscountUntilDate(dft.mrrDiscountUntilDate);
+      setMrrDiscountUntilStage(dft.mrrDiscountUntilStage);
+      setMrrStartTrigger(dft.mrrStartTrigger);
+      setDiscountEnabled(dft.discountEnabled);
+      setDiscountKind(dft.discountKind);
+      setDiscountAmount(dft.discountAmount);
+      setDiscountValidUntil(dft.discountValidUntil);
+      setDiscountNotes(dft.discountNotes);
+      setExtraCosts(dft.extraCosts);
+      // Categorizações também (mas só sobrescreve se não-vazio para não atropelar defaults globais que carregam async)
+      if (dft.implCategoriaId) setImplCategoriaId(dft.implCategoriaId);
+      if (dft.implCentroId) setImplCentroId(dft.implCentroId);
+      if (dft.implContaId) setImplContaId(dft.implContaId);
+      if (dft.implMeioId) setImplMeioId(dft.implMeioId);
+      if (dft.mrrCategoriaId) setMrrCategoriaId(dft.mrrCategoriaId);
+      if (dft.mrrCentroId) setMrrCentroId(dft.mrrCentroId);
+      if (dft.mrrContaId) setMrrContaId(dft.mrrContaId);
+      if (dft.mrrMeioId) setMrrMeioId(dft.mrrMeioId);
+      if (dft.extraCategoriaId) setExtraCategoriaId(dft.extraCategoriaId);
+      if (dft.extraCentroId) setExtraCentroId(dft.extraCentroId);
+      if (dft.extraContaId) setExtraContaId(dft.extraContaId);
+      if (dft.extraMeioId) setExtraMeioId(dft.extraMeioId);
+      restoreDraftRef.current = null;
+      return;
+    }
+
     setProjectName(deal.title);
     setProjectTypeSlugs(deal.project_type_v2 ?? []);
     setPainCategorySlugs(deal.pain_categories ?? (deal.pain_category ? [deal.pain_category] : []));
