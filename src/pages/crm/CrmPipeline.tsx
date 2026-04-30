@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
