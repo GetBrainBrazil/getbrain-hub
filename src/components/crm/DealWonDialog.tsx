@@ -612,9 +612,82 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     .filter((e) => e.recurrence === 'monthly')
     .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
+  const onceExtras = extraCosts
+    .filter((e) => e.recurrence === 'once')
+    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  const yearlyExtras = extraCosts
+    .filter((e) => e.recurrence === 'yearly')
+    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
   const mrrDiscountInvalid =
     mrrEnabled && mrrDiscountEnabled &&
     Number(mrrDiscountValue) > 0 && Number(mrrDiscountValue) >= Number(mrrValue);
+
+  // ============== Autosave do rascunho ==============
+  useEffect(() => {
+    if (!open || !deal) return;
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      const draft: DealWonDraft = {
+        __v: DRAFT_VERSION,
+        savedAt: new Date().toISOString(),
+        step,
+        projectName, projectTypeSlugs, painCategorySlugs, startDate, estimatedDelivery,
+        installmentsN, firstDueDate, installments,
+        implCategoriaId, implCentroId, implContaId, implMeioId,
+        mrrCategoriaId, mrrCentroId, mrrContaId, mrrMeioId,
+        extraCategoriaId, extraCentroId, extraContaId, extraMeioId,
+        mrrEnabled, mrrValue, mrrStartDate, mrrIndefinite, mrrDuration,
+        mrrDiscountEnabled, mrrDiscountMonths, mrrDiscountValue, mrrDiscountKind,
+        mrrDiscountUntilDate, mrrDiscountUntilStage, mrrStartTrigger,
+        discountEnabled, discountKind, discountAmount, discountValidUntil, discountNotes,
+        extraCosts,
+      };
+      try { localStorage.setItem(draftKey(deal.id), JSON.stringify(draft)); } catch {}
+    }, 400);
+    return () => clearTimeout(t);
+  }, [
+    open, deal?.id, step,
+    projectName, projectTypeSlugs, painCategorySlugs, startDate, estimatedDelivery,
+    installmentsN, firstDueDate, installments,
+    implCategoriaId, implCentroId, implContaId, implMeioId,
+    mrrCategoriaId, mrrCentroId, mrrContaId, mrrMeioId,
+    extraCategoriaId, extraCentroId, extraContaId, extraMeioId,
+    mrrEnabled, mrrValue, mrrStartDate, mrrIndefinite, mrrDuration,
+    mrrDiscountEnabled, mrrDiscountMonths, mrrDiscountValue, mrrDiscountKind,
+    mrrDiscountUntilDate, mrrDiscountUntilStage, mrrStartTrigger,
+    discountEnabled, discountKind, discountAmount, discountValidUntil, discountNotes,
+    extraCosts,
+  ]);
+
+  function discardDraft() {
+    if (!deal) return;
+    clearDraft(deal.id);
+    setDraftRestored(false);
+    // Recarrega valores originais do deal
+    restoreDraftRef.current = null;
+    skipNextAutosaveRef.current = true;
+    // Força re-execução do effect de pré-preenchimento via toggle artificial:
+    // a forma simples é fechar/reabrir; mas como não queremos isso, replicamos defaults aqui.
+    setProjectName(deal.title);
+    setProjectTypeSlugs(deal.project_type_v2 ?? []);
+    setPainCategorySlugs(deal.pain_categories ?? (deal.pain_category ? [deal.pain_category] : []));
+    setStartDate(deal.desired_start_date ?? fmtDateInput(new Date()));
+    setEstimatedDelivery(deal.desired_delivery_date ?? '');
+    const dealN = (deal as any).installments_count as number | null;
+    const dealFirst = (deal as any).first_installment_date as string | null;
+    const initialN = dealN && dealN > 0 ? dealN : 1;
+    const initialFirst = dealFirst || fmtDateInput(addMonths(new Date(), 1));
+    setInstallmentsN(String(initialN));
+    setFirstDueDate(initialFirst);
+    setInstallments(buildInstallments(initialN, initialFirst, baseImplementation));
+    setExtraCosts([]);
+    toast.success('Rascunho descartado');
+  }
 
   // ============== Ações de parcelas ==============
   function addInstallment() {
