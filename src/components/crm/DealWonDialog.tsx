@@ -283,7 +283,7 @@ function FinanceCategorizationCard(p: FinCardProps) {
         </div>
       </div>
 
-      <div className="grid gap-3 p-3 sm:grid-cols-2">
+      <div className={cn('grid gap-3 sm:grid-cols-2', p.compact ? 'p-2.5' : 'p-3')}>
         {fieldRow(
           isExpense ? 'Categoria de despesa' : 'Categoria de receita',
           p.categoriaId,
