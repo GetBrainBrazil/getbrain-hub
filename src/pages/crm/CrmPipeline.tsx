@@ -139,7 +139,7 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   );
 }
 
-function HomeKpi({ label, value, tone }: { label: string; value: string; tone?: 'destructive' | 'success' | 'accent' }) {
+function HomeKpi({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: 'destructive' | 'success' | 'accent' }) {
   return (
     <div className="rounded-lg border border-border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3">
       <p className="text-[10px] sm:text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -150,6 +150,7 @@ function HomeKpi({ label, value, tone }: { label: string; value: string; tone?: 
         tone === 'accent' && 'text-accent',
         !tone && 'text-foreground',
       )}>{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -226,18 +227,30 @@ export default function CrmPipeline() {
 
   const sortedListDeals = useSortedDeals(listDeals, sort);
 
-  // KPIs específicos da home (calculados a partir dos deals ativos brutos, ignorando filtros de página)
+  // KPIs reagem aos filtros aplicados (estágio, tipo, dono, origem, valor, busca).
+  // Em modo Lista usa listDeals (já oculta fechados quando não há filtro de estágio);
+  // em modo Kanban usa filteredDeals (representa o que está visível nas colunas).
   const homeKpis = useMemo(() => {
-    const active = rawDeals.filter((d) => ACTIVE_STAGES.includes(d.stage));
-    const pipeline = active.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0);
-    const forecast = active.reduce((s, d) => s + (Number(d.estimated_value ?? 0) * (d.probability_pct / 100)), 0);
+    const base = viewMode === 'lista' ? listDeals : filteredDeals;
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const pipeline = base.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0);
+    const forecast = base.reduce(
+      (s, d) => s + Number(d.estimated_value ?? 0) * (d.probability_pct / 100),
+      0,
+    );
+    const withValue = base.filter((d) => Number(d.estimated_value ?? 0) > 0).length;
+    const ticketMedio = withValue > 0 ? pipeline / withValue : 0;
+    const overdueNextStep = base.filter(
+      (d) => d.next_step_date && d.next_step_date < todayIso,
+    ).length;
     return {
       pipeline,
       forecast,
-      activeCount: active.length,
-      overdueDeps: indicators?.totalOverdueDeps ?? 0,
+      ticketMedio,
+      dealsCount: base.length,
+      overdueNextStep,
     };
-  }, [rawDeals, indicators]);
+  }, [viewMode, listDeals, filteredDeals]);
 
   const grouped = useMemo(
     () => new Map(DEAL_STAGES.map((s) => [s, filteredDeals.filter((d) => d.stage === s)])),
@@ -520,12 +533,30 @@ export default function CrmPipeline() {
           </div>
         </div>
 
-        {/* KPIs */}
+        {/* KPIs — recalculados conforme filtros aplicados */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
-          <HomeKpi label="Pipeline total" value={formatCurrency(homeKpis.pipeline)} />
-          <HomeKpi label="Forecast ponderado" value={formatCurrency(homeKpis.forecast)} tone="accent" />
-          <HomeKpi label="Deals ativos" value={String(homeKpis.activeCount)} />
-          <HomeKpi label="Deps atrasadas" value={String(homeKpis.overdueDeps)} tone={homeKpis.overdueDeps > 0 ? 'destructive' : undefined} />
+          <HomeKpi
+            label="Pipeline"
+            value={formatCurrency(homeKpis.pipeline)}
+            hint={`${homeKpis.dealsCount} ${homeKpis.dealsCount === 1 ? 'deal' : 'deals'}`}
+          />
+          <HomeKpi
+            label="Forecast ponderado"
+            value={formatCurrency(homeKpis.forecast)}
+            tone="accent"
+            hint="ajustado pela probabilidade"
+          />
+          <HomeKpi
+            label="Ticket médio"
+            value={formatCurrency(homeKpis.ticketMedio)}
+            hint="por deal com valor"
+          />
+          <HomeKpi
+            label="Próximo passo atrasado"
+            value={String(homeKpis.overdueNextStep)}
+            tone={homeKpis.overdueNextStep > 0 ? 'destructive' : undefined}
+            hint={homeKpis.overdueNextStep === 1 ? 'deal parado' : 'deals parados'}
+          />
         </div>
 
       {/* View body */}
