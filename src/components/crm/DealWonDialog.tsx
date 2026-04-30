@@ -1400,73 +1400,195 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                       </div>
                     </div>
 
-                    {/* Início da cobrança (vem antes pois define se mostra a data) */}
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-muted-foreground">Quando começa a cobrar</Label>
-                      <Select
-                        value={mrrStartTrigger || ''}
-                        onValueChange={(v) => setMrrStartTrigger((v as 'on_delivery' | 'before_delivery') || '')}
-                      >
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="on_delivery">Na entrega da implementação</SelectItem>
-                          <SelectItem value="before_delivery">Antes da entrega (data específica)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    {/* Início da cobrança — cards visuais */}
+                    <div className="space-y-2">
+                      <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Quando começa a cobrar
+                      </Label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => setMrrStartTrigger('on_delivery')}
+                          className={cn(
+                            'group relative rounded-lg border p-3 text-left transition-all',
+                            mrrStartTrigger === 'on_delivery'
+                              ? 'border-primary bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]'
+                              : 'border-border bg-background/40 hover:border-primary/40 hover:bg-muted/30',
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className={cn(
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+                              mrrStartTrigger === 'on_delivery' ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
+                            )}>
+                              <CheckCircle2 className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                                Na entrega
+                                {mrrStartTrigger === 'on_delivery' && (
+                                  <Badge variant="outline" className="h-4 border-primary/40 px-1 text-[9px] font-semibold uppercase tracking-wide text-primary">
+                                    Selecionado
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                                Cobrança inicia automaticamente quando o projeto for movido para <span className="font-medium text-foreground">Entregue</span>.
+                              </p>
+                            </div>
+                          </div>
+                        </button>
 
-                      {mrrStartTrigger === 'on_delivery' && (
-                        <div className="mt-2 flex items-start gap-2 rounded-md border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-[11px] text-foreground">
-                          <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-cyan-500 shrink-0" />
-                          <span>
-                            A cobrança da manutenção começará <strong>automaticamente</strong> quando este projeto for movido para a coluna <strong>Entregue</strong> em /projetos.
-                          </span>
-                        </div>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => setMrrStartTrigger('before_delivery')}
+                          className={cn(
+                            'group relative rounded-lg border p-3 text-left transition-all',
+                            mrrStartTrigger === 'before_delivery'
+                              ? 'border-primary bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]'
+                              : 'border-border bg-background/40 hover:border-primary/40 hover:bg-muted/30',
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className={cn(
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+                              mrrStartTrigger === 'before_delivery' ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
+                            )}>
+                              <Banknote className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                                Em data específica
+                                {mrrStartTrigger === 'before_delivery' && (
+                                  <Badge variant="outline" className="h-4 border-primary/40 px-1 text-[9px] font-semibold uppercase tracking-wide text-primary">
+                                    Selecionado
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                                Defina uma data fixa de início, mesmo antes de entregar o projeto.
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
 
                       {mrrStartTrigger === 'before_delivery' && (
-                        <div className="mt-2 space-y-1.5">
-                          <Label className="text-[11px] font-medium text-muted-foreground">Data de início da cobrança</Label>
-                          <Input
-                            type="date"
-                            value={mrrStartDate}
-                            onChange={(e) => setMrrStartDate(e.target.value)}
-                            className="h-9"
-                          />
+                        <div className="flex items-end gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Data de início da cobrança
+                            </Label>
+                            <Input
+                              type="date"
+                              value={mrrStartDate}
+                              onChange={(e) => setMrrStartDate(e.target.value)}
+                              className="h-9"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Duração */}
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-muted-foreground">Duração do contrato</Label>
-                      <RadioGroup
-                        value={mrrIndefinite ? 'indefinite' : 'fixed'}
-                        onValueChange={(v) => setMrrIndefinite(v === 'indefinite')}
-                        className="grid grid-cols-2 gap-2"
-                      >
-                        <label className={cn(
-                          'flex items-center gap-2 rounded-md border px-3 py-2 text-xs cursor-pointer transition-colors',
-                          mrrIndefinite ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'
-                        )}>
-                          <RadioGroupItem value="indefinite" id="mrr-indef" />
-                          <span className="font-medium">Indefinido</span>
-                        </label>
-                        <label className={cn(
-                          'flex items-center gap-2 rounded-md border px-3 py-2 text-xs cursor-pointer transition-colors',
-                          !mrrIndefinite ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'
-                        )}>
-                          <RadioGroupItem value="fixed" id="mrr-fixed" />
-                          <span className="font-medium">Por</span>
-                          <Input
-                            type="number" min={1} max={120}
-                            value={mrrDuration} onChange={(e) => setMrrDuration(e.target.value)}
-                            disabled={mrrIndefinite}
-                            className="h-7 w-14 px-2 text-xs"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <span className="text-muted-foreground">meses</span>
-                        </label>
-                      </RadioGroup>
+                    {/* Duração — cards visuais */}
+                    <div className="space-y-2">
+                      <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Duração do contrato
+                      </Label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => setMrrIndefinite(true)}
+                          className={cn(
+                            'group rounded-lg border p-3 text-left transition-all',
+                            mrrIndefinite
+                              ? 'border-primary bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]'
+                              : 'border-border bg-background/40 hover:border-primary/40 hover:bg-muted/30',
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className={cn(
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+                              mrrIndefinite ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
+                            )}>
+                              <Repeat className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                                Indefinido
+                                {mrrIndefinite && (
+                                  <Badge variant="outline" className="h-4 border-primary/40 px-1 text-[9px] font-semibold uppercase tracking-wide text-primary">
+                                    Selecionado
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                                Cobra todo mês até o cliente cancelar.
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setMrrIndefinite(false)}
+                          className={cn(
+                            'group rounded-lg border p-3 text-left transition-all',
+                            !mrrIndefinite
+                              ? 'border-primary bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]'
+                              : 'border-border bg-background/40 hover:border-primary/40 hover:bg-muted/30',
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className={cn(
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+                              !mrrIndefinite ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
+                            )}>
+                              <ClipboardCheck className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                                Prazo fixo
+                                {!mrrIndefinite && (
+                                  <Badge variant="outline" className="h-4 border-primary/40 px-1 text-[9px] font-semibold uppercase tracking-wide text-primary">
+                                    Selecionado
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                                Encerra automaticamente após X meses.
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+
+                      {!mrrIndefinite && (
+                        <div className="flex items-end gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Quantos meses?
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number" min={1} max={120}
+                                value={mrrDuration}
+                                onChange={(e) => setMrrDuration(e.target.value)}
+                                className="h-9 w-24 font-mono"
+                              />
+                              <span className="text-xs text-muted-foreground">meses</span>
+                            </div>
+                          </div>
+                          {Number(mrrDuration) > 0 && Number(mrrValue) > 0 && (
+                            <div className="ml-auto text-right">
+                              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total estimado</div>
+                              <div className="font-mono text-sm font-semibold text-foreground">
+                                {formatBRL(Number(mrrValue) * Number(mrrDuration))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Desconto MRR */}
