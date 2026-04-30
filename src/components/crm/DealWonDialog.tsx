@@ -1846,9 +1846,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                     Custos extras (APIs, infra, licenças)
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Liste o que esse projeto vai consumir (recorrente ou setup único).
-                    A categorização financeira pode ficar no <span className="font-medium">padrão</span>{' '}
-                    abaixo — só sobrescreva por item se for diferente.
+                    Liste o que esse projeto vai consumir. Cada item tem sua própria categorização —
+                    use <span className="font-medium">Duplicar</span> ou <span className="font-medium">Aplicar a todos</span> para acelerar.
                   </p>
                 </div>
                 <Button type="button" size="sm" variant="outline" onClick={addExtraCost}>
