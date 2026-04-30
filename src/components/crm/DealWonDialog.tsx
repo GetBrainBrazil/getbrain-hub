@@ -609,7 +609,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     if (cleaned.length === 0) return 'Adicione ao menos uma parcela com valor e data';
     if (mrrEnabled) {
       if (!Number(mrrValue) || Number(mrrValue) <= 0) return 'Valor mensal do MRR deve ser maior que zero';
-      if (!mrrStartDate) return 'Informe a data de início da manutenção (MRR)';
+      if (!mrrStartTrigger) return 'Escolha quando começar a cobrar a manutenção';
+      if (mrrStartTrigger === 'before_delivery' && !mrrStartDate) return 'Informe a data de início da manutenção (MRR)';
       if (mrrDiscountInvalid) return 'Desconto do MRR não pode ser ≥ valor cheio';
     }
     return null;
