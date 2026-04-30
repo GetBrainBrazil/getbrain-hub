@@ -227,18 +227,30 @@ export default function CrmPipeline() {
 
   const sortedListDeals = useSortedDeals(listDeals, sort);
 
-  // KPIs específicos da home (calculados a partir dos deals ativos brutos, ignorando filtros de página)
+  // KPIs reagem aos filtros aplicados (estágio, tipo, dono, origem, valor, busca).
+  // Em modo Lista usa listDeals (já oculta fechados quando não há filtro de estágio);
+  // em modo Kanban usa filteredDeals (representa o que está visível nas colunas).
   const homeKpis = useMemo(() => {
-    const active = rawDeals.filter((d) => ACTIVE_STAGES.includes(d.stage));
-    const pipeline = active.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0);
-    const forecast = active.reduce((s, d) => s + (Number(d.estimated_value ?? 0) * (d.probability_pct / 100)), 0);
+    const base = viewMode === 'lista' ? listDeals : filteredDeals;
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const pipeline = base.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0);
+    const forecast = base.reduce(
+      (s, d) => s + Number(d.estimated_value ?? 0) * (d.probability_pct / 100),
+      0,
+    );
+    const withValue = base.filter((d) => Number(d.estimated_value ?? 0) > 0).length;
+    const ticketMedio = withValue > 0 ? pipeline / withValue : 0;
+    const overdueNextStep = base.filter(
+      (d) => d.next_step_date && d.next_step_date < todayIso,
+    ).length;
     return {
       pipeline,
       forecast,
-      activeCount: active.length,
-      overdueDeps: indicators?.totalOverdueDeps ?? 0,
+      ticketMedio,
+      dealsCount: base.length,
+      overdueNextStep,
     };
-  }, [rawDeals, indicators]);
+  }, [viewMode, listDeals, filteredDeals]);
 
   const grouped = useMemo(
     () => new Map(DEAL_STAGES.map((s) => [s, filteredDeals.filter((d) => d.stage === s)])),
