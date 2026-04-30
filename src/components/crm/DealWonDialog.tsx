@@ -992,6 +992,21 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
           </DialogDescription>
         </DialogHeader>
 
+        {draftRestored && (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px]">
+            <div className="flex items-center gap-2 text-foreground">
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              <span>
+                <span className="font-semibold">Rascunho restaurado.</span>{' '}
+                Continuamos do último ponto. Salvamos suas alterações automaticamente.
+              </span>
+            </div>
+            <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={discardDraft}>
+              Descartar rascunho
+            </Button>
+          </div>
+        )}
+
         <Tabs value={step} onValueChange={(v) => setStep(v as any)} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="projeto" className="gap-1.5">
