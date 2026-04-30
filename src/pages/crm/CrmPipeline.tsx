@@ -139,9 +139,9 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   );
 }
 
-function HomeKpi({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: 'destructive' | 'success' | 'accent' }) {
-  return (
-    <div className="rounded-lg border border-border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3">
+function HomeKpi({ label, value, hint, tone, tooltip }: { label: string; value: string; hint?: string; tone?: 'destructive' | 'success' | 'accent'; tooltip?: string }) {
+  const card = (
+    <div className="rounded-lg border border-border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3 cursor-help transition-colors hover:border-accent/40 hover:bg-card">
       <p className="text-[10px] sm:text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn(
         'mt-1 text-base sm:text-lg font-semibold tabular-nums',
@@ -152,6 +152,15 @@ function HomeKpi({ label, value, hint, tone }: { label: string; value: string; h
       )}>{value}</p>
       {hint && <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>}
     </div>
+  );
+  if (!tooltip) return card;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent side="bottom" align="start" className="max-w-xs text-xs leading-relaxed">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
