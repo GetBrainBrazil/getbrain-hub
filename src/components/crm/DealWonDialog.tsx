@@ -124,6 +124,49 @@ function saveDefaults(key: string, def: FinDefaults) {
   try { localStorage.setItem(key, JSON.stringify(def)); } catch {}
 }
 
+// ============== Draft (rascunho do modal por deal) ==============
+const DRAFT_VERSION = 1;
+const draftKey = (dealId: string) => `crm.dealWonDraft:${dealId}`;
+
+interface DealWonDraft {
+  __v: number;
+  savedAt: string;
+  step: 'projeto' | 'receita' | 'custos' | 'revisao';
+  projectName: string;
+  projectTypeSlugs: string[];
+  painCategorySlugs: string[];
+  startDate: string;
+  estimatedDelivery: string;
+  installmentsN: string;
+  firstDueDate: string;
+  installments: InstallmentDraft[];
+  implCategoriaId: string; implCentroId: string; implContaId: string; implMeioId: string;
+  mrrCategoriaId: string; mrrCentroId: string; mrrContaId: string; mrrMeioId: string;
+  extraCategoriaId: string; extraCentroId: string; extraContaId: string; extraMeioId: string;
+  mrrEnabled: boolean; mrrValue: string; mrrStartDate: string; mrrIndefinite: boolean;
+  mrrDuration: string; mrrDiscountEnabled: boolean; mrrDiscountMonths: string;
+  mrrDiscountValue: string; mrrDiscountKind: 'months' | 'until_date' | 'until_stage';
+  mrrDiscountUntilDate: string; mrrDiscountUntilStage: string;
+  mrrStartTrigger: 'on_delivery' | 'before_delivery' | '';
+  discountEnabled: boolean; discountKind: 'percent' | 'fixed';
+  discountAmount: string; discountValidUntil: string; discountNotes: string;
+  extraCosts: ExtraCostDraft[];
+}
+
+function readDraft(dealId: string): DealWonDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(dealId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.__v !== DRAFT_VERSION) return null;
+    return parsed as DealWonDraft;
+  } catch { return null; }
+}
+
+function clearDraft(dealId: string) {
+  try { localStorage.removeItem(draftKey(dealId)); } catch {}
+}
+
 const RECURRENCE_LABEL: Record<ExtraCostDraft['recurrence'], string> = {
   once: 'Uma vez',
   monthly: 'Mensal',
