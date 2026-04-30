@@ -965,6 +965,8 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
       qc.invalidateQueries({ queryKey: ['clientes'] });
       qc.invalidateQueries({ queryKey: ['projects'] });
 
+      // Sucesso: limpa o rascunho deste deal
+      clearDraft(deal.id);
       onOpenChange(false);
       if (data?.project_id) {
         if (onSuccess) onSuccess(data.project_id);
