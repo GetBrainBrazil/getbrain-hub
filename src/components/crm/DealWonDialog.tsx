@@ -453,11 +453,21 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
     setExtraMeioId('');
   }
 
+  // ============== Draft (rascunho) ==============
+  const [draftRestored, setDraftRestored] = useState(false);
+  const restoreDraftRef = useRef<DealWonDraft | null>(null);
+  const skipNextAutosaveRef = useRef(true);
+
   useEffect(() => {
     if (!open) return;
-    setStep('projeto');
+    // Tenta carregar draft antes do pré-preenchimento
+    const dft = deal ? readDraft(deal.id) : null;
+    restoreDraftRef.current = dft;
+    setDraftRestored(Boolean(dft));
+    skipNextAutosaveRef.current = true;
+    setStep(dft?.step ?? 'projeto');
     reloadFinanceLists();
-  }, [open]);
+  }, [open, deal?.id]);
 
   // ============== Pré-preencher do deal ==============
   const proposalTotal = useMemo(
