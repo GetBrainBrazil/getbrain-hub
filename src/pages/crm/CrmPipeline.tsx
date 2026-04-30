@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DealCard } from '@/components/crm/DealCard';
 import { DealWonDialog } from '@/components/crm/DealWonDialog';
 import { DealsList, useSortedDeals, type DealsListSort } from '@/components/crm/DealsList';
@@ -139,9 +140,9 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
   );
 }
 
-function HomeKpi({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: 'destructive' | 'success' | 'accent' }) {
-  return (
-    <div className="rounded-lg border border-border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3">
+function HomeKpi({ label, value, hint, tone, tooltip }: { label: string; value: string; hint?: string; tone?: 'destructive' | 'success' | 'accent'; tooltip?: string }) {
+  const card = (
+    <div className="rounded-lg border border-border bg-card/60 px-3 py-2.5 sm:px-4 sm:py-3 cursor-help transition-colors hover:border-accent/40 hover:bg-card">
       <p className="text-[10px] sm:text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn(
         'mt-1 text-base sm:text-lg font-semibold tabular-nums',
@@ -152,6 +153,15 @@ function HomeKpi({ label, value, hint, tone }: { label: string; value: string; h
       )}>{value}</p>
       {hint && <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>}
     </div>
+  );
+  if (!tooltip) return card;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent side="bottom" align="start" className="max-w-xs text-xs leading-relaxed">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -539,24 +549,29 @@ export default function CrmPipeline() {
             label="Pipeline"
             value={formatCurrency(homeKpis.pipeline)}
             hint={`${homeKpis.dealsCount} ${homeKpis.dealsCount === 1 ? 'deal' : 'deals'}`}
+            tooltip="Soma do valor estimado de todos os deals atualmente visíveis (após os filtros aplicados). Representa o tamanho bruto da carteira em negociação — sem ajuste por probabilidade."
           />
           <HomeKpi
             label="Forecast ponderado"
             value={formatCurrency(homeKpis.forecast)}
             tone="accent"
             hint="ajustado pela probabilidade"
+            tooltip="Soma de (valor × probabilidade do estágio) dos deals visíveis. É a previsão realista de receita: deals em estágios iniciais entram com peso menor, deals próximos do fechamento pesam mais."
           />
           <HomeKpi
             label="Ticket médio"
             value={formatCurrency(homeKpis.ticketMedio)}
             hint="por deal com valor"
+            tooltip="Pipeline ÷ quantidade de deals visíveis com valor preenchido (> 0). Mostra o porte médio dos negócios na seleção atual — útil para comparar segmentos quando você filtra por origem, dono ou tipo."
           />
           <HomeKpi
             label="Próximo passo atrasado"
             value={String(homeKpis.overdueNextStep)}
             tone={homeKpis.overdueNextStep > 0 ? 'destructive' : undefined}
             hint={homeKpis.overdueNextStep === 1 ? 'deal parado' : 'deals parados'}
+            tooltip="Deals visíveis cuja data do próximo passo já passou. Sinal de que a negociação está estagnada e precisa de uma ação sua hoje (ligação, follow-up, envio de proposta etc.)."
           />
+
         </div>
 
       {/* View body */}
