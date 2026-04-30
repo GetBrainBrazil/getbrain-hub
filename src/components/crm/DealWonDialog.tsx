@@ -234,12 +234,17 @@ function FinanceCategorizationCard(p: FinCardProps) {
   return (
     <div className={cn('rounded-xl border overflow-hidden', accentBorder, accentBg)}>
       <div className={cn(
-        'flex items-center justify-between gap-2 border-b px-3 py-2',
+        'flex items-center justify-between gap-2 border-b',
         accentBorder,
+        p.compact ? 'px-2.5 py-1.5' : 'px-3 py-2',
       )}>
         <div className="flex items-center gap-2 min-w-0">
-          <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md', accentIconBg)}>
-            <Settings2 className="h-3.5 w-3.5" />
+          <div className={cn(
+            'flex shrink-0 items-center justify-center rounded-md',
+            accentIconBg,
+            p.compact ? 'h-6 w-6' : 'h-7 w-7',
+          )}>
+            <Settings2 className={p.compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
           </div>
           <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground truncate">
@@ -250,20 +255,32 @@ function FinanceCategorizationCard(p: FinCardProps) {
             )}
           </div>
         </div>
-        <Badge
-          variant="outline"
-          className={cn(
-            'shrink-0 gap-1 px-1.5 py-0 text-[10px] font-semibold',
-            filled === 4
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-              : filled > 0
-                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                : 'border-border text-muted-foreground',
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Badge
+            variant="outline"
+            className={cn(
+              'gap-1 px-1.5 py-0 text-[10px] font-semibold',
+              filled === 4
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : filled > 0
+                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  : 'border-border text-muted-foreground',
+            )}
+          >
+            {filled === 4 && <CheckCircle2 className="h-2.5 w-2.5" />}
+            {filled}/4
+          </Badge>
+          {p.onClear && filled > 0 && (
+            <Button
+              type="button" size="sm" variant="ghost"
+              className="h-6 gap-1 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+              onClick={p.onClear}
+            >
+              <Eraser className="h-3 w-3" />
+              <span className="hidden sm:inline">Limpar</span>
+            </Button>
           )}
-        >
-          {filled === 4 && <CheckCircle2 className="h-2.5 w-2.5" />}
-          {filled}/4
-        </Badge>
+        </div>
       </div>
 
       <div className="grid gap-3 p-3 sm:grid-cols-2">
