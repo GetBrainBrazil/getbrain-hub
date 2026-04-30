@@ -989,6 +989,18 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                   {/* Parâmetros das parcelas */}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-muted-foreground">Data da 1ª parcela</Label>
+                      <Input
+                        type="date" value={firstDueDate}
+                        onChange={(e) => {
+                          setFirstDueDate(e.target.value);
+                          const n = parseInt(installmentsN, 10) || 1;
+                          regenerateInstallments(n, e.target.value);
+                        }}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
                       <Label className="text-[11px] font-medium text-muted-foreground">Nº de parcelas</Label>
                       <Input
                         type="number" min={1} max={60}
@@ -997,18 +1009,6 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
                           setInstallmentsN(e.target.value);
                           const n = parseInt(e.target.value, 10);
                           if (!Number.isNaN(n) && n > 0) regenerateInstallments(n, firstDueDate);
-                        }}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-muted-foreground">Data da 1ª parcela</Label>
-                      <Input
-                        type="date" value={firstDueDate}
-                        onChange={(e) => {
-                          setFirstDueDate(e.target.value);
-                          const n = parseInt(installmentsN, 10) || 1;
-                          regenerateInstallments(n, e.target.value);
                         }}
                         className="h-9"
                       />
