@@ -202,6 +202,8 @@ interface FinCardProps {
   onCreateCentro: (name: string) => Promise<void>;
   onCreateConta: (name: string) => Promise<void>;
   onCreateMeio: (name: string) => Promise<void>;
+  compact?: boolean;
+  onClear?: () => void;
 }
 
 function FinanceCategorizationCard(p: FinCardProps) {
