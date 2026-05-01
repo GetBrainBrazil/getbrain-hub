@@ -174,6 +174,9 @@ export default function PropostaPublica() {
       }
       return;
     }
+    if (!isPreview) {
+      trackEvent(accessJwt, "pdf_download", { url: data.url });
+    }
     window.open(data.url, "_blank", "noopener,noreferrer");
   }
 
@@ -197,8 +200,53 @@ export default function PropostaPublica() {
       proposal={proposal}
       onDownloadPdf={handleDownloadPdf}
       isPreview={isPreview}
+      accessJwt={accessJwt}
     />
   );
+}
+
+/* ------------------------- TRACKING ------------------------- */
+
+function getOrCreateSessionToken(proposalCode: string): string {
+  const key = `proposal_session_${proposalCode}`;
+  try {
+    let t = localStorage.getItem(key);
+    if (!t) {
+      t = crypto.randomUUID();
+      localStorage.setItem(key, t);
+    }
+    return t;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+async function trackEvent(
+  jwt: string,
+  event: "view" | "pdf_download" | "interest_manifested" | "section_viewed",
+  metadata?: Record<string, unknown>,
+) {
+  try {
+    const sessionToken = metadata?.__session as string ||
+      localStorage.getItem("__last_session__") || crypto.randomUUID();
+    const cleanMeta = { ...metadata };
+    delete (cleanMeta as any).__session;
+    await fetch(`${SUPABASE_URL}/functions/v1/track-proposal-view`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({
+        event,
+        session_token: sessionToken,
+        metadata: cleanMeta,
+      }),
+    });
+  } catch (e) {
+    console.warn("track failed", e);
+  }
 }
 
 /* ------------------------- TELA DE SENHA ------------------------- */
