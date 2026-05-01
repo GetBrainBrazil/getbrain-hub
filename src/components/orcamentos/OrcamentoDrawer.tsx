@@ -18,6 +18,7 @@ import { AbaDetalhes } from "./abas/AbaDetalhes";
 import { effectiveStatus } from "@/lib/orcamentos/calculateTotal";
 import { getTemplate } from "@/lib/orcamentos/templates";
 import { toast } from "sonner";
+import { openProposalPdf } from "@/lib/orcamentos/storage";
 
 interface Props {
   proposalId: string | null;
