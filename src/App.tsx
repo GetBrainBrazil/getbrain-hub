@@ -49,6 +49,7 @@ import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
 import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
 import AdminAuditoriaPage from "./pages/admin/AdminAuditoriaPage";
+import AdminPropostasIaPage from "./pages/admin/AdminPropostasIaPage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
