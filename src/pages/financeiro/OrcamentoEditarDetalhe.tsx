@@ -84,7 +84,7 @@ export default function OrcamentoEditarDetalhe() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
-  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string } | null>(null);
+  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string; password?: string | null } | null>(null);
 
   useEffect(() => {
     if (!data) return;
