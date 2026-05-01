@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { openProposalPdf } from "@/lib/orcamentos/storage";
 import { createProposalFromDeal } from "@/lib/orcamentos/createProposalFromDeal";
 import { invalidateProposalCaches } from "@/lib/cacheInvalidation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ interface ConflictState {
 
 export function DealProposalsSection({ dealId, companyId, companyName }: Props) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -86,7 +88,7 @@ export function DealProposalsSection({ dealId, companyId, companyName }: Props) 
       }
 
       const created = result as Exclude<typeof result, { conflict: true }>;
-      await invalidateProposalCaches();
+      invalidateProposalCaches(qc);
       toast.success(`Proposta ${created.proposalCode} criada`, {
         description: `${created.itemsImported} item(ns) importados do deal. Senha: ${created.defaultPasswordPlain}`,
         duration: 8000,
