@@ -58,28 +58,38 @@ export function useGeneratePDF() {
       const path = `${proposalId}/v${nextVersion}-${timestamp}.pdf`;
 
       const { error: upErr } = await supabase.storage
-        .from("proposals")
+        .from(PROPOSALS_BUCKET)
         .upload(path, pdfBlob, {
           contentType: "application/pdf",
           upsert: false,
         });
       if (upErr) throw upErr;
 
-      const { data: urlData } = supabase.storage
-        .from("proposals")
-        .getPublicUrl(path);
-
       const userRes = await supabase.auth.getUser();
       const uid = userRes.data.user?.id ?? null;
+
+      // Lê org/template da proposta-pai p/ snapshot multi-tenant
+      const { data: parent } = await supabase
+        .from("proposals" as any)
+        .select("organization_id, template_key, template_version")
+        .eq("id", proposalId)
+        .maybeSingle();
 
       const { error: insErr } = await supabase
         .from("proposal_versions" as any)
         .insert({
           proposal_id: proposalId,
+          organization_id: (parent as any)?.organization_id ?? null,
           version_number: nextVersion,
-          pdf_url: urlData.publicUrl,
+          // Bucket privado: armazenamos o path em ambas as colunas (legacy + nova)
+          pdf_url: path,
           pdf_storage_path: path,
+          pdf_size_bytes: pdfBlob.size,
+          template_key: (parent as any)?.template_key ?? null,
+          template_version: (parent as any)?.template_version ?? null,
           generated_by: uid,
+          created_by: uid,
+          updated_by: uid,
           snapshot,
         });
       if (insErr) throw insErr;
@@ -88,7 +98,7 @@ export function useGeneratePDF() {
       await supabase
         .from("proposals" as any)
         .update({
-          pdf_url: urlData.publicUrl,
+          pdf_url: path,
           pdf_generated_at: nowIso,
         })
         .eq("id", proposalId);
