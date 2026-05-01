@@ -113,7 +113,7 @@ export function useGeneratePDF() {
       a.remove();
       URL.revokeObjectURL(url);
 
-      return { url: urlData.publicUrl, version: nextVersion };
+      return { path, version: nextVersion };
     },
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ["proposal", vars.proposalId] });
