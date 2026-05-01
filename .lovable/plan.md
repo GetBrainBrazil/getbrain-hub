@@ -1,68 +1,43 @@
-## Sub-abas dentro de "Descoberta" no detalhe do deal
+## Header de identidade da empresa no topo da sub-aba "Cliente"
 
-Hoje a aba **Descoberta** (em `/crm/d/:code`) empilha verticalmente 5 zonas grandes: Cliente, Dor, Solução, Dependências e Comercial. Vou separar essas 5 zonas em **sub-abas internas** com o mesmo visual segmentado do modal de Ganho (pill ativa com fundo claro + ícone + label).
+Hoje a sub-aba **Cliente** (dentro de Descoberta, em `/crm/d/:code`) começa direto em "Setor da empresa". Vou adicionar no topo um bloco de identidade com **logo da empresa** (com upload) e **nome** (razão social + nome fantasia editáveis), antes dos demais campos.
 
 ### Comportamento
 
-- 5 sub-abas: **Cliente · Dor · Solução · Dependências · Comercial** (mesma ordem atual).
-- Estilo `Tabs` do shadcn (idêntico ao do modal de Ganho), com ícone à esquerda do nome em cada trigger.
-- Em cada aba, mostra **só** a zona correspondente — não empilha mais tudo junto.
-- Aba ativa fica persistida via `usePersistedState` com chave `crm-deal-discovery-subtab` (cada usuário retoma onde estava). Padrão: `cliente`.
-- Indicador de status nos triggers: bolinha verde (`text-success`) em "Dor" quando `painOk` e em "Solução" quando `solucaoOk` — reaproveita os booleanos já calculados em `computeCompleteness()`.
-- Mobile: `TabsList grid grid-cols-5`, ícones sempre visíveis, label oculto em telas <sm (`hidden sm:inline`), igual o modal de Ganho.
+- **Logo (esquerda)**: thumbnail 80×80 quadrado arredondado. Se não tem logo, mostra placeholder com ícone `Building2` e iniciais da empresa. Botão "Enviar logo" / "Trocar logo" abaixo (variant outline, sm). Aceita PNG/JPG/SVG/WEBP, máx 2MB. Upload vai pro bucket `company-logos` (novo, público) no path `{company_id}/logo-{timestamp}.{ext}`.
+- **Nome (direita, ocupa o resto)**:
+  - Linha 1: **Razão social** (`legal_name`) — input grande, fonte semibold, autosave on blur (campo obrigatório, não permite vazio).
+  - Linha 2: **Nome fantasia** (`trade_name`) — input menor, placeholder "Nome fantasia (opcional)", autosave on blur, pode ficar vazio.
+  - Linha 3 (read-only): badge com CNPJ formatado se existir, senão link "+ adicionar CNPJ" que foca no campo (mantém simples por ora — CNPJ continua editável só na ficha da empresa, fora do escopo).
+- Bloco fica **acima** do grid Setor/Faturamento, separado por `border-b border-border/60 pb-4 mb-4` (mesmo padrão do header da seção).
+- Reusa `useUpdateCompanyField` que já está no `ZoneCliente` para salvar `legal_name`, `trade_name` e `logo_url`.
+- Toast de sucesso/erro via `sonner` (padrão do projeto).
 
-### Limpeza pendente
+### Backend
 
-Remover o `StageMiniStepper` que adicionei por engano em `src/components/crm/DealCard.tsx` na rodada anterior — não era isso que você pediu. O card do Pipeline volta ao visual original.
+Adicionar coluna `logo_url text` em `public.companies` (nullable) e criar bucket público `company-logos` com policies:
+- SELECT público (bucket é público).
+- INSERT/UPDATE/DELETE: usuários autenticados da org (segue padrão do bucket `avatars`).
 
 ### Arquivos afetados
 
-- `src/pages/crm/CrmDealDetail.tsx` — substituir o conteúdo do `<TabsContent value="descoberta">` por um `<Tabs>` aninhado com 5 sub-abas. Passar `painOk`/`solucaoOk` (já computados acima na página) para os triggers.
-- `src/components/crm/DealCard.tsx` — reverter a adição do `StageMiniStepper`.
+- **Migração SQL**: adicionar `logo_url` em `companies` + criar bucket `company-logos` + policies.
+- `src/components/crm/ZoneCliente.tsx`: adicionar componente interno `CompanyIdentityHeader` no topo do `<section>`, com logo uploader + inputs de nome. Reusa lógica de upload do `LogoUploader` de orçamentos como referência (não importa direto — escopo diferente).
+- `src/hooks/crm/useCrmDetails.ts`: nada a mudar (já tem `useUpdateCompanyField` genérico). Só confirmar que o tipo `Company` aceita `logo_url` (vem do `types.ts` regenerado).
 
-### Esboço técnico
+Sem mudanças em outros componentes, RLS de companies, ou no `CrmDealDetail.tsx`. O ✅ verde da sub-aba "Cliente" continua dependendo de `sector_id + client_type + contact_person_id` (logo é opcional).
 
-```tsx
-// Em CrmDealDetail.tsx, dentro de TabsContent value="descoberta"
-const [discoverySubtab, setDiscoverySubtab] = usePersistedState<string>(
-  'crm-deal-discovery-subtab',
-  'cliente',
-);
+### Esboço visual
 
-<Tabs value={discoverySubtab} onValueChange={setDiscoverySubtab}>
-  <TabsList className="grid w-full grid-cols-5 mb-4">
-    <TabsTrigger value="cliente" className="gap-1.5">
-      <Building2 className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">Cliente</span>
-    </TabsTrigger>
-    <TabsTrigger value="dor" className="gap-1.5">
-      <AlertCircle className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">Dor</span>
-      {painOk && <CheckCircle2 className="h-3 w-3 text-success" />}
-    </TabsTrigger>
-    <TabsTrigger value="solucao" className="gap-1.5">
-      <Lightbulb className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">Solução</span>
-      {solucaoOk && <CheckCircle2 className="h-3 w-3 text-success" />}
-    </TabsTrigger>
-    <TabsTrigger value="dependencias" className="gap-1.5">
-      <Link2 className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">Dependências</span>
-    </TabsTrigger>
-    <TabsTrigger value="comercial" className="gap-1.5">
-      <Banknote className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">Comercial</span>
-    </TabsTrigger>
-  </TabsList>
-
-  <TabsContent value="cliente"><ZoneCliente deal={deal} /></TabsContent>
-  <TabsContent value="dor"><ZoneDor deal={deal} save={save} /></TabsContent>
-  <TabsContent value="solucao"><ZoneSolucao deal={deal} save={save} /></TabsContent>
-  <TabsContent value="dependencias">
-    <ZoneDependencias dealId={deal.id} dealCode={deal.code} dealTitle={deal.title} />
-  </TabsContent>
-  <TabsContent value="comercial"><ZoneComercial deal={deal} /></TabsContent>
-</Tabs>
+```text
+┌──────────────────────────────────────────────────────┐
+│  01  Cliente & Empresa   Quem é, em que mercado...  │
+├──────────────────────────────────────────────────────┤
+│  ┌────┐  Razão Social Ltda                ___________│
+│  │LOGO│  Nome Fantasia                    ___________│
+│  └────┘  [CNPJ 12.345.678/0001-90]                  │
+│  [Trocar logo]                                       │
+├──────────────────────────────────────────────────────┤
+│  Setor da empresa        │  Faixa de faturamento     │
+│  ...                                                 │
 ```
-
-Sem mudanças em hooks, banco, RLS ou outros componentes. As zonas continuam idênticas — só muda como elas são apresentadas (separadas em sub-abas em vez de empilhadas).
