@@ -19,6 +19,7 @@ import {
   calculateScopeTotal, effectiveStatus, formatBRL, formatDateBR,
   type ProposalStatus, type ScopeItem,
 } from '@/lib/orcamentos/calculateTotal';
+import { openProposalPdf } from '@/lib/orcamentos/storage';
 import { useUpdateDealField } from '@/hooks/crm/useCrmDetails';
 import { AnexoUploader } from './AnexoUploader';
 import type { Deal } from '@/types/crm';
