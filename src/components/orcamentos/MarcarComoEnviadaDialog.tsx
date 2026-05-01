@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { setProposalPassword } from "@/lib/orcamentos/proposalPassword";
 import { toast } from "sonner";
 
 interface Props {
@@ -49,12 +50,8 @@ export function MarcarComoEnviadaDialog({
     }
     setSubmitting(true);
     try {
-      // 1. Grava hash de senha (RPC SECURITY DEFINER)
-      const setPwd = await supabase.rpc("set_proposal_password" as any, {
-        _proposal_id: proposalId,
-        _plain_password: password,
-      });
-      if (setPwd.error) throw setPwd.error;
+      // 1. Hash + grava senha via edge function (substitui RPC legada)
+      await setProposalPassword({ proposalId, plainPassword: password });
 
       // 2. Atualiza status pra enviada (trigger valida senha + seta sent_at)
       const upd = await supabase

@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { setProposalPassword } from "@/lib/orcamentos/proposalPassword";
 import { toast } from "sonner";
 
 interface Props {
@@ -38,11 +38,7 @@ export function RedefinirSenhaDialog({
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.rpc("set_proposal_password" as any, {
-        _proposal_id: proposalId,
-        _plain_password: password,
-      });
-      if (error) throw error;
+      await setProposalPassword({ proposalId, plainPassword: password });
       toast.success("Senha redefinida com sucesso");
       onOpenChange(false);
       setPassword("");
