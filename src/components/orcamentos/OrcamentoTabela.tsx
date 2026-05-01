@@ -54,6 +54,7 @@ export function OrcamentoTabela({ rows, loading, onAction, onRowClick }: Props) 
           <TableRow>
             <TableHead className="w-[110px]">Código</TableHead>
             <TableHead>Cliente</TableHead>
+            <TableHead className="w-[140px]">Origem</TableHead>
             <TableHead className="text-right w-[130px]">Total</TableHead>
             <TableHead className="w-[120px]">Status</TableHead>
             <TableHead className="w-[110px]">Validade</TableHead>
@@ -79,6 +80,17 @@ export function OrcamentoTabela({ rows, loading, onAction, onRowClick }: Props) 
                   {r.code}
                 </TableCell>
                 <TableCell className="font-medium">{r.client_company_name}</TableCell>
+                <TableCell>
+                  {r.deal?.code ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-accent/15 px-2 py-0.5 text-[11px] font-medium text-accent">
+                      Deal {r.deal.code}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-md bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      Manual
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {formatBRL(total)}
                 </TableCell>
