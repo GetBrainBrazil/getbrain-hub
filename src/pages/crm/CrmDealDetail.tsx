@@ -798,8 +798,6 @@ export default function CrmDealDetail() {
   }
 
   const { pct, painOk, solucaoOk } = computeCompleteness(deal);
-  const { data: companyForCheck } = useCompanyDetail(deal.company_id);
-  const { data: dependenciesForCheck } = useDealDependencies(deal.id);
   const clienteOk = !!(companyForCheck?.sector_id && companyForCheck?.client_type && deal.contact_person_id);
   const dependenciasOk = (dependenciesForCheck?.length ?? 0) > 0;
   const comercialOk = !!(
