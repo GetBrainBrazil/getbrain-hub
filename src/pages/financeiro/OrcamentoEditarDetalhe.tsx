@@ -73,6 +73,11 @@ export default function OrcamentoEditarDetalhe() {
   const [validUntil, setValidUntil] = useState("");
   const [mockupUrl, setMockupUrl] = useState("");
   const [templateKey, setTemplateKey] = useState<string>("inovacao_tecnologica");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [executiveSummary, setExecutiveSummary] = useState("");
+  const [painContext, setPainContext] = useState("");
+  const [solutionOverview, setSolutionOverview] = useState("");
+  const [clientBrandColor, setClientBrandColor] = useState<string>("");
   const [zoom, setZoom] = useState(0.5);
   const [dirty, setDirty] = useState(false);
   const [itemsDirty, setItemsDirty] = useState(false);
