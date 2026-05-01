@@ -20,8 +20,9 @@ interface Props {
   expiresAt: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Disparado depois da proposta ser marcada como enviada com sucesso. */
-  onSent: (info: { accessToken: string; expiresAt: string }) => void;
+  /** Disparado depois da proposta ser marcada como enviada com sucesso.
+   * Inclui a senha em plain text para exibir UMA ÚNICA VEZ ao Daniel. */
+  onSent: (info: { accessToken: string; expiresAt: string; password: string }) => void;
 }
 
 export function MarcarComoEnviadaDialog({
