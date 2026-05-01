@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   MessageCircle,
-  Sparkles,
   ThumbsUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
