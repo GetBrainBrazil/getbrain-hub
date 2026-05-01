@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
 import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 import { ItemDetailsDialog } from "@/components/orcamentos/ItemDetailsDialog";
 import { GerarComIaDropdown } from "@/components/orcamentos/GerarComIaDropdown";
+import { PropostaTrackingSheet } from "@/components/orcamentos/PropostaTrackingSheet";
 import type { GenerationType } from "@/lib/orcamentos/generateContent";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
 import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
@@ -96,6 +97,7 @@ export default function OrcamentoEditarDetalhe() {
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
   const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string; password?: string | null } | null>(null);
   const [detailsItemIdx, setDetailsItemIdx] = useState<number | null>(null);
+  const [trackingOpen, setTrackingOpen] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -428,6 +430,15 @@ export default function OrcamentoEditarDetalhe() {
             onGenerated={handleAiGenerated}
             disabled={isLocked}
           />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setTrackingOpen(true)}
+            title="Ver views, eventos e conversas"
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Tracking
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -885,6 +896,14 @@ export default function OrcamentoEditarDetalhe() {
           onOpenChange={(o) => !o && setDetailsItemIdx(null)}
         />
       )}
+
+      {/* Sheet: tracking de views/eventos/chats */}
+      <PropostaTrackingSheet
+        open={trackingOpen}
+        onOpenChange={setTrackingOpen}
+        proposalId={data.id}
+        proposalCode={data.code}
+      />
     </div>
   );
 }

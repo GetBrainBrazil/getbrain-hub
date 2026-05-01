@@ -49,6 +49,7 @@ import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
 import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
 import AdminAuditoriaPage from "./pages/admin/AdminAuditoriaPage";
+import AdminPropostasIaPage from "./pages/admin/AdminPropostasIaPage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
@@ -189,6 +190,7 @@ const App = () => (
               <Route path="agencia" element={<Navigate to="/admin/usuarios" replace />} />
               <Route path="auditoria" element={<AdminAuditoriaPage />} />
               <Route path="logs" element={<Navigate to="/admin/auditoria" replace />} />
+              <Route path="propostas-ia" element={<AdminPropostasIaPage />} />
             </Route>
             <Route path="/admin/usuarios/:id" element={<AdminRoute><UsuarioFichaPage mode="admin" /></AdminRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />

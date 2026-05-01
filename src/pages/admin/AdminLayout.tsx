@@ -9,6 +9,7 @@ const TABS = [
   { key: "usuarios", label: "Usuários", path: "/admin/usuarios" },
   { key: "permissoes", label: "Permissões", path: "/admin/permissoes" },
   { key: "auditoria", label: "Auditoria", path: "/admin/auditoria" },
+  { key: "propostas-ia", label: "IA das Propostas", path: "/admin/propostas-ia" },
 ] as const;
 
 export default function AdminLayout({ children }: { children?: ReactNode }) {
