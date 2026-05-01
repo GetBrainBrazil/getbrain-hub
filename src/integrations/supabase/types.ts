@@ -3427,6 +3427,38 @@ export type Database = {
           },
         ]
       }
+      proposal_access_attempts: {
+        Row: {
+          attempted_at: string
+          id: string
+          ip_hash: string
+          proposal_id: string
+          success: boolean
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          ip_hash: string
+          proposal_id: string
+          success?: boolean
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          ip_hash?: string
+          proposal_id?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_access_attempts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_events: {
         Row: {
           created_at: string
@@ -3461,10 +3493,14 @@ export type Database = {
       }
       proposal_items: {
         Row: {
+          acceptance_criteria: string[]
+          client_dependencies: string[]
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          deliverables: string[]
           description: string
+          detailed_description: string | null
           id: string
           order_index: number
           proposal_id: string
@@ -3475,10 +3511,14 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          acceptance_criteria?: string[]
+          client_dependencies?: string[]
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          deliverables?: string[]
           description: string
+          detailed_description?: string | null
           id?: string
           order_index?: number
           proposal_id: string
@@ -3489,10 +3529,14 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          acceptance_criteria?: string[]
+          client_dependencies?: string[]
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          deliverables?: string[]
           description?: string
+          detailed_description?: string | null
           id?: string
           order_index?: number
           proposal_id?: string
@@ -3629,6 +3673,7 @@ export type Database = {
           accepted_at: string | null
           access_password_hash: string | null
           access_token: string | null
+          client_brand_color: string | null
           client_city: string | null
           client_company_name: string
           client_logo_url: string | null
@@ -3640,6 +3685,7 @@ export type Database = {
           created_by: string | null
           deal_id: string | null
           deleted_at: string | null
+          executive_summary: string | null
           expires_at: string | null
           first_viewed_at: string | null
           id: string
@@ -3649,6 +3695,7 @@ export type Database = {
           maintenance_monthly_value: number | null
           mockup_url: string | null
           organization_id: string
+          pain_context: string | null
           pdf_generated_at: string | null
           pdf_url: string | null
           project_id: string | null
@@ -3656,6 +3703,7 @@ export type Database = {
           rejection_reason: string | null
           scope_items: Json
           sent_at: string | null
+          solution_overview: string | null
           status: Database["public"]["Enums"]["proposal_status"]
           template_key: string
           template_slug: string
@@ -3666,11 +3714,13 @@ export type Database = {
           valid_until: string
           validation_days: number | null
           view_count: number
+          welcome_message: string | null
         }
         Insert: {
           accepted_at?: string | null
           access_password_hash?: string | null
           access_token?: string | null
+          client_brand_color?: string | null
           client_city?: string | null
           client_company_name: string
           client_logo_url?: string | null
@@ -3682,6 +3732,7 @@ export type Database = {
           created_by?: string | null
           deal_id?: string | null
           deleted_at?: string | null
+          executive_summary?: string | null
           expires_at?: string | null
           first_viewed_at?: string | null
           id?: string
@@ -3691,6 +3742,7 @@ export type Database = {
           maintenance_monthly_value?: number | null
           mockup_url?: string | null
           organization_id: string
+          pain_context?: string | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
           project_id?: string | null
@@ -3698,6 +3750,7 @@ export type Database = {
           rejection_reason?: string | null
           scope_items?: Json
           sent_at?: string | null
+          solution_overview?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           template_key?: string
           template_slug?: string
@@ -3708,11 +3761,13 @@ export type Database = {
           valid_until: string
           validation_days?: number | null
           view_count?: number
+          welcome_message?: string | null
         }
         Update: {
           accepted_at?: string | null
           access_password_hash?: string | null
           access_token?: string | null
+          client_brand_color?: string | null
           client_city?: string | null
           client_company_name?: string
           client_logo_url?: string | null
@@ -3724,6 +3779,7 @@ export type Database = {
           created_by?: string | null
           deal_id?: string | null
           deleted_at?: string | null
+          executive_summary?: string | null
           expires_at?: string | null
           first_viewed_at?: string | null
           id?: string
@@ -3733,6 +3789,7 @@ export type Database = {
           maintenance_monthly_value?: number | null
           mockup_url?: string | null
           organization_id?: string
+          pain_context?: string | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
           project_id?: string | null
@@ -3740,6 +3797,7 @@ export type Database = {
           rejection_reason?: string | null
           scope_items?: Json
           sent_at?: string | null
+          solution_overview?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           template_key?: string
           template_slug?: string
@@ -3750,6 +3808,7 @@ export type Database = {
           valid_until?: string
           validation_days?: number | null
           view_count?: number
+          welcome_message?: string | null
         }
         Relationships: [
           {
