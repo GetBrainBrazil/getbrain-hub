@@ -2,15 +2,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Plus, GripVertical, ArrowUp, ArrowDown, FileText } from "lucide-react";
 import { formatBRL, type ScopeItem } from "@/lib/orcamentos/calculateTotal";
 
 interface Props {
   items: ScopeItem[];
   onChange: (items: ScopeItem[]) => void;
+  /** Quando definido, mostra botão "Detalhes" em cada item passando o índice. */
+  onOpenDetails?: (index: number) => void;
 }
 
-export function ScopeItemsEditor({ items, onChange }: Props) {
+export function ScopeItemsEditor({ items, onChange, onOpenDetails }: Props) {
   const update = (idx: number, patch: Partial<ScopeItem>) => {
     onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
   };
@@ -124,6 +126,20 @@ export function ScopeItemsEditor({ items, onChange }: Props) {
               className="min-h-[80px] text-sm"
             />
           </div>
+          {onOpenDetails && (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs gap-1.5"
+                onClick={() => onOpenDetails(idx)}
+              >
+                <FileText className="h-3 w-3" />
+                Detalhes do módulo (página pública)
+              </Button>
+            </div>
+          )}
         </div>
       ))}
       <Button

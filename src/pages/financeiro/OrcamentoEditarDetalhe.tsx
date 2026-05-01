@@ -20,6 +20,7 @@ import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBad
 import { MarcarComoEnviadaDialog } from "@/components/orcamentos/MarcarComoEnviadaDialog";
 import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
 import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
+import { ItemDetailsDialog } from "@/components/orcamentos/ItemDetailsDialog";
 import {
   calculateScopeTotal,
   effectiveStatus,
@@ -90,6 +91,7 @@ export default function OrcamentoEditarDetalhe() {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
   const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string; password?: string | null } | null>(null);
+  const [detailsItemIdx, setDetailsItemIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (!data) return;
@@ -521,6 +523,13 @@ export default function OrcamentoEditarDetalhe() {
             <ScopeItemsEditor
               items={scopeItems}
               onChange={markItemsDirty}
+              onOpenDetails={(idx) => {
+                if (itemsDirty || dirty) {
+                  toast.info("Aguarde o autosave concluir antes de detalhar.");
+                  return;
+                }
+                setDetailsItemIdx(idx);
+              }}
             />
             <div className="flex items-center justify-between border-t border-border pt-3">
               <span className="text-sm text-muted-foreground">Total dos itens</span>
@@ -841,6 +850,17 @@ export default function OrcamentoEditarDetalhe() {
         open={pwdDialogOpen}
         onOpenChange={setPwdDialogOpen}
       />
+
+      {/* Modal: detalhes do módulo (página pública) */}
+      {detailsItemIdx !== null && (
+        <ItemDetailsDialog
+          proposalId={data.id}
+          orderIndex={detailsItemIdx}
+          itemTitle={scopeItems[detailsItemIdx]?.title || `Item ${detailsItemIdx + 1}`}
+          open={detailsItemIdx !== null}
+          onOpenChange={(o) => !o && setDetailsItemIdx(null)}
+        />
+      )}
     </div>
   );
 }
