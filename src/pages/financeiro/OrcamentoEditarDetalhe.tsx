@@ -433,6 +433,15 @@ export default function OrcamentoEditarDetalhe() {
           <Button
             size="sm"
             variant="outline"
+            onClick={() => setTrackingOpen(true)}
+            title="Ver views, eventos e conversas"
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Tracking
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => save()}
             disabled={!dirty || update.isPending}
           >
