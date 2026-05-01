@@ -823,12 +823,49 @@ export default function CrmDealDetail() {
               <TabsTrigger value="proposta">Proposta &amp; Anexos</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="descoberta" className="space-y-6 mt-0">
-              <ZoneCliente deal={deal} />
-              <ZoneDor deal={deal} save={save} />
-              <ZoneSolucao deal={deal} save={save} />
-              <ZoneDependencias dealId={deal.id} dealCode={deal.code} dealTitle={deal.title} />
-              <ZoneComercial deal={deal} />
+            <TabsContent value="descoberta" className="mt-0">
+              <Tabs value={discoverySubtab} onValueChange={setDiscoverySubtab}>
+                <TabsList className="mb-4 grid w-full grid-cols-5">
+                  <TabsTrigger value="cliente" className="gap-1.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Cliente</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="dor" className="gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Dor</span>
+                    {painOk && <CheckCircle2 className="h-3 w-3 text-success" />}
+                  </TabsTrigger>
+                  <TabsTrigger value="solucao" className="gap-1.5">
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Solução</span>
+                    {solucaoOk && <CheckCircle2 className="h-3 w-3 text-success" />}
+                  </TabsTrigger>
+                  <TabsTrigger value="dependencias" className="gap-1.5">
+                    <Link2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Dependências</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="comercial" className="gap-1.5">
+                    <Banknote className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Comercial</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="cliente" className="mt-0">
+                  <ZoneCliente deal={deal} />
+                </TabsContent>
+                <TabsContent value="dor" className="mt-0">
+                  <ZoneDor deal={deal} save={save} />
+                </TabsContent>
+                <TabsContent value="solucao" className="mt-0">
+                  <ZoneSolucao deal={deal} save={save} />
+                </TabsContent>
+                <TabsContent value="dependencias" className="mt-0">
+                  <ZoneDependencias dealId={deal.id} dealCode={deal.code} dealTitle={deal.title} />
+                </TabsContent>
+                <TabsContent value="comercial" className="mt-0">
+                  <ZoneComercial deal={deal} />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="proposta" className="mt-0">
