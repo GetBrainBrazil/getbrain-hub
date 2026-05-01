@@ -22,6 +22,7 @@ import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
 import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 import { ItemDetailsDialog } from "@/components/orcamentos/ItemDetailsDialog";
 import { GerarComIaDropdown } from "@/components/orcamentos/GerarComIaDropdown";
+import { PropostaTrackingSheet } from "@/components/orcamentos/PropostaTrackingSheet";
 import type { GenerationType } from "@/lib/orcamentos/generateContent";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
 import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
