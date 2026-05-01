@@ -13,7 +13,7 @@ import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
 import { useProposalItems, useReplaceProposalItems } from "@/hooks/orcamentos/useProposalItems";
 import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
-import { ScopeItemsEditor } from "@/components/orcamentos/ScopeItemsEditor";
+import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
 import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBadge";
@@ -221,7 +221,7 @@ export default function OrcamentoEditarDetalhe() {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
       save({}, { silent: true }).catch(() => {});
-    }, 2000);
+    }, 1500);
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
