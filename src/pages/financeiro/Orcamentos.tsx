@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNavigate } from "react-router-dom";
 import { usePersistedState } from "@/hooks/use-persisted-state";
-import { useProposals } from "@/hooks/orcamentos/useProposals";
+import { useProposals, type ProposalOrigin } from "@/hooks/orcamentos/useProposals";
 import {
   useDeleteProposal,
   useDuplicateProposal,
@@ -43,6 +43,10 @@ export default function Orcamentos() {
     "todos"
   );
   const [search, setSearch] = usePersistedState("orcamentos:search", "");
+  const [origin, setOrigin] = usePersistedState<ProposalOrigin>(
+    "orcamentos:origin",
+    "all"
+  );
   const [viewMode, setViewMode] = usePersistedState<ViewMode>(
     "orcamentos.viewMode",
     "kanban"
@@ -53,7 +57,7 @@ export default function Orcamentos() {
   // No Kanban ignoramos o filtro de status (Kanban mostra tudo, dividido por coluna).
   // O filtro só age na tabela.
   const effStatus: StatusFilter = viewMode === "kanban" ? "todos" : status;
-  const { data = [], isLoading } = useProposals({ status: effStatus, search });
+  const { data = [], isLoading } = useProposals({ status: effStatus, search, origin });
   const update = useUpdateProposal();
   const del = useDeleteProposal();
   const dup = useDuplicateProposal();
