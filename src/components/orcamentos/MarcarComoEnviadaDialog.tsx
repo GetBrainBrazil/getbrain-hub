@@ -77,9 +77,10 @@ export function MarcarComoEnviadaDialog({
       });
 
       const token = (upd.data as any)?.access_token as string;
+      const sentPassword = password;
       onOpenChange(false);
       setPassword("");
-      onSent({ accessToken: token, expiresAt: validade });
+      onSent({ accessToken: token, expiresAt: validade, password: sentPassword });
     } catch (e: any) {
       toast.error(e?.message || "Erro ao marcar como enviada");
     } finally {
