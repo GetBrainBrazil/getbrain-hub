@@ -674,6 +674,7 @@ export default function CrmDealDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [persistedTab, setPersistedTab] = usePersistedState<string>('crm-deal-active-tab', 'descoberta');
+  const [discoverySubtab, setDiscoverySubtab] = usePersistedState<string>('crm-deal-discovery-subtab', 'cliente');
   const activeTab = tabFromUrl ?? persistedTab;
   const [wonDialogOpen, setWonDialogOpen] = useState(false);
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
