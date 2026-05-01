@@ -116,8 +116,6 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
             {deal.title}
           </h3>
 
-          {/* Stage stepper (5 estágios abertos) */}
-          <StageMiniStepper stage={deal.stage} />
 
           {/* Company */}
           <div className="mt-2 flex items-center gap-1.5 text-xs">
