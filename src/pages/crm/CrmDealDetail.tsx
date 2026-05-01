@@ -28,6 +28,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { createDraftProposal } from '@/components/orcamentos/createDraftProposal';
 import { invalidateProposalCaches } from '@/lib/cacheInvalidation';
 import { useUpdateDealStage } from '@/hooks/crm/useDeals';
+import { useCompanyDetail } from '@/hooks/crm/useCrmDetails';
+import { useDealDependencies } from '@/hooks/crm/useDealDependencies';
 import { DEAL_STAGE_PROBABILITY } from '@/constants/dealStages';
 import type { DealStage } from '@/types/crm';
 import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
