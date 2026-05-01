@@ -28,6 +28,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { createDraftProposal } from '@/components/orcamentos/createDraftProposal';
 import { invalidateProposalCaches } from '@/lib/cacheInvalidation';
 import { useUpdateDealStage } from '@/hooks/crm/useDeals';
+import { useCompanyDetail } from '@/hooks/crm/useCrmDetails';
+import { useDealDependencies } from '@/hooks/crm/useDealDependencies';
 import { DEAL_STAGE_PROBABILITY } from '@/constants/dealStages';
 import type { DealStage } from '@/types/crm';
 import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
@@ -685,6 +687,8 @@ export default function CrmDealDetail() {
   const qc = useQueryClient();
   const updateStage = useUpdateDealStage();
   const updateDealField = useUpdateDealField(code);
+  const { data: companyForCheck } = useCompanyDetail(deal?.company_id);
+  const { data: dependenciesForCheck } = useDealDependencies(deal?.id);
 
   const handleTabChange = (next: string) => {
     setPersistedTab(next);
@@ -794,6 +798,13 @@ export default function CrmDealDetail() {
   }
 
   const { pct, painOk, solucaoOk } = computeCompleteness(deal);
+  const clienteOk = !!(companyForCheck?.sector_id && companyForCheck?.client_type && deal.contact_person_id);
+  const dependenciasOk = (dependenciesForCheck?.length ?? 0) > 0;
+  const comercialOk = !!(
+    (Number(deal.estimated_implementation_value ?? 0) > 0 || Number(deal.estimated_mrr_value ?? 0) > 0) &&
+    deal.expected_close_date &&
+    deal.next_step
+  );
 
   return (
     <DetailShell>
@@ -829,6 +840,7 @@ export default function CrmDealDetail() {
                   <TabsTrigger value="cliente" className="gap-1.5">
                     <Building2 className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Cliente</span>
+                    {clienteOk && <CheckCircle2 className="h-3 w-3 text-success" />}
                   </TabsTrigger>
                   <TabsTrigger value="dor" className="gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5" />
@@ -843,10 +855,12 @@ export default function CrmDealDetail() {
                   <TabsTrigger value="dependencias" className="gap-1.5">
                     <Link2 className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Dependências</span>
+                    {dependenciasOk && <CheckCircle2 className="h-3 w-3 text-success" />}
                   </TabsTrigger>
                   <TabsTrigger value="comercial" className="gap-1.5">
                     <Banknote className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Comercial</span>
+                    {comercialOk && <CheckCircle2 className="h-3 w-3 text-success" />}
                   </TabsTrigger>
                 </TabsList>
 
