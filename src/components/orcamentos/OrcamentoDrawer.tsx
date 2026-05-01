@@ -18,6 +18,7 @@ import { AbaDetalhes } from "./abas/AbaDetalhes";
 import { effectiveStatus } from "@/lib/orcamentos/calculateTotal";
 import { getTemplate } from "@/lib/orcamentos/templates";
 import { toast } from "sonner";
+import { openProposalPdf } from "@/lib/orcamentos/storage";
 
 interface Props {
   proposalId: string | null;
@@ -72,11 +73,15 @@ export function OrcamentoDrawer({ proposalId, onClose }: Props) {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => {
-                    if (data.pdf_url) {
-                      window.open(data.pdf_url, "_blank");
-                    } else {
+                  onClick={async () => {
+                    if (!data.pdf_url) {
                       toast.info("Nenhuma versão gerada ainda. Use o editor pra gerar a primeira.");
+                      return;
+                    }
+                    try {
+                      await openProposalPdf(data.pdf_url);
+                    } catch (e: any) {
+                      toast.error(e?.message || "Falha ao abrir PDF");
                     }
                   }}
                   disabled={!data.pdf_url}

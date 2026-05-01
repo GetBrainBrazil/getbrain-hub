@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Download, FileSearch, Loader2 } from "lucide-react";
 import { useProposalVersions } from "@/hooks/orcamentos/useProposalVersions";
 import { SnapshotViewerDialog } from "../SnapshotViewerDialog";
+import { openProposalPdf } from "@/lib/orcamentos/storage";
+import { toast } from "sonner";
 
 interface Props {
   proposalId: string;
@@ -14,7 +16,19 @@ export function AbaVersoes({ proposalId }: Props) {
   const [viewSnapshot, setViewSnapshot] = useState<Record<string, any> | null>(
     null
   );
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [snapshotMeta, setSnapshotMeta] = useState<string>("");
+
+  async function handleDownload(versionId: string, path: string) {
+    setDownloadingId(versionId);
+    try {
+      await openProposalPdf(path);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao abrir PDF");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -69,9 +83,15 @@ export function AbaVersoes({ proposalId }: Props) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => window.open(v.pdf_url, "_blank")}
+                disabled={downloadingId === v.id}
+                onClick={() => handleDownload(v.id, v.pdf_storage_path || v.pdf_url)}
               >
-                <Download className="h-3.5 w-3.5" /> PDF
+                {downloadingId === v.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}{" "}
+                PDF
               </Button>
               <Button
                 size="sm"

@@ -19,6 +19,7 @@ import {
   calculateScopeTotal, effectiveStatus, formatBRL, formatDateBR,
   type ProposalStatus, type ScopeItem,
 } from '@/lib/orcamentos/calculateTotal';
+import { openProposalPdf } from '@/lib/orcamentos/storage';
 import { useUpdateDealField } from '@/hooks/crm/useCrmDetails';
 import { AnexoUploader } from './AnexoUploader';
 import type { Deal } from '@/types/crm';
@@ -292,10 +293,18 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {proposal.pdf_url && (
-              <Button size="sm" variant="outline" asChild>
-                <a href={proposal.pdf_url} target="_blank" rel="noreferrer">
-                  <Download className="h-3.5 w-3.5" /> PDF
-                </a>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await openProposalPdf(proposal.pdf_url!);
+                  } catch (e: any) {
+                    toast.error(e?.message || 'Falha ao abrir PDF');
+                  }
+                }}
+              >
+                <Download className="h-3.5 w-3.5" /> PDF
               </Button>
             )}
             {proposal.status === 'rascunho' && (

@@ -3515,35 +3515,62 @@ export type Database = {
       proposal_versions: {
         Row: {
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
           generated_at: string
           generated_by: string | null
           id: string
+          notes: string | null
+          organization_id: string | null
+          pdf_size_bytes: number | null
           pdf_storage_path: string
           pdf_url: string
           proposal_id: string
           snapshot: Json
+          template_key: string | null
+          template_version: string | null
+          updated_at: string
+          updated_by: string | null
           version_number: number
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
           generated_at?: string
           generated_by?: string | null
           id?: string
+          notes?: string | null
+          organization_id?: string | null
+          pdf_size_bytes?: number | null
           pdf_storage_path: string
           pdf_url: string
           proposal_id: string
           snapshot: Json
+          template_key?: string | null
+          template_version?: string | null
+          updated_at?: string
+          updated_by?: string | null
           version_number: number
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
           generated_at?: string
           generated_by?: string | null
           id?: string
+          notes?: string | null
+          organization_id?: string | null
+          pdf_size_bytes?: number | null
           pdf_storage_path?: string
           pdf_url?: string
           proposal_id?: string
           snapshot?: Json
+          template_key?: string | null
+          template_version?: string | null
+          updated_at?: string
+          updated_by?: string | null
           version_number?: number
         }
         Relationships: [
