@@ -1,78 +1,68 @@
-## Mini-stepper de etapas no card do Pipeline
+## Sub-abas dentro de "Descoberta" no detalhe do deal
 
-Replicar o visual de "abas segmentadas" do modal de Ganho (`Tabs` com ícone + label, fundo cinza claro com pill branca destacando o ativo) dentro do `DealCard` para indicar visualmente em qual dos 5 estágios abertos o deal está.
-
-### Os 5 estágios representados
-
-Os mesmos `OPEN_STAGES` já usados no funil do dashboard (`src/components/crm/dashboard/FunilVisual.tsx`):
-
-1. **Novo Lead** (`descoberta_marcada`)
-2. **Primeiro Contato** (`descobrindo`)
-3. **Qualificado** (`proposta_na_mesa`)
-4. **Proposta Enviada** (`ajustando`)
-5. **Negociação** (`gelado`)
-
-Deals em `ganho` ou `perdido` não exibem o stepper (já estão fora do funil ativo).
-
-### Como vai ficar (visual)
-
-Mesma linguagem do modal — `bg-muted` no trilho, pill ativa com `bg-background` + sombra sutil, etapas anteriores em tom secundário, próximas em tom muted, etapa atual com cor do estágio. Sem labels em telas estreitas (só bolinha colorida + barra), igual ao modal usa `hidden sm:inline` no texto.
-
-```text
-┌──────────────────────────────────────────────────┐
-│ ●─────●─────●─────[● Proposta]─────○─────────── │
-│ Lead  Cont. Qual.  ATUAL          Negoc.        │
-└──────────────────────────────────────────────────┘
-```
-
-Posicionamento: logo **abaixo do título do deal** e antes do bloco de empresa (linha ~117 do `DealCard.tsx`), para ficar visível sem deslocar o footer ou os valores.
+Hoje a aba **Descoberta** (em `/crm/d/:code`) empilha verticalmente 5 zonas grandes: Cliente, Dor, Solução, Dependências e Comercial. Vou separar essas 5 zonas em **sub-abas internas** com o mesmo visual segmentado do modal de Ganho (pill ativa com fundo claro + ícone + label).
 
 ### Comportamento
 
-- **Apenas visual** (não clicável). Movimentação entre estágios continua sendo via drag-and-drop entre colunas ou pelo drawer do deal — evita conflito com o `useDraggable` do card e cliques acidentais.
-- Tooltip em cada bolinha com o nome completo do estágio (já temos `TooltipProvider` no card).
-- Em colunas estreitas/mobile, mostra só os 5 dots conectados por uma linha, sem texto.
+- 5 sub-abas: **Cliente · Dor · Solução · Dependências · Comercial** (mesma ordem atual).
+- Estilo `Tabs` do shadcn (idêntico ao do modal de Ganho), com ícone à esquerda do nome em cada trigger.
+- Em cada aba, mostra **só** a zona correspondente — não empilha mais tudo junto.
+- Aba ativa fica persistida via `usePersistedState` com chave `crm-deal-discovery-subtab` (cada usuário retoma onde estava). Padrão: `cliente`.
+- Indicador de status nos triggers: bolinha verde (`text-success`) em "Dor" quando `painOk` e em "Solução" quando `solucaoOk` — reaproveita os booleanos já calculados em `computeCompleteness()`.
+- Mobile: `TabsList grid grid-cols-5`, ícones sempre visíveis, label oculto em telas <sm (`hidden sm:inline`), igual o modal de Ganho.
+
+### Limpeza pendente
+
+Remover o `StageMiniStepper` que adicionei por engano em `src/components/crm/DealCard.tsx` na rodada anterior — não era isso que você pediu. O card do Pipeline volta ao visual original.
 
 ### Arquivos afetados
 
-- `src/components/crm/DealCard.tsx` — adiciona o componente `StageMiniStepper` interno e renderiza após o `<h3>` do título, condicional a `deal.stage` estar em `OPEN_STAGES`.
+- `src/pages/crm/CrmDealDetail.tsx` — substituir o conteúdo do `<TabsContent value="descoberta">` por um `<Tabs>` aninhado com 5 sub-abas. Passar `painOk`/`solucaoOk` (já computados acima na página) para os triggers.
+- `src/components/crm/DealCard.tsx` — reverter a adição do `StageMiniStepper`.
 
-Sem mudanças em hooks, banco ou outros componentes. Reutiliza `DEAL_STAGES`, `DEAL_STAGE_LABEL`, `DEAL_STAGE_DOT` e `DEAL_STAGE_BAR` já exportados de `src/constants/dealStages.ts`.
-
-### Detalhes técnicos
+### Esboço técnico
 
 ```tsx
-const OPEN_STAGES: DealStage[] = ['descoberta_marcada','descobrindo','proposta_na_mesa','ajustando','gelado'];
+// Em CrmDealDetail.tsx, dentro de TabsContent value="descoberta"
+const [discoverySubtab, setDiscoverySubtab] = usePersistedState<string>(
+  'crm-deal-discovery-subtab',
+  'cliente',
+);
 
-function StageMiniStepper({ stage }: { stage: DealStage }) {
-  const idx = OPEN_STAGES.indexOf(stage);
-  if (idx === -1) return null; // ganho/perdido não exibem
-  return (
-    <div className="mt-2 flex items-center gap-1 rounded-md bg-muted/60 p-1" onClick={(e) => e.stopPropagation()}>
-      {OPEN_STAGES.map((s, i) => {
-        const isActive = i === idx;
-        const isPast = i < idx;
-        return (
-          <Tooltip key={s}>
-            <TooltipTrigger asChild>
-              <div className={cn(
-                'flex flex-1 items-center justify-center gap-1 rounded-sm py-1 text-[9px] font-semibold uppercase tracking-wide transition',
-                isActive && 'bg-background shadow-sm text-foreground',
-                isPast && 'text-foreground/60',
-                !isActive && !isPast && 'text-muted-foreground/40',
-              )}>
-                <span className={cn('h-1.5 w-1.5 rounded-full',
-                  isActive ? DEAL_STAGE_DOT[s] : isPast ? 'bg-foreground/40' : 'bg-muted-foreground/30')} />
-                <span className="hidden lg:inline truncate">{DEAL_STAGE_LABEL[s]}</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top">{DEAL_STAGE_LABEL[s]}</TooltipContent>
-          </Tooltip>
-        );
-      })}
-    </div>
-  );
-}
+<Tabs value={discoverySubtab} onValueChange={setDiscoverySubtab}>
+  <TabsList className="grid w-full grid-cols-5 mb-4">
+    <TabsTrigger value="cliente" className="gap-1.5">
+      <Building2 className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">Cliente</span>
+    </TabsTrigger>
+    <TabsTrigger value="dor" className="gap-1.5">
+      <AlertCircle className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">Dor</span>
+      {painOk && <CheckCircle2 className="h-3 w-3 text-success" />}
+    </TabsTrigger>
+    <TabsTrigger value="solucao" className="gap-1.5">
+      <Lightbulb className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">Solução</span>
+      {solucaoOk && <CheckCircle2 className="h-3 w-3 text-success" />}
+    </TabsTrigger>
+    <TabsTrigger value="dependencias" className="gap-1.5">
+      <Link2 className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">Dependências</span>
+    </TabsTrigger>
+    <TabsTrigger value="comercial" className="gap-1.5">
+      <Banknote className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">Comercial</span>
+    </TabsTrigger>
+  </TabsList>
+
+  <TabsContent value="cliente"><ZoneCliente deal={deal} /></TabsContent>
+  <TabsContent value="dor"><ZoneDor deal={deal} save={save} /></TabsContent>
+  <TabsContent value="solucao"><ZoneSolucao deal={deal} save={save} /></TabsContent>
+  <TabsContent value="dependencias">
+    <ZoneDependencias dealId={deal.id} dealCode={deal.code} dealTitle={deal.title} />
+  </TabsContent>
+  <TabsContent value="comercial"><ZoneComercial deal={deal} /></TabsContent>
+</Tabs>
 ```
 
-`onClick` com `stopPropagation` para que cliques na barra não disparem a abertura do deal nem interfiram com o `useDraggable` do card no Pipeline.
+Sem mudanças em hooks, banco, RLS ou outros componentes. As zonas continuam idênticas — só muda como elas são apresentadas (separadas em sub-abas em vez de empilhadas).
