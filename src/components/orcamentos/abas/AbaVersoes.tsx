@@ -83,9 +83,15 @@ export function AbaVersoes({ proposalId }: Props) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => window.open(v.pdf_url, "_blank")}
+                disabled={downloadingId === v.id}
+                onClick={() => handleDownload(v.id, v.pdf_storage_path || v.pdf_url)}
               >
-                <Download className="h-3.5 w-3.5" /> PDF
+                {downloadingId === v.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}{" "}
+                PDF
               </Button>
               <Button
                 size="sm"
