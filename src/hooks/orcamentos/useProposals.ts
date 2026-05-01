@@ -2,9 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 
+export type ProposalOrigin = "all" | "deal" | "manual";
+
 export interface ProposalFilters {
   status?: ProposalStatus | "todos";
   search?: string;
+  origin?: ProposalOrigin;
 }
 
 export interface ProposalRow {
@@ -51,6 +54,11 @@ export function useProposals(filters: ProposalFilters) {
       if (filters.search?.trim()) {
         const s = filters.search.trim();
         q = q.or(`code.ilike.%${s}%,client_company_name.ilike.%${s}%`);
+      }
+      if (filters.origin === "deal") {
+        q = q.not("deal_id", "is", null);
+      } else if (filters.origin === "manual") {
+        q = q.is("deal_id", null);
       }
       const { data, error } = await q;
       if (error) throw error;
