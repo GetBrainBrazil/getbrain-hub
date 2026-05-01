@@ -16,6 +16,19 @@ export function AbaVersoes({ proposalId }: Props) {
   const [viewSnapshot, setViewSnapshot] = useState<Record<string, any> | null>(
     null
   );
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [snapshotMeta, setSnapshotMeta] = useState<string>("");
+
+  async function handleDownload(versionId: string, path: string) {
+    setDownloadingId(versionId);
+    try {
+      await openProposalPdf(path);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao abrir PDF");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
   const [snapshotMeta, setSnapshotMeta] = useState<string>("");
 
   if (isLoading) {
