@@ -27,6 +27,8 @@ import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import type { ProposalRow } from "@/hooks/orcamentos/useProposals";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 import { effectiveStatus } from "@/lib/orcamentos/calculateTotal";
+import { logProposalStatusChange } from "@/lib/orcamentos/auditLog";
+import { useQueryClient } from "@tanstack/react-query";
 
 type ColumnId = "rascunho" | "enviada" | "convertida" | "recusada" | "expirada";
 
@@ -42,6 +44,7 @@ interface PendingMove {
 
 export function OrcamentoKanban({ rows, onCardClick }: Props) {
   const update = useUpdateProposal();
+  const qc = useQueryClient();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
@@ -112,6 +115,15 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
 
     try {
       await update.mutateAsync({ id: row.id, payload });
+      const fromEff = effectiveStatus(row.status, row.valid_until);
+      await logProposalStatusChange({
+        proposalId: row.id,
+        proposalCode: row.code,
+        from: fromEff,
+        to: target,
+        reason: target === "recusada" ? rejectionReason.trim() || null : null,
+      });
+      qc.invalidateQueries({ queryKey: ["proposal_audit", row.id] });
       toast.success(`Movido para ${LABEL[target]}`);
     } catch {
       // toast já vem do hook
