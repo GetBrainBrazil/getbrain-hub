@@ -44,6 +44,7 @@ interface PendingMove {
 
 export function OrcamentoKanban({ rows, onCardClick }: Props) {
   const update = useUpdateProposal();
+  const qc = useQueryClient();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
