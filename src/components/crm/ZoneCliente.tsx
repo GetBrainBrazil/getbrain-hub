@@ -164,6 +164,155 @@ interface Props {
   deal: Deal;
 }
 
+const LOGO_ACCEPT = 'image/png,image/jpeg,image/jpg,image/svg+xml,image/webp';
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+function CompanyIdentityHeader({
+  companyId,
+  legalName,
+  tradeName,
+  cnpj,
+  logoUrl,
+  onSave,
+}: {
+  companyId: string;
+  legalName: string;
+  tradeName: string | null;
+  cnpj: string | null;
+  logoUrl: string | null;
+  onSave: (updates: Record<string, unknown>) => void;
+}) {
+  const [legal, setLegal] = useState(legalName);
+  const [trade, setTrade] = useState(tradeName ?? '');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => { setLegal(legalName); }, [legalName]);
+  useEffect(() => { setTrade(tradeName ?? ''); }, [tradeName]);
+
+  const initials = (legalName || 'EM')
+    .split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]?.toUpperCase()).join('') || 'EM';
+
+  async function handleFile(file: File) {
+    if (file.size > LOGO_MAX_BYTES) {
+      toast.error('Logo deve ter no máximo 2MB');
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const path = `${companyId}/logo-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from('company-logos')
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from('company-logos').getPublicUrl(path);
+      onSave({ logo_url: data.publicUrl });
+      toast.success('Logo atualizada');
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao enviar logo');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="mb-5 flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-start">
+      {/* Logo */}
+      <div className="flex flex-col items-center gap-2 sm:items-start">
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/30 flex items-center justify-center">
+          {logoUrl ? (
+            <img src={logoUrl} alt={`Logo ${legalName}`} className="h-full w-full object-contain" />
+          ) : (
+            <div className="flex flex-col items-center gap-0.5 text-muted-foreground">
+              <Building2 className="h-5 w-5" />
+              <span className="text-[10px] font-bold tracking-wider">{initials}</span>
+            </div>
+          )}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept={LOGO_ACCEPT}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = '';
+          }}
+        />
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-[11px]"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading
+              ? <Loader2 className="h-3 w-3 animate-spin" />
+              : <Upload className="h-3 w-3" />}
+            {logoUrl ? 'Trocar' : 'Enviar'}
+          </Button>
+          {logoUrl && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-1.5 text-destructive"
+              onClick={() => onSave({ logo_url: null })}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Nomes + CNPJ */}
+      <div className="flex-1 space-y-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Razão social
+          </Label>
+          <Input
+            value={legal}
+            onChange={(e) => setLegal(e.target.value)}
+            onBlur={() => {
+              const v = legal.trim();
+              if (!v) { setLegal(legalName); toast.error('Razão social é obrigatória'); return; }
+              if (v !== legalName) onSave({ legal_name: v });
+            }}
+            className="h-9 bg-background/60 text-base font-semibold"
+            placeholder="Razão social"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Nome fantasia
+          </Label>
+          <Input
+            value={trade}
+            onChange={(e) => setTrade(e.target.value)}
+            onBlur={() => {
+              const v = trade.trim();
+              const current = tradeName ?? '';
+              if (v !== current) onSave({ trade_name: v || null });
+            }}
+            className="h-9 bg-background/60"
+            placeholder="Nome fantasia (opcional)"
+          />
+        </div>
+        {cnpj && (
+          <div className="text-[11px] text-muted-foreground font-mono">
+            CNPJ: {cnpj}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ZoneCliente({ deal }: Props) {
   const { data: company, isLoading } = useCompanyDetail(deal.company_id);
   const updateCompany = useUpdateCompanyField(deal.company_id);
