@@ -805,6 +805,13 @@ export default function CrmDealDetail() {
     deal.expected_close_date &&
     deal.next_step
   );
+  const clienteOk = !!(companyForCheck?.sector_id && companyForCheck?.client_type && deal.contact_person_id);
+  const dependenciasOk = (dependenciesForCheck?.length ?? 0) > 0;
+  const comercialOk = !!(
+    (Number(deal.estimated_implementation_value ?? 0) > 0 || Number(deal.estimated_mrr_value ?? 0) > 0) &&
+    deal.expected_close_date &&
+    deal.next_step
+  );
 
   return (
     <DetailShell>
