@@ -12,6 +12,7 @@ import {
   type ProposalStatus,
 } from "@/lib/orcamentos/calculateTotal";
 import { toast } from "sonner";
+import { openProposalPdf } from "@/lib/orcamentos/storage";
 
 const ORG_ID = "00000000-0000-0000-0000-000000000001";
 
