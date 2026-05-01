@@ -343,10 +343,12 @@ function ProposalView({
   proposal,
   onDownloadPdf,
   isPreview,
+  accessJwt,
 }: {
   proposal: PublicProposal;
   onDownloadPdf: () => void;
   isPreview: boolean;
+  accessJwt: string | null;
 }) {
   const brand = proposal.client_brand_color || DEFAULT_BRAND;
   const total = useMemo(
@@ -355,12 +357,55 @@ function ProposalView({
   );
   const clientLabel = proposal.client_name || proposal.client_company_name;
   const [scrolled, setScrolled] = useState(false);
+  const [interestSent, setInterestSent] = useState(false);
+  const sessionToken = useMemo(
+    () => getOrCreateSessionToken(proposal.code),
+    [proposal.code],
+  );
+  const startedAt = useRef(Date.now());
+
+  useEffect(() => {
+    if (isPreview || !accessJwt) return;
+    trackEvent(accessJwt, "view", { __session: sessionToken });
+    const beforeUnload = () => {
+      const dur = Math.round((Date.now() - startedAt.current) / 1000);
+      navigator.sendBeacon?.(
+        `${SUPABASE_URL}/functions/v1/track-proposal-view`,
+        new Blob(
+          [
+            JSON.stringify({
+              event: "view",
+              session_token: sessionToken,
+              metadata: { duration_seconds: dur },
+            }),
+          ],
+          { type: "application/json" },
+        ),
+      );
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [isPreview, accessJwt, sessionToken]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  function handleManifestInterest() {
+    if (interestSent) {
+      toast.info("Daniel já foi avisado!");
+      return;
+    }
+    if (isPreview || !accessJwt) return;
+    setInterestSent(true);
+    trackEvent(accessJwt, "interest_manifested", {
+      __session: sessionToken,
+      source: "cta_button",
+    });
+    toast.success("Pronto! Daniel foi avisado e te chama em breve.");
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
