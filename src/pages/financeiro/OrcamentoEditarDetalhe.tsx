@@ -239,6 +239,11 @@ export default function OrcamentoEditarDetalhe() {
     validUntil,
     mockupUrl,
     templateKey,
+    welcomeMessage,
+    executiveSummary,
+    painContext,
+    solutionOverview,
+    clientBrandColor,
   ]);
 
   function handleOpenSendDialog() {
