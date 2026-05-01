@@ -896,6 +896,14 @@ export default function OrcamentoEditarDetalhe() {
           onOpenChange={(o) => !o && setDetailsItemIdx(null)}
         />
       )}
+
+      {/* Sheet: tracking de views/eventos/chats */}
+      <PropostaTrackingSheet
+        open={trackingOpen}
+        onOpenChange={setTrackingOpen}
+        proposalId={data.id}
+        proposalCode={data.code}
+      />
     </div>
   );
 }
