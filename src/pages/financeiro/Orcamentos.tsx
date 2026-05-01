@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNavigate } from "react-router-dom";
 import { usePersistedState } from "@/hooks/use-persisted-state";
-import { useProposals } from "@/hooks/orcamentos/useProposals";
+import { useProposals, type ProposalOrigin } from "@/hooks/orcamentos/useProposals";
 import {
   useDeleteProposal,
   useDuplicateProposal,
@@ -43,6 +43,10 @@ export default function Orcamentos() {
     "todos"
   );
   const [search, setSearch] = usePersistedState("orcamentos:search", "");
+  const [origin, setOrigin] = usePersistedState<ProposalOrigin>(
+    "orcamentos:origin",
+    "all"
+  );
   const [viewMode, setViewMode] = usePersistedState<ViewMode>(
     "orcamentos.viewMode",
     "kanban"
@@ -53,7 +57,7 @@ export default function Orcamentos() {
   // No Kanban ignoramos o filtro de status (Kanban mostra tudo, dividido por coluna).
   // O filtro só age na tabela.
   const effStatus: StatusFilter = viewMode === "kanban" ? "todos" : status;
-  const { data = [], isLoading } = useProposals({ status: effStatus, search });
+  const { data = [], isLoading } = useProposals({ status: effStatus, search, origin });
   const update = useUpdateProposal();
   const del = useDeleteProposal();
   const dup = useDuplicateProposal();
@@ -206,14 +210,28 @@ export default function Orcamentos() {
         ) : (
           <div />
         )}
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Código ou cliente…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-10 md:h-9"
-          />
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:ml-auto">
+          {viewMode === "table" && (
+            <ToggleGroup
+              type="single"
+              value={origin}
+              onValueChange={(v) => v && setOrigin(v as ProposalOrigin)}
+              className="border border-border rounded-md p-0.5"
+            >
+              <ToggleGroupItem value="all" size="sm" className="h-9 px-3 text-xs">Todas</ToggleGroupItem>
+              <ToggleGroupItem value="deal" size="sm" className="h-9 px-3 text-xs">Do deal</ToggleGroupItem>
+              <ToggleGroupItem value="manual" size="sm" className="h-9 px-3 text-xs">Manual</ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Código ou cliente…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-10 md:h-9"
+            />
+          </div>
         </div>
       </div>
 
