@@ -20,8 +20,9 @@ interface Props {
   expiresAt: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Disparado depois da proposta ser marcada como enviada com sucesso. */
-  onSent: (info: { accessToken: string; expiresAt: string }) => void;
+  /** Disparado depois da proposta ser marcada como enviada com sucesso.
+   * Inclui a senha em plain text para exibir UMA ÚNICA VEZ ao Daniel. */
+  onSent: (info: { accessToken: string; expiresAt: string; password: string }) => void;
 }
 
 export function MarcarComoEnviadaDialog({
@@ -76,9 +77,10 @@ export function MarcarComoEnviadaDialog({
       });
 
       const token = (upd.data as any)?.access_token as string;
+      const sentPassword = password;
       onOpenChange(false);
       setPassword("");
-      onSent({ accessToken: token, expiresAt: validade });
+      onSent({ accessToken: token, expiresAt: validade, password: sentPassword });
     } catch (e: any) {
       toast.error(e?.message || "Erro ao marcar como enviada");
     } finally {

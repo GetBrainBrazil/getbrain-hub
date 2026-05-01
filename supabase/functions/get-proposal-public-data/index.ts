@@ -1,0 +1,107 @@
+// Edge function: get-proposal-public-data
+// Public endpoint protected by access_jwt issued by verify-proposal-access.
+// Returns sanitized proposal payload for the public page.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const proposalId = await getProposalIdFromJwt(req);
+    if (!proposalId) return json({ error: "unauthorized" }, 401);
+
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: prop, error } = await admin
+      .from("proposals")
+      .select(
+        `id, code, title, client_name, client_company_name, client_city,
+         client_logo_url, client_brand_color, welcome_message,
+         executive_summary, pain_context, solution_overview,
+         considerations, maintenance_description, maintenance_monthly_value,
+         implementation_days, validation_days, expires_at, valid_until,
+         mockup_url, sent_at, status, template_slug, template_version`,
+      )
+      .eq("id", proposalId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error || !prop) return json({ error: "not_found" }, 404);
+
+    const { data: items } = await admin
+      .from("proposal_items")
+      .select(
+        "id, description, quantity, unit_price, total, order_index, detailed_description, deliverables, acceptance_criteria, client_dependencies",
+      )
+      .eq("proposal_id", proposalId)
+      .is("deleted_at", null)
+      .order("order_index", { ascending: true });
+
+    return json({
+      proposal: {
+        code: prop.code,
+        title: prop.title,
+        client_name: prop.client_name ?? prop.client_company_name,
+        client_company_name: prop.client_company_name,
+        client_city: prop.client_city,
+        client_logo_url: prop.client_logo_url,
+        client_brand_color: prop.client_brand_color,
+        welcome_message: prop.welcome_message,
+        executive_summary: prop.executive_summary,
+        pain_context: prop.pain_context,
+        solution_overview: prop.solution_overview,
+        considerations: prop.considerations ?? [],
+        maintenance_description: prop.maintenance_description,
+        maintenance_monthly_value: prop.maintenance_monthly_value,
+        implementation_days: prop.implementation_days,
+        validation_days: prop.validation_days,
+        expires_at: prop.expires_at ?? prop.valid_until,
+        mockup_url: prop.mockup_url,
+        sent_at: prop.sent_at,
+        items: items ?? [],
+      },
+    });
+  } catch (e) {
+    console.error("get-proposal-public-data error", e);
+    return json({ error: "internal_error" }, 500);
+  }
+});
+
+async function getProposalIdFromJwt(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.replace("Bearer ", "");
+  try {
+    const secret = Deno.env.get("PROPOSAL_ACCESS_JWT_SECRET")!;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"],
+    );
+    const payload = await verify(token, key);
+    return (payload as any)?.proposal_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
