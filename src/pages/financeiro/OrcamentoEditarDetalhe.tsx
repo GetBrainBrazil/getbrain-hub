@@ -185,6 +185,11 @@ export default function OrcamentoEditarDetalhe() {
         expires_at: validUntil || null,
         mockup_url: mockupUrl.trim() || null,
         template_key: templateKey,
+        welcome_message: welcomeMessage.trim() || null,
+        executive_summary: executiveSummary.trim() || null,
+        pain_context: painContext.trim() || null,
+        solution_overview: solutionOverview.trim() || null,
+        client_brand_color: clientBrandColor.trim() || null,
         ...extra,
       },
     });
