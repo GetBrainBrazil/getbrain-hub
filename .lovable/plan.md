@@ -1,45 +1,78 @@
-## Problema
+## Mini-stepper de etapas no card do Pipeline
 
-No `DealWonDialog` (modal "Fechar deal como ganho"), o `DialogContent` está com largura fixa:
+Replicar o visual de "abas segmentadas" do modal de Ganho (`Tabs` com ícone + label, fundo cinza claro com pill branca destacando o ativo) dentro do `DealCard` para indicar visualmente em qual dos 5 estágios abertos o deal está.
 
+### Os 5 estágios representados
+
+Os mesmos `OPEN_STAGES` já usados no funil do dashboard (`src/components/crm/dashboard/FunilVisual.tsx`):
+
+1. **Novo Lead** (`descoberta_marcada`)
+2. **Primeiro Contato** (`descobrindo`)
+3. **Qualificado** (`proposta_na_mesa`)
+4. **Proposta Enviada** (`ajustando`)
+5. **Negociação** (`gelado`)
+
+Deals em `ganho` ou `perdido` não exibem o stepper (já estão fora do funil ativo).
+
+### Como vai ficar (visual)
+
+Mesma linguagem do modal — `bg-muted` no trilho, pill ativa com `bg-background` + sombra sutil, etapas anteriores em tom secundário, próximas em tom muted, etapa atual com cor do estágio. Sem labels em telas estreitas (só bolinha colorida + barra), igual ao modal usa `hidden sm:inline` no texto.
+
+```text
+┌──────────────────────────────────────────────────┐
+│ ●─────●─────●─────[● Proposta]─────○─────────── │
+│ Lead  Cont. Qual.  ATUAL          Negoc.        │
+└──────────────────────────────────────────────────┘
 ```
-w-[96vw] sm:max-w-[1200px] max-h-[94vh]
-```
 
-O Radix Dialog é centralizado no viewport **inteiro** (ignora a sidebar). Em monitores menores (~1280–1366px de largura CSS), os 1200px estouram para a esquerda e ficam atrás da sidebar fixa de 256px — exatamente o que aparece no print, com a coluna esquerda do conteúdo cortada.
+Posicionamento: logo **abaixo do título do deal** e antes do bloco de empresa (linha ~117 do `DealCard.tsx`), para ficar visível sem deslocar o footer ou os valores.
 
-Em telas maiores (≥1600px) o tamanho atual é confortável e deve ser preservado.
+### Comportamento
 
-## Solução
+- **Apenas visual** (não clicável). Movimentação entre estágios continua sendo via drag-and-drop entre colunas ou pelo drawer do deal — evita conflito com o `useDraggable` do card e cliques acidentais.
+- Tooltip em cada bolinha com o nome completo do estágio (já temos `TooltipProvider` no card).
+- Em colunas estreitas/mobile, mostra só os 5 dots conectados por uma linha, sem texto.
 
-Trocar a largura fixa por uma largura **fluida com teto**, respeitando a viewport real e deixando uma folga lateral mínima para nunca colidir com a sidebar:
+### Arquivos afetados
 
-- Em telas grandes: continua até 1200px (tamanho oficial que você gosta).
-- Em telas médias: encolhe proporcionalmente (`min(1200px, calc(100vw - 3rem))`).
-- Em telas pequenas/mobile: ocupa quase toda a largura como hoje.
-- Altura mantém `max-h-[94vh]` com scroll interno.
+- `src/components/crm/DealCard.tsx` — adiciona o componente `StageMiniStepper` interno e renderiza após o `<h3>` do título, condicional a `deal.stage` estar em `OPEN_STAGES`.
 
-## Alteração
+Sem mudanças em hooks, banco ou outros componentes. Reutiliza `DEAL_STAGES`, `DEAL_STAGE_LABEL`, `DEAL_STAGE_DOT` e `DEAL_STAGE_BAR` já exportados de `src/constants/dealStages.ts`.
 
-Arquivo único: `src/components/crm/DealWonDialog.tsx`, linha 1128.
+### Detalhes técnicos
 
-De:
 ```tsx
-<DialogContent className="w-[96vw] sm:max-w-[1200px] max-h-[94vh] overflow-y-auto">
+const OPEN_STAGES: DealStage[] = ['descoberta_marcada','descobrindo','proposta_na_mesa','ajustando','gelado'];
+
+function StageMiniStepper({ stage }: { stage: DealStage }) {
+  const idx = OPEN_STAGES.indexOf(stage);
+  if (idx === -1) return null; // ganho/perdido não exibem
+  return (
+    <div className="mt-2 flex items-center gap-1 rounded-md bg-muted/60 p-1" onClick={(e) => e.stopPropagation()}>
+      {OPEN_STAGES.map((s, i) => {
+        const isActive = i === idx;
+        const isPast = i < idx;
+        return (
+          <Tooltip key={s}>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                'flex flex-1 items-center justify-center gap-1 rounded-sm py-1 text-[9px] font-semibold uppercase tracking-wide transition',
+                isActive && 'bg-background shadow-sm text-foreground',
+                isPast && 'text-foreground/60',
+                !isActive && !isPast && 'text-muted-foreground/40',
+              )}>
+                <span className={cn('h-1.5 w-1.5 rounded-full',
+                  isActive ? DEAL_STAGE_DOT[s] : isPast ? 'bg-foreground/40' : 'bg-muted-foreground/30')} />
+                <span className="hidden lg:inline truncate">{DEAL_STAGE_LABEL[s]}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">{DEAL_STAGE_LABEL[s]}</TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+}
 ```
 
-Para:
-```tsx
-<DialogContent className="w-[calc(100vw-2rem)] max-w-[min(1200px,calc(100vw-3rem))] max-h-[94vh] overflow-y-auto p-4 sm:p-6">
-```
-
-O que isso faz:
-- `w-[calc(100vw-2rem)]`: largura base sempre cabe na viewport, com 1rem de folga de cada lado.
-- `max-w-[min(1200px,calc(100vw-3rem))]`: nunca passa de 1200px e nunca encosta nas bordas (mantém ~1.5rem de respiro).
-- `p-4 sm:p-6`: reduz padding interno em telas pequenas para ganhar área útil, sem prejudicar o desktop.
-
-## QA
-
-Após aplicar, validar nas larguras: 1280, 1366, 1440, 1600, 1920 — em todas o modal deve ficar inteiramente visível, centralizado, sem ser cortado pela sidebar e sem perder o tamanho atual em monitores grandes.
-
-Nenhuma outra mudança é necessária — sem impacto no fluxo de "dar como ganho", apenas ajuste visual responsivo.
+`onClick` com `stopPropagation` para que cliques na barra não disparem a abertura do deal nem interfiram com o `useDraggable` do card no Pipeline.
