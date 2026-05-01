@@ -27,6 +27,8 @@ import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import type { ProposalRow } from "@/hooks/orcamentos/useProposals";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 import { effectiveStatus } from "@/lib/orcamentos/calculateTotal";
+import { logProposalStatusChange } from "@/lib/orcamentos/auditLog";
+import { useQueryClient } from "@tanstack/react-query";
 
 type ColumnId = "rascunho" | "enviada" | "convertida" | "recusada" | "expirada";
 
