@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PDF_OPTIONS } from "@/lib/orcamentos/pdfConfig";
+import { PROPOSALS_BUCKET } from "@/lib/orcamentos/storageConfig";
 
 interface Args {
   proposalId: string;
