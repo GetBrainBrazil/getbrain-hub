@@ -10,8 +10,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   MessageCircle,
-  Send,
-  Sparkles,
+  ThumbsUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ABOUT_GETBRAIN_PARAGRAPHS } from "@/content/about-getbrain";
+import ProposalChatBox from "@/components/orcamentos/ProposalChatBox";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -173,6 +173,9 @@ export default function PropostaPublica() {
       }
       return;
     }
+    if (!isPreview) {
+      trackEvent(accessJwt, "pdf_download", { url: data.url });
+    }
     window.open(data.url, "_blank", "noopener,noreferrer");
   }
 
@@ -196,8 +199,53 @@ export default function PropostaPublica() {
       proposal={proposal}
       onDownloadPdf={handleDownloadPdf}
       isPreview={isPreview}
+      accessJwt={accessJwt}
     />
   );
+}
+
+/* ------------------------- TRACKING ------------------------- */
+
+function getOrCreateSessionToken(proposalCode: string): string {
+  const key = `proposal_session_${proposalCode}`;
+  try {
+    let t = localStorage.getItem(key);
+    if (!t) {
+      t = crypto.randomUUID();
+      localStorage.setItem(key, t);
+    }
+    return t;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+async function trackEvent(
+  jwt: string,
+  event: "view" | "pdf_download" | "interest_manifested" | "section_viewed",
+  metadata?: Record<string, unknown>,
+) {
+  try {
+    const sessionToken = metadata?.__session as string ||
+      localStorage.getItem("__last_session__") || crypto.randomUUID();
+    const cleanMeta = { ...metadata };
+    delete (cleanMeta as any).__session;
+    await fetch(`${SUPABASE_URL}/functions/v1/track-proposal-view`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({
+        event,
+        session_token: sessionToken,
+        metadata: cleanMeta,
+      }),
+    });
+  } catch (e) {
+    console.warn("track failed", e);
+  }
 }
 
 /* ------------------------- TELA DE SENHA ------------------------- */
@@ -294,10 +342,12 @@ function ProposalView({
   proposal,
   onDownloadPdf,
   isPreview,
+  accessJwt,
 }: {
   proposal: PublicProposal;
   onDownloadPdf: () => void;
   isPreview: boolean;
+  accessJwt: string | null;
 }) {
   const brand = proposal.client_brand_color || DEFAULT_BRAND;
   const total = useMemo(
@@ -306,12 +356,55 @@ function ProposalView({
   );
   const clientLabel = proposal.client_name || proposal.client_company_name;
   const [scrolled, setScrolled] = useState(false);
+  const [interestSent, setInterestSent] = useState(false);
+  const sessionToken = useMemo(
+    () => getOrCreateSessionToken(proposal.code),
+    [proposal.code],
+  );
+  const startedAt = useRef(Date.now());
+
+  useEffect(() => {
+    if (isPreview || !accessJwt) return;
+    trackEvent(accessJwt, "view", { __session: sessionToken });
+    const beforeUnload = () => {
+      const dur = Math.round((Date.now() - startedAt.current) / 1000);
+      navigator.sendBeacon?.(
+        `${SUPABASE_URL}/functions/v1/track-proposal-view`,
+        new Blob(
+          [
+            JSON.stringify({
+              event: "view",
+              session_token: sessionToken,
+              metadata: { duration_seconds: dur },
+            }),
+          ],
+          { type: "application/json" },
+        ),
+      );
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [isPreview, accessJwt, sessionToken]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  function handleManifestInterest() {
+    if (interestSent) {
+      toast.info("Daniel já foi avisado!");
+      return;
+    }
+    if (isPreview || !accessJwt) return;
+    setInterestSent(true);
+    trackEvent(accessJwt, "interest_manifested", {
+      __session: sessionToken,
+      source: "cta_button",
+    });
+    toast.success("Pronto! Daniel foi avisado e te chama em breve.");
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -572,26 +665,35 @@ function ProposalView({
 
         {/* Próximos passos */}
         <Block title="Próximos passos" brand={brand}>
-          <Card className="p-6 border-slate-200 bg-slate-50">
-            <p className="text-slate-700 mb-4">
-              Para avançar com esta proposta, fale direto com Daniel — pelo chat
-              abaixo ou pelo WhatsApp.
+          <Card className="p-6 border-slate-200 bg-slate-50 space-y-4">
+            <p className="text-slate-700">
+              Curtiu a proposta? Avise o Daniel com 1 clique — ou tire dúvidas
+              direto no chat abaixo.
             </p>
-            <Button
-              asChild
-              size="lg"
-              style={{ background: brand, color: "white" }}
-            >
-              <a
-                href={`https://wa.me/5511999999999?text=${encodeURIComponent(
-                  `Olá Daniel, quero avançar com a proposta ${proposal.code}`,
-                )}`}
-                target="_blank"
-                rel="noreferrer"
+            <div className="flex flex-wrap gap-3">
+              <Button
+                size="lg"
+                onClick={handleManifestInterest}
+                disabled={interestSent || isPreview}
+                style={{ background: brand, color: "white" }}
               >
-                <MessageCircle className="h-4 w-4" /> Falar pelo WhatsApp
-              </a>
-            </Button>
+                <ThumbsUp className="h-4 w-4" />
+                {interestSent ? "Daniel foi avisado!" : "Quero avançar"}
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a
+                  href={`https://wa.me/5511999999999?text=${
+                    encodeURIComponent(
+                      `Olá Daniel, quero avançar com a proposta ${proposal.code}`,
+                    )
+                  }`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <MessageCircle className="h-4 w-4" /> Falar pelo WhatsApp
+                </a>
+              </Button>
+            </div>
           </Card>
         </Block>
       </article>
@@ -602,8 +704,15 @@ function ProposalView({
         <p>GetBrain · getbrain.com.br · © {new Date().getFullYear()}</p>
       </footer>
 
-      {/* CHAT BAR — placeholder (ativo no 10C-3) */}
-      <ChatPlaceholder brand={brand} disabled={isPreview} />
+      {/* CHAT BAR — IA real (10C-3) */}
+      <ProposalChatBox
+        brand={brand}
+        disabled={isPreview}
+        accessJwt={accessJwt}
+        sessionToken={sessionToken}
+        proposalCode={proposal.code}
+        onManifestInterest={handleManifestInterest}
+      />
     </div>
   );
 }
@@ -769,25 +878,3 @@ function ItemCard({
   );
 }
 
-/** Chat bar placeholder — fica fixa no rodapé. Será ativada em 10C-3. */
-function ChatPlaceholder({ brand, disabled }: { brand: string; disabled: boolean }) {
-  return (
-    <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 flex-shrink-0" style={{ color: brand }} />
-        <Input
-          disabled
-          placeholder={
-            disabled
-              ? "Chat desabilitado em modo preview"
-              : "Em breve: tire dúvidas sobre esta proposta direto aqui"
-          }
-          className="flex-1 bg-slate-50 border-slate-200 text-slate-500 text-sm cursor-not-allowed"
-        />
-        <Button size="icon" variant="ghost" disabled className="flex-shrink-0">
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
