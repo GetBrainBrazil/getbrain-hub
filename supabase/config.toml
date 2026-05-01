@@ -1,1 +1,10 @@
 project_id = "xwwibclzfcbtkmesmhly"
+
+[functions.verify-proposal-access]
+verify_jwt = false
+
+[functions.get-proposal-public-data]
+verify_jwt = false
+
+[functions.get-proposal-pdf-public]
+verify_jwt = false
