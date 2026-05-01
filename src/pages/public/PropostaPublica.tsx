@@ -10,8 +10,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   MessageCircle,
-  Send,
   Sparkles,
+  ThumbsUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ABOUT_GETBRAIN_PARAGRAPHS } from "@/content/about-getbrain";
+import ProposalChatBox from "@/components/orcamentos/ProposalChatBox";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
