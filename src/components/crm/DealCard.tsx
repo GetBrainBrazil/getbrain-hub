@@ -1,68 +1,13 @@
 import { ArrowRight, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
-import { DEAL_STAGE_BAR, DEAL_STAGE_DOT, DEAL_STAGE_LABEL, DEAL_STAGE_TONE } from '@/constants/dealStages';
+import { DEAL_STAGE_BAR, DEAL_STAGE_TONE } from '@/constants/dealStages';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCrmPainCategories } from '@/hooks/crm/useCrmPainCategories';
 import { useCrmProjectTypes } from '@/hooks/crm/useCrmProjectTypes';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { chipStyleFromHex, resolveHex } from '@/lib/crm/colorUtils';
-import type { Deal, DealStage } from '@/types/crm';
-
-const OPEN_STAGES: DealStage[] = [
-  'descoberta_marcada',
-  'descobrindo',
-  'proposta_na_mesa',
-  'ajustando',
-  'gelado',
-];
-
-function StageMiniStepper({ stage }: { stage: DealStage }) {
-  const idx = OPEN_STAGES.indexOf(stage);
-  if (idx === -1) return null;
-  return (
-    <div
-      className="mt-2.5 flex items-center gap-0.5 rounded-md bg-muted/60 p-0.5"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {OPEN_STAGES.map((s, i) => {
-        const isActive = i === idx;
-        const isPast = i < idx;
-        return (
-          <Tooltip key={s}>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-1 rounded-sm py-1 text-[9px] font-semibold uppercase tracking-wide transition',
-                  isActive && 'bg-background shadow-sm text-foreground',
-                  !isActive && isPast && 'text-foreground/55',
-                  !isActive && !isPast && 'text-muted-foreground/40',
-                )}
-              >
-                <span
-                  className={cn(
-                    'h-1.5 w-1.5 shrink-0 rounded-full',
-                    isActive
-                      ? DEAL_STAGE_DOT[s]
-                      : isPast
-                        ? 'bg-foreground/40'
-                        : 'bg-muted-foreground/30',
-                  )}
-                  aria-hidden
-                />
-                <span className="hidden truncate xl:inline">{DEAL_STAGE_LABEL[s]}</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {DEAL_STAGE_LABEL[s]}
-              {isActive && ' · etapa atual'}
-            </TooltipContent>
-          </Tooltip>
-        );
-      })}
-    </div>
-  );
-}
+import type { Deal } from '@/types/crm';
 
 function daysLabel(date: string | null) {
   if (!date) return 'sem previsão';
@@ -171,8 +116,6 @@ export function DealCard({ deal, dragging, onClick, onCompanyClick }: { deal: De
             {deal.title}
           </h3>
 
-          {/* Stage stepper (5 estágios abertos) */}
-          <StageMiniStepper stage={deal.stage} />
 
           {/* Company */}
           <div className="mt-2 flex items-center gap-1.5 text-xs">
