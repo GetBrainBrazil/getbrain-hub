@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Download, FileSearch, Loader2 } from "lucide-react";
 import { useProposalVersions } from "@/hooks/orcamentos/useProposalVersions";
 import { SnapshotViewerDialog } from "../SnapshotViewerDialog";
+import { openProposalPdf } from "@/lib/orcamentos/storage";
+import { toast } from "sonner";
 
 interface Props {
   proposalId: string;
