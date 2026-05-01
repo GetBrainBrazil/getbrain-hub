@@ -107,8 +107,8 @@ export async function logProposalEvent({
       actor_id: actorId,
       entity_type: "proposal",
       entity_id: proposalId,
-      action: eventType,
-      metadata: { kind: `proposal_${eventType}`, ...(metadata || {}) },
+      action: "custom",
+      metadata: { kind: `proposal_${eventType}`, event_type: eventType, ...(metadata || {}) },
     });
     if (error) console.warn(`[audit] falha ao gravar ${eventType}:`, error.message);
   } catch (e: any) {
