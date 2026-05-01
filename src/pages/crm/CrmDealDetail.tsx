@@ -840,6 +840,7 @@ export default function CrmDealDetail() {
                   <TabsTrigger value="cliente" className="gap-1.5">
                     <Building2 className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Cliente</span>
+                    {clienteOk && <CheckCircle2 className="h-3 w-3 text-success" />}
                   </TabsTrigger>
                   <TabsTrigger value="dor" className="gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5" />
@@ -854,10 +855,12 @@ export default function CrmDealDetail() {
                   <TabsTrigger value="dependencias" className="gap-1.5">
                     <Link2 className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Dependências</span>
+                    {dependenciasOk && <CheckCircle2 className="h-3 w-3 text-success" />}
                   </TabsTrigger>
                   <TabsTrigger value="comercial" className="gap-1.5">
                     <Banknote className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Comercial</span>
+                    {comercialOk && <CheckCircle2 className="h-3 w-3 text-success" />}
                   </TabsTrigger>
                 </TabsList>
 
