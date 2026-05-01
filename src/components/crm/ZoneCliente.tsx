@@ -354,6 +354,15 @@ export function ZoneCliente({ deal }: Props) {
         <span className="text-xs text-muted-foreground">Quem é, em que mercado, com quem falamos</span>
       </header>
 
+      <CompanyIdentityHeader
+        companyId={company.id}
+        legalName={company.legal_name}
+        tradeName={company.trade_name}
+        cnpj={company.cnpj}
+        logoUrl={(company as any).logo_url ?? null}
+        onSave={saveCompany}
+      />
+
       <div className="space-y-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
