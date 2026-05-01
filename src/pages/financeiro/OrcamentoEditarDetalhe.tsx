@@ -422,6 +422,12 @@ export default function OrcamentoEditarDetalhe() {
               savedLabel
             )}
           </span>
+          <GerarComIaDropdown
+            proposalId={id}
+            hasDealLink={!!data.deal_id}
+            onGenerated={handleAiGenerated}
+            disabled={isLocked}
+          />
           <Button
             size="sm"
             variant="outline"
