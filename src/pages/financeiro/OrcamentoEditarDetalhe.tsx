@@ -97,6 +97,7 @@ export default function OrcamentoEditarDetalhe() {
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
   const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string; password?: string | null } | null>(null);
   const [detailsItemIdx, setDetailsItemIdx] = useState<number | null>(null);
+  const [trackingOpen, setTrackingOpen] = useState(false);
 
   useEffect(() => {
     if (!data) return;
