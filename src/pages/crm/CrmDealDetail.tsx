@@ -687,6 +687,8 @@ export default function CrmDealDetail() {
   const qc = useQueryClient();
   const updateStage = useUpdateDealStage();
   const updateDealField = useUpdateDealField(code);
+  const { data: companyForCheck } = useCompanyDetail(deal?.company_id);
+  const { data: dependenciesForCheck } = useDealDependencies(deal?.id);
 
   const handleTabChange = (next: string) => {
     setPersistedTab(next);
