@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, FileText, Loader2, ExternalLink, Download, Send, Check, X, Pencil, AlertTriangle, ArrowDown,
+  Plus, FileText, Loader2, ExternalLink, Download, Send, Check, X, Pencil, AlertTriangle, ArrowDown, Sparkles,
 } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { createProposalFromDeal } from '@/lib/orcamentos/createProposalFromDeal';
+import { invalidateProposalCaches } from '@/lib/cacheInvalidation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -391,9 +397,16 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
 
 function PropostaBlock({ deal, onRequestClose }: { deal: Deal; onRequestClose?: () => void }) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [rows, setRows] = useState<ProposalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [conflict, setConflict] = useState<{
+    open: boolean;
+    existingId?: string;
+    existingCode?: string;
+    message?: string;
+  }>({ open: false });
 
   async function load() {
     setLoading(true);
@@ -409,35 +422,47 @@ function PropostaBlock({ deal, onRequestClose }: { deal: Deal; onRequestClose?: 
 
   useEffect(() => { load(); }, [deal.id]);
 
-  async function handleCreate() {
+  async function runCreate(force: boolean) {
     setCreating(true);
     try {
-      const userRes = await supabase.auth.getUser();
-      const uid = userRes.data.user?.id ?? null;
-      const validUntil = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-      const { error } = await sb.from('proposals').insert({
-        organization_id: ORG_ID,
-        deal_id: deal.id,
-        company_id: deal.company_id,
-        status: 'rascunho',
-        client_company_name: deal.company?.trade_name || deal.company?.legal_name || 'Cliente',
-        scope_items: [],
-        valid_until: validUntil,
-        created_by: uid,
-        updated_by: uid,
-      });
-      if (error) throw error;
+      const result = await createProposalFromDeal(deal.id, force);
+      if ('conflict' in result && result.conflict) {
+        setConflict({
+          open: true,
+          existingId: result.existingProposalId,
+          existingCode: result.existingProposalCode,
+          message: result.message,
+        });
+        return;
+      }
+      const created = result as Exclude<typeof result, { conflict: true }>;
+      invalidateProposalCaches(qc);
       await load();
-      toast.success('Proposta criada');
+      toast.success(`Proposta ${created.proposalCode} criada`, {
+        description: `${created.itemsImported} item(ns) importados. Senha: ${created.defaultPasswordPlain}`,
+        duration: 8000,
+      });
+      navigate(`/financeiro/orcamentos/${created.proposalId}/editar`);
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao criar proposta');
+      toast.error(e?.message || 'Erro ao gerar proposta a partir do deal');
     } finally {
       setCreating(false);
     }
   }
 
+  async function handleConfirmConflict() {
+    setConflict({ open: false });
+    await runCreate(true);
+  }
+
+  function goToExisting() {
+    if (conflict.existingId) navigate(`/financeiro/orcamentos/${conflict.existingId}/editar`);
+    setConflict({ open: false });
+  }
+
   const active = rows[0];
   const previous = rows.slice(1);
+  const hasProposals = rows.length > 0;
 
   return (
     <section className="space-y-3">
@@ -448,21 +473,32 @@ function PropostaBlock({ deal, onRequestClose }: { deal: Deal; onRequestClose?: 
             Edite escopo, valor e status sem sair do deal. Pra preview, template e PDF use o editor completo.
           </p>
         </div>
-        <Button size="sm" onClick={handleCreate} disabled={creating}>
-          {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-          Nova proposta
-        </Button>
+        {hasProposals && (
+          <Button size="sm" variant="outline" onClick={() => runCreate(false)} disabled={creating}>
+            {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+            Gerar nova versão
+          </Button>
+        )}
       </div>
 
       {loading ? (
         <div className="rounded-lg border border-border bg-card/30 p-6 text-center text-xs text-muted-foreground">
           Carregando…
         </div>
-      ) : rows.length === 0 ? (
+      ) : !hasProposals ? (
         <div className="rounded-lg border border-dashed border-border bg-card/20 p-8 text-center">
-          <FileText className="mx-auto mb-2 h-6 w-6 text-muted-foreground/60" />
-          <p className="text-sm font-medium text-foreground">Nenhuma proposta ainda</p>
-          <p className="mt-1 text-xs text-muted-foreground">Clique em "Nova proposta" pra começar</p>
+          <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm font-semibold text-foreground">Sem proposta vinculada</p>
+          <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
+            Importe os dados deste deal para criar uma proposta pronta pra revisão.
+          </p>
+          <Button className="mt-4" onClick={() => runCreate(false)} disabled={creating}>
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Gerar proposta a partir deste deal
+          </Button>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Vamos puxar dor, solução, escopo e dependências automaticamente. Você revisa antes de enviar.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
