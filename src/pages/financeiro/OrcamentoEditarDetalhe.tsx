@@ -455,207 +455,90 @@ export default function OrcamentoEditarDetalhe() {
 
       {/* Body — split */}
       <div className="grid grid-cols-1 lg:grid-cols-2 flex-1 min-h-0">
-        {/* Editor (left) */}
-        <div className="overflow-y-auto p-5 space-y-5 border-r border-border">
-          {isLocked && (
-            <div className="rounded-md bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
-              Esta proposta está em status <strong>{data.status}</strong>. Edições ainda são possíveis mas afetam o registro histórico.
-            </div>
-          )}
+        {/* Editor (left) — Notion-like single column */}
+        <div className="overflow-y-auto border-r border-border">
+          <div className="mx-auto max-w-2xl px-8 py-10 space-y-10">
+            {isLocked && (
+              <div className="rounded-md bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
+                Esta proposta está em status <strong>{data.status}</strong>. Edições ainda são possíveis mas afetam o registro histórico.
+              </div>
+            )}
 
-          <Card className="p-4 space-y-3">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-              Identificação
-            </h2>
+            {/* Título — tipo H1 de documento */}
             <div>
-              <Label className="text-xs">Título da proposta</Label>
               <Input
                 value={title}
                 onChange={(e) => markDirty(setTitle)(e.target.value)}
-                className="h-9"
-                placeholder="Ex: Plataforma de Gestão Comercial"
+                placeholder="Título da proposta"
+                className="h-auto border-0 bg-transparent px-0 py-1 text-3xl font-bold tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Aparece no topo da página pública e no PDF. Default: nome do cliente.
-              </p>
-            </div>
-          </Card>
-
-          <Card className="p-4 space-y-4">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-              Cliente
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Nome / razão social</Label>
-                <Input
-                  value={clientName}
-                  onChange={(e) => markDirty(setClientName)(e.target.value)}
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Cidade (rodapé/contexto)</Label>
-                <Input
-                  value={clientCity}
-                  onChange={(e) => markDirty(setClientCity)(e.target.value)}
-                  className="h-9"
-                  placeholder="São Paulo, SP"
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs mb-1.5 block">Logo do cliente</Label>
-              <LogoUploader
-                proposalId={data.id}
-                value={clientLogoUrl}
-                onChange={(url) => {
-                  markDirty(setClientLogoUrl)(url);
-                }}
-              />
-            </div>
-          </Card>
-
-          <Card className="p-4 space-y-3">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-              Itens da proposta
-            </h2>
-            <ScopeItemsEditor
-              items={scopeItems}
-              onChange={markItemsDirty}
-              onOpenDetails={(idx) => {
-                if (itemsDirty || dirty) {
-                  toast.info("Aguarde o autosave concluir antes de detalhar.");
-                  return;
-                }
-                setDetailsItemIdx(idx);
-              }}
-            />
-            <div className="flex items-center justify-between border-t border-border pt-3">
-              <span className="text-sm text-muted-foreground">Total dos itens</span>
-              <span className="text-lg font-bold text-success tabular-nums">
-                {formatBRL(total)}
-              </span>
-            </div>
-          </Card>
-
-          <Card className="p-4 space-y-3">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-              Manutenção mensal (opcional)
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3">
-              <div>
-                <Label className="text-xs">Descrição</Label>
-                <Input
-                  value={maintenanceDesc}
-                  onChange={(e) => markDirty(setMaintenanceDesc)(e.target.value)}
-                  placeholder="Tokens + Servidor + Desenvolvedor"
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Valor mensal (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={maintenance}
-                  onChange={(e) =>
-                    markDirty(setMaintenance)(
-                      e.target.value === "" ? "" : (parseFloat(e.target.value) || 0)
-                    )
-                  }
-                  className="h-9 text-right tabular-nums"
-                />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 space-y-3">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-              Prazos
-            </h2>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs">Implementação (dias)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={implementationDays}
-                  onChange={(e) =>
-                    markDirty(setImplementationDays)(parseInt(e.target.value) || 0)
-                  }
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Validação (dias)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={validationDays}
-                  onChange={(e) =>
-                    markDirty(setValidationDays)(parseInt(e.target.value) || 0)
-                  }
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Validade da proposta</Label>
-                <Input
-                  type="date"
-                  value={validUntil}
-                  onChange={(e) => markDirty(setValidUntil)(e.target.value)}
-                  className="h-9"
-                />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <ConsiderationsEditor
-              items={considerations}
-              onChange={markDirty(setConsiderations)}
-            />
-          </Card>
-
-          {/* === Conteúdo da página pública === */}
-          <Card className="p-4 space-y-4">
-            <div>
-              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                Conteúdo da página pública
-              </h2>
               <p className="text-[11px] text-muted-foreground mt-1">
-                Textos que aparecem na página que o cliente vê. Todos opcionais — seções vazias ficam ocultas.
+                Aparece no topo da página pública e no PDF.
               </p>
             </div>
-            <div>
-              <Label className="text-xs">Mensagem de boas-vindas</Label>
+
+            {/* Cliente */}
+            <section className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Nome / razão social</Label>
+                  <Input
+                    value={clientName}
+                    onChange={(e) => markDirty(setClientName)(e.target.value)}
+                    className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:border-foreground"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Cidade</Label>
+                  <Input
+                    value={clientCity}
+                    onChange={(e) => markDirty(setClientCity)(e.target.value)}
+                    className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:border-foreground"
+                    placeholder="São Paulo, SP"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-[11px] text-muted-foreground mb-1.5 block">Logo</Label>
+                <LogoUploader
+                  proposalId={data.id}
+                  value={clientLogoUrl}
+                  onChange={(url) => markDirty(setClientLogoUrl)(url)}
+                />
+              </div>
+            </section>
+
+            {/* Mensagem de boas-vindas */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Boas-vindas</h2>
               <Textarea
                 value={welcomeMessage}
                 onChange={(e) => markDirty(setWelcomeMessage)(e.target.value)}
                 rows={2}
-                placeholder="Ex: Olá! Esta é a proposta preparada especialmente para a Acme."
+                placeholder="Olá! Esta é a proposta preparada especialmente para…"
+                className="border-0 border-l-2 border-border/50 rounded-none bg-transparent px-3 py-1 shadow-none focus-visible:ring-0 focus-visible:border-foreground italic text-muted-foreground/90 resize-none"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Aparece no topo da página pública. Deixe vazio para usar o padrão.
-              </p>
-            </div>
-            <div>
-              <Label className="text-xs">Resumo executivo</Label>
+            </section>
+
+            {/* Resumo executivo */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Resumo executivo</h2>
               <Textarea
                 value={executiveSummary}
                 onChange={(e) => markDirty(setExecutiveSummary)(e.target.value)}
                 rows={5}
                 placeholder="3-4 parágrafos descrevendo a proposta em alto nível."
+                className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 resize-none text-base leading-relaxed"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Para quem quer entender em 30 segundos.
-              </p>
-            </div>
-            <div>
-              <Label className="text-xs flex items-center gap-2">
-                Contexto / dor do cliente
+            </section>
+
+            {/* Contexto / dor */}
+            <section className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Contexto e dor
+                </h2>
                 {data.deal && (data.deal as any).pain_description && (
                   <Button
                     type="button"
@@ -667,32 +550,136 @@ export default function OrcamentoEditarDetalhe() {
                     Importar do deal
                   </Button>
                 )}
-              </Label>
+              </div>
               <Textarea
                 value={painContext}
                 onChange={(e) => markDirty(setPainContext)(e.target.value)}
                 rows={4}
                 placeholder="O que o cliente está enfrentando hoje."
+                className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 resize-none text-base leading-relaxed"
               />
-            </div>
-            <div>
-              <Label className="text-xs">Visão geral da solução</Label>
+            </section>
+
+            {/* Visão geral da solução */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Visão geral da solução
+              </h2>
               <Textarea
                 value={solutionOverview}
                 onChange={(e) => markDirty(setSolutionOverview)(e.target.value)}
                 rows={4}
-                placeholder="A solução em alto nível. Os módulos detalhados ficam em cada item da proposta."
+                placeholder="A solução em alto nível. Os módulos detalhados ficam em cada item abaixo."
+                className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 resize-none text-base leading-relaxed"
               />
-            </div>
-          </Card>
+            </section>
 
-          {/* === Identidade visual do cliente === */}
-          <Card className="p-4 space-y-3">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-              Identidade visual do cliente
-            </h2>
-            <div>
-              <Label className="text-xs">Cor de marca (opcional)</Label>
+            {/* Itens — Notion-like com DnD */}
+            <section className="space-y-2">
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Módulos da proposta
+                </h2>
+                <span className="text-[11px] text-muted-foreground">
+                  Total: <span className="font-bold text-success tabular-nums">{formatBRL(total)}</span>
+                </span>
+              </div>
+              <NotionItemsEditor
+                items={scopeItems}
+                onChange={markItemsDirty}
+                onOpenDetails={(idx) => {
+                  if (itemsDirty || dirty) {
+                    toast.info("Aguarde o autosave concluir antes de detalhar.");
+                    return;
+                  }
+                  setDetailsItemIdx(idx);
+                }}
+              />
+            </section>
+
+            {/* Manutenção mensal */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Manutenção mensal <span className="text-muted-foreground/50 normal-case font-normal tracking-normal">(opcional)</span>
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Descrição</Label>
+                  <Input
+                    value={maintenanceDesc}
+                    onChange={(e) => markDirty(setMaintenanceDesc)(e.target.value)}
+                    placeholder="Tokens + Servidor + Desenvolvedor"
+                    className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:border-foreground"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Valor mensal (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={maintenance}
+                    onChange={(e) =>
+                      markDirty(setMaintenance)(
+                        e.target.value === "" ? "" : (parseFloat(e.target.value) || 0)
+                      )
+                    }
+                    className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 text-right tabular-nums font-mono shadow-none focus-visible:ring-0 focus-visible:border-foreground"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Prazos */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Prazos</h2>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Implementação (dias)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={implementationDays}
+                    onChange={(e) => markDirty(setImplementationDays)(parseInt(e.target.value) || 0)}
+                    className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 tabular-nums shadow-none focus-visible:ring-0 focus-visible:border-foreground"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Validação (dias)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={validationDays}
+                    onChange={(e) => markDirty(setValidationDays)(parseInt(e.target.value) || 0)}
+                    className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 tabular-nums shadow-none focus-visible:ring-0 focus-visible:border-foreground"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Validade da proposta</Label>
+                  <Input
+                    type="date"
+                    value={validUntil}
+                    onChange={(e) => markDirty(setValidUntil)(e.target.value)}
+                    className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:border-foreground"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Considerações */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Considerações</h2>
+              <ConsiderationsEditor
+                items={considerations}
+                onChange={markDirty(setConsiderations)}
+              />
+            </section>
+
+            {/* Identidade visual */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Cor de marca <span className="text-muted-foreground/50 normal-case font-normal tracking-normal">(opcional)</span>
+              </h2>
               <div className="flex items-center gap-2">
                 <div
                   className="h-9 w-9 rounded border border-border flex-shrink-0"
@@ -704,7 +691,7 @@ export default function OrcamentoEditarDetalhe() {
                   onChange={(e) => markDirty(setClientBrandColor)(e.target.value)}
                   placeholder="#FF6B35"
                   pattern="^#[0-9a-fA-F]{6}$"
-                  className="h-9 font-mono text-sm"
+                  className="h-9 font-mono text-sm border-0 border-b border-border/50 rounded-none bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:border-foreground"
                 />
                 <input
                   type="color"
@@ -723,50 +710,44 @@ export default function OrcamentoEditarDetalhe() {
                   </Button>
                 )}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Usada apenas em destaques (bordas dos itens, ícones). Cor primária da página continua sendo GetBrain. Deixe vazio para usar padrão ciano.
-              </p>
-            </div>
-          </Card>
+            </section>
 
-          <Card className="p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                Mockup
-              </h2>
-              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/20 text-accent">
-                Beta
-              </span>
-            </div>
-            <div>
-              <Label className="text-xs">URL do mockup (Figma, Loom, vídeo, etc.)</Label>
+            {/* Mockup */}
+            <section className="space-y-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mockup</h2>
+                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/20 text-accent">
+                  Beta
+                </span>
+              </div>
               <Input
                 value={mockupUrl}
                 onChange={(e) => markDirty(setMockupUrl)(e.target.value)}
-                className="h-9"
+                className="h-9 border-0 border-b border-border/50 rounded-none bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:border-foreground"
                 placeholder="https://figma.com/proto/…"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Aparecerá como CTA destacado na página pública e como QR code no PDF.
+              <p className="text-[10px] text-muted-foreground">
+                CTA destacado na página pública e QR code no PDF.
               </p>
-            </div>
-          </Card>
+            </section>
 
-          {data.status === "recusada" && (
-            <Card className="p-4 space-y-2">
-              <Label className="text-xs">Motivo da recusa (opcional)</Label>
-              <Textarea
-                defaultValue={data.rejection_reason || ""}
-                onBlur={(e) =>
-                  update.mutate({
-                    id: data.id,
-                    payload: { rejection_reason: e.target.value || null },
-                  })
-                }
-                placeholder="Ex: cliente escolheu concorrente"
-              />
-            </Card>
-          )}
+            {data.status === "recusada" && (
+              <section className="space-y-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Motivo da recusa</h2>
+                <Textarea
+                  defaultValue={data.rejection_reason || ""}
+                  onBlur={(e) =>
+                    update.mutate({
+                      id: data.id,
+                      payload: { rejection_reason: e.target.value || null },
+                    })
+                  }
+                  placeholder="Ex: cliente escolheu concorrente"
+                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 resize-none"
+                />
+              </section>
+            )}
+          </div>
         </div>
 
         {/* Preview (right) */}
