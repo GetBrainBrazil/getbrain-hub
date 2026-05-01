@@ -111,6 +111,7 @@ const App = () => (
           <RouteTracker />
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/p/:token" element={<PropostaPublica />} />
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroVisaoGeral /></ProtectedRoute>} />
