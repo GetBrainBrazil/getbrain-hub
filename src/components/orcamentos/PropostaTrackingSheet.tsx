@@ -88,19 +88,19 @@ export function PropostaTrackingSheet({
     setLoading(true);
     try {
       const [v, e, s] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("proposal_views")
           .select("id, session_token, viewed_at, duration_seconds, pdf_downloaded, user_agent")
           .eq("proposal_id", proposalId)
           .order("viewed_at", { ascending: false })
           .limit(50),
-        supabase
+        (supabase as any)
           .from("proposal_events")
           .select("id, event_type, metadata, created_at")
           .eq("proposal_id", proposalId)
           .order("created_at", { ascending: false })
           .limit(100),
-        supabase
+        (supabase as any)
           .from("proposal_chat_sessions")
           .select("id, started_at, message_count, escalated_to_whatsapp, user_agent")
           .eq("proposal_id", proposalId)
@@ -120,7 +120,7 @@ export function PropostaTrackingSheet({
       setExpandedSession(expandedSession === sessionId ? null : sessionId);
       return;
     }
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("proposal_chat_messages")
       .select("id, role, content, created_at, was_filtered, was_escalation_suggested, cost_usd")
       .eq("session_id", sessionId)
