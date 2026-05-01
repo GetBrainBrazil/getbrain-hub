@@ -29,7 +29,6 @@ export function AbaVersoes({ proposalId }: Props) {
       setDownloadingId(null);
     }
   }
-  const [snapshotMeta, setSnapshotMeta] = useState<string>("");
 
   if (isLoading) {
     return (
