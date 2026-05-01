@@ -22,7 +22,7 @@ import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
 import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 import { ItemDetailsDialog } from "@/components/orcamentos/ItemDetailsDialog";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
-import { suggestPasswordFromCompany } from "@/lib/orcamentos/companySlug";
+import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
 import {
   calculateScopeTotal,
   effectiveStatus,
