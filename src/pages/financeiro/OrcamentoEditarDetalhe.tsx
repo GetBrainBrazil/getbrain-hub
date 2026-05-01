@@ -850,6 +850,17 @@ export default function OrcamentoEditarDetalhe() {
         open={pwdDialogOpen}
         onOpenChange={setPwdDialogOpen}
       />
+
+      {/* Modal: detalhes do módulo (página pública) */}
+      {detailsItemIdx !== null && (
+        <ItemDetailsDialog
+          proposalId={data.id}
+          orderIndex={detailsItemIdx}
+          itemTitle={scopeItems[detailsItemIdx]?.title || `Item ${detailsItemIdx + 1}`}
+          open={detailsItemIdx !== null}
+          onOpenChange={(o) => !o && setDetailsItemIdx(null)}
+        />
+      )}
     </div>
   );
 }
