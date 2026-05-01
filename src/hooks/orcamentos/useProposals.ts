@@ -40,7 +40,7 @@ export function useProposals(filters: ProposalFilters) {
         .select(
           `*,
           company:companies(id, trade_name, legal_name),
-          deal:deals(id, code, title, stage)`
+          deal:deals!proposals_deal_id_fkey(id, code, title, stage)`
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
