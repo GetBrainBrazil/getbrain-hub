@@ -106,7 +106,7 @@ export function OrcamentoDrawer({ proposalId, onClose }: Props) {
                   <AbaVersoes proposalId={data.id} />
                 </TabsContent>
                 <TabsContent value="historico" className="mt-4">
-                  <AbaHistorico />
+                  <AbaHistorico proposalId={data.id} />
                 </TabsContent>
                 <TabsContent value="detalhes" className="mt-4">
                   <AbaDetalhes proposal={data} />
