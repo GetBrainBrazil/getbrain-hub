@@ -610,6 +610,116 @@ export default function OrcamentoEditarDetalhe() {
             />
           </Card>
 
+          {/* === Conteúdo da página pública === */}
+          <Card className="p-4 space-y-4">
+            <div>
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                Conteúdo da página pública
+              </h2>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Textos que aparecem na página que o cliente vê. Todos opcionais — seções vazias ficam ocultas.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Mensagem de boas-vindas</Label>
+              <Textarea
+                value={welcomeMessage}
+                onChange={(e) => markDirty(setWelcomeMessage)(e.target.value)}
+                rows={2}
+                placeholder="Ex: Olá! Esta é a proposta preparada especialmente para a Acme."
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Aparece no topo da página pública. Deixe vazio para usar o padrão.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Resumo executivo</Label>
+              <Textarea
+                value={executiveSummary}
+                onChange={(e) => markDirty(setExecutiveSummary)(e.target.value)}
+                rows={5}
+                placeholder="3-4 parágrafos descrevendo a proposta em alto nível."
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Para quem quer entender em 30 segundos.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-2">
+                Contexto / dor do cliente
+                {data.deal && (data.deal as any).pain_description && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => markDirty(setPainContext)((data.deal as any).pain_description)}
+                  >
+                    Importar do deal
+                  </Button>
+                )}
+              </Label>
+              <Textarea
+                value={painContext}
+                onChange={(e) => markDirty(setPainContext)(e.target.value)}
+                rows={4}
+                placeholder="O que o cliente está enfrentando hoje."
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Visão geral da solução</Label>
+              <Textarea
+                value={solutionOverview}
+                onChange={(e) => markDirty(setSolutionOverview)(e.target.value)}
+                rows={4}
+                placeholder="A solução em alto nível. Os módulos detalhados ficam em cada item da proposta."
+              />
+            </div>
+          </Card>
+
+          {/* === Identidade visual do cliente === */}
+          <Card className="p-4 space-y-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+              Identidade visual do cliente
+            </h2>
+            <div>
+              <Label className="text-xs">Cor de marca (opcional)</Label>
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-9 w-9 rounded border border-border flex-shrink-0"
+                  style={{ background: clientBrandColor || "transparent" }}
+                />
+                <Input
+                  type="text"
+                  value={clientBrandColor}
+                  onChange={(e) => markDirty(setClientBrandColor)(e.target.value)}
+                  placeholder="#FF6B35"
+                  pattern="^#[0-9a-fA-F]{6}$"
+                  className="h-9 font-mono text-sm"
+                />
+                <input
+                  type="color"
+                  value={clientBrandColor || "#06b6d4"}
+                  onChange={(e) => markDirty(setClientBrandColor)(e.target.value)}
+                  className="h-9 w-12 rounded border border-border cursor-pointer bg-transparent"
+                />
+                {clientBrandColor && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => markDirty(setClientBrandColor)("")}
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Usada apenas em destaques (bordas dos itens, ícones). Cor primária da página continua sendo GetBrain. Deixe vazio para usar padrão ciano.
+              </p>
+            </div>
+          </Card>
+
           <Card className="p-4 space-y-3">
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
