@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2 } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,10 +17,12 @@ import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
 import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBadge";
-import { MarcarComoEnviadaDialog } from "@/components/orcamentos/MarcarComoEnviadaDialog";
+import { GerarEEnviarDialog } from "@/components/orcamentos/GerarEEnviarDialog";
 import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
 import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 import { ItemDetailsDialog } from "@/components/orcamentos/ItemDetailsDialog";
+import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
+import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
 import {
   calculateScopeTotal,
   effectiveStatus,
@@ -420,11 +422,27 @@ export default function OrcamentoEditarDetalhe() {
           </Button>
           {data.status === "rascunho" && (
             <Button size="sm" onClick={handleOpenSendDialog}>
-              <Send className="h-3.5 w-3.5" /> Marcar como enviada
+              <Send className="h-3.5 w-3.5" /> Gerar e enviar
             </Button>
           )}
           {data.status === "enviada" && (
             <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await previewProposalAsClient({
+                      proposalId: data.id,
+                      accessToken: (data as any).access_token,
+                    });
+                  } catch (e: any) {
+                    toast.error(e?.message || "Falha ao abrir preview");
+                  }
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" /> Ver como cliente
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -799,17 +817,17 @@ export default function OrcamentoEditarDetalhe() {
       </div>
       {confirmDialog}
 
-      {/* Modal: marcar como enviada (define senha + valida data) */}
-      <MarcarComoEnviadaDialog
+      {/* Modal: gerar e enviar (define senha + valida data + tela de sucesso) */}
+      <GerarEEnviarDialog
         proposalId={data.id}
         proposalCode={data.code}
+        suggestedPassword={defaultProposalPassword(clientName || data.client_company_name)}
+        clientLabel={clientName || data.client_company_name}
         expiresAt={validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
         open={sendDialogOpen}
         onOpenChange={setSendDialogOpen}
-        onSent={(info) => {
+        onDone={(info) => {
           setGeneratedTokenInfo(info);
-          setLinkDialogOpen(true);
-          // refresh local: validUntil pode ter mudado
           setValidUntil(info.expiresAt);
           setLastSavedAt(new Date());
         }}

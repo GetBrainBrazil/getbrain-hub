@@ -18,9 +18,10 @@ import { useConfirm } from '@/components/ConfirmDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { OrcamentoStatusBadge } from '@/components/orcamentos/OrcamentoStatusBadge';
 import { ScopeItemsEditor } from '@/components/orcamentos/ScopeItemsEditor';
-import { MarcarComoEnviadaDialog } from '@/components/orcamentos/MarcarComoEnviadaDialog';
+import { GerarEEnviarDialog } from '@/components/orcamentos/GerarEEnviarDialog';
 import { LinkGeradoDialog } from '@/components/orcamentos/LinkGeradoDialog';
 import { RedefinirSenhaDialog } from '@/components/orcamentos/RedefinirSenhaDialog';
+import { defaultProposalPassword } from '@/lib/orcamentos/companySlug';
 import {
   calculateScopeTotal, effectiveStatus, formatBRL, formatDateBR,
   type ProposalStatus, type ScopeItem,
@@ -73,7 +74,7 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
-  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string } | null>(null);
+  const [generatedTokenInfo, setGeneratedTokenInfo] = useState<{ accessToken: string; expiresAt: string; password?: string } | null>(null);
 
   useEffect(() => {
     setItems(proposal.scope_items ?? []);
@@ -366,15 +367,16 @@ function PropostaCard({ deal, proposal, onChanged, onRequestClose }: {
       </div>
 
       {/* Modais 10A — senha + link */}
-      <MarcarComoEnviadaDialog
+      <GerarEEnviarDialog
         proposalId={proposal.id}
         proposalCode={proposal.code}
+        suggestedPassword={defaultProposalPassword(proposal.client_company_name)}
+        clientLabel={proposal.client_company_name}
         expiresAt={validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
         open={sendDialogOpen}
         onOpenChange={setSendDialogOpen}
-        onSent={(info) => {
+        onDone={(info) => {
           setGeneratedTokenInfo(info);
-          setLinkDialogOpen(true);
           setValidUntil(info.expiresAt);
           onChanged();
         }}

@@ -1,17 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Eye, EyeOff, Loader2, Download, ExternalLink, Menu, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useParams, useSearchParams } from "react-router-dom";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Download,
+  ExternalLink,
+  AlertCircle,
+  CheckCircle2,
+  AlertTriangle,
+  MessageCircle,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { ABOUT_GETBRAIN_PARAGRAPHS } from "@/content/about-getbrain";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-const DEFAULT_BRAND = "#06b6d4"; // ciano GetBrain
+const DEFAULT_BRAND = "#06b6d4";
 
 interface PublicProposal {
   code: string;
@@ -79,6 +90,8 @@ async function callEdge(name: string, body: unknown, jwt?: string) {
 
 export default function PropostaPublica() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const previewJwt = searchParams.get("preview");
   const [accessJwt, setAccessJwt] = useState<string | null>(null);
   const [proposal, setProposal] = useState<PublicProposal | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,6 +99,24 @@ export default function PropostaPublica() {
   const [pwdInput, setPwdInput] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [expiredOn, setExpiredOn] = useState<string | null>(null);
+  const isPreview = !!previewJwt;
+
+  // Modo preview: usa JWT direto sem pedir senha
+  useEffect(() => {
+    if (!previewJwt) return;
+    (async () => {
+      setLoading(true);
+      const r = await callEdge("get-proposal-public-data", {}, previewJwt);
+      if (!r.ok) {
+        setAuthError("Preview expirado. Volte ao editor e gere outro.");
+        setLoading(false);
+        return;
+      }
+      setAccessJwt(previewJwt);
+      setProposal(r.data.proposal as PublicProposal);
+      setLoading(false);
+    })();
+  }, [previewJwt]);
 
   async function handleLogin(e?: React.FormEvent) {
     e?.preventDefault();
@@ -115,7 +146,6 @@ export default function PropostaPublica() {
     }
     const jwt = data.access_jwt as string;
     setAccessJwt(jwt);
-    // Buscar dados
     const r = await callEdge("get-proposal-public-data", {}, jwt);
     if (!r.ok) {
       setAuthError("Erro ao carregar proposta.");
@@ -128,7 +158,6 @@ export default function PropostaPublica() {
     setLoading(false);
   }
 
-  // JWT expira em 15 min — handler simples: ao baixar PDF e falhar 401, pede senha de novo
   async function handleDownloadPdf() {
     if (!accessJwt) return;
     const { ok, data } = await callEdge("get-proposal-pdf-public", {}, accessJwt);
@@ -163,7 +192,11 @@ export default function PropostaPublica() {
   }
 
   return (
-    <ProposalView proposal={proposal} onDownloadPdf={handleDownloadPdf} />
+    <ProposalView
+      proposal={proposal}
+      onDownloadPdf={handleDownloadPdf}
+      isPreview={isPreview}
+    />
   );
 }
 
@@ -255,411 +288,339 @@ function PasswordGate(props: {
   );
 }
 
-/* ------------------------- VISUALIZAÇÃO ------------------------- */
-
-interface SectionDef {
-  id: string;
-  label: string;
-  visible: boolean;
-}
+/* ------------------------- VISUALIZAÇÃO DOCUMENT-STYLE ------------------------- */
 
 function ProposalView({
   proposal,
   onDownloadPdf,
+  isPreview,
 }: {
   proposal: PublicProposal;
   onDownloadPdf: () => void;
+  isPreview: boolean;
 }) {
   const brand = proposal.client_brand_color || DEFAULT_BRAND;
   const total = useMemo(
     () => proposal.items.reduce((acc, it) => acc + Number(it.total ?? 0), 0),
     [proposal.items],
   );
-
-  const sections: SectionDef[] = useMemo(
-    () => [
-      { id: "boas-vindas", label: "Boas-vindas", visible: true },
-      { id: "resumo", label: "Resumo executivo", visible: !!proposal.executive_summary },
-      { id: "sobre", label: "Sobre a GetBrain", visible: true },
-      { id: "contexto", label: "O contexto", visible: !!proposal.pain_context },
-      { id: "solucao", label: "A solução", visible: !!proposal.solution_overview },
-      { id: "escopo", label: "Escopo detalhado", visible: proposal.items.length > 0 },
-      { id: "manutencao", label: "Manutenção mensal", visible: !!(proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0) },
-      { id: "cronograma", label: "Cronograma", visible: true },
-      { id: "investimento", label: "Investimento", visible: proposal.items.length > 0 },
-      { id: "consideracoes", label: "Considerações", visible: proposal.considerations.length > 0 },
-      { id: "mockup", label: "Mockup / Protótipo", visible: !!proposal.mockup_url },
-      { id: "proximos", label: "Próximos passos", visible: true },
-    ],
-    [proposal],
-  );
-
-  const visibleSections = sections.filter((s) => s.visible);
-  const [activeId, setActiveId] = useState(visibleSections[0]?.id);
-
-  // Scroll spy
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  useEffect(() => {
-    if (observerRef.current) observerRef.current.disconnect();
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]) setActiveId(visible[0].target.id);
-      },
-      { rootMargin: "-30% 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
-    );
-    visibleSections.forEach((s) => {
-      const el = document.getElementById(s.id);
-      if (el) obs.observe(el);
-    });
-    observerRef.current = obs;
-    return () => obs.disconnect();
-  }, [visibleSections.map((s) => s.id).join(",")]);
-
   const clientLabel = proposal.client_name || proposal.client_company_name;
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* HEADER */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+      {isPreview && (
+        <div
+          className="sticky top-0 z-50 bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-xs font-semibold text-center flex items-center justify-center gap-2"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Pré-visualização interna · o cliente verá esta página exatamente assim
+        </div>
+      )}
+
+      {/* HEADER sticky minimalista */}
+      <header
+        className={`sticky ${isPreview ? "top-[34px]" : "top-0"} z-40 bg-white/95 backdrop-blur transition-shadow ${
+          scrolled ? "shadow-sm border-b border-slate-200" : ""
+        }`}
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
           {proposal.client_logo_url ? (
             <img
               src={proposal.client_logo_url}
               alt={`Logo ${clientLabel}`}
-              className="h-10 max-h-[60px] w-auto object-contain"
+              className="h-8 max-h-[40px] w-auto object-contain"
             />
           ) : (
-            <div className="h-10 w-10 rounded bg-slate-100 flex items-center justify-center text-slate-400 font-semibold text-xs">
+            <div
+              className="h-8 w-8 rounded flex items-center justify-center text-white font-semibold text-xs"
+              style={{ background: brand }}
+            >
               {clientLabel.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <div className="hidden md:block flex-1 text-center">
-            <h1 className="text-sm font-semibold text-slate-700 truncate">
-              Proposta para {clientLabel}
-            </h1>
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 leading-tight">
+              Proposta
+            </div>
+            <div className="text-sm font-semibold text-slate-900 truncate leading-tight">
+              {clientLabel}
+            </div>
           </div>
+          <span className="hidden sm:inline font-mono text-[11px] text-slate-400">
+            {proposal.code}
+          </span>
           <Button
             size="sm"
             variant="outline"
             onClick={onDownloadPdf}
-            className="ml-auto md:ml-0"
+            className="text-xs"
           >
-            <Download className="h-3.5 w-3.5" /> Baixar PDF
+            <Download className="h-3.5 w-3.5" /> PDF
           </Button>
-          {/* Mobile menu */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-white">
-              <SidebarNav
-                sections={visibleSections}
-                activeId={activeId}
-                brand={brand}
-              />
-            </SheetContent>
-          </Sheet>
-        </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 text-[11px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5">
-          <span>Preparada por GetBrain</span>
-          <span>·</span>
-          <span>Válida até {formatDate(proposal.expires_at)}</span>
-          <span>·</span>
-          <span className="font-mono">{proposal.code}</span>
         </div>
       </header>
 
-      {/* BODY */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-8">
-        {/* SIDEBAR */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-32">
-            <SidebarNav
-              sections={visibleSections}
-              activeId={activeId}
-              brand={brand}
-            />
-          </div>
-        </aside>
-
-        {/* CONTENT */}
-        <main className="space-y-16 pb-24">
-          {/* Boas-vindas */}
-          <Section id="boas-vindas" title="Boas-vindas" brand={brand}>
-            <p className="text-lg text-slate-700 leading-relaxed">
-              {proposal.welcome_message ||
-                `Olá! Esta é a proposta preparada especialmente para ${clientLabel}.`}
-            </p>
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold"
-              style={{ background: `${brand}15`, color: brand }}>
-              Válida até {formatDate(proposal.expires_at)}
-            </div>
-          </Section>
-
-          {/* Resumo executivo */}
-          {proposal.executive_summary && (
-            <Section id="resumo" title="Resumo executivo" brand={brand}>
-              <Prose markdown={proposal.executive_summary} />
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Highlight label="Investimento total" value={formatBRL(total)} brand={brand} />
-                {proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
-                  <Highlight label="Manutenção mensal" value={formatBRL(Number(proposal.maintenance_monthly_value))} brand={brand} />
-                )}
-                {proposal.implementation_days && (
-                  <Highlight label="Implementação" value={`${proposal.implementation_days} dias`} brand={brand} />
-                )}
-              </div>
-            </Section>
+      {/* CONTEÚDO — fluxo único, document-style */}
+      <article className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-20 space-y-16">
+        {/* Hero */}
+        <section className="space-y-6">
+          {proposal.title && (
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
+              {proposal.title}
+            </h1>
           )}
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            <span>Preparada por GetBrain</span>
+            <span>·</span>
+            <span>Válida até {formatDate(proposal.expires_at)}</span>
+          </div>
+          <div className="text-lg text-slate-700 leading-relaxed pt-2">
+            {proposal.welcome_message ||
+              `Olá! Esta é a proposta preparada especialmente para ${clientLabel}.`}
+          </div>
+        </section>
 
-          {/* Sobre */}
-          <Section id="sobre" title="Sobre a GetBrain" brand={brand}>
-            <div className="space-y-4">
-              {ABOUT_GETBRAIN_PARAGRAPHS.map((p, i) => (
-                <p key={i} className="text-slate-700 leading-relaxed">{p}</p>
+        {/* Resumo executivo */}
+        {proposal.executive_summary && (
+          <Block title="Resumo executivo" brand={brand}>
+            <Prose markdown={proposal.executive_summary} />
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Highlight label="Investimento total" value={formatBRL(total)} brand={brand} />
+              {!!proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
+                <Highlight
+                  label="Manutenção mensal"
+                  value={formatBRL(Number(proposal.maintenance_monthly_value))}
+                  brand={brand}
+                />
+              )}
+              {!!proposal.implementation_days && (
+                <Highlight
+                  label="Implementação"
+                  value={`${proposal.implementation_days} dias`}
+                  brand={brand}
+                />
+              )}
+            </div>
+          </Block>
+        )}
+
+        {/* Sobre */}
+        <Block title="Sobre a GetBrain" brand={brand}>
+          <div className="space-y-4">
+            {ABOUT_GETBRAIN_PARAGRAPHS.map((p, i) => (
+              <p key={i} className="text-slate-700 leading-relaxed">{p}</p>
+            ))}
+          </div>
+        </Block>
+
+        {/* Contexto */}
+        {proposal.pain_context && (
+          <Block title="O contexto" brand={brand}>
+            <Prose markdown={proposal.pain_context} />
+          </Block>
+        )}
+
+        {/* Solução */}
+        {proposal.solution_overview && (
+          <Block title="A solução" brand={brand}>
+            <Prose markdown={proposal.solution_overview} />
+          </Block>
+        )}
+
+        {/* Escopo */}
+        {proposal.items.length > 0 && (
+          <Block title="Módulos da proposta" brand={brand}>
+            <div className="space-y-3">
+              {proposal.items.map((item, idx) => (
+                <ItemCard key={item.id} item={item} brand={brand} defaultOpen={idx === 0} />
               ))}
             </div>
-          </Section>
+          </Block>
+        )}
 
-          {/* Contexto */}
-          {proposal.pain_context && (
-            <Section id="contexto" title="O contexto" brand={brand}>
-              <Prose markdown={proposal.pain_context} />
-            </Section>
-          )}
-
-          {/* Solução */}
-          {proposal.solution_overview && (
-            <Section id="solucao" title="A solução" brand={brand}>
-              <Prose markdown={proposal.solution_overview} />
-            </Section>
-          )}
-
-          {/* Escopo */}
-          {proposal.items.length > 0 && (
-            <Section id="escopo" title="Escopo detalhado" brand={brand}>
-              <div className="space-y-3">
-                {proposal.items.map((item, idx) => (
-                  <ItemCard key={item.id} item={item} brand={brand} defaultOpen={idx === 0} />
-                ))}
+        {/* Manutenção */}
+        {!!proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
+          <Block title="Manutenção mensal" brand={brand}>
+            <Card className="p-5 border-slate-200">
+              <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+                <span className="text-sm text-slate-600">Mensalidade</span>
+                <span className="text-2xl font-bold" style={{ color: brand }}>
+                  {formatBRL(Number(proposal.maintenance_monthly_value))}
+                  <span className="text-sm font-normal text-slate-500 ml-1">/mês</span>
+                </span>
               </div>
-            </Section>
-          )}
+              {proposal.maintenance_description && (
+                <ul className="space-y-1.5 text-sm text-slate-700">
+                  {proposal.maintenance_description.split(/\n|[,+]/).map((s, i) => {
+                    const t = s.trim();
+                    if (!t) return null;
+                    return (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2
+                          className="h-4 w-4 mt-0.5 flex-shrink-0"
+                          style={{ color: brand }}
+                        />
+                        <span>{t}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+          </Block>
+        )}
 
-          {/* Manutenção */}
-          {proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
-            <Section id="manutencao" title="Manutenção mensal" brand={brand}>
-              <Card className="p-5 border-slate-200">
-                <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
-                  <span className="text-sm text-slate-600">Mensalidade</span>
-                  <span className="text-2xl font-bold" style={{ color: brand }}>
-                    {formatBRL(Number(proposal.maintenance_monthly_value))}
-                    <span className="text-sm font-normal text-slate-500 ml-1">/mês</span>
-                  </span>
-                </div>
-                {proposal.maintenance_description && (
-                  <ul className="space-y-1.5 text-sm text-slate-700">
-                    {proposal.maintenance_description.split(/\n|[,+]/).map((s, i) => {
-                      const t = s.trim();
-                      if (!t) return null;
-                      return (
-                        <li key={i} className="flex items-start gap-2">
-                          <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: brand }} />
-                          <span>{t}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </Card>
-            </Section>
-          )}
+        {/* Cronograma */}
+        <Block title="Cronograma" brand={brand}>
+          <Timeline
+            implementationDays={proposal.implementation_days ?? 0}
+            validationDays={proposal.validation_days ?? 0}
+            brand={brand}
+          />
+        </Block>
 
-          {/* Cronograma */}
-          <Section id="cronograma" title="Cronograma" brand={brand}>
-            <Timeline
-              implementationDays={proposal.implementation_days ?? 0}
-              validationDays={proposal.validation_days ?? 0}
-              brand={brand}
-            />
-          </Section>
-
-          {/* Investimento */}
-          {proposal.items.length > 0 && (
-            <Section id="investimento" title="Investimento" brand={brand}>
-              <Card className="overflow-hidden border-slate-200">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="text-left px-4 py-2.5 font-semibold text-slate-600">Item</th>
-                        <th className="text-right px-4 py-2.5 font-semibold text-slate-600 w-20">Qtd</th>
-                        <th className="text-right px-4 py-2.5 font-semibold text-slate-600 w-32">Unit.</th>
-                        <th className="text-right px-4 py-2.5 font-semibold text-slate-600 w-32">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {proposal.items.map((it) => (
-                        <tr key={it.id} className="border-t border-slate-100">
-                          <td className="px-4 py-3 text-slate-800">{it.description}</td>
-                          <td className="px-4 py-3 text-right tabular-nums text-slate-700">{Number(it.quantity)}</td>
-                          <td className="px-4 py-3 text-right tabular-nums text-slate-700">{formatBRL(Number(it.unit_price))}</td>
-                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">{formatBRL(Number(it.total))}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t-2" style={{ borderColor: brand }}>
-                        <td colSpan={3} className="px-4 py-3 text-right font-semibold text-slate-700">Total one-time</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-lg font-bold" style={{ color: brand }}>
-                          {formatBRL(total)}
+        {/* Investimento */}
+        {proposal.items.length > 0 && (
+          <Block title="Investimento" brand={brand}>
+            <Card className="overflow-hidden border-slate-200">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left px-4 py-2.5 font-semibold text-slate-600">Item</th>
+                      <th className="text-right px-4 py-2.5 font-semibold text-slate-600 w-32">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {proposal.items.map((it) => (
+                      <tr key={it.id} className="border-t border-slate-100">
+                        <td className="px-4 py-3 text-slate-800">{it.description}</td>
+                        <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
+                          {formatBRL(Number(it.total))}
                         </td>
                       </tr>
-                      {proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
-                        <tr>
-                          <td colSpan={3} className="px-4 py-2 text-right text-slate-600 text-sm">+ Manutenção mensal</td>
-                          <td className="px-4 py-2 text-right tabular-nums font-semibold text-slate-700">
-                            {formatBRL(Number(proposal.maintenance_monthly_value))}/mês
-                          </td>
-                        </tr>
-                      )}
-                    </tfoot>
-                  </table>
-                </div>
-              </Card>
-            </Section>
-          )}
-
-          {/* Considerações */}
-          {proposal.considerations.length > 0 && (
-            <Section id="consideracoes" title="Considerações" brand={brand}>
-              <ul className="space-y-2.5">
-                {proposal.considerations.map((c, i) => (
-                  <li key={i} className="flex gap-3 text-slate-700">
-                    <span className="text-slate-400 font-mono text-sm pt-0.5">{i + 1}.</span>
-                    <span className="leading-relaxed">{c}</span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
-
-          {/* Mockup */}
-          {proposal.mockup_url && (
-            <Section id="mockup" title="Mockup / Protótipo" brand={brand}>
-              <Card className="p-6 border-slate-200" style={{ borderLeftWidth: 4, borderLeftColor: brand }}>
-                <h3 className="text-lg font-semibold mb-2 text-slate-900">
-                  Veja o protótipo do seu sistema
-                </h3>
-                <p className="text-sm text-slate-600 mb-4">
-                  Preparamos uma versão navegável para você explorar a proposta visualmente.
-                </p>
-                <Button
-                  asChild
-                  size="lg"
-                  style={{ background: brand, color: "white" }}
-                >
-                  <a href={proposal.mockup_url} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-4 w-4" /> Abrir protótipo
-                  </a>
-                </Button>
-                <p className="text-xs text-slate-500 mt-3">
-                  Este é um protótipo navegável. Algumas funcionalidades podem estar simuladas.
-                </p>
-              </Card>
-            </Section>
-          )}
-
-          {/* Próximos passos */}
-          <Section id="proximos" title="Próximos passos" brand={brand}>
-            <Card className="p-6 border-slate-200 bg-slate-50">
-              <p className="text-slate-700 mb-4">
-                Para avançar com esta proposta, entre em contato com Daniel pelo WhatsApp.
-              </p>
-              <Button disabled size="lg" style={{ background: brand, color: "white", opacity: 0.5 }}>
-                Tenho interesse em avançar
-              </Button>
-              <p className="text-[11px] text-slate-500 mt-2">
-                (Em breve você poderá manifestar interesse direto por aqui.)
-              </p>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2" style={{ borderColor: brand }}>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-700">Total one-time</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-lg font-bold" style={{ color: brand }}>
+                        {formatBRL(total)}
+                      </td>
+                    </tr>
+                    {!!proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
+                      <tr>
+                        <td className="px-4 py-2 text-right text-slate-600 text-sm">+ Manutenção mensal</td>
+                        <td className="px-4 py-2 text-right tabular-nums font-semibold text-slate-700">
+                          {formatBRL(Number(proposal.maintenance_monthly_value))}/mês
+                        </td>
+                      </tr>
+                    )}
+                  </tfoot>
+                </table>
+              </div>
             </Card>
-          </Section>
-        </main>
-      </div>
+          </Block>
+        )}
+
+        {/* Considerações */}
+        {proposal.considerations.length > 0 && (
+          <Block title="Considerações" brand={brand}>
+            <ul className="space-y-2.5">
+              {proposal.considerations.map((c, i) => (
+                <li key={i} className="flex gap-3 text-slate-700">
+                  <span className="text-slate-400 font-mono text-sm pt-0.5">{i + 1}.</span>
+                  <span className="leading-relaxed">{c}</span>
+                </li>
+              ))}
+            </ul>
+          </Block>
+        )}
+
+        {/* Mockup */}
+        {proposal.mockup_url && (
+          <Block title="Mockup / Protótipo" brand={brand}>
+            <Card
+              className="p-6 border-slate-200"
+              style={{ borderLeftWidth: 4, borderLeftColor: brand }}
+            >
+              <h3 className="text-lg font-semibold mb-2 text-slate-900">
+                Veja o protótipo do seu sistema
+              </h3>
+              <p className="text-sm text-slate-600 mb-4">
+                Preparamos uma versão navegável para você explorar a proposta visualmente.
+              </p>
+              <Button
+                asChild
+                size="lg"
+                style={{ background: brand, color: "white" }}
+              >
+                <a href={proposal.mockup_url} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" /> Abrir protótipo
+                </a>
+              </Button>
+            </Card>
+          </Block>
+        )}
+
+        {/* Próximos passos */}
+        <Block title="Próximos passos" brand={brand}>
+          <Card className="p-6 border-slate-200 bg-slate-50">
+            <p className="text-slate-700 mb-4">
+              Para avançar com esta proposta, fale direto com Daniel — pelo chat
+              abaixo ou pelo WhatsApp.
+            </p>
+            <Button
+              asChild
+              size="lg"
+              style={{ background: brand, color: "white" }}
+            >
+              <a
+                href={`https://wa.me/5511999999999?text=${encodeURIComponent(
+                  `Olá Daniel, quero avançar com a proposta ${proposal.code}`,
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MessageCircle className="h-4 w-4" /> Falar pelo WhatsApp
+              </a>
+            </Button>
+          </Card>
+        </Block>
+      </article>
 
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-slate-50 px-4 sm:px-6 py-6 text-center text-xs text-slate-500 space-y-1">
         <p>Esta proposta foi preparada exclusivamente para {clientLabel}.</p>
-        <p>GetBrain · getbrain.com.br</p>
-        <p>© {new Date().getFullYear()} GetBrain. Todos os direitos reservados.</p>
-        <p>
-          <a
-            href={`https://wa.me/5511999999999?text=${encodeURIComponent(`Olá Daniel, estou olhando a proposta ${proposal.code}`)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="underline hover:text-slate-700"
-          >
-            Falar com Daniel
-          </a>
-        </p>
+        <p>GetBrain · getbrain.com.br · © {new Date().getFullYear()}</p>
       </footer>
+
+      {/* CHAT BAR — placeholder (ativo no 10C-3) */}
+      <ChatPlaceholder brand={brand} disabled={isPreview} />
     </div>
   );
 }
 
 /* ------------------------- AUX ------------------------- */
 
-function SidebarNav({ sections, activeId, brand }: { sections: SectionDef[]; activeId: string | undefined; brand: string }) {
-  return (
-    <nav className="space-y-1">
-      {sections.map((s) => {
-        const active = s.id === activeId;
-        return (
-          <a
-            key={s.id}
-            href={`#${s.id}`}
-            onClick={(e) => {
-              e.preventDefault();
-              const el = document.getElementById(s.id);
-              if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "start" });
-                window.history.replaceState(null, "", `#${s.id}`);
-              }
-            }}
-            className="block text-sm py-2 px-3 rounded transition-colors"
-            style={{
-              background: active ? `${brand}15` : "transparent",
-              color: active ? brand : "#475569",
-              fontWeight: active ? 600 : 400,
-              borderLeft: `3px solid ${active ? brand : "transparent"}`,
-            }}
-          >
-            {s.label}
-          </a>
-        );
-      })}
-    </nav>
-  );
-}
-
-function Section({
-  id,
+function Block({
   title,
   brand,
   children,
 }: {
-  id: string;
   title: string;
   brand: string;
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-32">
+    <section>
       <h2 className="text-2xl font-bold mb-5 flex items-center gap-3 text-slate-900">
         <span className="h-6 w-1.5 rounded" style={{ background: brand }} />
         {title}
@@ -689,26 +650,28 @@ function Highlight({ label, value, brand }: { label: string; value: string; bran
   );
 }
 
-function Timeline({ implementationDays, validationDays, brand }: { implementationDays: number; validationDays: number; brand: string }) {
+function Timeline({
+  implementationDays,
+  validationDays,
+  brand,
+}: {
+  implementationDays: number;
+  validationDays: number;
+  brand: string;
+}) {
   const total = (implementationDays || 0) + (validationDays || 0);
   return (
     <div className="space-y-4">
       <div className="flex items-stretch gap-1 rounded overflow-hidden h-12 border border-slate-200">
         <div
           className="flex items-center justify-center text-white text-xs font-semibold px-3"
-          style={{
-            background: brand,
-            flex: implementationDays || 1,
-          }}
+          style={{ background: brand, flex: implementationDays || 1 }}
         >
           Implementação · {implementationDays}d
         </div>
         <div
           className="flex items-center justify-center text-white text-xs font-semibold px-3"
-          style={{
-            background: `${brand}aa`,
-            flex: validationDays || 1,
-          }}
+          style={{ background: `${brand}aa`, flex: validationDays || 1 }}
         >
           Validação · {validationDays}d
         </div>
@@ -751,9 +714,6 @@ function ItemCard({
       >
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-slate-900">{item.description}</div>
-          <div className="text-xs text-slate-500 mt-0.5">
-            {Number(item.quantity)} × {formatBRL(Number(item.unit_price))}
-          </div>
         </div>
         <div className="text-right">
           <div className="font-bold tabular-nums text-slate-900">{formatBRL(Number(item.total))}</div>
@@ -806,5 +766,28 @@ function ItemCard({
         </div>
       )}
     </Card>
+  );
+}
+
+/** Chat bar placeholder — fica fixa no rodapé. Será ativada em 10C-3. */
+function ChatPlaceholder({ brand, disabled }: { brand: string; disabled: boolean }) {
+  return (
+    <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 flex-shrink-0" style={{ color: brand }} />
+        <Input
+          disabled
+          placeholder={
+            disabled
+              ? "Chat desabilitado em modo preview"
+              : "Em breve: tire dúvidas sobre esta proposta direto aqui"
+          }
+          className="flex-1 bg-slate-50 border-slate-200 text-slate-500 text-sm cursor-not-allowed"
+        />
+        <Button size="icon" variant="ghost" disabled className="flex-shrink-0">
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
