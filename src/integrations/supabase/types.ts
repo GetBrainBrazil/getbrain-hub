@@ -522,6 +522,7 @@ export type Database = {
           industry: string | null
           legal_name: string
           linkedin_url: string | null
+          logo_url: string | null
           notes: string | null
           organization_id: string
           relationship_status: Database["public"]["Enums"]["company_relationship_status"]
@@ -550,6 +551,7 @@ export type Database = {
           industry?: string | null
           legal_name: string
           linkedin_url?: string | null
+          logo_url?: string | null
           notes?: string | null
           organization_id: string
           relationship_status?: Database["public"]["Enums"]["company_relationship_status"]
@@ -578,6 +580,7 @@ export type Database = {
           industry?: string | null
           legal_name?: string
           linkedin_url?: string | null
+          logo_url?: string | null
           notes?: string | null
           organization_id?: string
           relationship_status?: Database["public"]["Enums"]["company_relationship_status"]

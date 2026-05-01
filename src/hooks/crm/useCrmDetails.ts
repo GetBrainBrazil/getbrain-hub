@@ -97,7 +97,7 @@ export function useAllCompaniesAggregates() {
 }
 
 export function useCompanyDetail(id?: string) {
-  return useQuery({ queryKey: ['crm-company-detail', id], enabled: !!id, queryFn: async (): Promise<CompanyDetail | null> => { const { data, error } = await sb.from('companies').select('id, legal_name, trade_name, relationship_status, cnpj, industry, employee_count_range, website, linkedin_url, notes, created_at, updated_at, sector_id, client_type, revenue_range, digital_maturity').eq('id', id).is('deleted_at', null).maybeSingle(); if (error) throw error; return data ?? null; } });
+  return useQuery({ queryKey: ['crm-company-detail', id], enabled: !!id, queryFn: async (): Promise<CompanyDetail | null> => { const { data, error } = await sb.from('companies').select('id, legal_name, trade_name, relationship_status, cnpj, industry, employee_count_range, website, linkedin_url, notes, created_at, updated_at, sector_id, client_type, revenue_range, digital_maturity, logo_url').eq('id', id).is('deleted_at', null).maybeSingle(); if (error) throw error; return data ?? null; } });
 }
 
 export function useCompanyLeads(id?: string) {
