@@ -57,8 +57,12 @@ export async function createProposalFromDeal(
   // Hash da senha padrão (bcrypt via edge function) e gravação em access_password_hash.
   // Falha aqui não invalida a proposta — Daniel pode regenerar depois.
   try {
-    await setProposalPassword(proposalId, defaultPassword);
-    await logProposalEvent(proposalId, "password_set", { source: "auto_default" });
+    await setProposalPassword({ proposalId, plainPassword: defaultPassword });
+    await logProposalEvent({
+      proposalId,
+      eventType: "password_set",
+      metadata: { source: "auto_default" },
+    });
   } catch (e) {
     // Loga mas não derruba — UI já redireciona pro editor onde Daniel pode editar a senha.
     console.warn("[createProposalFromDeal] hash da senha falhou:", e);
