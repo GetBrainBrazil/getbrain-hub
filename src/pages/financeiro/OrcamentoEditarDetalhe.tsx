@@ -701,6 +701,7 @@ export default function OrcamentoEditarDetalhe() {
         onOpenChange={setLinkDialogOpen}
         accessToken={generatedTokenInfo?.accessToken ?? null}
         expiresAt={generatedTokenInfo?.expiresAt ?? validUntil}
+        password={generatedTokenInfo?.password ?? null}
       />
 
       {/* Modal: redefinir senha (proposta já enviada) */}
