@@ -252,6 +252,23 @@ export default function OrcamentoEditarDetalhe() {
     clientBrandColor,
   ]);
 
+  function handleAiGenerated(type: GenerationType, content: any) {
+    if (type === "full_content" && content && typeof content === "object") {
+      if (content.executive_summary) setExecutiveSummary(content.executive_summary);
+      if (content.pain_context) setPainContext(content.pain_context);
+      if (content.solution_overview) setSolutionOverview(content.solution_overview);
+      // descrição de itens: nosso UI atual não tem campo "description" inline,
+      // então só dispara dirty. Conteúdo fica salvo no log pra revisão futura.
+      setDirty(true);
+      return;
+    }
+    if (typeof content !== "string") return;
+    if (type === "executive_summary") setExecutiveSummary(content);
+    else if (type === "pain_context") setPainContext(content);
+    else if (type === "solution_overview") setSolutionOverview(content);
+    setDirty(true);
+  }
+
   function handleOpenSendDialog() {
     if (scopeItems.length === 0) {
       toast.error("Adicione pelo menos um item antes de enviar");
