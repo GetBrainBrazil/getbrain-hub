@@ -119,15 +119,19 @@ export function DealProposalsSection({ dealId, companyId, companyName }: Props) 
                 </span>
                 {r.pdf_url && (
                   <Button
-                    asChild
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await openProposalPdf(r.pdf_url!);
+                      } catch (err: any) {
+                        toast.error(err?.message || "Falha ao abrir PDF");
+                      }
+                    }}
                   >
-                    <a href={r.pdf_url} target="_blank" rel="noreferrer">
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
+                    <Download className="h-3.5 w-3.5" />
                   </Button>
                 )}
                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
