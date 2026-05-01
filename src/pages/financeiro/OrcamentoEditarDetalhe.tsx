@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2 } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,10 +17,12 @@ import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
 import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBadge";
-import { MarcarComoEnviadaDialog } from "@/components/orcamentos/MarcarComoEnviadaDialog";
+import { GerarEEnviarDialog } from "@/components/orcamentos/GerarEEnviarDialog";
 import { LinkGeradoDialog } from "@/components/orcamentos/LinkGeradoDialog";
 import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 import { ItemDetailsDialog } from "@/components/orcamentos/ItemDetailsDialog";
+import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
+import { suggestPasswordFromCompany } from "@/lib/orcamentos/companySlug";
 import {
   calculateScopeTotal,
   effectiveStatus,
