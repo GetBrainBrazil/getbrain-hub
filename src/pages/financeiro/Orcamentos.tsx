@@ -210,14 +210,28 @@ export default function Orcamentos() {
         ) : (
           <div />
         )}
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Código ou cliente…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-10 md:h-9"
-          />
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:ml-auto">
+          {viewMode === "table" && (
+            <ToggleGroup
+              type="single"
+              value={origin}
+              onValueChange={(v) => v && setOrigin(v as ProposalOrigin)}
+              className="border border-border rounded-md p-0.5"
+            >
+              <ToggleGroupItem value="all" size="sm" className="h-9 px-3 text-xs">Todas</ToggleGroupItem>
+              <ToggleGroupItem value="deal" size="sm" className="h-9 px-3 text-xs">Do deal</ToggleGroupItem>
+              <ToggleGroupItem value="manual" size="sm" className="h-9 px-3 text-xs">Manual</ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Código ou cliente…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-10 md:h-9"
+            />
+          </div>
         </div>
       </div>
 
