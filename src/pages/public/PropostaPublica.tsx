@@ -879,25 +879,3 @@ function ItemCard({
   );
 }
 
-/** Chat bar placeholder — fica fixa no rodapé. Será ativada em 10C-3. */
-function ChatPlaceholder({ brand, disabled }: { brand: string; disabled: boolean }) {
-  return (
-    <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 flex-shrink-0" style={{ color: brand }} />
-        <Input
-          disabled
-          placeholder={
-            disabled
-              ? "Chat desabilitado em modo preview"
-              : "Em breve: tire dúvidas sobre esta proposta direto aqui"
-          }
-          className="flex-1 bg-slate-50 border-slate-200 text-slate-500 text-sm cursor-not-allowed"
-        />
-        <Button size="icon" variant="ghost" disabled className="flex-shrink-0">
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
