@@ -4667,6 +4667,10 @@ export type Database = {
         Args: { p_deal_data?: Json; p_lead_id: string }
         Returns: string
       }
+      create_proposal_from_deal: {
+        Args: { p_deal_id: string; p_force_new_version?: boolean }
+        Returns: Json
+      }
       create_recurrence_with_installments: {
         Args: { p_horizon_months?: number; p_payload: Json }
         Returns: Json
