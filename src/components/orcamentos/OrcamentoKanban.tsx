@@ -115,6 +115,15 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
 
     try {
       await update.mutateAsync({ id: row.id, payload });
+      const fromEff = effectiveStatus(row.status, row.valid_until);
+      await logProposalStatusChange({
+        proposalId: row.id,
+        proposalCode: row.code,
+        from: fromEff,
+        to: target,
+        reason: target === "recusada" ? rejectionReason.trim() || null : null,
+      });
+      qc.invalidateQueries({ queryKey: ["proposal_audit", row.id] });
       toast.success(`Movido para ${LABEL[target]}`);
     } catch {
       // toast já vem do hook
