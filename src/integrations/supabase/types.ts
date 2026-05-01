@@ -3459,6 +3459,261 @@ export type Database = {
           },
         ]
       }
+      proposal_ai_generations: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          filter_reasons: string[] | null
+          generation_type: Database["public"]["Enums"]["proposal_ai_generation_type"]
+          id: string
+          input_tokens: number | null
+          model: string
+          organization_id: string
+          output_raw: string | null
+          output_tokens: number | null
+          output_used: string | null
+          prompt_used: string
+          proposal_id: string
+          triggered_by: string | null
+          updated_at: string
+          updated_by: string | null
+          was_filtered: boolean
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          filter_reasons?: string[] | null
+          generation_type: Database["public"]["Enums"]["proposal_ai_generation_type"]
+          id?: string
+          input_tokens?: number | null
+          model: string
+          organization_id: string
+          output_raw?: string | null
+          output_tokens?: number | null
+          output_used?: string | null
+          prompt_used: string
+          proposal_id: string
+          triggered_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          was_filtered?: boolean
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          filter_reasons?: string[] | null
+          generation_type?: Database["public"]["Enums"]["proposal_ai_generation_type"]
+          id?: string
+          input_tokens?: number | null
+          model?: string
+          organization_id?: string
+          output_raw?: string | null
+          output_tokens?: number | null
+          output_used?: string | null
+          prompt_used?: string
+          proposal_id?: string
+          triggered_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          was_filtered?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_ai_generations_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_ai_settings: {
+        Row: {
+          chat_enabled: boolean
+          chat_model: string
+          created_at: string
+          created_by: string | null
+          current_month_spend_usd: number
+          current_month_started_at: string
+          deleted_at: string | null
+          generation_enabled: boolean
+          generation_model: string
+          id: string
+          max_messages_per_session: number
+          monthly_budget_usd: number
+          notify_on_first_view: boolean
+          notify_on_high_engagement: boolean
+          notify_on_manifested_interest: boolean
+          notify_on_pdf_download: boolean
+          organization_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          chat_enabled?: boolean
+          chat_model?: string
+          created_at?: string
+          created_by?: string | null
+          current_month_spend_usd?: number
+          current_month_started_at?: string
+          deleted_at?: string | null
+          generation_enabled?: boolean
+          generation_model?: string
+          id?: string
+          max_messages_per_session?: number
+          monthly_budget_usd?: number
+          notify_on_first_view?: boolean
+          notify_on_high_engagement?: boolean
+          notify_on_manifested_interest?: boolean
+          notify_on_pdf_download?: boolean
+          organization_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          chat_enabled?: boolean
+          chat_model?: string
+          created_at?: string
+          created_by?: string | null
+          current_month_spend_usd?: number
+          current_month_started_at?: string
+          deleted_at?: string | null
+          generation_enabled?: boolean
+          generation_model?: string
+          id?: string
+          max_messages_per_session?: number
+          monthly_budget_usd?: number
+          notify_on_first_view?: boolean
+          notify_on_high_engagement?: boolean
+          notify_on_manifested_interest?: boolean
+          notify_on_pdf_download?: boolean
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      proposal_chat_messages: {
+        Row: {
+          content: string
+          cost_usd: number | null
+          created_at: string
+          filter_reasons: string[] | null
+          id: string
+          input_tokens: number | null
+          model: string | null
+          output_tokens: number | null
+          role: Database["public"]["Enums"]["proposal_chat_role"]
+          session_id: string
+          was_escalation_suggested: boolean | null
+          was_filtered: boolean | null
+        }
+        Insert: {
+          content: string
+          cost_usd?: number | null
+          created_at?: string
+          filter_reasons?: string[] | null
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          role: Database["public"]["Enums"]["proposal_chat_role"]
+          session_id: string
+          was_escalation_suggested?: boolean | null
+          was_filtered?: boolean | null
+        }
+        Update: {
+          content?: string
+          cost_usd?: number | null
+          created_at?: string
+          filter_reasons?: string[] | null
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          role?: Database["public"]["Enums"]["proposal_chat_role"]
+          session_id?: string
+          was_escalation_suggested?: boolean | null
+          was_filtered?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_chat_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          ended_at: string | null
+          escalated_to_whatsapp: boolean
+          id: string
+          ip_hash: string | null
+          message_count: number
+          organization_id: string
+          proposal_id: string
+          session_token: string
+          started_at: string
+          updated_at: string
+          updated_by: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          ended_at?: string | null
+          escalated_to_whatsapp?: boolean
+          id?: string
+          ip_hash?: string | null
+          message_count?: number
+          organization_id: string
+          proposal_id: string
+          session_token: string
+          started_at?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          ended_at?: string | null
+          escalated_to_whatsapp?: boolean
+          id?: string
+          ip_hash?: string | null
+          message_count?: number
+          organization_id?: string
+          proposal_id?: string
+          session_token?: string
+          started_at?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_chat_sessions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_events: {
         Row: {
           created_at: string
@@ -3490,6 +3745,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      proposal_faqs: {
+        Row: {
+          answer: string
+          category: Database["public"]["Enums"]["proposal_faq_category"]
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          organization_id: string
+          question: string
+          status: Database["public"]["Enums"]["proposal_faq_status"]
+          updated_at: string
+          updated_by: string | null
+          usage_count: number
+        }
+        Insert: {
+          answer: string
+          category?: Database["public"]["Enums"]["proposal_faq_category"]
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          organization_id: string
+          question: string
+          status?: Database["public"]["Enums"]["proposal_faq_status"]
+          updated_at?: string
+          updated_by?: string | null
+          usage_count?: number
+        }
+        Update: {
+          answer?: string
+          category?: Database["public"]["Enums"]["proposal_faq_category"]
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          organization_id?: string
+          question?: string
+          status?: Database["public"]["Enums"]["proposal_faq_status"]
+          updated_at?: string
+          updated_by?: string | null
+          usage_count?: number
+        }
+        Relationships: []
       }
       proposal_items: {
         Row: {
@@ -5129,6 +5429,7 @@ export type Database = {
         | "presencial_feita"
         | "orcamento_enviado"
         | "em_negociacao"
+        | "orcamento_aceito_verbal"
         | "fechado_ganho"
         | "fechado_perdido"
         | "descoberta_marcada"
@@ -5227,6 +5528,21 @@ export type Database = {
         | "consultoria"
         | "interno"
         | "outro"
+      proposal_ai_generation_type:
+        | "full_content"
+        | "executive_summary"
+        | "pain_context"
+        | "solution_overview"
+        | "item_description"
+      proposal_chat_role: "user" | "assistant"
+      proposal_faq_category:
+        | "pagamento"
+        | "prazo"
+        | "manutencao"
+        | "tecnico"
+        | "comercial"
+        | "outros"
+      proposal_faq_status: "ativo" | "inativo"
       proposal_status:
         | "rascunho"
         | "enviada"
@@ -5436,6 +5752,7 @@ export const Constants = {
         "presencial_feita",
         "orcamento_enviado",
         "em_negociacao",
+        "orcamento_aceito_verbal",
         "fechado_ganho",
         "fechado_perdido",
         "descoberta_marcada",
@@ -5546,6 +5863,23 @@ export const Constants = {
         "interno",
         "outro",
       ],
+      proposal_ai_generation_type: [
+        "full_content",
+        "executive_summary",
+        "pain_context",
+        "solution_overview",
+        "item_description",
+      ],
+      proposal_chat_role: ["user", "assistant"],
+      proposal_faq_category: [
+        "pagamento",
+        "prazo",
+        "manutencao",
+        "tecnico",
+        "comercial",
+        "outros",
+      ],
+      proposal_faq_status: ["ativo", "inativo"],
       proposal_status: [
         "rascunho",
         "enviada",
