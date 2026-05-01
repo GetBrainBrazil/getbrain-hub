@@ -110,6 +110,11 @@ export default function OrcamentoEditarDetalhe() {
     setValidUntil((data as any).expires_at || data.valid_until || "");
     setMockupUrl((data as any).mockup_url || "");
     setTemplateKey((data as any).template_key || "inovacao_tecnologica");
+    setWelcomeMessage((data as any).welcome_message || "");
+    setExecutiveSummary((data as any).executive_summary || "");
+    setPainContext((data as any).pain_context || "");
+    setSolutionOverview((data as any).solution_overview || "");
+    setClientBrandColor((data as any).client_brand_color || "");
     setDirty(false);
     setItemsDirty(false);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
