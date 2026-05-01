@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Check, Sparkles, Loader2 } from 'lucide-react';
+import { Check, Sparkles, Loader2, Building2, AlertCircle, Lightbulb, Link2, Banknote, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
