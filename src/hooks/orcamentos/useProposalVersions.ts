@@ -4,11 +4,20 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ProposalVersion {
   id: string;
   proposal_id: string;
+  organization_id: string | null;
   version_number: number;
   pdf_url: string;
   pdf_storage_path: string;
+  pdf_size_bytes: number | null;
+  template_key: string | null;
+  template_version: string | null;
+  notes: string | null;
   generated_at: string;
   generated_by: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  updated_at: string;
+  deleted_at: string | null;
   snapshot: Record<string, any>;
   created_at: string;
 }
