@@ -535,6 +535,32 @@ function PropostaBlock({ deal, onRequestClose }: { deal: Deal; onRequestClose?: 
           )}
         </div>
       )}
+
+      <Dialog open={conflict.open} onOpenChange={(o) => setConflict((s) => ({ ...s, open: o }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Já existe proposta ativa
+            </DialogTitle>
+            <DialogDescription>
+              {conflict.message || `A proposta ${conflict.existingCode} já está vinculada a este deal.`}
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Você pode continuar editando a proposta existente ou gerar uma nova versão (a anterior continua salva no histórico).
+          </p>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button variant="ghost" onClick={goToExisting}>
+              Abrir proposta existente
+            </Button>
+            <Button onClick={handleConfirmConflict} disabled={creating}>
+              {creating && <Loader2 className="h-4 w-4 animate-spin" />}
+              Gerar mesmo assim como nova versão
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
