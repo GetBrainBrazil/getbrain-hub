@@ -79,3 +79,39 @@ export async function logProposalStatusChange({
     console.warn("[audit] erro inesperado:", e?.message);
   }
 }
+
+interface LogProposalEventArgs {
+  proposalId: string;
+  /** Ex: 'password_set' | 'password_change' | 'public_access_granted' */
+  eventType: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Registra um evento genérico relacionado a uma proposta em `audit_logs`.
+ * Usado pra eventos de senha, acesso público, etc. Nunca registra a senha em si.
+ */
+export async function logProposalEvent({
+  proposalId,
+  eventType,
+  metadata,
+}: LogProposalEventArgs): Promise<void> {
+  try {
+    const [actorId, orgId] = await Promise.all([
+      getCurrentActorId(),
+      getProposalOrgId(proposalId),
+    ]);
+    if (!orgId) return;
+    const { error } = await supabase.from("audit_logs").insert({
+      organization_id: orgId,
+      actor_id: actorId,
+      entity_type: "proposal",
+      entity_id: proposalId,
+      action: eventType,
+      metadata: { kind: `proposal_${eventType}`, ...(metadata || {}) },
+    });
+    if (error) console.warn(`[audit] falha ao gravar ${eventType}:`, error.message);
+  } catch (e: any) {
+    console.warn("[audit] erro inesperado:", e?.message);
+  }
+}
