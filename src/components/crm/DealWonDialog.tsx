@@ -1125,7 +1125,7 @@ export function DealWonDialog({ open, onOpenChange, deal, onSuccess }: Props) {
   // ============== Render ==============
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[96vw] sm:max-w-[1200px] max-h-[94vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[min(1200px,calc(100vw-3rem))] max-h-[94vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Fechar deal como ganho — {deal.code}</DialogTitle>
           <DialogDescription>

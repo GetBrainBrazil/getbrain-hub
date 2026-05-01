@@ -1,63 +1,45 @@
-## Reformular UX/UI de "Custos extras" — sem padrão global, com herança inteligente
+## Problema
 
-### O que muda na lógica
+No `DealWonDialog` (modal "Fechar deal como ganho"), o `DialogContent` está com largura fixa:
 
-1. **Remover o bloco "Padrão de categorização"** colapsado no fim. Ele criava confusão (preenche tudo lá, depois precisa preencher de novo no item).
-2. **Cada item passa a ter sua categorização visível e independente**, exposta direto no card (não fica mais escondida em collapsible).
-3. **Herança automática ao adicionar item**: o novo item já vem com a categorização do **último item criado**. Se você adicionou "API OpenAI · Categoria: APIs/Ferramentas · Conta: BTG", o próximo item já vem com isso preenchido — mas livre para mudar.
-4. **Botão "Aplicar a todos"** dentro de cada item: propaga a categorização daquele item para todos os outros itens **que ainda estão vazios** (não atropela quem já tem própria). Toast confirma quantos foram afetados.
-5. **Botão "Duplicar item"** ao lado da lixeira: copia o item inteiro (categorização + valores) — útil para criar variações rápidas (ex: 3 APIs do mesmo provedor).
-6. **Botão "Limpar categorização"** no card quando ele tem alguma categorização preenchida.
-7. Os state legados (`extraCategoriaId`, etc.) continuam existindo em memória apenas para **migração de drafts antigos** — o `addExtraCost` os usa como fallback inicial. Mas a UI deles some.
-
-### O que muda no UI
-
-```text
-┌─ CUSTOS EXTRAS (APIs, infra, licenças)        [+ Adicionar item] ┐
-│ Liste o que esse projeto vai consumir. Cada item tem sua          │
-│ própria categorização — você pode duplicar ou aplicar a todos.    │
-│                                                                   │
-│ ┌─ 1 ITEM                            [📋 Aplicar p/ todos] [⎘][🗑]┐│
-│ │ [Descrição: API OpenAI]    [R$ 200,00]    [Mensal ▾]           ││
-│ │                                                                 ││
-│ │ ┌─ Categorização ─────────────── 4/4 ✓ [Limpar] ────────────┐  ││
-│ │ │ 📁 Categoria      [APIs/Ferramentas ▾]                    │  ││
-│ │ │ 💰 Centro custo   [Operações ▾]                            │  ││
-│ │ │ 🏦 Conta          [BTG ▾]                                  │  ││
-│ │ │ 🔁 Meio pagamento [Cartão ▾]                               │  ││
-│ │ └────────────────────────────────────────────────────────────┘  ││
-│ │ [Observação opcional]                                          ││
-│ └─────────────────────────────────────────────────────────────────┘│
-│                                                                   │
-│              + Adicionar outro item (herda do anterior)           │
-│                                                                   │
-│ Resumo: 3 itens · Mensal: R$ 450 · Único: R$ 1.200                │
-└───────────────────────────────────────────────────────────────────┘
+```
+w-[96vw] sm:max-w-[1200px] max-h-[94vh]
 ```
 
-**Detalhes visuais:**
-- Card de categorização interno reutiliza o `FinanceCategorizationCard` melhorado (header com badge `4/4`, ícones, checks verdes).
-- Botão **"Aplicar p/ todos"** só aparece no header do item quando há **mais de 1 item** E o item atual tem alguma categorização preenchida. Ícone de copy/duplicate.
-- Botão **"Duplicar"** sempre visível (ícone Copy).
-- Quando o item é **incompleto** (sem descrição ou valor), borda âmbar permanece.
-- Estado vazio (sem nenhum item) continua igual.
-- Resumo no rodapé continua igual.
+O Radix Dialog é centralizado no viewport **inteiro** (ignora a sidebar). Em monitores menores (~1280–1366px de largura CSS), os 1200px estouram para a esquerda e ficam atrás da sidebar fixa de 256px — exatamente o que aparece no print, com a coluna esquerda do conteúdo cortada.
 
-### Detalhes técnicos
+Em telas maiores (≥1600px) o tamanho atual é confortável e deve ser preservado.
 
-**Arquivo:** `src/components/crm/DealWonDialog.tsx`
+## Solução
 
-- `addExtraCost()` herda categorização do último item (ou dos `extraCategoriaId`/etc. legados se não houver itens ainda).
-- Novas funções: `duplicateExtraCost(id)`, `applyCategorizationFrom(id)`, `clearItemCategorization(id)`.
-- `applyCategorizationFrom`: só sobrescreve itens **vazios** de categorização (proteção). Toast informa quantos foram afetados; toast info se nenhum.
-- Substituir todo o JSX da `TabsContent value="custos"`:
-  - Remover o `<Collapsible>` "Padrão de categorização" do final.
-  - Substituir o collapsible interno do item ("Personalizar categorização") pelo `FinanceCategorizationCard` direto, em modo compacto, com botão "Limpar" no header quando há valores.
-  - Adicionar botões "Aplicar p/ todos" e "Duplicar" no header do item.
-- Manter os state legados (`extraCategoriaId` etc.) e os campos no draft para retrocompatibilidade — só remove a UI de configurá-los.
-- Manter o fallback no submit (`e.categoria_id || extraCategoriaId || null`) — assim drafts antigos com padrão definido continuam funcionando, mas novos itens já vêm com categorização própria.
-- Pequena adição no `FinanceCategorizationCard`: aceitar prop `compact?: boolean` para diminuir paddings quando renderizado dentro de um item, e prop `onClear?: () => void` para mostrar botão "Limpar" no header.
+Trocar a largura fixa por uma largura **fluida com teto**, respeitando a viewport real e deixando uma folga lateral mínima para nunca colidir com a sidebar:
 
-### Fora do escopo
-- Mudar o schema de `extra_costs` no banco.
-- Auto-sugestão de itens recorrentes baseada em projetos anteriores.
+- Em telas grandes: continua até 1200px (tamanho oficial que você gosta).
+- Em telas médias: encolhe proporcionalmente (`min(1200px, calc(100vw - 3rem))`).
+- Em telas pequenas/mobile: ocupa quase toda a largura como hoje.
+- Altura mantém `max-h-[94vh]` com scroll interno.
+
+## Alteração
+
+Arquivo único: `src/components/crm/DealWonDialog.tsx`, linha 1128.
+
+De:
+```tsx
+<DialogContent className="w-[96vw] sm:max-w-[1200px] max-h-[94vh] overflow-y-auto">
+```
+
+Para:
+```tsx
+<DialogContent className="w-[calc(100vw-2rem)] max-w-[min(1200px,calc(100vw-3rem))] max-h-[94vh] overflow-y-auto p-4 sm:p-6">
+```
+
+O que isso faz:
+- `w-[calc(100vw-2rem)]`: largura base sempre cabe na viewport, com 1rem de folga de cada lado.
+- `max-w-[min(1200px,calc(100vw-3rem))]`: nunca passa de 1200px e nunca encosta nas bordas (mantém ~1.5rem de respiro).
+- `p-4 sm:p-6`: reduz padding interno em telas pequenas para ganhar área útil, sem prejudicar o desktop.
+
+## QA
+
+Após aplicar, validar nas larguras: 1280, 1366, 1440, 1600, 1920 — em todas o modal deve ficar inteiramente visível, centralizado, sem ser cortado pela sidebar e sem perder o tamanho atual em monitores grandes.
+
+Nenhuma outra mudança é necessária — sem impacto no fluxo de "dar como ganho", apenas ajuste visual responsivo.
