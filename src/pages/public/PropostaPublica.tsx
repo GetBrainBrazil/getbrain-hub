@@ -666,26 +666,35 @@ function ProposalView({
 
         {/* Próximos passos */}
         <Block title="Próximos passos" brand={brand}>
-          <Card className="p-6 border-slate-200 bg-slate-50">
-            <p className="text-slate-700 mb-4">
-              Para avançar com esta proposta, fale direto com Daniel — pelo chat
-              abaixo ou pelo WhatsApp.
+          <Card className="p-6 border-slate-200 bg-slate-50 space-y-4">
+            <p className="text-slate-700">
+              Curtiu a proposta? Avise o Daniel com 1 clique — ou tire dúvidas
+              direto no chat abaixo.
             </p>
-            <Button
-              asChild
-              size="lg"
-              style={{ background: brand, color: "white" }}
-            >
-              <a
-                href={`https://wa.me/5511999999999?text=${encodeURIComponent(
-                  `Olá Daniel, quero avançar com a proposta ${proposal.code}`,
-                )}`}
-                target="_blank"
-                rel="noreferrer"
+            <div className="flex flex-wrap gap-3">
+              <Button
+                size="lg"
+                onClick={handleManifestInterest}
+                disabled={interestSent || isPreview}
+                style={{ background: brand, color: "white" }}
               >
-                <MessageCircle className="h-4 w-4" /> Falar pelo WhatsApp
-              </a>
-            </Button>
+                <ThumbsUp className="h-4 w-4" />
+                {interestSent ? "Daniel foi avisado!" : "Quero avançar"}
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a
+                  href={`https://wa.me/5511999999999?text=${
+                    encodeURIComponent(
+                      `Olá Daniel, quero avançar com a proposta ${proposal.code}`,
+                    )
+                  }`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <MessageCircle className="h-4 w-4" /> Falar pelo WhatsApp
+                </a>
+              </Button>
+            </div>
           </Card>
         </Block>
       </article>
@@ -696,8 +705,15 @@ function ProposalView({
         <p>GetBrain · getbrain.com.br · © {new Date().getFullYear()}</p>
       </footer>
 
-      {/* CHAT BAR — placeholder (ativo no 10C-3) */}
-      <ChatPlaceholder brand={brand} disabled={isPreview} />
+      {/* CHAT BAR — IA real (10C-3) */}
+      <ProposalChatBox
+        brand={brand}
+        disabled={isPreview}
+        accessJwt={accessJwt}
+        sessionToken={sessionToken}
+        proposalCode={proposal.code}
+        onManifestInterest={handleManifestInterest}
+      />
     </div>
   );
 }
