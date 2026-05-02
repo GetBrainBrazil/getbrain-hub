@@ -635,6 +635,14 @@ function ProposalView({
         .reveal { opacity: 0; transform: translateY(28px); transition: opacity 1s cubic-bezier(.2,.7,.2,1), transform 1s cubic-bezier(.2,.7,.2,1); }
         .reveal-in { opacity: 1; transform: none; }
 
+        /* Halo usado pelo editor (modo preview) ao apontar a seção em edição */
+        .preview-highlight {
+          box-shadow:
+            inset 0 0 0 2px var(--brand),
+            0 0 0 8px color-mix(in srgb, var(--brand) 18%, transparent);
+          transition: box-shadow .8s ease;
+        }
+
         .text-brand { color: var(--brand); }
         .bg-brand { background: var(--brand); }
         .border-brand { border-color: var(--brand); }
