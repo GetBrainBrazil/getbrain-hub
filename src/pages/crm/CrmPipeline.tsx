@@ -170,6 +170,30 @@ function HomeKpi({ label, value, hint, tone, tooltip }: { label: string; value: 
   );
 }
 
+function FilterChip({
+  prefix,
+  label,
+  onRemove,
+}: {
+  prefix?: string;
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/40 bg-accent/10 pl-2 pr-1 text-[11px] text-accent">
+      {prefix && <span className="opacity-60">{prefix}:</span>}
+      <span className="max-w-[160px] truncate font-medium">{label}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remover filtro ${prefix ?? ''} ${label}`}
+        className="flex h-5 w-5 items-center justify-center rounded-full text-accent/70 transition-colors hover:bg-accent/20 hover:text-accent"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+
 export default function CrmPipeline() {
   const navigate = useNavigate();
   const qc = useQueryClient();
