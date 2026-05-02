@@ -211,13 +211,22 @@ export function TabEscopo({
               {state.scopeItems.length} {state.scopeItems.length === 1 ? "módulo" : "módulos"}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowItemValues((v) => !v)}
-            className="text-[11px] text-accent hover:underline"
-          >
-            {showItemValues ? "Ocultar valor por módulo" : "Exibir valor por módulo"}
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <GerarDescricoesIaButton
+              proposalId={proposalId}
+              items={state.scopeItems}
+              hasDealLink={hasDealLink}
+              disabled={isLocked}
+              onDescriptionsGenerated={setItems}
+            />
+            <button
+              type="button"
+              onClick={() => setShowItemValues((v) => !v)}
+              className="text-[11px] text-accent hover:underline"
+            >
+              {showItemValues ? "Ocultar valor por módulo" : "Exibir valor por módulo"}
+            </button>
+          </div>
         </div>
         <NotionItemsEditor
           items={state.scopeItems}
