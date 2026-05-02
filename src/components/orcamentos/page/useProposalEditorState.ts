@@ -347,6 +347,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
         setItemsDirty(false);
       }
       setDirty(false);
+      clearLocalDraft(proposalId);
       setLastSavedAt(new Date());
       if (!opts.silent) toast.success("Salvo");
     },
