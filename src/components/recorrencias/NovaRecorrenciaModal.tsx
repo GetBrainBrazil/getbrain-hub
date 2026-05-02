@@ -85,6 +85,29 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
 
   useEffect(() => {
     if (!open) return;
+    setForm({
+      type: "recurrence",
+      direction: "despesa",
+      description: "",
+      amount: 0,
+      frequency: "mensal",
+      start_date: today(),
+      end_date: null,
+      total_installments: null,
+      cliente_id: null,
+      fornecedor_id: null,
+      projeto_id: defaultProjectId ?? null,
+      categoria_id: null,
+      centro_custo_id: null,
+      conta_bancaria_id: null,
+      meio_pagamento_id: null,
+    });
+    setEndMode("open");
+    setErrors({});
+  }, [open, defaultProjectId]);
+
+  useEffect(() => {
+    if (!open) return;
     (async () => {
       const [c, f, p, cat, cc, cb, mp] = await Promise.all([
         supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
