@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -39,6 +40,22 @@ export function TabConfiguracoes({
   onUpdateField,
   onDelete,
 }: Props) {
+  const [rejectionReason, setRejectionReason] = useState(proposal.rejection_reason || "");
+
+  useEffect(() => {
+    setRejectionReason(proposal.rejection_reason || "");
+  }, [proposal.rejection_reason]);
+
+  useEffect(() => {
+    if (proposal.status !== "recusada") return;
+    if (rejectionReason === (proposal.rejection_reason || "")) return;
+    const id = setTimeout(
+      () => onUpdateField("rejection_reason", rejectionReason || null),
+      600,
+    );
+    return () => clearTimeout(id);
+  }, [onUpdateField, proposal.rejection_reason, proposal.status, rejectionReason]);
+
   return (
     <div className="space-y-4 max-w-3xl">
       {/* Template */}
@@ -96,8 +113,8 @@ export function TabConfiguracoes({
             Motivo da recusa
           </h3>
           <Textarea
-            defaultValue={proposal.rejection_reason || ""}
-            onBlur={(e) => onUpdateField("rejection_reason", e.target.value || null)}
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
             placeholder="Ex: cliente escolheu concorrente"
             rows={4}
             className="resize-none"
