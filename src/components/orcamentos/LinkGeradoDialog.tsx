@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
 
 interface Props {
   open: boolean;
@@ -21,8 +22,6 @@ interface Props {
    * o dialog mostra somente o link (modo "Ver link"). */
   password?: string | null;
 }
-
-const PUBLIC_BASE = "https://hub.getbrain.com.br/p";
 
 export function LinkGeradoDialog({
   open,

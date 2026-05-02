@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { setProposalPassword } from "@/lib/orcamentos/proposalPassword";
 import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
+import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDialog";
 
@@ -55,9 +56,7 @@ export function AcessoClienteCard({
   const [previewing, setPreviewing] = useState(false);
   const { confirm, dialog } = useConfirm();
 
-  const publicUrl = accessToken
-    ? `${window.location.origin}/p/${accessToken}`
-    : null;
+  const publicUrl = buildPublicProposalUrl(accessToken);
 
   const effectivePwd = passwordPlain || defaultProposalPassword(clientName);
 
