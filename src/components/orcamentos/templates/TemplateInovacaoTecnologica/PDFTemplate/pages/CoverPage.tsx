@@ -16,6 +16,7 @@ import logoGetBrain from "@/assets/logo-getbrain.svg";
 import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { colors, fontSizes, spacing } from "../styles";
 import { formatDateBR } from "../components/format";
+import { Watermark } from "../components/Watermark";
 
 const coverStyles = StyleSheet.create({
   page: {
@@ -146,9 +147,12 @@ const coverStyles = StyleSheet.create({
 
 interface Props {
   data: ProposalDataForTemplate;
+  qrCodeDataUrl?: string | null;
+  proposalAccessUrl?: string;
+  isDraft?: boolean;
 }
 
-export function CoverPage({ data }: Props) {
+export function CoverPage({ data, qrCodeDataUrl, proposalAccessUrl, isDraft }: Props) {
   return (
     <Page size="A4" style={coverStyles.page}>
       <View style={coverStyles.topBar}>
