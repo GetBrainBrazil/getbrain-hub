@@ -61,6 +61,7 @@ interface Props {
   onPreviewPdf: () => void;
   onOpenSendDialog: () => void;
   onGoToTab: (tab: string) => void;
+  onOpenPasswordDialog: () => void;
   // Novos — para o picker de CRM funcionar direto do Resumo
   setField: (field: any, value: any) => void;
   setItems: (items: ScopeItem[]) => void;
