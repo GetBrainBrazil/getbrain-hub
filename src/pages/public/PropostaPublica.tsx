@@ -728,11 +728,12 @@ function ProposalView({
 
           {/* Eyebrow filosofal */}
           <div className="reveal mt-10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-mono-display uppercase tracking-[0.35em] text-white/55">
-            <span>Estratégia</span>
-            <span className="text-white/20">·</span>
-            <span>Tecnologia</span>
-            <span className="text-white/20">·</span>
-            <span>Resultado</span>
+            {s.hero_eyebrows.map((eb, i) => (
+              <span key={`${eb}-${i}`} className="contents">
+                {i > 0 && <span className="text-white/20">·</span>}
+                <span>{eb}</span>
+              </span>
+            ))}
           </div>
 
           {/* Sub */}
@@ -796,7 +797,7 @@ function ProposalView({
 
         {/* Scroll cue */}
         <div className="relative pb-12 flex flex-col items-center gap-4 text-white/45">
-          <span className="text-[9px] font-mono-display uppercase tracking-[0.4em]">Role para baixo</span>
+          <span className="text-[9px] font-mono-display uppercase tracking-[0.4em]">{s.hero_scroll_cue}</span>
           <div className="scroll-line" />
         </div>
       </section>
