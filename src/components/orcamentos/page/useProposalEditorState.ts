@@ -260,6 +260,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
           proposalId,
           items: state.scopeItems.map((it, i) => ({
             description: it.title || "Item",
+            long_description: (it.description ?? "").trim() || null,
             quantity: 1,
             unit_price: Number(it.value) || 0,
             order_index: i,
