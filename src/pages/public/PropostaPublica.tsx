@@ -143,6 +143,51 @@ export default function PropostaPublica() {
     })();
   }, [previewJwt]);
 
+  // ============ Canal postMessage com o editor (somente em preview) ============
+  // O editor pode pedir: scroll-to seção, aplicar patch in-memory na proposta,
+  // ou re-fetchar settings globais. Fica isolado nesta página.
+  useEffect(() => {
+    if (!isPreview) return;
+
+    function highlight(section: string) {
+      const el = document.getElementById(section);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("preview-highlight");
+      window.setTimeout(() => el.classList.remove("preview-highlight"), 1600);
+    }
+
+    async function refetchSettings() {
+      if (!previewJwt) return;
+      const r = await callEdge("get-proposal-public-data", {}, previewJwt);
+      if (r.ok) {
+        setPageSettings(mergeWithDefaults(r.data.page_settings));
+        setProposal((p) => (p ? { ...p, ...r.data.proposal } : (r.data.proposal as PublicProposal)));
+      }
+    }
+
+    function onMsg(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      const data = e.data;
+      if (!data || typeof data !== "object") return;
+
+      if (data.type === "scroll-to" && typeof data.section === "string") {
+        highlight(data.section);
+      } else if (data.type === "settings-changed") {
+        refetchSettings();
+      } else if (data.type === "proposal-patch" && data.patch) {
+        setProposal((p) => (p ? { ...p, ...data.patch } : p));
+        // se patch incluir uma seção alvo, dá scroll/highlight
+        if (typeof data.scrollTo === "string") highlight(data.scrollTo);
+      }
+    }
+    window.addEventListener("message", onMsg);
+    // sinaliza ao parent que o iframe já pode receber comandos
+    window.parent?.postMessage({ type: "preview-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMsg);
+  }, [isPreview, previewJwt]);
+
+
   async function handleLogin(e?: React.FormEvent) {
     e?.preventDefault();
     if (!token || pwdInput.length < 1) return;
