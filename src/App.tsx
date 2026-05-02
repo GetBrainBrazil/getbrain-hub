@@ -189,15 +189,14 @@ const App = () => (
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
-            <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-              <Route index element={<Navigate to="usuarios" replace />} />
-              <Route path="usuarios" element={<AdminUsuariosList />} />
-              <Route path="permissoes" element={<AdminPermissoesPage />} />
-              <Route path="agencia" element={<Navigate to="/admin/usuarios" replace />} />
-              <Route path="auditoria" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
-              <Route path="logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
-              <Route path="propostas-ia" element={<AdminPropostasIaPage />} />
-            </Route>
+            {/* Compat: /admin/* foi unificado em /configuracoes/* */}
+            <Route path="/admin" element={<Navigate to="/configuracoes/sistema/usuarios" replace />} />
+            <Route path="/admin/usuarios" element={<Navigate to="/configuracoes/sistema/usuarios" replace />} />
+            <Route path="/admin/permissoes" element={<Navigate to="/configuracoes/sistema/permissoes" replace />} />
+            <Route path="/admin/auditoria" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
+            <Route path="/admin/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
+            <Route path="/admin/agencia" element={<Navigate to="/configuracoes/sistema/usuarios" replace />} />
+            <Route path="/admin/propostas-ia" element={<Navigate to="/configuracoes/integracoes/ia-propostas" replace />} />
             <Route path="/admin/usuarios/:id" element={<AdminRoute><UsuarioFichaPage mode="admin" /></AdminRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
             <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
