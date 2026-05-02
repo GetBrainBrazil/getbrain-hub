@@ -1,9 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import { buildPublicProposalUrl } from "./publicProposalUrl";
 
 /**
  * Solicita um JWT curto (5min) para pré-visualizar a proposta como o cliente
  * verá. Aciona a edge function `preview-proposal-as-internal` (auth obrigatória)
- * e abre uma nova aba em /p/{token}?preview={jwt}.
+ * e abre uma nova aba em /p/{token}?preview={jwt} no domínio canônico
+ * (`hub.getbrain.com.br`) — nunca no host do preview Lovable.
  *
  * Retorna o URL gerado e indica se a abertura foi bloqueada por popup blocker
  * — caller pode oferecer fallback (copiar para clipboard / abrir na mesma aba).
@@ -24,8 +26,7 @@ export async function previewProposalAsClient(params: {
   const jwt = (data as any)?.access_jwt as string | undefined;
   if (!jwt) throw new Error("Falha ao gerar JWT de preview");
 
-  const base = window.location.origin;
-  const url = `${base}/p/${accessToken}?preview=${encodeURIComponent(jwt)}`;
+  const url = buildPublicProposalUrl(accessToken, { previewJwt: jwt })!;
   const win = window.open(url, "_blank", "noopener,noreferrer");
   return { url, popupBlocked: !win };
 }
