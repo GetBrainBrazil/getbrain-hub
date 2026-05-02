@@ -787,35 +787,58 @@ function ProposalView({
         </div>
       </section>
 
-      {/* ============================ CARTA DE ABERTURA ============================ */}
-      {proposal.executive_summary && (
-        <section id="carta" className="editorial-light scroll-mt-16">
-          <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-32 sm:py-44 grid lg:grid-cols-12 gap-12">
-            <div className="lg:col-span-3">
-              <div className="reveal text-[10px] font-mono-display uppercase tracking-[0.4em] text-muted-ink">
-                <span className="text-brand">—</span> Carta de abertura
-              </div>
+      {/* ============================ CARTA DE ABERTURA (IA) ============================ */}
+      <section id="carta" className="editorial-light scroll-mt-16">
+        <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-32 sm:py-44 grid lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-3">
+            <div className="reveal text-[10px] font-mono-display uppercase tracking-[0.4em] text-muted-ink flex items-center gap-2">
+              <Sparkles className="h-3 w-3 text-brand" />
+              <span>Carta de Daniel</span>
             </div>
-            <div className="lg:col-span-8 lg:col-start-5">
-              <p className="reveal font-editorial-display text-3xl sm:text-5xl lg:text-6xl leading-[1.15] tracking-tight font-light">
-                {greeting}
-              </p>
-              <div className="reveal mt-10 prose prose-lg max-w-none prose-p:text-slate-700 prose-p:leading-relaxed prose-p:font-light prose-strong:text-slate-900">
-                <ReactMarkdown>{proposal.executive_summary}</ReactMarkdown>
+            <div className="reveal hidden lg:block mt-6 text-xs text-muted-ink/70 leading-relaxed font-light max-w-[18ch]">
+              Escrita especialmente para {clientLabel}.
+            </div>
+          </div>
+          <div className="lg:col-span-8 lg:col-start-5">
+            <p className="reveal font-editorial-display text-3xl sm:text-5xl lg:text-6xl leading-[1.15] tracking-tight font-light">
+              {greeting}
+            </p>
+            <div className="reveal mt-10 min-h-[120px]">
+              {openingLetter ? (
+                <div className="prose prose-lg max-w-none prose-p:text-slate-700 prose-p:leading-relaxed prose-p:font-light prose-p:text-[1.15rem] prose-strong:text-slate-900">
+                  {openingLetter.split(/\n\n+/).map((para, i) => (
+                    <p key={i}>{para.trim()}</p>
+                  ))}
+                </div>
+              ) : letterLoading ? (
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-4 bg-slate-900/8 rounded w-[95%]" />
+                  <div className="h-4 bg-slate-900/8 rounded w-[88%]" />
+                  <div className="h-4 bg-slate-900/8 rounded w-[92%]" />
+                  <div className="h-4 bg-slate-900/8 rounded w-[60%]" />
+                  <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-brand pt-3 flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Daniel está escrevendo...
+                  </div>
+                </div>
+              ) : proposal.executive_summary ? (
+                <div className="prose prose-lg max-w-none prose-p:text-slate-700 prose-p:leading-relaxed prose-p:font-light prose-strong:text-slate-900">
+                  <ReactMarkdown>{proposal.executive_summary}</ReactMarkdown>
+                </div>
+              ) : null}
+            </div>
+            <div className="reveal mt-12 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white">
+                D
               </div>
-              <div className="reveal mt-12 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white">
-                  D
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-slate-900">Daniel</div>
-                  <div className="text-xs text-muted-ink">Fundador · GetBrain</div>
-                </div>
+              <div>
+                <div className="text-sm font-medium text-slate-900">Daniel</div>
+                <div className="text-xs text-muted-ink">Fundador · GetBrain</div>
               </div>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* ============================ CONTEXTO ============================ */}
       {proposal.pain_context && (
