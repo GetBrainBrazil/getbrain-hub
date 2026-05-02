@@ -182,10 +182,18 @@ export default function PropostaPublica() {
       }
     }
     window.addEventListener("message", onMsg);
-    // sinaliza ao parent que o iframe já pode receber comandos
-    window.parent?.postMessage({ type: "preview-ready" }, window.location.origin);
     return () => window.removeEventListener("message", onMsg);
   }, [isPreview, previewJwt]);
+
+  // re-anuncia "preview-ready" toda vez que a página completar uma renderização
+  // significativa (proposal carregado), pra cobrir o caso de o iframe ter sido
+  // recriado depois de o editor ter setado seu listener.
+  useEffect(() => {
+    if (isPreview && proposal) {
+      window.parent?.postMessage({ type: "preview-ready" }, window.location.origin);
+    }
+  }, [isPreview, proposal]);
+
 
 
   async function handleLogin(e?: React.FormEvent) {
