@@ -124,13 +124,20 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
           const isDone = progressIndex >= 0 && i < progressIndex;
           const isCurrent = i === progressIndex;
           const showConnector = i < PROGRESS_STAGES.length - 1;
+          const stepKind = s === INTEREST_STAGE ? 'interest' : 'progress';
+          // Conector que precede o passo "Com Interesse" fica verde quando ativo,
+          // pra reforçar que o sinal vem do cliente.
+          const nextIsInterest = PROGRESS_STAGES[i + 1] === INTEREST_STAGE;
+          const connectorActive = i < progressIndex;
           return (
             <div key={s} className="flex flex-1 min-w-[110px] items-start gap-1">
-              {renderStep(s, { isDone, isCurrent, kind: 'progress' })}
+              {renderStep(s, { isDone, isCurrent, kind: stepKind })}
               {showConnector && (
                 <span className={cn(
                   'mt-[14px] h-1 flex-1 min-w-[16px] rounded-full transition',
-                  i < progressIndex ? 'bg-accent' : 'bg-border'
+                  connectorActive
+                    ? (nextIsInterest ? 'bg-success' : 'bg-accent')
+                    : (nextIsInterest ? 'bg-success/30' : 'bg-border'),
                 )} />
               )}
             </div>
