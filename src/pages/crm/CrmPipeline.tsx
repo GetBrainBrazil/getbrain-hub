@@ -552,33 +552,39 @@ export default function CrmPipeline() {
           </div>
         </div>
 
-        {/* KPIs — recalculados conforme filtros aplicados */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
+        {/* KPIs — apenas deals ativos. Implementação e MRR ficam separados. */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-5">
           <HomeKpi
             label="Pipeline"
             value={formatCurrency(homeKpis.pipeline)}
-            hint={`${homeKpis.dealsCount} ${homeKpis.dealsCount === 1 ? 'deal' : 'deals'}`}
-            tooltip="Soma do valor estimado de todos os deals atualmente visíveis (após os filtros aplicados). Representa o tamanho bruto da carteira em negociação — sem ajuste por probabilidade."
+            hint={`${homeKpis.dealsCount} ${homeKpis.dealsCount === 1 ? 'deal ativo' : 'deals ativos'}`}
+            tooltip="Soma da implementação (one-time) dos deals ATIVOS visíveis. Deals ganhos ou perdidos não entram aqui."
+          />
+          <HomeKpi
+            label="MRR pipeline"
+            value={`${formatCurrency(homeKpis.mrrPipeline)}/mês`}
+            hint="mensalidade em negociação"
+            tooltip="Soma da mensalidade (MRR) estimada dos deals ATIVOS visíveis. Receita recorrente potencial — não é multiplicada por meses."
           />
           <HomeKpi
             label="Forecast ponderado"
-            value={formatCurrency(homeKpis.forecast)}
+            value={formatCurrency(homeKpis.forecastImpl)}
             tone="accent"
-            hint="ajustado pela probabilidade"
-            tooltip="Soma de (valor × probabilidade do estágio) dos deals visíveis. É a previsão realista de receita: deals em estágios iniciais entram com peso menor, deals próximos do fechamento pesam mais."
+            hint={homeKpis.forecastMrr > 0 ? `+ ${formatCurrency(homeKpis.forecastMrr)}/mês` : 'ajustado pela probabilidade'}
+            tooltip="Implementação × probabilidade do estágio de cada deal ativo. O segundo número é o MRR ponderado da mesma forma."
           />
           <HomeKpi
             label="Ticket médio"
             value={formatCurrency(homeKpis.ticketMedio)}
-            hint="por deal com valor"
-            tooltip="Pipeline ÷ quantidade de deals visíveis com valor preenchido (> 0). Mostra o porte médio dos negócios na seleção atual — útil para comparar segmentos quando você filtra por origem, dono ou tipo."
+            hint="implementação por deal"
+            tooltip="Média da implementação entre os deals ativos com valor preenchido (> 0). Mostra o porte típico das propostas em negociação."
           />
           <HomeKpi
             label="Próximo passo atrasado"
             value={String(homeKpis.overdueNextStep)}
             tone={homeKpis.overdueNextStep > 0 ? 'destructive' : undefined}
             hint={homeKpis.overdueNextStep === 1 ? 'deal parado' : 'deals parados'}
-            tooltip="Deals visíveis cuja data do próximo passo já passou. Sinal de que a negociação está estagnada e precisa de uma ação sua hoje (ligação, follow-up, envio de proposta etc.)."
+            tooltip="Deals ativos visíveis cuja data do próximo passo já passou. Sinal de que a negociação precisa de uma ação sua hoje."
           />
 
         </div>
