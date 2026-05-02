@@ -24,6 +24,12 @@ export interface PublicPageSettings {
   contact_whatsapp: string | null;
   contact_email: string | null;
   contact_display_name: string | null;
+  kpi_labels: {
+    investimento: string;
+    mensalidade: string;
+    implementacao: string;
+    validade: string;
+  };
 }
 
 export const DEFAULT_PAGE_SETTINGS: PublicPageSettings = {
@@ -80,6 +86,12 @@ export const DEFAULT_PAGE_SETTINGS: PublicPageSettings = {
   contact_whatsapp: null,
   contact_email: null,
   contact_display_name: null,
+  kpi_labels: {
+    investimento: "Investimento",
+    mensalidade: "Mensalidade",
+    implementacao: "Implementação",
+    validade: "Válida até",
+  },
 };
 
 /** Merge raso seguro entre defaults e payload remoto (campo a campo). */
@@ -92,5 +104,6 @@ export function mergeWithDefaults(
     ...partial,
     section_eyebrows: { ...DEFAULT_PAGE_SETTINGS.section_eyebrows, ...(partial.section_eyebrows || {}) },
     section_titles: { ...DEFAULT_PAGE_SETTINGS.section_titles, ...(partial.section_titles || {}) },
+    kpi_labels: { ...DEFAULT_PAGE_SETTINGS.kpi_labels, ...((partial as any).kpi_labels || {}) },
   };
 }
