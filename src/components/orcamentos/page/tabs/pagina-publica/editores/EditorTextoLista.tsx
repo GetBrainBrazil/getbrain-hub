@@ -1,6 +1,6 @@
 /**
  * Editor de lista de strings (parágrafos). Cada item é uma textarea com
- * controles de remover/reordenar acessíveis via kebab no canto. Autosave on blur.
+ * controles de remover/reordenar acessíveis via kebab no canto. Autosave enquanto digita.
  */
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,11 @@ export function EditorTextoLista({
 }: Props) {
   const [local, setLocal] = useState<string[]>(value);
   useEffect(() => setLocal(value), [value]);
+  useEffect(() => {
+    if (JSON.stringify(local) === JSON.stringify(value)) return;
+    const id = setTimeout(() => onCommit(local), 650);
+    return () => clearTimeout(id);
+  }, [local, value, onCommit]);
 
   const setAt = (i: number, v: string) =>
     setLocal((arr) => arr.map((x, idx) => (idx === i ? v : x)));

@@ -1,5 +1,5 @@
 /**
- * Inputs por-proposta com autosave on blur + patch in-memory para o iframe.
+ * Inputs por-proposta com autosave enquanto digita + patch in-memory para o iframe.
  * Usado pelos painéis do grupo "Esta proposta" do CMS da página pública.
  */
 import { useEffect, useState } from "react";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface BaseProps<T extends string | number> {
   value: T;
-  /** Persiste no banco (chamado on blur, only-if-dirty). */
+  /** Persiste no estado/banco (debounced enquanto digita e flush no blur). */
   onCommit: (v: T) => void;
   /** Patch in-memory no iframe (debounced enquanto digita). */
   onLivePatch?: (v: T) => void;
@@ -38,11 +38,13 @@ export function ProposalCommitInput({
   useEffect(() => setV(value ?? ""), [value]);
 
   useEffect(() => {
-    if (!onLivePatch) return;
     if (v === value) return;
-    const id = setTimeout(() => onLivePatch(v), 250);
+    const id = setTimeout(() => {
+      onLivePatch?.(v);
+      onCommit(v);
+    }, 300);
     return () => clearTimeout(id);
-  }, [v, value, onLivePatch]);
+  }, [v, value, onLivePatch, onCommit]);
 
   return (
     <div className="relative">
@@ -51,6 +53,7 @@ export function ProposalCommitInput({
         onChange={(e) => setV(e.target.value)}
         onBlur={() => {
           if (v !== value) {
+            onLivePatch?.(v);
             onCommit(v);
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 1100);
@@ -100,13 +103,15 @@ export function ProposalCommitNumber({
   };
 
   useEffect(() => {
-    if (!onLivePatch) return;
     const p = parsed();
     if (p === value) return;
-    const id = setTimeout(() => onLivePatch(p), 250);
+    const id = setTimeout(() => {
+      onLivePatch?.(p);
+      onCommit(p);
+    }, 300);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v]);
+  }, [v, value, onLivePatch, onCommit]);
 
   return (
     <div className="relative">
@@ -124,6 +129,7 @@ export function ProposalCommitNumber({
         onBlur={() => {
           const p = parsed();
           if (p !== value) {
+            onLivePatch?.(p);
             onCommit(p);
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 1100);
@@ -166,11 +172,13 @@ export function ProposalCommitTextarea({
   useEffect(() => setV(value ?? ""), [value]);
 
   useEffect(() => {
-    if (!onLivePatch) return;
     if (v === value) return;
-    const id = setTimeout(() => onLivePatch(v), 300);
+    const id = setTimeout(() => {
+      onLivePatch?.(v);
+      onCommit(v);
+    }, 350);
     return () => clearTimeout(id);
-  }, [v, value, onLivePatch]);
+  }, [v, value, onLivePatch, onCommit]);
 
   return (
     <div className="relative">
@@ -179,6 +187,7 @@ export function ProposalCommitTextarea({
         onChange={(e) => setV(e.target.value)}
         onBlur={() => {
           if (v !== value) {
+            onLivePatch?.(v);
             onCommit(v);
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 1100);
@@ -216,11 +225,13 @@ export function ProposalCommitColor({ value, onCommit, onLivePatch, placeholder 
   useEffect(() => setV(value || ""), [value]);
 
   useEffect(() => {
-    if (!onLivePatch) return;
     if (v === value) return;
-    const id = setTimeout(() => onLivePatch(v), 200);
+    const id = setTimeout(() => {
+      onLivePatch?.(v);
+      onCommit(v);
+    }, 300);
     return () => clearTimeout(id);
-  }, [v, value, onLivePatch]);
+  }, [v, value, onLivePatch, onCommit]);
 
   const isValidHex = /^#[0-9a-fA-F]{6}$/.test(v);
   const safeColor = isValidHex ? v : "#22D3EE";
@@ -237,7 +248,10 @@ export function ProposalCommitColor({ value, onCommit, onLivePatch, placeholder 
           value={safeColor}
           onChange={(e) => setV(e.target.value)}
           onBlur={() => {
-            if (v !== value) onCommit(v);
+            if (v !== value) {
+              onLivePatch?.(v);
+              onCommit(v);
+            }
           }}
           className="absolute inset-0 opacity-0 cursor-pointer"
         />
@@ -246,7 +260,10 @@ export function ProposalCommitColor({ value, onCommit, onLivePatch, placeholder 
         value={v}
         onChange={(e) => setV(e.target.value)}
         onBlur={() => {
-          if (v !== value) onCommit(v);
+          if (v !== value) {
+            onLivePatch?.(v);
+            onCommit(v);
+          }
         }}
         placeholder={placeholder || "#22D3EE"}
         className="h-10 text-sm font-mono uppercase max-w-[140px]"

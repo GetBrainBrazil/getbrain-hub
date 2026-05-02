@@ -1,6 +1,6 @@
 /**
  * Editor para os pares (eyebrow + title) das seções da página pública.
- * Exibe linhas em grid 2 colunas, autosave on blur.
+ * Exibe linhas em grid 2 colunas, autosave enquanto digita.
  */
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
@@ -25,6 +25,16 @@ export function EditorSecoes({
   const [tt, setTt] = useState(titles);
   useEffect(() => setEb(eyebrows), [eyebrows]);
   useEffect(() => setTt(titles), [titles]);
+  useEffect(() => {
+    if (JSON.stringify(eb) === JSON.stringify(eyebrows)) return;
+    const id = setTimeout(() => onCommitEyebrows(eb), 550);
+    return () => clearTimeout(id);
+  }, [eb, eyebrows, onCommitEyebrows]);
+  useEffect(() => {
+    if (JSON.stringify(tt) === JSON.stringify(titles)) return;
+    const id = setTimeout(() => onCommitTitles(tt), 550);
+    return () => clearTimeout(id);
+  }, [tt, titles, onCommitTitles]);
 
   return (
     <div className="space-y-2">

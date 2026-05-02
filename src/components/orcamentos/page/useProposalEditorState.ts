@@ -90,6 +90,67 @@ const EMPTY_STATE: ProposalFormState = {
   showInvestmentBreakdown: true,
 };
 
+const DRAFT_VERSION = 1;
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type ProposalEditorDraft = {
+  version: number;
+  proposalId: string;
+  updatedAt: number;
+  state: ProposalFormState;
+  itemsDirty: boolean;
+};
+
+function draftKey(proposalId: string) {
+  return `proposal-editor-draft:${proposalId}`;
+}
+
+function readLocalDraft(proposalId: string, dbUpdatedAt?: string | null): ProposalEditorDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(draftKey(proposalId));
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as ProposalEditorDraft;
+    const dbTime = dbUpdatedAt ? new Date(dbUpdatedAt).getTime() : 0;
+    const expired = !draft.updatedAt || Date.now() - draft.updatedAt > DRAFT_TTL_MS;
+    const stale = dbTime > 0 && draft.updatedAt <= dbTime;
+    if (draft.version !== DRAFT_VERSION || draft.proposalId !== proposalId || expired || stale) {
+      window.localStorage.removeItem(draftKey(proposalId));
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalDraft(proposalId: string, state: ProposalFormState, itemsDirty: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      draftKey(proposalId),
+      JSON.stringify({
+        version: DRAFT_VERSION,
+        proposalId,
+        updatedAt: Date.now(),
+        state,
+        itemsDirty,
+      } satisfies ProposalEditorDraft),
+    );
+  } catch {
+    // Sem espaço/permissão no navegador: o autosave em banco continua funcionando.
+  }
+}
+
+function clearLocalDraft(proposalId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(draftKey(proposalId));
+  } catch {
+    // noop
+  }
+}
+
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
 function canonicalToScopeItems(
   rows: Array<{
@@ -116,16 +177,18 @@ export function useProposalEditorState(proposalId: string | undefined) {
   const [dirty, setDirty] = useState(false);
   const [itemsDirty, setItemsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [hydratedAt, setHydratedAt] = useState(0);
 
   const isInitialLoad = useRef(true);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revisionRef = useRef(0);
 
   // Hidrata estado quando os dados chegam (1ª vez ou ao trocar de proposta).
   useEffect(() => {
     const data = detail.data;
     if (!data) return;
     isInitialLoad.current = true;
-    setState({
+    const hydratedState: ProposalFormState = {
       title: (data as any).title || "",
       clientName: data.client_company_name || "",
       clientCity: data.client_city || "",
@@ -171,13 +234,16 @@ export function useProposalEditorState(proposalId: string | undefined) {
       investmentLayout: ((data as any).investment_layout as any) || "total_first",
       showInvestmentBreakdown:
         (data as any).show_investment_breakdown ?? true,
-    });
-    setDirty(false);
-    setItemsDirty(false);
+    };
+    const localDraft = readLocalDraft(data.id, data.updated_at);
+    setState(localDraft?.state ?? hydratedState);
+    setDirty(!!localDraft);
+    setItemsDirty(!!localDraft?.itemsDirty);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
     // libera o autosave após o ciclo de hidratação
     setTimeout(() => {
       isInitialLoad.current = false;
+      setHydratedAt(Date.now());
     }, 0);
   }, [detail.data?.id]);
 
@@ -189,20 +255,38 @@ export function useProposalEditorState(proposalId: string | undefined) {
     setState((s) => ({ ...s, scopeItems: canonicalToScopeItems(rows as any) }));
   }, [itemsQuery.data, itemsDirty]);
 
+  useEffect(() => {
+    if (isInitialLoad.current || !dirty || !proposalId) return;
+    writeLocalDraft(proposalId, state, itemsDirty);
+  }, [dirty, itemsDirty, proposalId, state]);
+
   // Setter genérico — útil pra binding direto em inputs sem boilerplate.
   const setField = useCallback(
     <K extends keyof ProposalFormState>(field: K, value: ProposalFormState[K]) => {
-      setState((s) => ({ ...s, [field]: value }));
+      revisionRef.current += 1;
+      setState((s) => {
+        const next = { ...s, [field]: value };
+        if (proposalId) writeLocalDraft(proposalId, next, itemsDirty);
+        return next;
+      });
       setDirty(true);
     },
-    [],
+    [itemsDirty, proposalId],
   );
 
-  const setItems = useCallback((next: ScopeItem[]) => {
-    setState((s) => ({ ...s, scopeItems: next }));
-    setItemsDirty(true);
-    setDirty(true);
-  }, []);
+  const setItems = useCallback(
+    (next: ScopeItem[]) => {
+      revisionRef.current += 1;
+      setState((s) => {
+        const nextState = { ...s, scopeItems: next };
+        if (proposalId) writeLocalDraft(proposalId, nextState, true);
+        return nextState;
+      });
+      setItemsDirty(true);
+      setDirty(true);
+    },
+    [proposalId],
+  );
 
   /**
    * Persiste a proposta. Quando `silent`, omite toast (autosave).
@@ -211,6 +295,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
   const save = useCallback(
     async (extra: Record<string, any> = {}, opts: { silent?: boolean } = {}) => {
       if (!proposalId) return;
+      const saveRevision = revisionRef.current;
       await update.mutateAsync({
         id: proposalId,
         payload: {
@@ -276,9 +361,14 @@ export function useProposalEditorState(proposalId: string | undefined) {
             order_index: i,
           })),
         });
-        setItemsDirty(false);
+        if (revisionRef.current === saveRevision) {
+          setItemsDirty(false);
+        }
       }
-      setDirty(false);
+      if (revisionRef.current === saveRevision) {
+        setDirty(false);
+        clearLocalDraft(proposalId);
+      }
       setLastSavedAt(new Date());
       if (!opts.silent) toast.success("Salvo");
     },
@@ -296,7 +386,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, state]);
+  }, [dirty, state, hydratedAt]);
 
   // ----- Guards de saída/recarga -----
   // Mantém referências sempre atualizadas pra usar nos handlers globais

@@ -85,6 +85,13 @@ export default function OrcamentoEditarDetalhe() {
 
   const interactionsCount = useProposalInteractionsCount(id);
   const versionsQuery = useProposalVersions(id);
+  const handleUpdateField = useCallback(
+    (field: string, value: any) => {
+      if (!id) return;
+      update.mutate({ id, payload: { [field]: value } });
+    },
+    [id, update],
+  );
 
   // Tab control
   const [activeTab, setActiveTab] = useState<ProposalTabKey>(getInitialTab());
@@ -401,9 +408,7 @@ export default function OrcamentoEditarDetalhe() {
               proposal={data}
               state={state}
               setField={setField}
-              onUpdateField={(field, value) =>
-                update.mutate({ id: data.id, payload: { [field]: value } })
-              }
+              onUpdateField={handleUpdateField}
               onDelete={handleDelete}
             />
             {/* Anexos integrados ao bloco de configurações para evitar uma 10ª aba */}

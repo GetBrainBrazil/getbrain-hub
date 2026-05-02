@@ -28,6 +28,11 @@ interface Props {
 export function EditorCapabilities({ value, onCommit }: Props) {
   const [local, setLocal] = useState<Capability[]>(value);
   useEffect(() => setLocal(value), [value]);
+  useEffect(() => {
+    if (JSON.stringify(local) === JSON.stringify(value)) return;
+    const id = setTimeout(() => onCommit(local), 650);
+    return () => clearTimeout(id);
+  }, [local, value, onCommit]);
 
   const setAt = (i: number, patch: Partial<Capability>) =>
     setLocal((arr) => arr.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
