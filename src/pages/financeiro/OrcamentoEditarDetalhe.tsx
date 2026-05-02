@@ -470,8 +470,18 @@ export default function OrcamentoEditarDetalhe() {
             <Save className="h-3.5 w-3.5" />
             {update.isPending ? "Salvando…" : "Salvar"}
           </Button>
-          <Button size="sm" variant="outline" onClick={handleDownload} disabled={gen.isPending}>
-            {gen.isPending ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPreviewPdfOpen(true)}
+            disabled={genV2.isPending}
+            title="Renderiza o PDF sem criar versão"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Pré-visualizar PDF
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleDownload} disabled={genV2.isPending}>
+            {genV2.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Download className="h-3.5 w-3.5" />
