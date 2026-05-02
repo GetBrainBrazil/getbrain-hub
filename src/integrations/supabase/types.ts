@@ -4437,6 +4437,81 @@ export type Database = {
           },
         ]
       }
+      public_page_settings: {
+        Row: {
+          about_paragraphs: string[]
+          capabilities: Json
+          contact_display_name: string | null
+          contact_email: string | null
+          contact_whatsapp: string | null
+          created_at: string
+          footer_contact_label: string
+          footer_tagline: string
+          hero_eyebrows: string[]
+          hero_scroll_cue: string
+          id: string
+          next_steps_paragraphs: string[]
+          next_steps_title: string
+          organization_id: string
+          password_gate_button: string
+          password_gate_subtitle: string
+          password_gate_title: string
+          section_eyebrows: Json
+          section_titles: Json
+          tech_stack: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          about_paragraphs?: string[]
+          capabilities?: Json
+          contact_display_name?: string | null
+          contact_email?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string
+          footer_contact_label?: string
+          footer_tagline?: string
+          hero_eyebrows?: string[]
+          hero_scroll_cue?: string
+          id?: string
+          next_steps_paragraphs?: string[]
+          next_steps_title?: string
+          organization_id: string
+          password_gate_button?: string
+          password_gate_subtitle?: string
+          password_gate_title?: string
+          section_eyebrows?: Json
+          section_titles?: Json
+          tech_stack?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          about_paragraphs?: string[]
+          capabilities?: Json
+          contact_display_name?: string | null
+          contact_email?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string
+          footer_contact_label?: string
+          footer_tagline?: string
+          hero_eyebrows?: string[]
+          hero_scroll_cue?: string
+          id?: string
+          next_steps_paragraphs?: string[]
+          next_steps_title?: string
+          organization_id?: string
+          password_gate_button?: string
+          password_gate_subtitle?: string
+          password_gate_title?: string
+          section_eyebrows?: Json
+          section_titles?: Json
+          tech_stack?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       sectors: {
         Row: {
           created_at: string
