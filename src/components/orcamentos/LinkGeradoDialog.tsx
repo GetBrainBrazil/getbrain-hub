@@ -32,7 +32,7 @@ export function LinkGeradoDialog({
 }: Props) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedPwd, setCopiedPwd] = useState(false);
-  const url = accessToken ? `${PUBLIC_BASE}/${accessToken}` : "";
+  const url = buildPublicProposalUrl(accessToken) ?? "";
 
   async function copyTo(text: string, setFlag: (b: boolean) => void, label: string) {
     try {
