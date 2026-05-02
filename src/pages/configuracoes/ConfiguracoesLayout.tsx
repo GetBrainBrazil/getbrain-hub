@@ -25,16 +25,23 @@ type Section = { key: string; label: string; icon: React.ComponentType<{ classNa
 
 const SECTIONS: Section[] = [
   {
-    key: "pessoas",
-    label: "Pessoas & Empresas",
-    icon: Building2,
+    key: "crm",
+    label: "CRM",
+    icon: Workflow,
     tabs: [
-      { key: "setores", label: "Setores", path: "/configuracoes/pessoas/setores", icon: FolderTree },
-      { key: "papeis-contato", label: "Papéis de Contato", path: "/configuracoes/pessoas/papeis-contato", icon: Users },
-      { key: "origens", label: "Origens de Lead", path: "/configuracoes/pessoas/origens", icon: Tag },
-      { key: "categorias-dor", label: "Categorias de Dor", path: "/configuracoes/pessoas/categorias-dor", icon: Tags },
-      { key: "tipos-projeto", label: "Tipos de Projeto", path: "/configuracoes/pessoas/tipos-projeto", icon: Layers },
-      { key: "cargos", label: "Cargos Internos", path: "/configuracoes/pessoas/cargos", icon: Briefcase },
+      { key: "etapas", label: "Etapas do funil", path: "/configuracoes/crm/etapas", icon: Workflow },
+      { key: "motivos-descarte", label: "Motivos de descarte", path: "/configuracoes/crm/motivos-descarte", icon: XCircle },
+      { key: "origens", label: "Origens de Lead", path: "/configuracoes/crm/origens", icon: Tag },
+      { key: "papeis-contato", label: "Papéis de Contato", path: "/configuracoes/crm/papeis-contato", icon: Users },
+      { key: "categorias-dor", label: "Categorias de Dor", path: "/configuracoes/crm/categorias-dor", icon: Tags },
+    ],
+  },
+  {
+    key: "projetos",
+    label: "Projetos",
+    icon: Layers,
+    tabs: [
+      { key: "tipos-projeto", label: "Tipos de Projeto", path: "/configuracoes/projetos/tipos", icon: Layers },
     ],
   },
   {
@@ -51,12 +58,12 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    key: "crm",
-    label: "CRM",
-    icon: Workflow,
+    key: "pessoas",
+    label: "Pessoas & Empresas",
+    icon: Building2,
     tabs: [
-      { key: "etapas", label: "Etapas do funil", path: "/configuracoes/crm/etapas", icon: Workflow },
-      { key: "motivos-descarte", label: "Motivos de descarte", path: "/configuracoes/crm/motivos-descarte", icon: XCircle },
+      { key: "setores", label: "Setores", path: "/configuracoes/pessoas/setores", icon: FolderTree },
+      { key: "cargos", label: "Cargos Internos", path: "/configuracoes/pessoas/cargos", icon: Briefcase },
     ],
   },
   {
