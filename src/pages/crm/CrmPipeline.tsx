@@ -197,6 +197,8 @@ export default function CrmPipeline() {
   const [stageFilter, setStageFilter] = useState<DealStage[]>([]);
   const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
   const [sort, setSort] = useState<DealsListSort>('next_step');
+  // Escopo: só deals em trilha (ativos) ou tudo (inclui ganho/perdido). Persistido.
+  const [scope, setScope] = usePersistedState<'trilha' | 'todos'>('crm_pipeline_scope', 'trilha');
 
   const filters = useMemo(
     () => ({ ownerIds: ownerFilter, sourceIds: sourceFilter, valueRange, search }),
@@ -222,23 +224,26 @@ export default function CrmPipeline() {
     setCreateOpen(true);
   };
 
-  // Deals filtrados (estágio + tipo)
+  // Deals filtrados (escopo trilha/todos + estágio + tipo).
+  // Quando o usuário aplica filtro explícito de estágio, o escopo é ignorado
+  // (a escolha manual prevalece).
   const filteredDeals = useMemo(() => {
     return rawDeals.map((d) => {
       const overrideStage = visualStageOverrides[d.id];
       return overrideStage ? { ...d, stage: overrideStage, probability_pct: DEAL_STAGE_PROBABILITY[overrideStage] } : d;
     }).filter((d) => {
-      if (stageFilter.length && !stageFilter.includes(d.stage)) return false;
+      if (stageFilter.length) {
+        if (!stageFilter.includes(d.stage)) return false;
+      } else if (scope === 'trilha' && !ACTIVE_STAGES.includes(d.stage)) {
+        return false;
+      }
       if (projectTypeFilter.length && !(d.project_type_v2 ?? []).some((s) => projectTypeFilter.includes(s))) return false;
       return true;
     });
-  }, [rawDeals, visualStageOverrides, stageFilter, projectTypeFilter]);
+  }, [rawDeals, visualStageOverrides, stageFilter, projectTypeFilter, scope]);
 
-  // Lista mostra apenas ativos por padrão (sem filtro de estágio aplicado)
-  const listDeals = useMemo(() => {
-    if (stageFilter.length) return filteredDeals;
-    return filteredDeals.filter((d) => ACTIVE_STAGES.includes(d.stage));
-  }, [filteredDeals, stageFilter]);
+  // Lista usa exatamente o mesmo conjunto que o Kanban (escopo já aplicado acima).
+  const listDeals = filteredDeals;
 
   const sortedListDeals = useSortedDeals(listDeals, sort);
 
