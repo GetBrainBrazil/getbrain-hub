@@ -262,40 +262,53 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">CEP</Label>
-                <Input value={cep} onChange={e => setCep(e.target.value)} onBlur={handleCepBlur} placeholder="00000-000" disabled={!canEdit} />
+                <div className="relative">
+                  <Input
+                    value={cep}
+                    onChange={e => setCep(formatCEP(e.target.value))}
+                    placeholder="00000-000"
+                    inputMode="numeric"
+                    maxLength={9}
+                    disabled={!canEdit}
+                    className={cepLoading ? "pr-9" : undefined}
+                  />
+                  {cepLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  )}
+                </div>
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">País</Label>
-                <Input value={pais} onChange={e => setPais(e.target.value)} disabled={!canEdit} />
+                <Input value={pais} onChange={e => setPais(e.target.value)} maxLength={60} disabled={!canEdit} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Endereço</Label>
-                <Input value={endereco} onChange={e => setEndereco(e.target.value)} disabled={!canEdit} />
+                <Input value={endereco} onChange={e => setEndereco(e.target.value)} maxLength={120} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Número</Label>
-                <Input value={numero} onChange={e => setNumero(e.target.value)} disabled={!canEdit} />
+                <Input value={numero} onChange={e => setNumero(e.target.value)} maxLength={10} disabled={!canEdit} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Complemento</Label>
-                <Input value={complemento} onChange={e => setComplemento(e.target.value)} disabled={!canEdit} />
+                <Input value={complemento} onChange={e => setComplemento(e.target.value)} maxLength={60} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Bairro</Label>
-                <Input value={bairro} onChange={e => setBairro(e.target.value)} disabled={!canEdit} />
+                <Input value={bairro} onChange={e => setBairro(e.target.value)} maxLength={80} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cidade</Label>
-                <Input value={cidade} onChange={e => setCidade(e.target.value)} disabled={!canEdit} />
+                <Input value={cidade} onChange={e => setCidade(e.target.value)} maxLength={80} disabled={!canEdit} />
               </div>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Estado</Label>
-              <Input value={estado} onChange={e => setEstado(e.target.value)} disabled={!canEdit} />
+              <Input value={estado} onChange={e => setEstado(formatUF(e.target.value))} maxLength={2} placeholder="UF" disabled={!canEdit} />
             </div>
 
             <div className="border-t pt-5">
