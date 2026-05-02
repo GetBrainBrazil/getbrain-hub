@@ -26,7 +26,15 @@ import {
   Calendar,
   Clock,
   Layers,
+  Copy,
+  ExternalLink,
+  QrCode,
+  Check,
+  Lock,
 } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { useEffect, useState } from "react";
+import { generateQrDataUrl } from "@/lib/orcamentos/generateQrDataUrl";
 import type { ProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBadge";
 import {
