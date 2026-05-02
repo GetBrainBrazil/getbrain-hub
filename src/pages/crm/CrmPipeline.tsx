@@ -57,7 +57,8 @@ function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: ()
 
 function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyOpen, onAdd }: { stage: DealStage; deals: Deal[]; collapsed: boolean; onToggleCollapsed: () => void; onOpen: (deal: Deal) => void; onCompanyOpen: (deal: Deal) => void; onAdd: (stage: DealStage) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
-  const total = deals.reduce((sum, d) => sum + Number(d.estimated_value ?? 0), 0);
+  const totalImpl = deals.reduce((sum, d) => sum + Number(d.estimated_implementation_value ?? 0), 0);
+  const totalMrr = deals.reduce((sum, d) => sum + Number(d.estimated_mrr_value ?? 0), 0);
   const dotClass = DEAL_STAGE_DOT[stage];
 
   if (collapsed) {
@@ -107,7 +108,11 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
             <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', dotClass)} aria-hidden />
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold text-foreground">{DEAL_STAGE_LABEL[stage]}</h3>
-              <p className="text-xs text-muted-foreground">{formatCurrency(total)} · {deals.length} deals</p>
+              <p className="text-xs text-muted-foreground">
+                {formatCurrency(totalImpl)}
+                {totalMrr > 0 && <span> + {formatCurrency(totalMrr)}/mês</span>}
+                {' · '}{deals.length} deals
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
