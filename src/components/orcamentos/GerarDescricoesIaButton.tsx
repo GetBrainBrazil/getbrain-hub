@@ -60,7 +60,6 @@ export function GerarDescricoesIaButton({
   async function run() {
     setRunning(true);
     try {
-      // Construir índices dos itens a processar
       const indicesToGenerate = items
         .map((it, idx) =>
           skipExisting && (it.description ?? "").trim().length > 0 ? -1 : idx,
@@ -80,7 +79,6 @@ export function GerarDescricoesIaButton({
         return;
       }
 
-      // Aplicar as descrições aos itens correspondentes
       const updated = items.map((it, idx) => {
         const match = result.descriptions.find((d) => d.index === idx);
         if (!match || !match.text) return it;
@@ -98,7 +96,7 @@ export function GerarDescricoesIaButton({
         );
       } else {
         toast.success(
-          `${generated} descrições geradas. Revise antes de enviar.`,
+          `${generated} descrições geradas. Os módulos foram expandidos automaticamente para revisão.`,
         );
       }
 
@@ -139,62 +137,63 @@ export function GerarDescricoesIaButton({
               <Sparkles className="h-4 w-4 text-accent" />
               Gerar descrições dos módulos
             </DialogTitle>
-            <DialogDescription className="space-y-3 pt-2">
-              <span className="block">
-                A IA vai escrever uma descrição curta (2-3 frases) para cada
-                módulo do escopo, com base{" "}
-                {hasDealLink ? (
-                  <>
-                    no <strong>contexto do deal vinculado no CRM</strong> (dor,
-                    escopo, entregáveis).
-                  </>
-                ) : (
-                  <em>
-                    sem deal vinculado — vai gerar descrições genéricas baseadas
-                    apenas no título.
-                  </em>
-                )}
-              </span>
-
-              <div className="rounded-md border border-border/60 bg-muted/30 p-3 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Total de módulos</span>
-                  <span className="font-mono font-medium">{totalItems}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Já com descrição</span>
-                  <span className="font-mono font-medium">
-                    {itemsWithDescription}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
-                  <span className="text-foreground">Vão ser processados</span>
-                  <span className="font-mono font-semibold text-accent">
-                    {itemsToProcess}
-                  </span>
-                </div>
-              </div>
-
-              <label className="flex items-start gap-2 cursor-pointer">
-                <Checkbox
-                  checked={skipExisting}
-                  onCheckedChange={(v) => setSkipExisting(Boolean(v))}
-                  className="mt-0.5"
-                />
-                <span className="text-xs text-muted-foreground leading-relaxed">
-                  Pular módulos que já têm descrição{" "}
-                  <span className="text-muted-foreground/60">
-                    (recomendado — não sobrescreve o que você já escreveu)
-                  </span>
-                </span>
-              </label>
-
-              <span className="block text-xs text-muted-foreground pt-1">
-                Custo estimado:{" "}
-                <strong className="font-mono">{formatBRL(estimatedCost)}</strong>
-              </span>
+            <DialogDescription className="pt-2">
+              A IA vai escrever uma descrição curta (2-3 frases) para cada
+              módulo do escopo, com base{" "}
+              {hasDealLink ? (
+                <>
+                  no <strong>contexto do deal vinculado no CRM</strong> (dor,
+                  escopo, entregáveis).
+                </>
+              ) : (
+                <em>
+                  sem deal vinculado — vai gerar descrições genéricas baseadas
+                  apenas no título.
+                </em>
+              )}
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Total de módulos</span>
+                <span className="font-mono font-medium">{totalItems}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Já com descrição</span>
+                <span className="font-mono font-medium">
+                  {itemsWithDescription}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
+                <span className="text-foreground">Vão ser processados</span>
+                <span className="font-mono font-semibold text-accent">
+                  {itemsToProcess}
+                </span>
+              </div>
+            </div>
+
+            <label className="flex items-start gap-2 cursor-pointer">
+              <Checkbox
+                checked={skipExisting}
+                onCheckedChange={(v) => setSkipExisting(Boolean(v))}
+                className="mt-0.5"
+              />
+              <span className="text-xs text-muted-foreground leading-relaxed">
+                Pular módulos que já têm descrição{" "}
+                <span className="text-muted-foreground/60">
+                  (recomendado — não sobrescreve o que você já escreveu)
+                </span>
+              </span>
+            </label>
+
+            <p className="text-xs text-muted-foreground pt-1">
+              Custo estimado:{" "}
+              <strong className="font-mono">{formatBRL(estimatedCost)}</strong>
+            </p>
+          </div>
+
           <DialogFooter>
             <Button
               variant="outline"

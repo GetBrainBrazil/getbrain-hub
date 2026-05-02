@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -124,6 +124,18 @@ function SortableItem({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const [expanded, setExpanded] = useState(Boolean(item.description));
+  const prevDescRef = useRef(item.description ?? "");
+
+  // Auto-expandir quando a descrição passa de vazio para preenchido
+  // (ex: geração via IA em lote).
+  useEffect(() => {
+    const prev = prevDescRef.current ?? "";
+    const curr = item.description ?? "";
+    if (!prev.trim() && curr.trim()) {
+      setExpanded(true);
+    }
+    prevDescRef.current = curr;
+  }, [item.description]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
