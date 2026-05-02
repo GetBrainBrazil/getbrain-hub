@@ -64,6 +64,8 @@ function describeType(t: GenerationType): string {
       return "VISÃO DA SOLUÇÃO: como vamos resolver o problema, em alto nível. Sem repetir lista de itens. 2-3 parágrafos.";
     case "item_description":
       return "DESCRIÇÃO DETALHADA DO ITEM: 2-4 frases explicando o que esse item entrega e o valor que gera. Sem inventar funcionalidade.";
+    case "item_descriptions_batch":
+      return "DESCRIÇÕES DOS MÓDULOS: para CADA módulo da lista 'modulos_escopo' fornecida, gere 2-3 frases curtas, práticas e específicas explicando o que aquele módulo entrega no contexto deste cliente. Use o título do módulo + o contexto do deal (dor, escopo, entregáveis). Sem inventar funcionalidade fora do escopo.";
   }
 }
 
@@ -77,6 +79,16 @@ function expectedFormat(t: GenerationType): string {
   "item_descriptions": [{"item_id": "...", "detailed_description": "..."}]
 }
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`;
+  }
+  if (t === "item_descriptions_batch") {
+    return `JSON com a forma exata:
+{
+  "descriptions": [
+    {"index": 0, "text": "descrição de 2-3 frases para o módulo de índice 0"},
+    {"index": 1, "text": "..."}
+  ]
+}
+O array DEVE ter exatamente um objeto por índice solicitado em "indices_a_gerar". Retorne APENAS o JSON, sem markdown, sem explicação extra.`;
   }
   return "Texto puro em português. Sem markdown. Sem aspas envolvendo a resposta.";
 }
