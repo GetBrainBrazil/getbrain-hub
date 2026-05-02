@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput, IntegerInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,7 +80,6 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
     meio_pagamento_id: null,
   });
   const [endMode, setEndMode] = useState<"open" | "withEnd">("open");
-  const [amountStr, setAmountStr] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -216,17 +216,10 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Valor *</Label>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={amountStr}
-                placeholder="0,00"
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/[^\d,.-]/g, "");
-                  setAmountStr(raw);
-                  const num = Number(raw.replace(/\./g, "").replace(",", "."));
-                  update("amount", isNaN(num) ? 0 : num);
-                }}
+              <CurrencyInput
+                value={form.amount ? String(form.amount) : ""}
+                onValueChange={(raw) => update("amount", raw ? Number(raw) : 0)}
+                placeholder="R$ 0,00"
               />
               {errors["amount"] && <p className="text-xs text-destructive mt-1">{errors["amount"]}</p>}
             </div>
@@ -258,11 +251,11 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
           {form.type === "installment" && (
             <div>
               <Label className="text-xs">Total de parcelas *</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.total_installments ?? ""}
-                onChange={(e) => update("total_installments", e.target.value ? Number(e.target.value) : null)}
+              <IntegerInput
+                value={form.total_installments ? String(form.total_installments) : ""}
+                onValueChange={(raw) => update("total_installments", raw ? Number(raw) : null)}
+                placeholder="0"
+                withSeparator={false}
               />
               {errors["total_installments"] && <p className="text-xs text-destructive mt-1">{errors["total_installments"]}</p>}
             </div>
