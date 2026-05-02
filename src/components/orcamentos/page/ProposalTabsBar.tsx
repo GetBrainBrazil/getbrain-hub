@@ -28,7 +28,6 @@ export type ProposalTabKey =
   | "resumo"
   | "cliente"
   | "escopo"
-  | "conteudo_ia"
   | "pagina_publica"
   | "historico"
   | "interacoes"
@@ -39,7 +38,6 @@ const TAB_ORDER: ProposalTabKey[] = [
   "resumo",
   "cliente",
   "escopo",
-  "conteudo_ia",
   "pagina_publica",
   "historico",
   "interacoes",
@@ -51,7 +49,6 @@ const TAB_LABEL: Record<ProposalTabKey, string> = {
   resumo: "Resumo",
   cliente: "Cliente",
   escopo: "Escopo",
-  conteudo_ia: "Conteúdo IA",
   pagina_publica: "Página Pública",
   historico: "Histórico",
   interacoes: "Interações",
