@@ -282,6 +282,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
   const save = useCallback(
     async (extra: Record<string, any> = {}, opts: { silent?: boolean } = {}) => {
       if (!proposalId) return;
+      const saveRevision = revisionRef.current;
       await update.mutateAsync({
         id: proposalId,
         payload: {
@@ -347,10 +348,14 @@ export function useProposalEditorState(proposalId: string | undefined) {
             order_index: i,
           })),
         });
-        setItemsDirty(false);
+        if (revisionRef.current === saveRevision) {
+          setItemsDirty(false);
+        }
       }
-      setDirty(false);
-      clearLocalDraft(proposalId);
+      if (revisionRef.current === saveRevision) {
+        setDirty(false);
+        clearLocalDraft(proposalId);
+      }
       setLastSavedAt(new Date());
       if (!opts.silent) toast.success("Salvo");
     },
