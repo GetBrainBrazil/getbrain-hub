@@ -1,137 +1,117 @@
-# Unificação total das Configurações
+## Objetivo
 
-## Mapeamento — situação atual
+Reordenar as seções do `/configuracoes` para espelhar a sidebar e expandir cada uma com configurações que hoje estão espalhadas pelo código (ou faltando) — transformando o hub no único lugar onde se gerencia catálogos, comportamento e branding de cada módulo.
 
-```text
-JÁ NO CENTRO (/configuracoes)         AINDA FORA (precisam migrar)
-─────────────────────────────         ─────────────────────────────
-Pessoas & Empresas                    /crm/configuracoes
- • Setores                             • Origens de leads ⟵ duplica
- • Papéis de Contato                   • Papéis de contato ⟵ duplica
- • Origens de Lead                     • (placeholders: Etapas, Motivos)
- • Categorias de Dor
- • Tipos de Projeto                   /admin/* (AdminLayout)
- • Cargos Internos                     • Usuários ⟵ já espelhado em /sistema
-                                       • Permissões ⟵ já espelhado em /sistema
-Financeiro                             • Auditoria ⟵ FORA
- • Contas, Categorias, Centros         • IA das Propostas ⟵ FORA
- • Clientes, Fornecedores,
-   Colaboradores                      Páginas órfãs (sem rota direta, sujeira)
-                                       • src/pages/ConfiguracoesFinanceiras.tsx
-Sistema                                • src/pages/admin/AdminAgenciaPage.tsx
- • Usuários
- • Permissões
- • (Logs → redirect)
-```
+---
 
-**Conclusão**: faltam migrar **4 páginas reais** (Auditoria, IA das Propostas — e os 2 placeholders ainda úteis do CRM passam a viver no centro). Tudo o resto já está duplicado e só precisa virar redirect.
+## 1. Reordenação das seções (espelhando a sidebar)
 
-## Estrutura final do `/configuracoes`
+Sidebar atual: **Dashboard → CRM → Projetos → Financeiro → Área Dev → Configurações**.
+
+Nova ordem das abas em `ConfiguracoesLayout.tsx`:
 
 ```text
-Configurações Gerais
-├── Pessoas & Empresas
-│   • Setores · Papéis de Contato · Origens de Lead
-│   • Categorias de Dor · Tipos de Projeto · Cargos Internos
-├── CRM                              ← seção nova
-│   • Etapas do funil (placeholder, mantido vivo p/ futuro)
-│   • Motivos de descarte (placeholder)
-├── Financeiro
-│   • Contas · Categorias · Centros · Clientes · Fornecedores · Colaboradores
-├── Sistema
-│   • Usuários · Permissões · Auditoria · Logs (redir)
-└── Integrações                      ← seção nova
-    • IA das Propostas
+1. CRM
+2. Projetos          (nova)
+3. Financeiro
+4. Área Dev          (nova)
+5. Pessoas & Empresas   (catálogos transversais)
+6. Sistema
+7. Integrações
 ```
 
-A seção **CRM** entra mesmo só com placeholders (Etapas / Motivos de descarte) por dois motivos: (1) deixa claro que aquele lugar passa a ser o canal único, e (2) preserva o trabalho que já existia na CrmSettings sem ressuscitar duplicatas reais.
+A Pessoas & Empresas perde itens que pertencem só ao CRM; sobra como "catálogos compartilhados de verdade" (Setores, Cargos).
 
-## Mudanças em código
+---
 
-### 1. Migrar páginas para o centro
+## 2. Reorganização de páginas existentes
 
-- **Mover** `AdminAuditoriaPage.tsx` para a sub-aba `Sistema › Auditoria` (já existe rota `sistema/auditoria`, basta aparecer no menu).
-- **Mover** `AdminPropostasIaPage.tsx` para nova sub-aba `Integrações › IA das Propostas`.
-- Adicionar seção **Integrações** e seção **CRM** no `SECTIONS` do `ConfiguracoesLayout.tsx`.
-- Criar sub-páginas placeholder consistentes com o padrão atual (mesma estética dos outros tabs do Centro).
+| Página atual | Vai para |
+|---|---|
+| Pessoas → Papéis de Contato | **CRM** → Papéis de Contato |
+| Pessoas → Origens de Lead | **CRM** → Origens de Lead |
+| Pessoas → Categorias de Dor | **CRM** → Categorias de Dor |
+| Pessoas → Tipos de Projeto | **Projetos** → Tipos de Projeto |
+| Pessoas → Setores, Cargos | mantém em **Pessoas & Empresas** |
+| Sistema → Auditoria | mantém |
+| Integrações → IA das Propostas | mantém |
 
-### 2. Eliminar `/crm/configuracoes`
+Rotas antigas viram `<Navigate>` para o novo destino (compat).
 
-- Remover a aba "Configurações" de `CrmLayout.tsx`.
-- Substituir a rota `crm/configuracoes` por `<Navigate to="/configuracoes/pessoas/origens" replace />`.
-- Apagar `src/pages/crm/CrmSettings.tsx`.
-- Os componentes `LeadSourcesManager` e `ContactRolesManager` (em `src/components/crm/settings/`) **continuam** sendo usados pelas páginas do centro — não mexer.
+---
 
-### 3. Eliminar `/admin/*` shell
+## 3. Novas configurações por módulo (varredura do que falta)
 
-- Apagar `AdminLayout.tsx` (o shell de tabs duplicado).
-- Apagar `AdminAgenciaPage.tsx` (já órfã, não tem mais rota).
-- Substituir as rotas filhas do `/admin` por redirects para o centro:
-  - `/admin` → `/configuracoes/sistema/usuarios`
-  - `/admin/usuarios` → `/configuracoes/sistema/usuarios`
-  - `/admin/permissoes` → `/configuracoes/sistema/permissoes`
-  - `/admin/auditoria` → `/configuracoes/sistema/auditoria`
-  - `/admin/propostas-ia` → `/configuracoes/integracoes/ia-propostas`
-- **Manter** `/admin/usuarios/:id` (ficha individual com `UsuarioFichaPage`) — é tela cheia, fora do shell, não tem equivalente no centro. Atualizar o link "voltar" dela para `/configuracoes/sistema/usuarios`.
+### CRM (adicionar)
+- **Etapas do Funil** — já existe (read-only); vamos torná-la editável: cor, label, probabilidade, ordem (mantendo `is_system` para travar deleção das 7 base).
+- **Motivos de descarte** — já existe.
+- **Tipos de Atividade do Calendário** — hoje os tipos (`call`, `meeting`, `email`, `task`, `whatsapp`…) e suas cores estão hardcoded em `src/lib/crm/activityColors.ts`. Criar tabela `crm_activity_types` (slug, label, icon, color, is_system) e migrar o mapa.
+- **Origens de Lead / Papéis de Contato / Categorias de Dor** — movidas de Pessoas.
 
-### 4. Eliminar página antiga `ConfiguracoesFinanceiras.tsx`
+### Projetos (nova seção inteira)
+- **Status de Projeto** — hoje strings livres; criar `project_statuses` (slug, label, color, kind: `aberto/pausado/concluido/cancelado`).
+- **Templates de Marcos** — bibliotecas de marcos reutilizáveis para `project_milestones` (ex.: "Kickoff", "Aceite final"). Tabela `milestone_templates`.
+- **Categorias de Risco** — para `project_risks`. Tabela `project_risk_categories` (label, severidade default, cor).
+- **Papéis de Ator (`project_actors`)** — catálogo de funções (PM, Dev, Designer…) usado em `AlocarAtorDialog`. Tabela `actor_roles`.
+- **Tipos de Projeto** — vinda de Pessoas.
+- **Tipos de Dependência** — para `project_dependencies` / `deal_dependencies` (ex.: "bloqueia", "depende de", "relaciona-se com").
 
-- Remover o arquivo `src/pages/ConfiguracoesFinanceiras.tsx` e seu import em `App.tsx`. A rota `/financeiro/configuracoes` continua existindo só como redirect e não precisa do componente.
-- A pasta `src/components/config-financeiras/` é usada pelas páginas novas (`FinContasPage`, etc.)? Verificar — se for, manter; se não, apagar. (No plano fica como item de limpeza condicional.)
+### Financeiro (adicionar)
+- **Meios de Pagamento** — tabela `meios_pagamento` já existe sem UI; criar CRUD (label, ícone, ativo, ordem).
+- **Templates de Recorrência** — presets prontos (mensalidade fixa, anual com reajuste IGPM, parcelamento) que aparecem em `NovaRecorrenciaModal`.
+- **Regras de Conciliação** — padrões de match para `extrato_transacoes` (regex no histórico → categoria/centro de custo sugerido).
+- **Política de Inadimplência** — quando marcar como atrasado, dias de tolerância, juros/multa default usados em `InadimplenciaTab`.
+- **Numeração de documentos** — formato/sequência de proposta, recibo, NF (ex.: `PROP-2026-####`).
 
-### 5. Atualizar links cruzados
+### Área Dev (nova seção)
+- **Tipos de Task** — hoje strings em `tasks.tipo`; virar catálogo com cor/ícone (feature, bug, chore, spike…).
+- **Status do Kanban** — colunas e transições permitidas (atualmente fixas).
+- **Agentes de IA** — UI sobre `ai_agents` para configurar prompts/modelos por agente.
+- **Configuração de Sprints** — duração padrão, dia da semana de início, cerimônias.
+- **Severidades de Bug** — catálogo (P0/P1/P2/P3, SLA em horas).
 
-- `TopBar.tsx`: dropdown do avatar → "Admin" passa a apontar para `/configuracoes/sistema/usuarios` (rótulo pode virar "Configurações").
-- Breadcrumbs/títulos em `TopBar.tsx` (linhas 45-47, 82-86): atualizar mapeamento `/admin/*` → labels do Centro.
-- `RouteTracker.getAdminExitRoute()` (referenciado pelo AdminLayout que vai sumir): conferir se ainda é usado em outro lugar; se não, deletar.
-- `AppSidebar.tsx`: o item "Configurações" já existe — adicionar 2 sub-itens novos ("CRM", "Integrações") e remover qualquer link para `/admin`/`/crm/configuracoes` se houver.
+### Pessoas & Empresas (limpar e adicionar)
+- **Setores** — fica.
+- **Cargos Internos** — fica.
+- **Tipos de Contrato Interno** — para `usuario_contratos` (CLT, PJ, Estágio…) com campos default.
+- **Planos de Saúde** — atualmente texto livre em `profiles.plano_saude`; virar catálogo.
 
-### 6. Permissão
+### Sistema (adicionar)
+- **Usuários, Permissões, Auditoria** — ficam.
+- **Organização (`tenant_settings`)** — branding interno: nome fantasia, CNPJ, endereço, logo usados em propostas, contratos e e-mails. Hoje espalhado.
+- **Manutenção** — limpeza de anexos órfãos, reindexação, recomputo de KPIs (usar `src/lib/maintenance.ts`).
+- **Notificações do sistema** — destinatários de alertas críticos (proposta vista, deal ganho, falha de cobrança), substitui `proposal_notification_recipients` espalhado.
 
-- O Centro já é admin-only (`AdminRoute` + `useAuth().isAdmin`). Tudo migrado herda isso automaticamente.
+### Integrações (adicionar)
+- **IA das Propostas** — fica.
+- **Provedores de Integração (`integration_providers`)** — UI para ativar/desativar e configurar credenciais por provedor.
+- **Webhooks de Saída** — endpoints externos para eventos (deal_won, proposal_signed…).
+- **Página Pública de Propostas** — branding/cores/textos do `public_page_settings` (hoje em hooks sem UI dedicada).
+- **E-mails Transacionais** — remetente, assinatura, templates de proposta enviada / cobrança / lembrete.
 
-## Arquivos tocados
+---
 
-**Editados**
+## 4. Detalhes técnicos
 
-- `src/App.tsx` — novas rotas `integracoes/ia-propostas`, `crm/etapas`, `crm/motivos-descarte`; redirects do `/admin/*`; remoção de imports mortos.
-- `src/pages/configuracoes/ConfiguracoesLayout.tsx` — adicionar seções CRM + Integrações; ícones.
-- `src/pages/crm/CrmLayout.tsx` — remover aba Configurações.
-- `src/components/TopBar.tsx` — labels e link do dropdown.
-- `src/components/AppSidebar.tsx` — sub-itens novos.
-- `src/pages/admin/UsuarioFichaPage.tsx` — corrigir `navigate("/admin/usuarios")` → `/configuracoes/sistema/usuarios`.
+- **Migrations novas**: `crm_activity_types`, `project_statuses`, `milestone_templates`, `project_risk_categories`, `actor_roles`, `dependency_types`, `task_types`, `bug_severities`, `internal_contract_types`, `health_plans`, `payment_method` UI (tabela já existe), `reconciliation_rules`, `outbound_webhooks`. Todas com `slug`, `label`, `is_system`, `sort_order`, RLS admin-only, padrão idêntico ao já adotado em `crm_lead_sources` / `deal_lost_reasons`.
+- **Refactors**:
+  - `src/lib/crm/activityColors.ts` → ler do banco com cache (`useCrmActivityTypes`), mantendo fallback local.
+  - `AlocarAtorDialog`, `NovoProjetoDialog`, `NovaRecorrenciaModal` consomem os novos catálogos via hooks `use<Catalog>()`.
+- **Páginas**: cada item acima é um arquivo em `src/pages/configuracoes/<secao>/<Item>Page.tsx`, todos seguindo o padrão de CRUD inline com `ComboboxCreate` + tabela editável usado em `OrigensLeadPage` / `MotivosDescartePage`.
+- **Navegação**: ampliar `SECTIONS` em `ConfiguracoesLayout.tsx` com a nova ordem e tabs; atualizar `AppSidebar.tsx` para listar Projetos/Área Dev/CRM como subitens de "Configurações".
+- **Compat**: redirects de todas as rotas que se moveram (ex.: `/configuracoes/pessoas/origens` → `/configuracoes/crm/origens`).
+- **Memória**: atualizar `mem://features/admin-area` com a nova ordem e a regra "todo catálogo de qualquer módulo deve nascer aqui".
 
-**Criados**
+---
 
-- `src/pages/configuracoes/integracoes/IaPropostasPage.tsx` — wrapper que reusa todo o conteúdo de `AdminPropostasIaPage` (move o JSX para cá; o componente original some).
-- `src/pages/configuracoes/crm/EtapasFunilPage.tsx` — placeholder estilizado.
-- `src/pages/configuracoes/crm/MotivosDescartePage.tsx` — placeholder estilizado.
+## 5. Entrega faseada (sugestão)
 
-**Apagados**
+Se preferir não fazer tudo de uma vez, a ordem natural é:
 
-- `src/pages/crm/CrmSettings.tsx`
-- `src/pages/admin/AdminLayout.tsx`
-- `src/pages/admin/AdminAgenciaPage.tsx`
-- `src/pages/admin/AdminPropostasIaPage.tsx` (conteúdo migrado para `IaPropostasPage`)
-- `src/pages/ConfiguracoesFinanceiras.tsx`
+1. **Reordenar abas + mover páginas existentes** (zero schema, baixo risco).
+2. **CRM** (activity_types) + **Projetos** (status/marcos/atores/risco/dependência).
+3. **Financeiro** (meios de pagamento, conciliação, inadimplência, numeração).
+4. **Área Dev** (task_types, kanban, ai_agents, sprints, severidades).
+5. **Pessoas/Sistema/Integrações** restantes (organização, manutenção, webhooks, public page, e-mails).
 
-**Mantidos com rota nova**
-
-- `AdminAuditoriaPage.tsx`, `AdminPermissoesPage.tsx`, `AdminUsuariosList.tsx`, `UsuarioFichaPage.tsx` — código reaproveitado dentro do Centro; arquivos ficam no `src/pages/admin/` por enquanto pra reduzir churn de imports (renomear é cosmético, fica fora do escopo).
-
-## Detalhes técnicos
-
-- `usePersistedState` em `CrmSettings` (`crm-settings-tab`) deixa de ser usado — sem migration de dados, é só localStorage.
-- Não há mudança de banco.
-- Memória `mem://features/admin-area` precisa ser atualizada após a execução: a área `/admin/*` deixa de existir como shell; só a ficha `/admin/usuarios/:id` permanece como rota tela-cheia.
-- Atualizar `mem://index.md` se mudar a estrutura conhecida.
-
-## O que você ganha
-
-1. **Um lugar único** (`/configuracoes`) para qualquer ajuste de catálogo, usuário, permissão, auditoria ou integração.
-2. Fim das duplicatas (Origens/Papéis em CRM **e** em Pessoas, Usuários em /admin **e** em /sistema).
-3. Sidebar mais enxuta — sem "Admin" escondido no avatar duplicando o que está em "Configurações".
-4. Estrutura preparada pra crescer (seção **Integrações** já existe pra próximas: webhooks, Stripe, etc.).  
-  
-  
-Vamos começar a migrar então, monte um planejamneto de etapas para migrar um módulo de cada vez e apagando o lugar antigo onde ele ficava. caso o módulo de config esteja muito simples, desenvolva e deixe ele com controle nível micro para o módulo que ele representa.
+Quer que eu vá direto com tudo, ou prefere começar pela Fase 1 + Fase 2?
