@@ -121,6 +121,54 @@ async function callEdge(name: string, body: unknown, jwt?: string) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// ───────── Persistência local do "passe" do cliente (12 h) ─────────
+// Guarda o JWT por token de proposta no localStorage para evitar repedir
+// senha em refreshes/aberturas seguidas dentro da janela de validade.
+const ACCESS_STORAGE_PREFIX = "proposal_access:";
+
+function accessStorageKey(token: string) {
+  return `${ACCESS_STORAGE_PREFIX}${token}`;
+}
+
+function loadStoredAccess(token: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(accessStorageKey(token));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { jwt?: string; expiresAt?: number };
+    if (!parsed?.jwt || !parsed?.expiresAt) return null;
+    if (parsed.expiresAt <= Date.now()) {
+      window.localStorage.removeItem(accessStorageKey(token));
+      return null;
+    }
+    return parsed.jwt;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredAccess(token: string, jwt: string, expiresInSeconds: number) {
+  if (typeof window === "undefined") return;
+  try {
+    const expiresAt = Date.now() + Math.max(0, expiresInSeconds) * 1000;
+    window.localStorage.setItem(
+      accessStorageKey(token),
+      JSON.stringify({ jwt, expiresAt }),
+    );
+  } catch {
+    // Ignora quota / modo privado.
+  }
+}
+
+function clearStoredAccess(token: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(accessStorageKey(token));
+  } catch {
+    // Ignora.
+  }
+}
+
 export default function PropostaPublica() {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
