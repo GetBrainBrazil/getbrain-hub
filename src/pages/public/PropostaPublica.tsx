@@ -860,8 +860,8 @@ function ProposalView({
         <EditorialSection
           id="contexto"
           number="01"
-          eyebrow="Contexto"
-          title="O ponto de partida"
+          eyebrow={s.section_eyebrows.contexto}
+          title={s.section_titles.contexto}
           theme="dark"
         >
           <div className="grid lg:grid-cols-12 gap-10">
@@ -882,8 +882,8 @@ function ProposalView({
         <EditorialSection
           id="solucao"
           number="02"
-          eyebrow="Solução"
-          title="O que vamos construir"
+          eyebrow={s.section_eyebrows.solucao}
+          title={s.section_titles.solucao}
           theme="light"
         >
           <Prose markdown={proposal.solution_overview} />
@@ -895,8 +895,8 @@ function ProposalView({
         <EditorialSection
           id="escopo"
           number="03"
-          eyebrow="Escopo"
-          title="Capítulos da entrega"
+          eyebrow={s.section_eyebrows.escopo}
+          title={s.section_titles.escopo}
           theme="dark"
         >
           <div className="space-y-0">
@@ -917,7 +917,7 @@ function ProposalView({
                 <span className="text-brand">04 ·</span> Investimento
               </div>
               <h2 className="font-editorial-display text-4xl sm:text-6xl lg:text-7xl tracking-tight font-light leading-[1.05]">
-                <span className="brand-dot">Os números</span>
+                <span className="brand-dot">{s.section_titles.investimento}</span>
               </h2>
             </div>
 
@@ -994,8 +994,8 @@ function ProposalView({
         <EditorialSection
           id="cronograma"
           number="05"
-          eyebrow="Cronograma"
-          title="A jornada"
+          eyebrow={s.section_eyebrows.cronograma}
+          title={s.section_titles.cronograma}
           theme="dark"
         >
           <RoadmapTimeline
@@ -1068,8 +1068,8 @@ function ProposalView({
       <EditorialSection
         id="sobre"
         number="08"
-        eyebrow="Sobre"
-        title="A GetBrain"
+        eyebrow={s.section_eyebrows.sobre}
+        title={s.section_titles.sobre}
         theme="light"
       >
         <div className="reveal max-w-3xl space-y-6 text-slate-700 text-lg leading-relaxed font-light mb-16">
@@ -1164,7 +1164,7 @@ function ProposalView({
             <span className="text-brand">—</span> Próximos passos
           </div>
           <h2 className="reveal font-editorial-display text-5xl sm:text-7xl lg:text-8xl tracking-tight font-light leading-[1.05] max-w-[18ch]">
-            <span className="brand-dot">Vamos começar?</span>
+            <span className="brand-dot">{s.next_steps_title}</span>
           </h2>
           <p className="reveal mt-8 text-lg text-white/70 max-w-2xl font-light leading-relaxed">
             Se faz sentido, clique em <strong className="text-white">"Quero avançar"</strong> — o
