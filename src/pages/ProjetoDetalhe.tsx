@@ -403,6 +403,8 @@ export default function ProjetoDetalhe() {
   const [logActors, setLogActors] = useState<Record<string, string>>({});
   const [dependencies, setDependencies] = useState<any[]>([]);
   const [milestones, setMilestones] = useState<any[]>([]);
+  const { data: proposalsPayload } = useProjectProposals(projectId ?? null);
+  const proposalsCount = proposalsPayload?.proposals.length ?? 0;
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [allocOpen, setAllocOpen] = useState(false);
   // (modal de contrato removido — agora editamos inline no card Financeiro)
