@@ -15,11 +15,7 @@ import {
   MessageCircle,
   ThumbsUp,
   Sparkles,
-  CheckCircle2,
-  Zap,
-  Brain,
-  Target,
-  Rocket,
+  Loader2 as _L2_unused,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
