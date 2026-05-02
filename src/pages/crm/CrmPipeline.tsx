@@ -495,15 +495,17 @@ export default function CrmPipeline() {
             </div>
           </div>
 
-          {/* Linha 2: escopo + filtros lado a lado */}
+          {/* Linha 2: escopo + filtros */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Escopo: Em trilha (ativos) vs Tudo (inclui ganho/perdido). */}
             <div
               className={cn(
-                'inline-flex h-9 items-center overflow-hidden rounded-md border bg-background p-0.5',
-                stageFilter.length ? 'border-border/50 opacity-50' : 'border-border',
+                'inline-flex h-9 items-center overflow-hidden rounded-full border bg-background p-0.5',
+                stageFilter.length ? 'border-border/40 opacity-60' : 'border-border',
               )}
-              title={stageFilter.length ? 'Limpe o filtro de estágio para usar o escopo' : undefined}
+              title={stageFilter.length ? 'Filtro de estágio ativo — escopo é ignorado' : undefined}
+              role="group"
+              aria-label="Escopo do funil"
             >
               <button
                 type="button"
@@ -511,13 +513,13 @@ export default function CrmPipeline() {
                 onClick={() => setScope('trilha')}
                 aria-pressed={scope === 'trilha' && !stageFilter.length}
                 className={cn(
-                  'flex h-full items-center rounded-sm px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed',
+                  'flex h-full items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed',
                   scope === 'trilha' && !stageFilter.length
-                    ? 'bg-accent/15 text-accent'
+                    ? 'bg-accent/15 text-accent shadow-sm'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
-                Em trilha
+                <Activity className="h-3.5 w-3.5" /> Em trilha
               </button>
               <button
                 type="button"
@@ -525,51 +527,60 @@ export default function CrmPipeline() {
                 onClick={() => setScope('todos')}
                 aria-pressed={scope === 'todos' && !stageFilter.length}
                 className={cn(
-                  'flex h-full items-center rounded-sm px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed',
+                  'flex h-full items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed',
                   scope === 'todos' && !stageFilter.length
-                    ? 'bg-accent/15 text-accent'
+                    ? 'bg-accent/15 text-accent shadow-sm'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
-                Tudo
+                <Layers className="h-3.5 w-3.5" /> Tudo
               </button>
             </div>
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Filtros:
-            </span>
+
+            <span className="hidden h-5 w-px bg-border sm:inline-block" aria-hidden />
+
             <MultiFilter
               label="Estágio"
+              icon={<Tag className="h-3.5 w-3.5" />}
               selected={stageFilter}
               onChange={(v) => setStageFilter(v as DealStage[])}
               options={DEAL_STAGES.map((s) => ({ value: s, label: DEAL_STAGE_LABEL[s] }))}
             />
             <MultiFilter
               label="Tipo"
+              icon={<Briefcase className="h-3.5 w-3.5" />}
               selected={projectTypeFilter}
               onChange={setProjectTypeFilter}
               options={activeProjectTypes.map((t) => ({ value: t.slug, label: t.name }))}
             />
             <MultiFilter
               label="Dono"
+              icon={<User className="h-3.5 w-3.5" />}
               selected={ownerFilter}
               onChange={setOwnerFilter}
               options={actors.map((a) => ({ value: a.id, label: a.display_name }))}
             />
             <MultiFilter
               label="Origem"
+              icon={<Tag className="h-3.5 w-3.5" />}
               selected={sourceFilter}
               onChange={setSourceFilter}
               options={[{ value: 'direto', label: 'Direto' }, ...leadSources.map((s) => ({ value: s, label: s }))]}
             />
-            <ValueRangeFilter value={valueRange} onChange={setValueRange} />
+            <ValueRangeFilter
+              icon={<CircleDollarSign className="h-3.5 w-3.5" />}
+              value={valueRange}
+              onChange={setValueRange}
+            />
+
             {hasAnyFilters && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 text-xs text-muted-foreground hover:text-foreground"
+                className="ml-auto h-9 gap-1 rounded-full px-3 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={clearAllFilters}
               >
-                Limpar
+                <X className="h-3.5 w-3.5" /> Limpar tudo
               </Button>
             )}
 
@@ -581,7 +592,7 @@ export default function CrmPipeline() {
                 </span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs whitespace-nowrap">
+                    <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-full text-xs whitespace-nowrap">
                       <ArrowUpDown className="h-3.5 w-3.5" />
                       <span>{sortLabels[sort]}</span>
                     </Button>
