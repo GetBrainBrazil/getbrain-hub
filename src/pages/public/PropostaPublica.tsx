@@ -56,6 +56,8 @@ interface PublicProposal {
   first_installment_date: string | null;
   public_opening_letter: string | null;
   public_roadmap: { phases: Array<{ number: number; title: string; duration_days: number; outcome: string; deliverables: string[] }> } | null;
+  investment_layout: "total_first" | "installments_first";
+  show_investment_breakdown: boolean;
   items: Array<{
     id: string;
     description: string;
@@ -824,27 +826,27 @@ function ProposalView({
           <div className="hairline mb-8" />
           <div className="reveal grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-10">
             <KpiEditorial
-              label="Investimento"
+              label={s.kpi_labels?.investimento || "Investimento"}
               value={formatBRL(total)}
               brand={brand}
             />
             {!!proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
               <KpiEditorial
-                label="Mensalidade"
+                label={s.kpi_labels?.mensalidade || "Mensalidade"}
                 value={`${formatBRL(Number(proposal.maintenance_monthly_value))}`}
                 suffix="/mês"
               />
             )}
             {!!proposal.implementation_days && (
               <KpiEditorial
-                label="Implementação"
+                label={s.kpi_labels?.implementacao || "Implementação"}
                 value={`${proposal.implementation_days}`}
                 suffix=" dias"
               />
             )}
             {expiresInDays !== null && (
               <KpiEditorial
-                label="Válida até"
+                label={s.kpi_labels?.validade || "Válida até"}
                 value={formatDate(proposal.expires_at)}
                 suffix={` · ${expiresInDays}d`}
               />
@@ -979,14 +981,44 @@ function ProposalView({
             </div>
 
             <div className="grid lg:grid-cols-12 gap-12">
-              {/* Total monumental */}
+              {/* Total monumental — 2 layouts: total-first ou parcela-first */}
               <div className="lg:col-span-5 reveal">
-                <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-4">
-                  Investimento total
-                </div>
-                <div className="font-editorial-display text-6xl sm:text-7xl lg:text-[88px] leading-none tracking-tight tabular-nums">
-                  {formatBRL(total)}
-                </div>
+                {proposal.investment_layout === "installments_first" && installments > 1 ? (
+                  <>
+                    <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-4">
+                      Por mês
+                    </div>
+                    <div className="font-editorial-display text-6xl sm:text-7xl lg:text-[88px] leading-none tracking-tight tabular-nums flex items-baseline gap-3 flex-wrap">
+                      <span>{formatBRL(installmentValue)}</span>
+                      <span className="text-2xl sm:text-3xl text-muted-ink font-light tabular-nums">
+                        em {installments}×
+                      </span>
+                    </div>
+                    <div className="mt-6 text-muted-ink">
+                      <span className="text-[10px] font-mono-display uppercase tracking-[0.3em]">Total à vista</span>
+                      <div className="font-editorial-display text-3xl mt-1 tabular-nums">
+                        {formatBRL(total)}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-4">
+                      Investimento total
+                    </div>
+                    <div className="font-editorial-display text-6xl sm:text-7xl lg:text-[88px] leading-none tracking-tight tabular-nums">
+                      {formatBRL(total)}
+                    </div>
+                    {installments > 1 && (
+                      <div className="mt-6 text-muted-ink">
+                        <span className="text-[10px] font-mono-display uppercase tracking-[0.3em]">Parcelado</span>
+                        <div className="font-editorial-display text-3xl mt-1 tabular-nums">
+                          {installments}× <span className="text-base text-muted-ink">de</span> {formatBRL(installmentValue)}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
                 {!!proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
                   <div className="mt-6 text-muted-ink">
                     <span className="text-[10px] font-mono-display uppercase tracking-[0.3em]">+ Mensalidade</span>
@@ -998,24 +1030,26 @@ function ProposalView({
               </div>
 
               {/* Tabela editorial */}
-              <div className="lg:col-span-7 reveal">
-                <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-6">
-                  Composição
+              {proposal.show_investment_breakdown !== false && (
+                <div className="lg:col-span-7 reveal">
+                  <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-6">
+                    Composição
+                  </div>
+                  <ul className="divide-y divide-slate-900/10">
+                    {proposal.items.map((it, i) => (
+                      <li key={it.id} className="py-5 flex items-baseline gap-4">
+                        <span className="font-mono-display text-xs text-muted-ink w-8 flex-shrink-0">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span className="flex-1 text-slate-900">{it.description}</span>
+                        <span className="font-mono-display tabular-nums text-slate-900 font-medium whitespace-nowrap">
+                          {Number(it.total) > 0 ? formatBRL(Number(it.total)) : "incluso"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="divide-y divide-slate-900/10">
-                  {proposal.items.map((it, i) => (
-                    <li key={it.id} className="py-5 flex items-baseline gap-4">
-                      <span className="font-mono-display text-xs text-muted-ink w-8 flex-shrink-0">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span className="flex-1 text-slate-900">{it.description}</span>
-                      <span className="font-mono-display tabular-nums text-slate-900 font-medium whitespace-nowrap">
-                        {Number(it.total) > 0 ? formatBRL(Number(it.total)) : "incluso"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              )}
             </div>
 
             {/* Manutenção: o que está incluso */}

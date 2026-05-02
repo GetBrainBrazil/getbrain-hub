@@ -4250,6 +4250,7 @@ export type Database = {
           implementation_days: number | null
           implementation_value: number | null
           installments_count: number | null
+          investment_layout: string | null
           last_viewed_at: string | null
           maintenance_description: string | null
           maintenance_monthly_value: number | null
@@ -4270,6 +4271,7 @@ export type Database = {
           rejection_reason: string | null
           scope_items: Json
           sent_at: string | null
+          show_investment_breakdown: boolean | null
           solution_overview: string | null
           status: Database["public"]["Enums"]["proposal_status"]
           template_key: string
@@ -4308,6 +4310,7 @@ export type Database = {
           implementation_days?: number | null
           implementation_value?: number | null
           installments_count?: number | null
+          investment_layout?: string | null
           last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null
@@ -4328,6 +4331,7 @@ export type Database = {
           rejection_reason?: string | null
           scope_items?: Json
           sent_at?: string | null
+          show_investment_breakdown?: boolean | null
           solution_overview?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           template_key?: string
@@ -4366,6 +4370,7 @@ export type Database = {
           implementation_days?: number | null
           implementation_value?: number | null
           installments_count?: number | null
+          investment_layout?: string | null
           last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null
@@ -4386,6 +4391,7 @@ export type Database = {
           rejection_reason?: string | null
           scope_items?: Json
           sent_at?: string | null
+          show_investment_breakdown?: boolean | null
           solution_overview?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           template_key?: string
@@ -4450,6 +4456,7 @@ export type Database = {
           hero_eyebrows: string[]
           hero_scroll_cue: string
           id: string
+          kpi_labels: Json | null
           next_steps_paragraphs: string[]
           next_steps_title: string
           organization_id: string
@@ -4474,6 +4481,7 @@ export type Database = {
           hero_eyebrows?: string[]
           hero_scroll_cue?: string
           id?: string
+          kpi_labels?: Json | null
           next_steps_paragraphs?: string[]
           next_steps_title?: string
           organization_id: string
@@ -4498,6 +4506,7 @@ export type Database = {
           hero_eyebrows?: string[]
           hero_scroll_cue?: string
           id?: string
+          kpi_labels?: Json | null
           next_steps_paragraphs?: string[]
           next_steps_title?: string
           organization_id?: string

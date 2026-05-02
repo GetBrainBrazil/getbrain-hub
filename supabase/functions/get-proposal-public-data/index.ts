@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
          implementation_days, validation_days, expires_at, valid_until,
          mockup_url, sent_at, status, template_slug, template_version,
          company_id, implementation_value, installments_count,
-         first_installment_date, public_opening_letter, public_roadmap`,
+         first_installment_date, public_opening_letter, public_roadmap,
+         investment_layout, show_investment_breakdown`,
       )
       .eq("id", proposalId)
       .is("deleted_at", null)
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
          next_steps_title, next_steps_paragraphs,
          footer_tagline, footer_contact_label,
          password_gate_title, password_gate_subtitle, password_gate_button,
-         contact_whatsapp, contact_email, contact_display_name`,
+         contact_whatsapp, contact_email, contact_display_name, kpi_labels`,
       )
       .eq("organization_id", "00000000-0000-0000-0000-000000000001")
       .maybeSingle();
@@ -109,6 +110,8 @@ Deno.serve(async (req) => {
         first_installment_date: prop.first_installment_date,
         public_opening_letter: prop.public_opening_letter,
         public_roadmap: prop.public_roadmap,
+        investment_layout: (prop as any).investment_layout ?? "total_first",
+        show_investment_breakdown: (prop as any).show_investment_breakdown ?? true,
         items: items ?? [],
       },
       page_settings: pageSettings ?? null,
