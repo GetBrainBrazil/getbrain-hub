@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
          mockup_url, sent_at, status, template_slug, template_version,
          company_id, implementation_value, installments_count,
          first_installment_date, public_opening_letter, public_roadmap,
-         investment_layout, show_investment_breakdown`,
+         investment_layout, show_investment_breakdown, created_by`,
       )
       .eq("id", proposalId)
       .is("deleted_at", null)
