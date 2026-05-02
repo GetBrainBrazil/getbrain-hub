@@ -57,7 +57,8 @@ function DraggableDeal({ deal, onOpen, onCompanyOpen }: { deal: Deal; onOpen: ()
 
 function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyOpen, onAdd }: { stage: DealStage; deals: Deal[]; collapsed: boolean; onToggleCollapsed: () => void; onOpen: (deal: Deal) => void; onCompanyOpen: (deal: Deal) => void; onAdd: (stage: DealStage) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
-  const total = deals.reduce((sum, d) => sum + Number(d.estimated_value ?? 0), 0);
+  const totalImpl = deals.reduce((sum, d) => sum + Number(d.estimated_implementation_value ?? 0), 0);
+  const totalMrr = deals.reduce((sum, d) => sum + Number(d.estimated_mrr_value ?? 0), 0);
   const dotClass = DEAL_STAGE_DOT[stage];
 
   if (collapsed) {
@@ -107,7 +108,11 @@ function Column({ stage, deals, collapsed, onToggleCollapsed, onOpen, onCompanyO
             <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', dotClass)} aria-hidden />
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold text-foreground">{DEAL_STAGE_LABEL[stage]}</h3>
-              <p className="text-xs text-muted-foreground">{formatCurrency(total)} · {deals.length} deals</p>
+              <p className="text-xs text-muted-foreground">
+                {formatCurrency(totalImpl)}
+                {totalMrr > 0 && <span> + {formatCurrency(totalMrr)}/mês</span>}
+                {' · '}{deals.length} deals
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -192,6 +197,8 @@ export default function CrmPipeline() {
   const [stageFilter, setStageFilter] = useState<DealStage[]>([]);
   const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
   const [sort, setSort] = useState<DealsListSort>('next_step');
+  // Escopo: só deals em trilha (ativos) ou tudo (inclui ganho/perdido). Persistido.
+  const [scope, setScope] = usePersistedState<'trilha' | 'todos'>('crm_pipeline_scope', 'trilha');
 
   const filters = useMemo(
     () => ({ ownerIds: ownerFilter, sourceIds: sourceFilter, valueRange, search }),
@@ -217,23 +224,26 @@ export default function CrmPipeline() {
     setCreateOpen(true);
   };
 
-  // Deals filtrados (estágio + tipo)
+  // Deals filtrados (escopo trilha/todos + estágio + tipo).
+  // Quando o usuário aplica filtro explícito de estágio, o escopo é ignorado
+  // (a escolha manual prevalece).
   const filteredDeals = useMemo(() => {
     return rawDeals.map((d) => {
       const overrideStage = visualStageOverrides[d.id];
       return overrideStage ? { ...d, stage: overrideStage, probability_pct: DEAL_STAGE_PROBABILITY[overrideStage] } : d;
     }).filter((d) => {
-      if (stageFilter.length && !stageFilter.includes(d.stage)) return false;
+      if (stageFilter.length) {
+        if (!stageFilter.includes(d.stage)) return false;
+      } else if (scope === 'trilha' && !ACTIVE_STAGES.includes(d.stage)) {
+        return false;
+      }
       if (projectTypeFilter.length && !(d.project_type_v2 ?? []).some((s) => projectTypeFilter.includes(s))) return false;
       return true;
     });
-  }, [rawDeals, visualStageOverrides, stageFilter, projectTypeFilter]);
+  }, [rawDeals, visualStageOverrides, stageFilter, projectTypeFilter, scope]);
 
-  // Lista mostra apenas ativos por padrão (sem filtro de estágio aplicado)
-  const listDeals = useMemo(() => {
-    if (stageFilter.length) return filteredDeals;
-    return filteredDeals.filter((d) => ACTIVE_STAGES.includes(d.stage));
-  }, [filteredDeals, stageFilter]);
+  // Lista usa exatamente o mesmo conjunto que o Kanban (escopo já aplicado acima).
+  const listDeals = filteredDeals;
 
   const sortedListDeals = useSortedDeals(listDeals, sort);
 
@@ -485,8 +495,45 @@ export default function CrmPipeline() {
             </div>
           </div>
 
-          {/* Linha 2: filtros lado a lado */}
+          {/* Linha 2: escopo + filtros lado a lado */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Escopo: Em trilha (ativos) vs Tudo (inclui ganho/perdido). */}
+            <div
+              className={cn(
+                'inline-flex h-9 items-center overflow-hidden rounded-md border bg-background p-0.5',
+                stageFilter.length ? 'border-border/50 opacity-50' : 'border-border',
+              )}
+              title={stageFilter.length ? 'Limpe o filtro de estágio para usar o escopo' : undefined}
+            >
+              <button
+                type="button"
+                disabled={stageFilter.length > 0}
+                onClick={() => setScope('trilha')}
+                aria-pressed={scope === 'trilha' && !stageFilter.length}
+                className={cn(
+                  'flex h-full items-center rounded-sm px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed',
+                  scope === 'trilha' && !stageFilter.length
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                Em trilha
+              </button>
+              <button
+                type="button"
+                disabled={stageFilter.length > 0}
+                onClick={() => setScope('todos')}
+                aria-pressed={scope === 'todos' && !stageFilter.length}
+                className={cn(
+                  'flex h-full items-center rounded-sm px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed',
+                  scope === 'todos' && !stageFilter.length
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                Tudo
+              </button>
+            </div>
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               Filtros:
             </span>
