@@ -1,66 +1,93 @@
+## Diagnóstico
 
-## O que muda
+Confirmei os números no banco. Você tem hoje:
 
-Transformar a aba **Propostas & Anexos** de `/projetos/:id` num CRUD completo, sem precisar sair pra outra tela pra cada ação.
+| Deal | Estágio | Implementação | MRR | `estimated_value` salvo |
+|------|---------|---------------|-----|---|
+| DEAL-008 Sunbright | **ganho** | R$ 4.000 | R$ 600/mês | R$ 11.200 |
+| DEAL-009 Del Fiori | descoberta_marcada | — | — | — |
 
-## 1. Card de proposta — novo comportamento
+A proposta PROP-0006 (status `convertida`) bate com isso: implementação 4.000 + manutenção 600/mês.
 
-O card inteiro vira clicável (abre o editor completo). E ganha um menu **⋯** no canto superior direito com tudo que existe na lista de orçamentos:
+### Por que aparece R$ 11.200 / 2 deals / R$ 9.520 forecast / R$ 11.200 ticket médio?
+
+Encontrei 2 problemas em `src/pages/crm/CrmPipeline.tsx`:
+
+**1. Fórmula inflando o valor do deal**
+Em `CrmPipeline.tsx:347` e `CrmDealDetail.tsx:746`, sempre que você edita implementação ou MRR, o sistema sobrescreve `estimated_value` com:
+```
+estimated_value = implementação + MRR × 12
+```
+Ou seja, R$ 4.000 + R$ 600 × 12 = **R$ 11.200**. Isso é um TCV de 12 meses, não o valor da proposta. O KPI "Pipeline" simplesmente soma esse campo.
+
+**2. Deal "ganho" entrando no pipeline (modo Kanban)**
+No modo Kanban, o `homeKpis` usa `filteredDeals`, que inclui deals já ganhos/perdidos. Por isso o Sunbright (ganho) ainda conta como "pipeline" e infla os 4 KPIs. No modo Lista os fechados já são ocultados — a inconsistência é só no Kanban.
+
+Resultado: forecast = 11.200 × 85% = R$ 9.520 ✓, ticket médio = 11.200/1 = R$ 11.200 ✓ (só 1 deal tem valor). Matemática correta, premissas erradas.
+
+---
+
+## Plano de correção
+
+### 1. Mudar o conceito de "Pipeline" para refletir one-time + MRR separados
+
+Em `src/components/crm/CrmKpiStrip.tsx` e nos KPIs de `CrmPipeline.tsx`, trocar o card único "Pipeline" por **dois números** lado a lado:
+
+- **Pipeline (implementação)** — soma de `estimated_implementation_value` dos deals abertos
+- **MRR em pipeline** — soma de `estimated_mrr_value` dos deals abertos, formatada como `R$ X/mês`
+
+Para o seu caso atual (sem deals abertos com valor): ambos zerariam, que é o esperado já que o único deal com valor virou ganho.
+
+### 2. Forecast ponderado: também separar
+
+- **Forecast one-time** = Σ implementação × probabilidade
+- **Forecast MRR** = Σ MRR × probabilidade (mostrado como `R$ Y/mês`)
+
+Remove a soma "implementação + MRR×12" disfarçada de forecast.
+
+### 3. Excluir deals fechados (ganho/perdido) dos KPIs em qualquer modo
+
+No `homeKpis` de `CrmPipeline.tsx`, sempre filtrar por `ACTIVE_STAGES` antes de calcular pipeline/forecast/ticket — independente de Kanban ou Lista. Os deals fechados continuam visíveis no Kanban (são colunas válidas) mas não entram nas métricas de "pipeline futuro".
+
+### 4. Ticket médio = média da implementação
+
+Trocar `pipeline / nº deals com valor` por `Σ implementação / nº deals abertos com implementação > 0`. Mais alinhado com como você pensa ("o ticket de uma proposta").
+
+### 5. Parar de sobrescrever `estimated_value` com TCV
+
+Em `CrmPipeline.tsx:347` e `CrmDealDetail.tsx:746`, remover a linha que faz `estimated_value = implementation + mrr*12`. O campo `estimated_value` passa a ser só um valor manual opcional (legado). Os KPIs leem direto de `estimated_implementation_value` e `estimated_mrr_value`, que já existem e estão corretos no banco.
+
+Vou rodar uma migração one-shot para zerar `estimated_value` em deals onde o valor atual seja exatamente `estimated_implementation_value + estimated_mrr_value*12` (evita resíduo desse cálculo antigo poluindo qualquer outra view).
+
+### 6. Layout do strip
 
 ```text
-┌─ PROP-0006  ● Convertida           TOTAL R$ 4.000  MRR 600  ⋯ ┐
-│  Sunbright Engenharia                                          │
-│  ✓ Aceita 02/05/26  📅 Validade 01/06/26                       │
-│  [PDF] [Página pública]            [Editor completo →]         │
-└────────────────────────────────────────────────────────────────┘
+┌──────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+│ PIPELINE     │ MRR PIPELINE │ FORECAST     │ TICKET MÉDIO │ PRÓXIMO PASSO│
+│ R$ 0         │ R$ 0/mês     │ R$ 0 + 0/mês │ R$ 0         │ ATRASADO: 0  │
+│ 0 deals      │              │ ponderado    │ por deal     │              │
+└──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
 ```
 
-**Menu ⋯ por card:**
-- **Abrir** (editor completo) — atalho do clique no card
-- **Duplicar como nova versão** (usa `useDuplicateProposal`, vincula ao mesmo deal)
-- **Copiar link público** (copia `buildPublicProposalUrl(...)` pro clipboard)
-- **Baixar PDF** (signed URL via `openProposalPdf`)
-- ─────────
-- **Marcar como enviada** (só se `rascunho`)
-- **Marcar como aceita** (só se `enviada`) → grava `accepted_at`
-- **Marcar como recusada** (só se `enviada`) → grava `rejected_at`
-- ─────────
-- **Excluir proposta** (vermelho) — usa `useDeleteProposal` (soft delete via `deleted_at`), pede confirmação com `useConfirm`
+Em desktop largo viram 5 cards; em mobile colapsam para 2 colunas como hoje.
 
-## 2. Botão "+ Nova proposta" no header da seção
+---
 
-Substitui/complementa o atual "Abrir deal de origem":
+## Arquivos afetados
 
-- Quando há deal vinculado: dispara `createProposalFromDeal(sourceDealId, true)` direto (já trata conflito de proposta ativa abrindo o diálogo padrão "Já existe proposta…").
-- Quando o projeto não tem deal: o botão abre uma nota explicando que propostas sem deal precisam ser criadas em `/financeiro/orcamentos/novo` (mantém o link).
+- `src/components/crm/CrmKpiStrip.tsx` — novo card MRR, forecast separado
+- `src/pages/crm/CrmPipeline.tsx` — `homeKpis` usa implementação/MRR e sempre filtra fechados; remove sobrescrita de `estimated_value`
+- `src/pages/crm/CrmDealDetail.tsx` — remove sobrescrita de `estimated_value`
+- `src/types/crm.ts` (`CrmMetrics`) — adicionar `mrr_pipeline_brl` se a view CRM for usada
+- Migração SQL — limpar `estimated_value` legado e atualizar a view `crm_pipeline_metrics` para expor MRR separado
 
-## 3. Clique no card = abrir editor
+## Resultado esperado para você agora
 
-`onClick` no card todo navega pra `/financeiro/orcamentos/:id/editar`. O menu ⋯ usa `e.stopPropagation()` igual ao padrão de `OrcamentoTabela`.
+Com 1 deal ganho (Sunbright) e 1 deal aberto sem valor (Del Fiori):
+- Pipeline: **R$ 0** (1 deal aberto sem valor)
+- MRR Pipeline: **R$ 0/mês**
+- Forecast: **R$ 0**
+- Ticket médio: **R$ 0**
+- Próximo passo atrasado: **0**
 
-## 4. Cache cross-módulo
-
-Adicionar `["project_proposals", projectId]` ao `invalidateProjectCaches` em `src/lib/cacheInvalidation.ts`. Os hooks `useDeleteProposal` / `useDuplicateProposal` / `useUpdateProposal` já invalidam `["proposals"]`, mas como nossa chave é própria, precisamos garantir que o card recarregue.
-
-Em todas as ações disparadas daqui, chamar:
-```ts
-invalidateProposalCaches(qc, { proposalId, dealId: sourceDealId, projectId });
-```
-
-## 5. Confirmações e feedback
-
-Seguindo o padrão do projeto:
-- `useConfirm()` pra excluir (variant destructive) e pra marcar recusada.
-- `toast.success` / `toast.error` do `sonner` em cada ação.
-- Estado `loading` por linha durante a mutação (botão menu vira spinner).
-
-## 6. Mobile
-
-O menu ⋯ resolve responsividade: no desktop mostra os botões PDF/Página pública inline + ⋯; no mobile (< 640px) os botões inline somem e só fica o ⋯ (que vira um dropdown nativo do shadcn — já é touch-friendly).
-
-## Arquivos editados
-
-- `src/components/projetos/AbaPropostas.tsx` — adicionar `DropdownMenu`, mutações, botão "Nova proposta", click handler.
-- `src/lib/cacheInvalidation.ts` — incluir `["project_proposals", projectId]`.
-
-**Sem migration.** Tudo já existe no schema (`deleted_at` em `proposals`, hooks `useDeleteProposal`/`useDuplicateProposal`/`useUpdateProposal` em `useUpdateProposal.ts`, `createProposalFromDeal` em `lib/orcamentos/`).
+Quando você precificar o Del Fiori com 4k + 600/mês, vai aparecer corretamente como `Pipeline R$ 4.000`, `MRR R$ 600/mês`, sem inflar nada.
