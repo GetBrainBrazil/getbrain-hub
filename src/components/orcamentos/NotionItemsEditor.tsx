@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -204,11 +204,10 @@ function SortableItem({
 
           {expanded && (
             <div className="pl-1 pr-1 pb-1 pt-0.5 space-y-1.5">
-              <Textarea
+              <AutoGrowTextarea
                 value={item.description || ""}
-                onChange={(e) => onChange({ description: e.target.value })}
+                onChange={(val) => onChange({ description: val })}
                 placeholder="Bullets curtos, um por linha…"
-                className="min-h-[60px] border-0 bg-transparent px-1 text-sm shadow-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring resize-none"
               />
               {showValue && item.value > 0 && (
                 <div className="px-1 text-[10px] text-success/80 tabular-nums">
@@ -246,5 +245,38 @@ function SortableItem({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Textarea que cresce automaticamente conforme o conteúdo, sem scroll interno.
+ */
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={2}
+      className="w-full min-h-[40px] border-0 bg-transparent px-1 py-1 text-sm shadow-none resize-none overflow-hidden outline-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring rounded-md placeholder:text-muted-foreground"
+    />
   );
 }
