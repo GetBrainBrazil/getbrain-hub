@@ -186,7 +186,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
     const data = detail.data;
     if (!data) return;
     isInitialLoad.current = true;
-    setState({
+    const hydratedState: ProposalFormState = {
       title: (data as any).title || "",
       clientName: data.client_company_name || "",
       clientCity: data.client_city || "",
@@ -232,9 +232,11 @@ export function useProposalEditorState(proposalId: string | undefined) {
       investmentLayout: ((data as any).investment_layout as any) || "total_first",
       showInvestmentBreakdown:
         (data as any).show_investment_breakdown ?? true,
-    });
-    setDirty(false);
-    setItemsDirty(false);
+    };
+    const localDraft = readLocalDraft(data.id, data.updated_at);
+    setState(localDraft?.state ?? hydratedState);
+    setDirty(!!localDraft);
+    setItemsDirty(!!localDraft?.itemsDirty);
     setLastSavedAt(data.updated_at ? new Date(data.updated_at) : null);
     // libera o autosave após o ciclo de hidratação
     setTimeout(() => {
@@ -249,6 +251,11 @@ export function useProposalEditorState(proposalId: string | undefined) {
     if (itemsDirty) return;
     setState((s) => ({ ...s, scopeItems: canonicalToScopeItems(rows as any) }));
   }, [itemsQuery.data, itemsDirty]);
+
+  useEffect(() => {
+    if (isInitialLoad.current || !dirty || !proposalId) return;
+    writeLocalDraft(proposalId, state, itemsDirty);
+  }, [dirty, itemsDirty, proposalId, state]);
 
   // Setter genérico — útil pra binding direto em inputs sem boilerplate.
   const setField = useCallback(
