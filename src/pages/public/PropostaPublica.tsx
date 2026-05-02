@@ -25,9 +25,10 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ABOUT_GETBRAIN_PARAGRAPHS } from "@/content/about-getbrain";
 import ProposalChatBubble from "@/components/orcamentos/ProposalChatBubble";
 import { GETBRAIN_INFO, whatsappUrl as buildWhatsappUrl } from "@/lib/getbrain-info";
+import { DEFAULT_PAGE_SETTINGS, mergeWithDefaults, type PublicPageSettings } from "@/lib/publicPageDefaults";
+import { getIcon } from "@/lib/iconMap";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
