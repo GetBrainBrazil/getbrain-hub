@@ -10,6 +10,7 @@
  */
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
   Loader2,
@@ -26,11 +27,25 @@ import {
   ArrowUpRight,
   FolderArchive,
   Layers,
+  MoreVertical,
+  Copy as CopyIcon,
+  Send,
+  Check,
+  X as XIcon,
+  Trash2,
+  Plus,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   useProjectProposals,
@@ -45,6 +60,14 @@ import {
 } from "@/lib/orcamentos/calculateTotal";
 import { openProposalPdf } from "@/lib/orcamentos/storage";
 import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
+import {
+  useUpdateProposal,
+  useDeleteProposal,
+  useDuplicateProposal,
+} from "@/hooks/orcamentos/useUpdateProposal";
+import { createProposalFromDeal } from "@/lib/orcamentos/createProposalFromDeal";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { invalidateProposalCaches } from "@/lib/cacheInvalidation";
 
 interface Props {
   projectId: string;
