@@ -1503,3 +1503,96 @@ function CronogramaEditorial({
     </div>
   );
 }
+
+function RoadmapTimeline({
+  roadmap,
+  loading,
+  brand,
+}: {
+  roadmap: PublicProposal["public_roadmap"];
+  loading: boolean;
+  brand: string;
+}) {
+  if (loading && !roadmap) {
+    return (
+      <div className="reveal space-y-6">
+        <div className="flex items-center gap-2 text-[10px] font-mono-display uppercase tracking-[0.3em] text-brand mb-2">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Organizando o roadmap com IA...
+        </div>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-32 rounded-2xl bg-white/5 border border-white/10 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (!roadmap || !roadmap.phases || roadmap.phases.length === 0) {
+    return (
+      <div className="reveal text-white/55 text-sm font-light">
+        Roadmap detalhado é construído junto com você na primeira semana.
+      </div>
+    );
+  }
+
+  return (
+    <div className="reveal space-y-3">
+      <div className="flex items-center gap-2 text-[10px] font-mono-display uppercase tracking-[0.3em] text-brand mb-6">
+        <Sparkles className="h-3 w-3" />
+        Roadmap priorizado · primeira entrega o quanto antes
+      </div>
+      <ol className="relative space-y-4">
+        {/* linha vertical */}
+        <div
+          className="absolute left-[18px] top-3 bottom-3 w-px"
+          style={{ background: `linear-gradient(to bottom, ${brand}, ${brand}22)` }}
+        />
+        {roadmap.phases.map((phase) => (
+          <li key={phase.number} className="relative pl-14">
+            <div
+              className="absolute left-0 top-2 h-9 w-9 rounded-full flex items-center justify-center font-mono-display text-xs font-bold text-slate-900 shadow-lg"
+              style={{ background: brand }}
+            >
+              {String(phase.number).padStart(2, "0")}
+            </div>
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 hover:border-white/25 transition-colors">
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 mb-3">
+                <h3 className="font-editorial-display text-2xl sm:text-3xl text-white font-light leading-tight">
+                  {phase.title}
+                </h3>
+                <span className="text-[10px] font-mono-display uppercase tracking-[0.25em] text-brand whitespace-nowrap">
+                  ~ {phase.duration_days} dias
+                </span>
+              </div>
+              <p className="text-white/75 leading-relaxed text-base mb-4 font-light">
+                <span className="text-[10px] font-mono-display uppercase tracking-[0.25em] text-white/45 mr-2">
+                  Resultado:
+                </span>
+                {phase.outcome}
+              </p>
+              {phase.deliverables?.length > 0 && (
+                <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 mt-3">
+                  {phase.deliverables.map((d, i) => (
+                    <li
+                      key={i}
+                      className="flex items-baseline gap-2 text-sm text-white/65"
+                    >
+                      <CheckCircle2
+                        className="h-3.5 w-3.5 flex-shrink-0 mt-0.5"
+                        style={{ color: brand }}
+                      />
+                      <span className="font-light">{d}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
