@@ -43,10 +43,10 @@ const routeNames: Record<string, string> = {
   "/projetos": "Projetos",
   "/clientes": "Clientes",
   "/perfil": "Meu Perfil",
-  "/admin/usuarios": "Admin › Usuários",
-  "/admin/permissoes": "Admin › Permissões",
-  "/admin/agencia": "Admin › Agência",
-  "/admin/logs": "Admin › Logs",
+  "/configuracoes": "Configurações",
+  "/configuracoes/sistema/usuarios": "Configurações › Usuários",
+  "/configuracoes/sistema/permissoes": "Configurações › Permissões",
+  "/configuracoes/sistema/auditoria": "Configurações › Auditoria",
 };
 
 export function TopBar() {
@@ -79,12 +79,12 @@ export function TopBar() {
       .then(({ data }) => setProfile(data ?? null));
   }, [user?.id]);
 
-  // dynamic breadcrumb (handles /admin/usuarios/:id, etc.)
+  // dynamic breadcrumb
   const path = location.pathname;
   const breadcrumb =
     routeNames[path] ||
-    (path.startsWith("/admin/usuarios/") ? "Admin › Usuário" :
-     path.startsWith("/admin") ? "Admin" : "Página");
+    (path.startsWith("/admin/usuarios/") ? "Configurações › Usuário" :
+     path.startsWith("/configuracoes") ? "Configurações" : "Página");
 
   const initials = (profile?.full_name || user?.email || "GB").substring(0, 2).toUpperCase();
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Usuário";
@@ -153,8 +153,8 @@ export function TopBar() {
             <UserIcon className="h-4 w-4 mr-2" /> Meu Perfil
           </DropdownMenuItem>
           {isAdmin && (
-            <DropdownMenuItem onClick={() => navigate("/admin/usuarios")}>
-              <Shield className="h-4 w-4 mr-2" /> Admin
+            <DropdownMenuItem onClick={() => navigate("/configuracoes")}>
+              <Shield className="h-4 w-4 mr-2" /> Configurações
             </DropdownMenuItem>
           )}
           {isAdmin && (
