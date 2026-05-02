@@ -90,6 +90,67 @@ const EMPTY_STATE: ProposalFormState = {
   showInvestmentBreakdown: true,
 };
 
+const DRAFT_VERSION = 1;
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type ProposalEditorDraft = {
+  version: number;
+  proposalId: string;
+  updatedAt: number;
+  state: ProposalFormState;
+  itemsDirty: boolean;
+};
+
+function draftKey(proposalId: string) {
+  return `proposal-editor-draft:${proposalId}`;
+}
+
+function readLocalDraft(proposalId: string, dbUpdatedAt?: string | null): ProposalEditorDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(draftKey(proposalId));
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as ProposalEditorDraft;
+    const dbTime = dbUpdatedAt ? new Date(dbUpdatedAt).getTime() : 0;
+    const expired = !draft.updatedAt || Date.now() - draft.updatedAt > DRAFT_TTL_MS;
+    const stale = dbTime > 0 && draft.updatedAt <= dbTime;
+    if (draft.version !== DRAFT_VERSION || draft.proposalId !== proposalId || expired || stale) {
+      window.localStorage.removeItem(draftKey(proposalId));
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalDraft(proposalId: string, state: ProposalFormState, itemsDirty: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      draftKey(proposalId),
+      JSON.stringify({
+        version: DRAFT_VERSION,
+        proposalId,
+        updatedAt: Date.now(),
+        state,
+        itemsDirty,
+      } satisfies ProposalEditorDraft),
+    );
+  } catch {
+    // Sem espaço/permissão no navegador: o autosave em banco continua funcionando.
+  }
+}
+
+function clearLocalDraft(proposalId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(draftKey(proposalId));
+  } catch {
+    // noop
+  }
+}
+
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
 function canonicalToScopeItems(
   rows: Array<{
