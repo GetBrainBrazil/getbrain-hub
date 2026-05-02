@@ -274,13 +274,9 @@ export default function OrcamentoEditarDetalhe() {
     }
   }
 
-  async function handleSave() {
-    try {
-      await save();
-    } catch {
-      // toast vem do hook
-    }
-  }
+  // (handleSave removido — autosave debounced + flush em pagehide tornam o
+  // botão manual redundante. O status é exibido na ProposalActionBar via
+  // SaveStatusIndicator.)
 
   async function handleDelete() {
     const ok = await confirm({
@@ -424,6 +420,7 @@ export default function OrcamentoEditarDetalhe() {
         status={eff}
         isDirty={dirty}
         isSaving={isSaving}
+        lastSavedAt={lastSavedAt}
         isGeneratingPdf={genPdf.isPending}
         hasPublicLink={hasPublicLink}
         onDelete={handleDelete}
@@ -431,7 +428,6 @@ export default function OrcamentoEditarDetalhe() {
         onPreviewAsClient={handlePreviewAsClient}
         onDownloadPdf={handleDownloadPdf}
         onOpenWhatsApp={handleOpenWhatsApp}
-        onSave={handleSave}
         onSendOrResend={handleOpenSendDialog}
       />
 
