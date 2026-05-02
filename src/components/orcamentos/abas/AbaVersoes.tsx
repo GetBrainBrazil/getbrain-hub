@@ -77,6 +77,21 @@ export function AbaVersoes({ proposalId }: Props) {
 
   return (
     <>
+      <div className="flex justify-end mb-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleRegenerate}
+          disabled={regen.isPending || !proposal}
+        >
+          {regen.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+          Regenerar PDF
+        </Button>
+      </div>
       <div className="space-y-2">
         {data.map((v, i) => {
           const isCurrent = i === 0;
@@ -139,6 +154,7 @@ export function AbaVersoes({ proposalId }: Props) {
         meta={snapshotMeta}
         onClose={() => setViewSnapshot(null)}
       />
+      {confirmDialog}
     </>
   );
 }
