@@ -404,15 +404,20 @@ const SECTIONS = [
 
 function ProposalView({
   proposal,
+  pageSettings,
   onDownloadPdf,
   isPreview,
   accessJwt,
 }: {
   proposal: PublicProposal;
+  pageSettings: PublicPageSettings;
   onDownloadPdf: () => void;
   isPreview: boolean;
   accessJwt: string | null;
 }) {
+  const s = pageSettings;
+  const wppNumber = s.contact_whatsapp || GETBRAIN_INFO.whatsapp;
+  const contactDisplayName = s.contact_display_name || "Daniel";
   const brand = proposal.client_brand_color || DEFAULT_BRAND;
   const itemsTotal = useMemo(
     () => proposal.items.reduce((acc, it) => acc + Number(it.total ?? 0), 0),
