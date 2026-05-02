@@ -10,6 +10,7 @@
  */
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
   Loader2,
@@ -26,11 +27,25 @@ import {
   ArrowUpRight,
   FolderArchive,
   Layers,
+  MoreVertical,
+  Copy as CopyIcon,
+  Send,
+  Check,
+  X as XIcon,
+  Trash2,
+  Plus,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   useProjectProposals,
@@ -45,6 +60,14 @@ import {
 } from "@/lib/orcamentos/calculateTotal";
 import { openProposalPdf } from "@/lib/orcamentos/storage";
 import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
+import {
+  useUpdateProposal,
+  useDeleteProposal,
+  useDuplicateProposal,
+} from "@/hooks/orcamentos/useUpdateProposal";
+import { createProposalFromDeal } from "@/lib/orcamentos/createProposalFromDeal";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { invalidateProposalCaches } from "@/lib/cacheInvalidation";
 
 interface Props {
   projectId: string;
@@ -121,11 +144,26 @@ function MetaPill({
 function ProposalCard({
   proposal,
   isActive,
+  busy,
+  onOpen,
+  onDuplicate,
+  onCopyLink,
+  onMarkSent,
+  onMarkAccepted,
+  onMarkRejected,
+  onDelete,
 }: {
   proposal: ProjectProposalRow;
   isActive: boolean;
+  busy: boolean;
+  onOpen: () => void;
+  onDuplicate: () => void;
+  onCopyLink: () => void;
+  onMarkSent: () => void;
+  onMarkAccepted: () => void;
+  onMarkRejected: () => void;
+  onDelete: () => void;
 }) {
-  const navigate = useNavigate();
   const [openingPdf, setOpeningPdf] = useState(false);
 
   const total = calculateScopeTotal(proposal.scope_items ?? []);
@@ -133,7 +171,8 @@ function ProposalCard({
   const monthly = proposal.maintenance_monthly_value ?? 0;
   const publicUrl = buildPublicProposalUrl(proposal.access_token);
 
-  async function handleOpenPdf() {
+  async function handleOpenPdf(e: React.MouseEvent) {
+    e.stopPropagation();
     if (!proposal.pdf_url) return;
     setOpeningPdf(true);
     try {
@@ -145,13 +184,24 @@ function ProposalCard({
     }
   }
 
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       className={cn(
-        "relative rounded-lg border bg-card/40 transition-colors",
+        "group relative cursor-pointer rounded-lg border bg-card/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
         isActive
           ? "border-accent/60 ring-1 ring-accent/20"
-          : "border-border/70 hover:border-border",
+          : "border-border/70 hover:border-accent/40",
       )}
     >
       {isActive && (
@@ -188,6 +238,75 @@ function ProposalCard({
               </span>
             </div>
           )}
+
+          {/* Menu ⋯ */}
+          <div onClick={stop}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  disabled={busy}
+                  aria-label="Ações da proposta"
+                >
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MoreVertical className="h-4 w-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={onOpen}>
+                  <Pencil className="h-4 w-4" /> Abrir editor
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDuplicate}>
+                  <CopyIcon className="h-4 w-4" /> Duplicar como nova versão
+                </DropdownMenuItem>
+                {publicUrl && (
+                  <DropdownMenuItem onClick={onCopyLink}>
+                    <Link2 className="h-4 w-4" /> Copiar link público
+                  </DropdownMenuItem>
+                )}
+                {proposal.pdf_url && (
+                  <DropdownMenuItem onClick={handleOpenPdf}>
+                    <Download className="h-4 w-4" /> Baixar PDF
+                  </DropdownMenuItem>
+                )}
+
+                {(proposal.status === "rascunho" ||
+                  proposal.status === "enviada") && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {proposal.status === "rascunho" && (
+                      <DropdownMenuItem onClick={onMarkSent}>
+                        <Send className="h-4 w-4" /> Marcar como enviada
+                      </DropdownMenuItem>
+                    )}
+                    {proposal.status === "enviada" && (
+                      <>
+                        <DropdownMenuItem onClick={onMarkAccepted}>
+                          <Check className="h-4 w-4 text-success" /> Marcar como aceita
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={onMarkRejected}>
+                          <XIcon className="h-4 w-4 text-destructive" /> Marcar como recusada
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </>
+                )}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-4 w-4" /> Excluir proposta
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -243,8 +362,8 @@ function ProposalCard({
           )}
         </div>
 
-        {/* Ações */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+        {/* Ações inline (desktop) — duplicam atalhos do menu */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3" onClick={stop}>
           <Button
             size="sm"
             variant="outline"
@@ -262,7 +381,7 @@ function ProposalCard({
 
           {publicUrl && (
             <Button size="sm" variant="outline" asChild>
-              <a href={publicUrl} target="_blank" rel="noreferrer">
+              <a href={publicUrl} target="_blank" rel="noreferrer" onClick={stop}>
                 <Globe className="h-3.5 w-3.5" /> Página pública
               </a>
             </Button>
@@ -272,7 +391,10 @@ function ProposalCard({
             size="sm"
             variant="ghost"
             className="ml-auto"
-            onClick={() => navigate(`/financeiro/orcamentos/${proposal.id}/editar`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
           >
             <Pencil className="h-3.5 w-3.5" /> Editor completo
             <ArrowUpRight className="h-3 w-3 opacity-60" />
@@ -289,6 +411,158 @@ function ProposalCard({
 
 export function AbaPropostas({ projectId }: Props) {
   const { data, isLoading, isError, error } = useProjectProposals(projectId);
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const updateMut = useUpdateProposal();
+  const deleteMut = useDeleteProposal();
+  const dupMut = useDuplicateProposal();
+  const { confirm, dialog: confirmDialog } = useConfirm();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const sourceDealId = data?.sourceDealId ?? null;
+  const sourceDealCode = data?.sourceDealCode ?? null;
+
+  function invalidate(proposalId?: string | null) {
+    invalidateProposalCaches(qc, {
+      proposalId: proposalId ?? null,
+      dealId: sourceDealId,
+      projectId,
+    });
+  }
+
+  async function handleCreateNew() {
+    if (!sourceDealId) {
+      window.open("/financeiro/orcamentos", "_blank");
+      return;
+    }
+    setCreating(true);
+    try {
+      const result = await createProposalFromDeal(sourceDealId, false);
+      if ("conflict" in result && result.conflict) {
+        const force = await confirm({
+          title: "Já existe proposta ativa pra este deal",
+          description:
+            (result.message ||
+              `Existe a proposta ${result.existingProposalCode}.`) +
+            " Deseja gerar uma nova versão mesmo assim?",
+          confirmLabel: "Gerar nova versão",
+          variant: "default",
+        });
+        if (!force) {
+          if (result.existingProposalId) {
+            navigate(`/financeiro/orcamentos/${result.existingProposalId}/editar`);
+          }
+          return;
+        }
+        const retry = await createProposalFromDeal(sourceDealId, true);
+        if ("conflict" in retry && retry.conflict) {
+          toast.error("Não foi possível criar nova versão");
+          return;
+        }
+        const created = retry as Exclude<typeof retry, { conflict: true }>;
+        invalidate(created.proposalId);
+        toast.success(`Proposta ${created.proposalCode} criada`);
+        navigate(`/financeiro/orcamentos/${created.proposalId}/editar`);
+        return;
+      }
+      const created = result as Exclude<typeof result, { conflict: true }>;
+      invalidate(created.proposalId);
+      toast.success(`Proposta ${created.proposalCode} criada`);
+      navigate(`/financeiro/orcamentos/${created.proposalId}/editar`);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao gerar proposta");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleDuplicate(p: ProjectProposalRow) {
+    setBusyId(p.id);
+    try {
+      const newId = await dupMut.mutateAsync(p.id);
+      invalidate(newId);
+      toast.success("Proposta duplicada como rascunho");
+      navigate(`/financeiro/orcamentos/${newId}/editar`);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao duplicar");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleCopyLink(p: ProjectProposalRow) {
+    const url = buildPublicProposalUrl(p.access_token);
+    if (!url) {
+      toast.error("Esta proposta ainda não tem link público");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("Não foi possível copiar — copie manualmente");
+    }
+  }
+
+  async function handleMarkStatus(
+    p: ProjectProposalRow,
+    next: "enviada" | "aceita" | "recusada",
+  ) {
+    if (next === "recusada") {
+      const ok = await confirm({
+        title: "Marcar proposta como recusada?",
+        description: `A proposta ${p.code} será marcada como recusada pelo cliente.`,
+        confirmLabel: "Marcar recusada",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
+    setBusyId(p.id);
+    const nowIso = new Date().toISOString();
+    const payload: Record<string, any> = { status: next };
+    if (next === "enviada") payload.sent_at = nowIso;
+    if (next === "aceita") payload.accepted_at = nowIso;
+    if (next === "recusada") payload.rejected_at = nowIso;
+    try {
+      await updateMut.mutateAsync({ id: p.id, payload });
+      invalidate(p.id);
+      toast.success(
+        next === "enviada"
+          ? "Marcada como enviada"
+          : next === "aceita"
+            ? "Marcada como aceita"
+            : "Marcada como recusada",
+      );
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao atualizar status");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(p: ProjectProposalRow) {
+    const ok = await confirm({
+      title: `Excluir a proposta ${p.code}?`,
+      description:
+        p.status === "rascunho"
+          ? "Como ainda é rascunho, será removida da listagem. A ação pode ser revertida no banco."
+          : "Esta proposta já foi enviada. Excluir vai removê-la do CRM e do controle financeiro.",
+      confirmLabel: "Excluir",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setBusyId(p.id);
+    try {
+      await deleteMut.mutateAsync(p.id);
+      invalidate(p.id);
+      toast.success(`Proposta ${p.code} excluída`);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao excluir");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -307,7 +581,7 @@ export function AbaPropostas({ projectId }: Props) {
   }
 
   const payload = data!;
-  const { proposals, sourceDealId, sourceDealCode } = payload;
+  const { proposals } = payload;
 
   // Versão ativa = primeira não-recusada (lista já vem ordenada desc por data)
   const activeIdx = proposals.findIndex((p) => p.status !== "recusada");
@@ -315,6 +589,7 @@ export function AbaPropostas({ projectId }: Props) {
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       {/* === BLOCO 1 — Propostas comerciais === */}
       <CardShell
         title="Propostas comerciais"
@@ -325,16 +600,35 @@ export function AbaPropostas({ projectId }: Props) {
         }
         icon={Layers}
         action={
-          sourceDealId && (
-            <Button size="sm" variant="outline" asChild>
-              <Link to={`/crm/deals/${sourceDealCode ?? sourceDealId}`}>
-                <ExternalLink className="h-3.5 w-3.5" /> Abrir deal de origem
-              </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {sourceDealId && (
+              <Button size="sm" variant="ghost" asChild>
+                <Link to={`/crm/deals/${sourceDealCode ?? sourceDealId}`}>
+                  <ExternalLink className="h-3.5 w-3.5" /> Abrir deal
+                </Link>
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={handleCreateNew}
+              disabled={creating}
+              title={
+                sourceDealId
+                  ? "Gerar nova versão a partir do deal"
+                  : "Sem deal vinculado — abrir orçamentos"
+              }
+            >
+              {creating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" />
+              )}
+              Nova proposta
             </Button>
-          )
+          </div>
         }
       >
-        {!sourceDealId ? (
+        {!sourceDealId && !hasProposals ? (
           <EmptyState
             icon={Sparkles}
             title="Projeto criado manualmente"
@@ -353,19 +647,36 @@ export function AbaPropostas({ projectId }: Props) {
           <EmptyState
             icon={FileText}
             title="Sem proposta vinculada"
-            description={`O deal ${sourceDealCode ?? "de origem"} ainda não tem proposta gerada. Volte ao deal pra criar a primeira versão.`}
+            description={`O deal ${sourceDealCode ?? "de origem"} ainda não tem proposta gerada. Use "Nova proposta" pra criar a primeira versão.`}
             action={
-              <Button size="sm" asChild>
-                <Link to={`/crm/deals/${sourceDealCode ?? sourceDealId}`}>
-                  <Sparkles className="h-3.5 w-3.5" /> Ir pro deal e gerar
-                </Link>
+              <Button size="sm" onClick={handleCreateNew} disabled={creating}>
+                {creating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                Gerar primeira proposta
               </Button>
             }
           />
         ) : (
           <div className="space-y-3">
             {proposals.map((p, i) => (
-              <ProposalCard key={p.id} proposal={p} isActive={i === activeIdx} />
+              <ProposalCard
+                key={p.id}
+                proposal={p}
+                isActive={i === activeIdx}
+                busy={busyId === p.id}
+                onOpen={() =>
+                  navigate(`/financeiro/orcamentos/${p.id}/editar`)
+                }
+                onDuplicate={() => handleDuplicate(p)}
+                onCopyLink={() => handleCopyLink(p)}
+                onMarkSent={() => handleMarkStatus(p, "enviada")}
+                onMarkAccepted={() => handleMarkStatus(p, "aceita")}
+                onMarkRejected={() => handleMarkStatus(p, "recusada")}
+                onDelete={() => handleDelete(p)}
+              />
             ))}
           </div>
         )}
