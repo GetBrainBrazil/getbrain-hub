@@ -421,6 +421,16 @@ function ProposalView({
   const [interestSent, setInterestSent] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [scrolled, setScrolled] = useState(false);
+
+  // Carta IA + Roadmap IA
+  const [openingLetter, setOpeningLetter] = useState<string | null>(
+    proposal.public_opening_letter,
+  );
+  const [letterLoading, setLetterLoading] = useState(false);
+  const [roadmap, setRoadmap] = useState<PublicProposal["public_roadmap"]>(
+    proposal.public_roadmap,
+  );
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
   const sessionToken = useMemo(
     () => getOrCreateSessionToken(proposal.code),
     [proposal.code],
