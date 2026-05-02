@@ -1,85 +1,71 @@
-## Objetivo
+## Diagnóstico
 
-Adicionar um botão **"Gerar com IA"** no card **"Módulos inclusos"** (TabEscopo) que, com um clique, gera uma descrição curta e prática para cada módulo da lista — usando o contexto do escopo do CRM (deal vinculado) + o título do módulo.
+As descrições foram geradas pela IA e **estão salvas** em `proposals.scope_items` (JSONB) — confirmei no banco para a proposta `f49118d7…`: todos os 7 módulos têm o texto completo gravado.
 
-## Como vai funcionar (UX)
+O problema é que a UI lê os itens da **tabela canônica** `proposal_items` via `useProposalItems`, e o adapter `canonicalToScopeItems` em `src/components/orcamentos/page/useProposalEditorState.ts:89-97` sempre retorna `description: ""`. Sequência do bug:
 
-No header do card "Módulos inclusos", ao lado do toggle "Exibir valor por módulo", aparece um novo botão `Sparkles · Gerar descrições com IA`.
+1. IA gera → `setItems(updated)` atualiza estado local com descrições, marca `itemsDirty=true`.
+2. Após 1,5s o autosave salva o JSONB (com descrições) E reescreve `proposal_items`, mas só com `description=title`, `unit_price=value` — a descrição longa é descartada.
+3. `setItemsDirty(false)` libera o efeito da linha 172 que re-hidrata `scopeItems` a partir da tabela canônica → todas as descrições viram `""` na UI.
+4. Resultado: ao recarregar (ou após autosave), os módulos voltam ao placeholder "Bullets curtos…".
 
-- **Sem módulos na lista:** botão desabilitado, tooltip "Adicione módulos primeiro".
-- **Sem deal vinculado:** habilitado, mas avisa no modal de confirmação que vai gerar de forma genérica.
-- **Ao clicar:** modal de confirmação mostrando:
-  - Quantidade de módulos que serão processados.
-  - Custo estimado (preço por item × N).
-  - Aviso "Vai sobrescrever descrições existentes" + checkbox "Pular módulos que já têm descrição" (default: marcado, mais seguro).
-- **Ao confirmar:** chama a edge function uma única vez (modo batch), recebe uma descrição por módulo, atualiza `state.scopeItems[i].description` para cada item, autosave dispara normalmente.
-- **Loading:** botão vira `Loader2 · Claude está escrevendo… (3/7)` com contador.
-- **Sucesso:** toast "7 descrições geradas. Revise antes de enviar." Itens ficam expandidos automaticamente para o usuário ver o que foi escrito.
-- **Falha parcial:** se algum item der erro, gera os demais e mostra toast "5 de 7 descrições geradas. 2 falharam — tente novamente."
+## Solução
 
-## Arquitetura técnica
+Tornar a tabela `proposal_items` a fonte de verdade também para a descrição longa do módulo, e usá-la nos dois lados (write + read).
 
-### 1. Edge function `generate-proposal-content` — novo modo `item_descriptions_batch`
+### 1. Migração: adicionar coluna `long_description` em `proposal_items`
 
-Adicionar um novo `generation_type`:
-- `item_descriptions_batch` — gera descrição de **todos** os módulos do escopo de uma vez, em uma única chamada ao gateway.
-- Recebe opcional `item_indices?: number[]` no body para gerar só de alguns (usado quando "pular existentes" está marcado).
-- Recebe opcional `scope_titles: string[]` no body — porque os módulos do escopo (`state.scopeItems`) vivem no campo `proposals.scope_items` (JSON), **não** em `proposal_items`. Isso é importante: a função hoje lê `proposal_items` (tabela), mas os módulos exibidos no editor são `scope_items` no JSON.
-- Prompt instrui retornar JSON: `{ "descriptions": [{ "index": 0, "text": "..." }, ...] }`.
-- Cada descrição: 2-3 frases, prática, sem inventar funcionalidade, baseada em `deal.scope_summary`, `deal.deliverables`, `deal.business_context` e `deal.pain_description`.
-- Aplica os mesmos filtros de output (`filterAiOutput`) por descrição.
-- Persiste **uma** linha em `proposal_ai_generations` agregando custo total.
-- Retorna `{ content: { descriptions: [{index, text}] }, was_filtered, ... }`.
-
-### 2. `src/lib/orcamentos/generateContent.ts`
-
-Adicionar tipo e helper:
-```ts
-export type GenerationType = ... | "item_descriptions_batch";
-
-export async function generateItemDescriptionsBatch(params: {
-  proposalId: string;
-  scopeTitles: string[];
-  itemIndices?: number[];
-}): Promise<{ descriptions: Array<{index: number; text: string}>; was_filtered: boolean; filter_reasons: string[]; }>
+```sql
+ALTER TABLE public.proposal_items
+  ADD COLUMN IF NOT EXISTS long_description text;
 ```
-Atualizar `estimateGenerationCostBrl` para aceitar `(type, itemCount?)` retornando `~R$ 0.03 × N` para o batch.
 
-### 3. Novo componente `GerarDescricoesIaButton.tsx`
+Backfill a partir do JSONB existente, casando por `order_index`:
 
-Em `src/components/orcamentos/`, recebe:
-- `proposalId`
-- `items: ScopeItem[]`
-- `hasDealLink: boolean`
-- `onDescriptionsGenerated(updatedItems: ScopeItem[])`
+```sql
+UPDATE public.proposal_items pi
+SET long_description = (p.scope_items -> pi.order_index ->> 'description')
+FROM public.proposals p
+WHERE pi.proposal_id = p.id
+  AND p.scope_items IS NOT NULL
+  AND jsonb_typeof(p.scope_items) = 'array'
+  AND (p.scope_items -> pi.order_index ->> 'description') IS NOT NULL
+  AND (pi.long_description IS NULL OR pi.long_description = '');
+```
 
-Renderiza o botão + Dialog de confirmação + estado de loading. Reusa o visual do `GerarComIaDropdown` existente para consistência.
+### 2. Adapter de leitura (`useProposalEditorState.ts`)
 
-### 4. `TabEscopo.tsx` — integração
+- Atualizar `canonicalToScopeItems` para receber também `long_description` e devolver `description: r.long_description ?? ""`.
+- Atualizar a tipagem das `rows` no useEffect (linha 172) para incluir o novo campo.
 
-- Importa `GerarDescricoesIaButton`.
-- Recebe novas props já disponíveis no editor state: `proposalId` e `dealClientLink` (para saber se há deal vinculado).
-- Renderiza o botão no header do card "Módulos inclusos", à esquerda do toggle de valor.
-- Callback `onDescriptionsGenerated` chama `setItems(novaLista)` — mesmo fluxo de autosave que já existe.
+### 3. Adapter de escrita (`save()`, linhas 253-264)
 
-### 5. `OrcamentoEditarDetalhe.tsx` — passar props
+Incluir `long_description: it.description || null` no payload do `replaceItems.mutateAsync`.
 
-Já passa `state` para TabEscopo; só adicionar `proposalId={proposalId}` e `hasDealLink={Boolean(state.dealClientLink)}` ao componente.
+### 4. Hook `useReplaceProposalItems` / serviço de items
 
-### 6. Audit log
+Em `src/lib/orcamentos/proposalItemsService.ts` (ou onde estiver `useReplaceProposalItems`/`useProposalItems`):
+- Estender o tipo de item aceito para `long_description?: string | null`.
+- Garantir que o `select` em `useProposalItems` traga a nova coluna (`select('*')` já cobre, mas conferir se há lista explícita).
+- Garantir que o `insert` durante o replace inclua `long_description`.
 
-A própria edge function já registra em `audit_logs` com `action: "ai_content_generated"` e `metadata.generation_type`. Sem mudanças extras.
+### 5. `createProposalFromDeal.ts`
 
-## Fora do escopo
+Quando a proposta é criada a partir de um deal e a IA gera o escopo inicial, propagar a descrição inicial (se existir) também para `long_description` ao popular `proposal_items`.
 
-- Não toca em `proposal_items` (tabela legada usada pelo PDF antigo).
-- Não muda o dropdown `GerarComIaDropdown` existente (continua para conteúdos textuais como resumo executivo).
-- Sem regenerar descrições item-a-item via UI (batch resolve o caso real). O endpoint singular `item_description` continua funcionando como está.
+### 6. PDF / preview público
+
+Verificar `buildPreviewProposal` (já usa `state.scopeItems`, então OK) e os componentes de preview/PDF que iteram `scope_items` — eles já leem o campo `description` do JSONB, então continuam funcionando. Como o JSONB também é gravado no save, não muda nada para o preview.
 
 ## Arquivos afetados
 
-- `supabase/functions/generate-proposal-content/index.ts` (edita)
-- `src/lib/orcamentos/generateContent.ts` (edita)
-- `src/components/orcamentos/GerarDescricoesIaButton.tsx` (novo)
-- `src/components/orcamentos/page/tabs/TabEscopo.tsx` (edita)
-- `src/pages/financeiro/OrcamentoEditarDetalhe.tsx` (edita — passar props)
+- `supabase/migrations/<timestamp>_proposal_items_long_description.sql` (novo)
+- `src/components/orcamentos/page/useProposalEditorState.ts` (adapter read+write)
+- `src/lib/orcamentos/proposalItemsService.ts` (ou arquivo equivalente do hook — confirmar no início da implementação)
+- `src/lib/orcamentos/createProposalFromDeal.ts` (propagar descrição inicial)
+- `src/integrations/supabase/types.ts` é regenerado automaticamente
+
+## Resultado esperado
+
+- Após gerar com IA: descrições aparecem expandidas (auto-expand já funciona) E **persistem** após autosave/reload.
+- A proposta `f49118d7…` que você acabou de gerar já tem o texto no JSONB; o backfill da migração vai copiá-lo para a coluna nova, então as descrições aparecerão automaticamente assim que a página recarregar — sem precisar gerar de novo.
