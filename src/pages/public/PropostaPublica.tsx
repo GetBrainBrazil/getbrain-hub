@@ -181,6 +181,7 @@ export default function PropostaPublica() {
   const [pwdInput, setPwdInput] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [expiredOn, setExpiredOn] = useState<string | null>(null);
+  const [restoringSession, setRestoringSession] = useState<boolean>(() => !previewJwt && !!token);
   const isPreview = !!previewJwt;
 
   useEffect(() => {
