@@ -254,33 +254,6 @@ export default function Orcamentos() {
 
       <NovoOrcamentoModal open={novoOpen} onOpenChange={setNovoOpen} />
       {confirmDialog}
-      {/* Render off-screen template for PDF generation */}
-      {pdfRow && (
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            pointerEvents: "none",
-          }}
-        >
-          <ProposalPDFTemplate
-            domId={`pdf-list-${pdfRow.id}`}
-            proposal={{
-              client_company_name: pdfRow.client_company_name,
-              client_logo_url: pdfRow.client_logo_url,
-              scope_items: pdfRow.scope_items || [],
-              maintenance_monthly_value: pdfRow.maintenance_monthly_value,
-              maintenance_description: pdfRow.maintenance_description ?? null,
-              implementation_days: pdfRow.implementation_days ?? 30,
-              validation_days: pdfRow.validation_days ?? 7,
-              considerations: pdfRow.considerations || [],
-              valid_until: pdfRow.valid_until,
-              template_key: pdfRow.template_key,
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }
