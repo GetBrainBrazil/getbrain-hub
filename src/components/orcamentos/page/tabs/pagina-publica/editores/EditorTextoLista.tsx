@@ -1,11 +1,17 @@
 /**
  * Editor de lista de strings (parágrafos). Cada item é uma textarea com
- * controles de remover/reordenar. Autosave on blur (chama onChange com
- * o array completo). Suporta adicionar item.
+ * controles de remover/reordenar acessíveis via kebab no canto. Autosave on blur.
  */
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ArrowDown, ArrowUp, MoreVertical, Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface Props {
@@ -42,51 +48,42 @@ export function EditorTextoLista({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {local.map((item, i) => (
-        <div key={i} className="group flex gap-2 items-start">
-          <div className="flex-1">
-            <Textarea
-              value={item}
-              onChange={(e) => setAt(i, e.target.value)}
-              onBlur={() => {
-                if (item !== value[i]) commit(local);
-              }}
-              placeholder={placeholder}
-              rows={rows}
-              className="text-sm resize-y"
-            />
-          </div>
-          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6"
-              onClick={() => move(i, -1)}
-              disabled={i === 0}
-              title="Mover para cima"
-            >
-              <ArrowUp className="h-3 w-3" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6"
-              onClick={() => move(i, 1)}
-              disabled={i === local.length - 1}
-              title="Mover para baixo"
-            >
-              <ArrowDown className="h-3 w-3" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6 text-destructive hover:text-destructive"
-              onClick={() => commit(local.filter((_, idx) => idx !== i))}
-              title="Remover"
-            >
-              <X className="h-3 w-3" />
-            </Button>
+        <div key={i} className="group relative rounded-lg border border-border bg-background hover:border-border/80 transition-colors">
+          <Textarea
+            value={item}
+            onChange={(e) => setAt(i, e.target.value)}
+            onBlur={() => {
+              if (item !== value[i]) commit(local);
+            }}
+            placeholder={placeholder}
+            rows={rows}
+            className="text-sm resize-y border-0 bg-transparent focus-visible:ring-0 pr-10"
+          />
+          <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-7 w-7">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => move(i, -1)} disabled={i === 0}>
+                  <ArrowUp className="h-3.5 w-3.5 mr-2" /> Mover para cima
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => move(i, 1)} disabled={i === local.length - 1}>
+                  <ArrowDown className="h-3.5 w-3.5 mr-2" /> Mover para baixo
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => commit(local.filter((_, idx) => idx !== i))}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Remover
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       ))}
@@ -94,7 +91,7 @@ export function EditorTextoLista({
         variant="outline"
         size="sm"
         onClick={() => commit([...local, ""])}
-        className="h-8"
+        className="h-9 w-full border-dashed text-muted-foreground hover:text-foreground"
       >
         <Plus className="h-3.5 w-3.5 mr-1.5" />
         {addLabel}
