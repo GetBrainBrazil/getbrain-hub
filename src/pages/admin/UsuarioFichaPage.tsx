@@ -18,6 +18,7 @@ import { UserHeaderCard } from "@/components/admin/UserHeaderCard";
 import { DangerZoneCard } from "@/components/admin/DangerZoneCard";
 import { NovoContratoDialog } from "@/components/admin/NovoContratoDialog";
 import { lookupCep } from "@/lib/cep";
+import { formatPhoneBR } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { logAction } from "@/hooks/useLogAction";
 
@@ -202,7 +203,7 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Celular</Label>
-                <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" disabled={!canEdit} />
+                <Input value={telefone} onChange={e => setTelefone(formatPhoneBR(e.target.value))} placeholder="(11) 99999-9999" inputMode="tel" disabled={!canEdit} />
               </div>
             </div>
             <div>
@@ -286,7 +287,7 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Telefone</Label>
-                <Input value={emerTel} onChange={e => setEmerTel(e.target.value)} placeholder="(11) 99999-9999" disabled={!canEdit} />
+                <Input value={emerTel} onChange={e => setEmerTel(formatPhoneBR(e.target.value))} placeholder="(11) 99999-9999" inputMode="tel" disabled={!canEdit} />
               </div>
             </div>
             <div className="border-t pt-5">
