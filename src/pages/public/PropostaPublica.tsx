@@ -281,6 +281,7 @@ export default function PropostaPublica() {
       return;
     }
     const jwt = data.access_jwt as string;
+    const expiresIn = Number(data.expires_in) || 12 * 60 * 60;
     setAccessJwt(jwt);
     const r = await callEdge("get-proposal-public-data", {}, jwt);
     if (!r.ok) {
@@ -289,6 +290,7 @@ export default function PropostaPublica() {
       setLoading(false);
       return;
     }
+    if (token) saveStoredAccess(token, jwt, expiresIn);
     setProposal(r.data.proposal as PublicProposal);
     setPageSettings(mergeWithDefaults(r.data.page_settings));
     setPwdInput("");
@@ -303,6 +305,7 @@ export default function PropostaPublica() {
         toast.error("PDF ainda não disponível. Solicite ao Daniel pelo WhatsApp.");
       } else if (data?.error === "unauthorized") {
         toast.error("Sessão expirada. Digite a senha novamente.");
+        if (token) clearStoredAccess(token);
         setAccessJwt(null);
         setProposal(null);
       } else {
@@ -317,6 +320,16 @@ export default function PropostaPublica() {
   }
 
   if (!proposal) {
+    if (restoringSession) {
+      return (
+        <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-white/70">
+            <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+            <span className="text-sm">Carregando proposta…</span>
+          </div>
+        </div>
+      );
+    }
     return (
       <PasswordGate
         loading={loading}
