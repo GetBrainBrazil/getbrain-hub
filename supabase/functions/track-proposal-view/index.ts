@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
 
     const { data: prop } = await admin
       .from("proposals")
-      .select("id, organization_id, status")
+      .select("id, organization_id, status, code, deal_id, client_name, client_company_name")
       .eq("id", proposalId)
       .maybeSingle();
     if (!prop) return json({ error: "proposal_not_found" }, 404);
@@ -136,6 +136,39 @@ Deno.serve(async (req) => {
           .from("proposals")
           .update({ status: "interesse_manifestado" })
           .eq("id", proposalId);
+      }
+
+      // Mover deal vinculado para "Com Interesse" + criar activity
+      if (prop.deal_id) {
+        const { data: dealRow } = await admin
+          .from("deals")
+          .select("id, stage")
+          .eq("id", prop.deal_id)
+          .maybeSingle();
+        if (dealRow) {
+          // Só move se ainda está em estágios "abertos" (não ganho/perdido)
+          const movableStages = ["proposta_na_mesa", "ajustando", "gelado", "descobrindo", "descoberta_marcada"];
+          if (movableStages.includes(dealRow.stage)) {
+            await admin
+              .from("deals")
+              .update({
+                stage: "com_interesse",
+                stage_changed_at: new Date().toISOString(),
+                probability_pct: 85,
+              })
+              .eq("id", prop.deal_id);
+          }
+          const clientLabel = prop.client_name || prop.client_company_name || "Cliente";
+          await admin.from("deal_activities").insert({
+            organization_id: prop.organization_id,
+            deal_id: prop.deal_id,
+            type: "outro",
+            title: `${clientLabel} manifestou interesse na proposta ${prop.code}`,
+            description:
+              `Cliente clicou em "Quero avançar" na página pública da proposta ${prop.code}.`,
+            happened_at: new Date().toISOString(),
+          }).then(() => {}).catch((e) => console.error("activity insert", e));
+        }
       }
     }
 
