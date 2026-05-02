@@ -204,11 +204,10 @@ function SortableItem({
 
           {expanded && (
             <div className="pl-1 pr-1 pb-1 pt-0.5 space-y-1.5">
-              <Textarea
+              <AutoGrowTextarea
                 value={item.description || ""}
-                onChange={(e) => onChange({ description: e.target.value })}
+                onChange={(val) => onChange({ description: val })}
                 placeholder="Bullets curtos, um por linha…"
-                className="min-h-[60px] border-0 bg-transparent px-1 text-sm shadow-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring resize-none"
               />
               {showValue && item.value > 0 && (
                 <div className="px-1 text-[10px] text-success/80 tabular-nums">
