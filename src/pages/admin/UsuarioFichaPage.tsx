@@ -59,6 +59,8 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
   // senha
   const [senha1, setSenha1] = useState("");
   const [senha2, setSenha2] = useState("");
+  const [cepLoading, setCepLoading] = useState(false);
+  const lastLookedUpCep = useRef<string | null>(null);
 
   useEffect(() => {
     if (ficha) {
@@ -66,7 +68,8 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
       setEmail(ficha.email ?? "");
       setTelefone(ficha.telefone ?? "");
       setCargoId(ficha.cargo_id ?? "");
-      setCep(ficha.cep ?? "");
+      setCep(formatCEP(ficha.cep ?? ""));
+      lastLookedUpCep.current = (ficha.cep ?? "").replace(/\D/g, "") || null;
       setPais(ficha.pais ?? "Brasil");
       setEndereco(ficha.endereco ?? "");
       setNumero(ficha.numero ?? "");
@@ -80,15 +83,34 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
     }
   }, [ficha]);
 
-  async function handleCepBlur() {
-    const r = await lookupCep(cep);
-    if (r) {
-      setEndereco(r.logradouro || endereco);
-      setBairro(r.bairro || bairro);
-      setCidade(r.localidade || cidade);
-      setEstado(r.uf || estado);
-    }
-  }
+  // Auto-lookup do CEP: dispara quando atinge 8 dígitos e sobrescreve campos.
+  useEffect(() => {
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    if (lastLookedUpCep.current === digits) return;
+    const t = setTimeout(async () => {
+      setCepLoading(true);
+      try {
+        const r = await lookupCep(digits);
+        if (!r) {
+          toast.error("CEP não encontrado");
+          return;
+        }
+        lastLookedUpCep.current = digits;
+        setEndereco(r.logradouro ?? "");
+        setBairro(r.bairro ?? "");
+        setCidade(r.localidade ?? "");
+        setEstado(formatUF(r.uf ?? ""));
+        setPais("Brasil");
+        toast.success("Endereço preenchido pelo CEP");
+      } catch {
+        toast.error("Falha ao buscar CEP");
+      } finally {
+        setCepLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [cep]);
 
   async function saveDados() {
     if (!userId) return;
