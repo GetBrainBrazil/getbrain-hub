@@ -10,11 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
-import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
 import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
 import { PreviewPdfDialog } from "@/components/orcamentos/PreviewPdfDialog";
+import { LivePdfPreview } from "@/components/orcamentos/LivePdfPreview";
 import { useProposalItems, useReplaceProposalItems } from "@/hooks/orcamentos/useProposalItems";
-import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
@@ -44,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { listTemplates } from "@/lib/orcamentos/templates";
 
-const PDF_DOM_ID = "proposal-pdf-template-live";
+
 
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
 function canonicalToScopeItems(
