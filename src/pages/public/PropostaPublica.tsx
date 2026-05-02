@@ -909,12 +909,14 @@ function ProposalView({
               ) : null}
             </div>
             <div className="reveal mt-12 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white">
-                D
-              </div>
+              <AuthorAvatar author={proposal.author} size={48} className="shadow-md" />
               <div>
-                <div className="text-sm font-medium text-slate-900">Daniel</div>
-                <div className="text-xs text-muted-ink">Fundador · GetBrain</div>
+                <div className="text-sm font-medium text-slate-900">
+                  {proposal.author?.name?.split(/\s+/)[0] ?? "Daniel"}
+                </div>
+                <div className="text-xs text-muted-ink">
+                  {proposal.author?.role_label ?? "Fundador · GetBrain"}
+                </div>
               </div>
             </div>
           </div>
