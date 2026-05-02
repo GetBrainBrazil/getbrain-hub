@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye, Activity, FileText } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, Loader2, KeyRound, Link2, Eye, Activity, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,7 +86,7 @@ export default function OrcamentoEditarDetalhe() {
   const [painContext, setPainContext] = useState("");
   const [solutionOverview, setSolutionOverview] = useState("");
   const [clientBrandColor, setClientBrandColor] = useState<string>("");
-  const [zoom, setZoom] = useState(0.5);
+  
   const [dirty, setDirty] = useState(false);
   const [itemsDirty, setItemsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
