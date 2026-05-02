@@ -64,7 +64,6 @@ export default function OrcamentoEditarDetalhe() {
   const { data: itemsRows } = useProposalItems(id);
   const replaceItems = useReplaceProposalItems();
   const update = useUpdateProposal();
-  const gen = useGeneratePDF();
   const genV2 = useGenerateProposalPDF();
   const [previewPdfOpen, setPreviewPdfOpen] = useState(false);
 
@@ -835,51 +834,23 @@ export default function OrcamentoEditarDetalhe() {
           </div>
         </div>
 
-        {/* Preview (right) */}
-        <div className="overflow-y-auto bg-muted/30 p-4">
-          <div className="sticky top-0 z-10 mb-3 flex items-center justify-between bg-muted/30 backdrop-blur py-2">
+        {/* Preview (right) — PDF React-PDF ao vivo */}
+        <div className="bg-muted/30 p-4 flex flex-col">
+          <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Pré-visualização (3 páginas A4)
+              Pré-visualização ao vivo
             </span>
-            <div className="flex items-center gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => setZoom((z) => Math.max(0.3, +(z - 0.1).toFixed(2)))}
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </Button>
-              <span className="text-xs tabular-nums w-12 text-center">
-                {Math.round(zoom * 100)}%
-              </span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => setZoom((z) => Math.min(1, +(z + 0.1).toFixed(2)))}
-              >
-                <ZoomIn className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            <span className="text-[10px] text-muted-foreground">
+              Atualiza 500ms após cada edição
+            </span>
           </div>
-
-          <div
-            style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: "top center",
-              width: "210mm",
-              margin: "0 auto",
-            }}
-            className="shadow-2xl"
-          >
-            <ProposalPDFTemplate
-              domId={PDF_DOM_ID}
-              proposal={previewProposal}
+          <div className="flex-1 min-h-[600px]">
+            <LivePdfPreview
+              proposal={{ ...data, ...buildPreviewProposal() }}
+              templateKey={templateKey}
+              proposalKey={JSON.stringify(buildPreviewProposal())}
             />
           </div>
-          {/* Spacer para o scroll alcançar o final mesmo escalado */}
-          <div style={{ height: `${297 * 3 * zoom}mm` }} aria-hidden />
         </div>
       </div>
       {confirmDialog}
