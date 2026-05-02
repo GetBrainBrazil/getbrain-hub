@@ -78,6 +78,16 @@ export interface PDFTemplateProps {
   data: ProposalDataForTemplate;
   /** Versão do template no momento da geração — gravada no proposal_versions. */
   templateVersion: string;
-  /** URL pública pra QR code (preparada pro 10D-2). */
+  /** URL pública pra QR code. */
   proposalAccessUrl: string;
+  /**
+   * Se `"draft"` aplica watermark "RASCUNHO" diagonal em todas as páginas.
+   * Setado quando o status da proposta é `rascunho` ou `recusada`.
+   */
+  watermark?: "draft" | null;
+  /**
+   * Data URL (PNG) do QR code apontando pra `proposalAccessUrl`.
+   * Renderizado na contracapa e/ou no rodapé da capa.
+   */
+  qrCodeDataUrl?: string | null;
 }
