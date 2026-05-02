@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
         investment_layout: (prop as any).investment_layout ?? "total_first",
         show_investment_breakdown: (prop as any).show_investment_breakdown ?? true,
         items: items ?? [],
+        author,
       },
       page_settings: pageSettings ?? null,
     });
