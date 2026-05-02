@@ -1,60 +1,50 @@
-## Padronizar trilha da proposta + linkar criação CRM ↔ Financeiro
+## Objetivo
 
-Três pontos a resolver:
+Quando o cliente digita a senha da proposta uma vez, ele não precisa digitar de novo por **12 horas**, mesmo se atualizar a página, fechar e reabrir a aba ou voltar via histórico — desde que continue no mesmo navegador/dispositivo.
 
-### 1. Por que tem "duas Sunbright"?
+## Como vai funcionar (visão do cliente)
 
-Confirmado no banco: as duas (`PROP-0005` e `PROP-0006`) **estão sim ligadas** ao mesmo deal `DEAL-988`. Isto é, **elas já aparecem hoje** dentro da aba Proposta do card no CRM (a query usa `where deal_id = deal.id`). A "duplicação" é dado real — alguém clicou em **"Criar proposta a partir do deal"** mais de uma vez (via diálogo de conflito) ou criou uma direto no `/financeiro/orcamentos` apontando para o mesmo deal. **Não é bug de visibilidade.**
+1. Cliente abre o link da proposta → digita a senha.
+2. A página guarda um "passe" seguro no próprio navegador, válido por 12 horas.
+3. Nas próximas 12 h, ao reabrir o link, a proposta aparece direto, sem tela de senha.
+4. Após 12 h (ou se a proposta expirar / for desativada / a senha mudar), volta a pedir a senha.
+5. Se o passe for inválido ou rejeitado pelo servidor, a tela de senha aparece sem mensagem de erro (transparente).
 
-> Se você quiser de fato ter só uma, basta excluir a antiga (PROP-0005) — faço isso depois se confirmar.
+## Mudanças técnicas
 
-### 2. Trilha do kanban (board) ≠ trilha do card (stage pipeline)
+### 1. Edge function `verify-proposal-access`
+- Aumentar `JWT_TTL_SECONDS` de `15 * 60` (15 min) para `12 * 60 * 60` (12 h).
+- Continuar incluindo `proposal_id` + `exp` no payload (sem outras mudanças de claim).
+- Manter rate limit e auditoria como estão.
 
-Hoje:
+### 2. Edge function nova / leve: aproveitar `get-proposal-public-data`
+- Não precisa de função nova. Já valida o JWT internamente. Vamos usar a própria chamada de "carregar dados" como verificação de passe.
 
-- **Kanban em `/financeiro/orcamentos`** mostra 5 colunas: `Rascunho · Enviada · Convertida · Recusada · Expirada`.
-- **Pipeline dentro do card** (`ProposalStagePipeline`) mostra 7: `Rascunho → Enviada → Visualizada → Com interesse | Convertida · Recusada` (mais o aviso de Expirada quando aplicável).
+### 3. `src/pages/public/PropostaPublica.tsx`
+- Criar helpers locais `loadStoredAccess(token)` / `saveStoredAccess(token, jwt, expSeconds)` / `clearStoredAccess(token)` usando `localStorage` com chave por token: `proposal_access:<token>`.
+  - Valor armazenado: `{ jwt, expiresAt }` (epoch ms).
+  - Antes de usar, comparar `expiresAt > Date.now()`; senão limpar.
+- Novo `useEffect` no mount (quando não é preview e há `token`):
+  1. Ler passe salvo. Se válido, setar `accessJwt` e chamar `get-proposal-public-data` com ele.
+  2. Se a chamada retornar 401/403 ou falhar, limpar o passe e cair na tela de senha sem mostrar erro.
+  3. Se retornar OK, popular `proposal` + `pageSettings` direto, pulando a senha.
+- Em `handleLogin`, após receber `access_jwt` com sucesso, salvar via `saveStoredAccess(token, jwt, data.expires_in)`.
+- Em `handleDownloadPdf`, quando o servidor responder `unauthorized`, além de zerar o estado, chamar `clearStoredAccess(token)` para forçar nova senha.
+- Adicionar pequeno spinner de "Carregando proposta…" enquanto a restauração inicial roda, para o cliente não ver flash da tela de senha.
 
-Pelo seu pedido, vou **alinhar os dois** assim:
+### 4. Comportamento em preview
+- Preview interno (`?preview=...`) continua funcionando como hoje, sem tocar no `localStorage` (já é fluxo separado do JWT do cliente).
 
-- Adicionar duas colunas ao kanban entre "Enviada" e "Convertida":
-  - **Visualizada** (`status = visualizada`)
-  - **Com interesse** (`status = interesse_manifestado`)
-- Manter a coluna **Expirada** só como "derivada" (não aceita drop manual — o sistema marca pela data).
-- **Resultado**: o board fica `Rascunho · Enviada · Visualizada · Com interesse · Convertida · Recusada · Expirada`, idêntico à trilha do card.
+### 5. Segurança
+- O JWT é específico da proposta (claim `proposal_id`) e é validado server-side em todas as chamadas → mesmo que copiado, só serve para aquela proposta e expira em 12 h.
+- Trocar a senha da proposta no editor invalida automaticamente os passes antigos (servidor recusa o JWT antigo? Não diretamente — ele só checa assinatura/exp). Para forçar invalidação ao trocar a senha, a edge function que regenera senha já zera o `access_token`? Conferir; se não, isso fica fora do escopo desta tarefa e o passe expira naturalmente em 12 h.
+- Nenhum dado sensível vai pro `localStorage` além do próprio JWT (que o cliente já recebe).
 
-Implementação técnica:
+### Arquivos tocados
+- `supabase/functions/verify-proposal-access/index.ts` — TTL para 12 h.
+- `src/pages/public/PropostaPublica.tsx` — restauração de sessão + persistência do JWT.
 
-- `src/components/orcamentos/OrcamentoKanban.tsx`
-  - Estender o tipo `ColumnId` com `visualizada` e `interesse_manifestado`.
-  - Atualizar o reducer `columns = { rascunho, enviada, visualizada, interesse_manifestado, convertida, recusada, expirada }` e o agrupamento.
-  - Renderizar as duas colunas novas (com `accentClass` neutro / accent da marca).
-  - Atualizar o `LABEL` map.
-- `src/hooks/orcamentos/useUpdateProposal.ts` ou validador equivalente — garantir que o drag aceite os novos valores (`canMoveTo`).
-- `src/components/orcamentos/OrcamentoStatusBadge.tsx` — já cobre os 7 estados, sem mudança.
-- KPIs do topo (`useProposalKPIs`) seguem agregando os mesmos status, sem mudança.
-
-### 3. Sincronização real CRM ↔ Financeiro
-
-Já está tecnicamente sincronizado (mesma tabela `proposals`, ligada por `deal_id`). O que **falta** é a recíproca: ao criar uma proposta direto em `/financeiro/orcamentos`, hoje **não há campo para vincular ao deal**, então ela nasce com `deal_id = null` (ex.: PROP-0001 da "Equipe Certa").
-
-Vou adicionar:
-
-- **No diálogo "Nova proposta" (`/financeiro/orcamentos`)**: campo opcional **"Vincular ao deal do CRM"** com combobox que busca deals abertos (mesmo padrão do `ComboboxCreate`/`Combobox` já usado em outras telas). Mostra `code · company · stage`. Sem deal selecionado, segue criando avulsa como hoje.
-- Quando o deal é escolhido, pre-popula `client_company_name` e demais campos do CNPJ a partir do `deals → companies` (mesmo lookup já usado por `createProposalFromDeal`).
-- **Na aba Proposta do deal (CRM)**: já lista corretamente — sem mudança.
-- **Indicador de "deal vinculado" no card do kanban**: pequeno chip `DEAL-XXX` clicável (vai pra `/crm/deals/{id}`), reaproveitando o relacionamento `deal:deals!proposals_deal_id_fkey` que `useProposals` já traz.
-
-Arquivos:
-
-- `src/components/orcamentos/NovaPropostaDialog.tsx` (ou nome equivalente — confirmar pelo `Orcamentos.tsx`) — adicionar combobox de deals.
-- `src/hooks/crm/useDealsLookup.ts` (novo) — query enxuta `select id, code, title, stage, company:companies(name)` filtrando deals não-fechados.
-- `src/components/orcamentos/OrcamentoKanbanCard.tsx` — chip `DEAL-XXX` no header do card.
-
-### Fora de escopo
-
-- Mudar o destino do drop "Expirada" (continua sendo derivado por data).
-- Mover múltiplas propostas em massa.
-- Auto-merge de propostas duplicadas para o mesmo deal — preciso de UX explícita pra isso (você confirma qual fica).
-
-Aprova que eu siga?
+## O que NÃO entra
+- Não muda nada no editor interno nem nas tabs.
+- Não mexe em rate limiting, auditoria, fluxo de PDF ou tracking.
+- Não cria tabela nova nem migration.
