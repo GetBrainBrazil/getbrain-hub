@@ -251,11 +251,13 @@ export function TabResumo({
       {/* Bloco do link público */}
       <PublicLinkBlock
         accessToken={(proposal as any).access_token || null}
+        accessPassword={(proposal as any).access_password_plain || null}
         validUntilLabel={validityChip}
         interactionsCount={interactionsCount}
         onPreviewAsClient={onPreviewAsClient}
         onCopyLink={onCopyLink}
         onProtectedAction={(label) => handleProtectedAction(label)}
+        onOpenPasswordDialog={onOpenPasswordDialog}
       />
 
       {/* Ações secundárias */}
