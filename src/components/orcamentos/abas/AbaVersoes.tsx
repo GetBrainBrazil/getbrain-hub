@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, FileSearch, Loader2 } from "lucide-react";
+import { Download, FileSearch, Loader2, RefreshCw } from "lucide-react";
 import { useProposalVersions } from "@/hooks/orcamentos/useProposalVersions";
+import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
+import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
 import { SnapshotViewerDialog } from "../SnapshotViewerDialog";
 import { openProposalPdf } from "@/lib/orcamentos/storage";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface Props {
   proposalId: string;
@@ -13,11 +16,35 @@ interface Props {
 
 export function AbaVersoes({ proposalId }: Props) {
   const { data, isLoading } = useProposalVersions(proposalId);
+  const { data: proposal } = useProposalDetail(proposalId);
+  const regen = useGenerateProposalPDF();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const [viewSnapshot, setViewSnapshot] = useState<Record<string, any> | null>(
     null
   );
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [snapshotMeta, setSnapshotMeta] = useState<string>("");
+
+  async function handleRegenerate() {
+    if (!proposal) {
+      toast.error("Proposta ainda carregando");
+      return;
+    }
+    const ok = await confirm({
+      title: "Regenerar PDF?",
+      description:
+        "Cria uma nova versão do PDF usando o conteúdo atual da proposta. As versões anteriores são preservadas.",
+      confirmLabel: "Regenerar",
+    });
+    if (!ok) return;
+    regen.mutate({
+      proposalId,
+      proposal,
+      templateKey: (proposal as any).template_key,
+      isRegeneration: true,
+      triggerDownload: false,
+    });
+  }
 
   async function handleDownload(versionId: string, path: string) {
     setDownloadingId(versionId);
@@ -41,15 +68,44 @@ export function AbaVersoes({ proposalId }: Props) {
 
   if (!data || data.length === 0) {
     return (
-      <Card className="p-6 text-center text-sm text-muted-foreground border-dashed">
-        Nenhum PDF gerado ainda. Vá pro editor e clique em "PDF" pra gerar a
-        primeira versão.
-      </Card>
+      <>
+        <Card className="p-6 text-center text-sm text-muted-foreground border-dashed space-y-3">
+          <p>Nenhum PDF gerado ainda.</p>
+          <Button
+            size="sm"
+            onClick={handleRegenerate}
+            disabled={regen.isPending || !proposal}
+          >
+            {regen.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Gerar primeira versão
+          </Button>
+        </Card>
+        {confirmDialog}
+      </>
     );
   }
 
   return (
     <>
+      <div className="flex justify-end mb-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleRegenerate}
+          disabled={regen.isPending || !proposal}
+        >
+          {regen.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+          Regenerar PDF
+        </Button>
+      </div>
       <div className="space-y-2">
         {data.map((v, i) => {
           const isCurrent = i === 0;
@@ -112,6 +168,7 @@ export function AbaVersoes({ proposalId }: Props) {
         meta={snapshotMeta}
         onClose={() => setViewSnapshot(null)}
       />
+      {confirmDialog}
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye, Activity } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye, Activity, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
+import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
+import { PreviewPdfDialog } from "@/components/orcamentos/PreviewPdfDialog";
 import { useProposalItems, useReplaceProposalItems } from "@/hooks/orcamentos/useProposalItems";
 import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
@@ -64,6 +66,8 @@ export default function OrcamentoEditarDetalhe() {
   const replaceItems = useReplaceProposalItems();
   const update = useUpdateProposal();
   const gen = useGeneratePDF();
+  const genV2 = useGenerateProposalPDF();
+  const [previewPdfOpen, setPreviewPdfOpen] = useState(false);
 
   // Local form state — edits are batched until "Salvar" or auto-save on blur
   const [title, setTitle] = useState("");
@@ -297,26 +301,44 @@ export default function OrcamentoEditarDetalhe() {
   async function handleDownload() {
     if (dirty) await save();
     if (!data || !id) return;
-    gen.mutate({
+    // Novo fluxo (10D-1): React-PDF + storage + register-proposal-pdf-version edge.
+    genV2.mutate({
       proposalId: id,
-      code: data.code,
-      clientName: clientName || data.client_company_name,
-      elementId: PDF_DOM_ID,
-      snapshot: {
-        client_company_name: clientName,
-        client_logo_url: clientLogoUrl,
-        client_city: clientCity,
-        scope_items: scopeItems,
-        maintenance_monthly_value:
-          typeof maintenance === "number" && maintenance > 0 ? maintenance : null,
-        maintenance_description: maintenanceDesc || null,
-        implementation_days: implementationDays,
-        validation_days: validationDays,
-        considerations,
-        valid_until: validUntil,
-        template_key: templateKey,
-      },
+      proposal: { ...data, ...buildPreviewProposal() },
+      templateKey: templateKey,
+      isRegeneration: false,
+      triggerDownload: true,
     });
+  }
+
+  /**
+   * Monta a versão "ao vivo" da proposta usando o estado local do editor,
+   * pra preview e geração refletirem alterações ainda não salvas.
+   */
+  function buildPreviewProposal() {
+    return {
+      id,
+      code: data?.code,
+      title,
+      client_company_name: clientName,
+      client_logo_url: clientLogoUrl,
+      client_city: clientCity,
+      client_brand_color: clientBrandColor,
+      welcome_message: welcomeMessage,
+      executive_summary: executiveSummary,
+      pain_context: painContext,
+      solution_overview: solutionOverview,
+      scope_items: scopeItems,
+      maintenance_monthly_value:
+        typeof maintenance === "number" && maintenance > 0 ? maintenance : null,
+      maintenance_description: maintenanceDesc || null,
+      implementation_days: implementationDays,
+      validation_days: validationDays,
+      considerations,
+      valid_until: validUntil,
+      mockup_url: mockupUrl,
+      template_key: templateKey,
+    };
   }
 
   if (isLoading) {
@@ -448,8 +470,18 @@ export default function OrcamentoEditarDetalhe() {
             <Save className="h-3.5 w-3.5" />
             {update.isPending ? "Salvando…" : "Salvar"}
           </Button>
-          <Button size="sm" variant="outline" onClick={handleDownload} disabled={gen.isPending}>
-            {gen.isPending ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPreviewPdfOpen(true)}
+            disabled={genV2.isPending}
+            title="Renderiza o PDF sem criar versão"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Pré-visualizar PDF
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleDownload} disabled={genV2.isPending}>
+            {genV2.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Download className="h-3.5 w-3.5" />
@@ -852,6 +884,12 @@ export default function OrcamentoEditarDetalhe() {
         </div>
       </div>
       {confirmDialog}
+      <PreviewPdfDialog
+        open={previewPdfOpen}
+        onOpenChange={setPreviewPdfOpen}
+        proposal={{ ...data, ...buildPreviewProposal() }}
+        templateKey={templateKey}
+      />
 
       {/* Modal: gerar e enviar (define senha + valida data + tela de sucesso) */}
       <GerarEEnviarDialog
