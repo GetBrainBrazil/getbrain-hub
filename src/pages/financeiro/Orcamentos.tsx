@@ -66,22 +66,6 @@ export default function Orcamentos() {
     data,
   ]);
 
-  function buildSnapshot(row: any) {
-    return {
-      client_company_name: row.client_company_name,
-      client_logo_url: row.client_logo_url,
-      client_city: row.client_city,
-      scope_items: row.scope_items,
-      maintenance_monthly_value: row.maintenance_monthly_value,
-      maintenance_description: row.maintenance_description ?? null,
-      implementation_days: row.implementation_days ?? 30,
-      validation_days: row.validation_days ?? 7,
-      considerations: row.considerations || [],
-      valid_until: row.valid_until,
-      template_key: row.template_key || "inovacao_tecnologica",
-    };
-  }
-
   async function handleAction(row: any, action: string) {
     if (action === "edit") {
       navigate(`/financeiro/orcamentos/${row.id}/editar`);
