@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
 import { setProposalPassword } from "@/lib/orcamentos/proposalPassword";
 import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
