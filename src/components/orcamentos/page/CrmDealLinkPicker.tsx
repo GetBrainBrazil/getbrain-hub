@@ -536,7 +536,6 @@ function ImportDealDialog({
  */
 function parseScopeItems(deal: DealRow): ScopeItem[] {
   const items: ScopeItem[] = [];
-  const totalValue = Number(deal.estimated_implementation_value || deal.estimated_value || 0);
 
   // 1) scope_bullets (jsonb)
   if (Array.isArray(deal.scope_bullets) && deal.scope_bullets.length > 0) {
