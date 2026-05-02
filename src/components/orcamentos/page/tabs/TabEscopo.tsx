@@ -202,6 +202,91 @@ export function TabEscopo({
           onChange={(v) => setField("considerations", v)}
         />
       </Card>
+
+      {/* ─────────── Narrativa (antes em "Conteúdo IA") ─────────── */}
+      <div className="pt-4 border-t border-border/40">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Narrativa da proposta</h2>
+            <p className="text-[11px] text-muted-foreground">
+              Textos exibidos na página pública e no PDF. Opcional — preencha o que fizer sentido.
+            </p>
+          </div>
+          <GerarComIaDropdown
+            proposalId={proposalId}
+            hasDealLink={hasDealLink}
+            onGenerated={onAiGenerated}
+            disabled={isLocked}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Card className="p-4 space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Boas-vindas
+            </h3>
+            <Textarea
+              value={state.welcomeMessage}
+              onChange={(e) => setField("welcomeMessage", e.target.value)}
+              rows={3}
+              placeholder="Olá! Esta é a proposta preparada especialmente para…"
+              className="text-base leading-relaxed italic resize-none"
+            />
+          </Card>
+
+          <Card className="p-4 space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Resumo executivo
+            </h3>
+            <Textarea
+              value={state.executiveSummary}
+              onChange={(e) => setField("executiveSummary", e.target.value)}
+              rows={6}
+              placeholder="3-4 parágrafos descrevendo a proposta em alto nível."
+              className="text-base leading-relaxed resize-none"
+            />
+          </Card>
+
+          <Card className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Contexto e dor
+              </h3>
+              {dealPainDescription && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-[11px]"
+                  onClick={() => setField("painContext", dealPainDescription)}
+                >
+                  Importar do deal
+                </Button>
+              )}
+            </div>
+            <Textarea
+              value={state.painContext}
+              onChange={(e) => setField("painContext", e.target.value)}
+              rows={5}
+              placeholder="O que o cliente está enfrentando hoje."
+              className="text-base leading-relaxed resize-none"
+            />
+          </Card>
+
+          <Card className="p-4 space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Visão geral da solução
+            </h3>
+            <Textarea
+              value={state.solutionOverview}
+              onChange={(e) => setField("solutionOverview", e.target.value)}
+              rows={5}
+              placeholder="A solução em alto nível. Os módulos detalhados ficam em cada item do escopo."
+              className="text-base leading-relaxed resize-none"
+            />
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
