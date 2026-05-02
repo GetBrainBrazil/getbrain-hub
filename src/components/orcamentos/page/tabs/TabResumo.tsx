@@ -702,16 +702,6 @@ function PublicLinkBlock({
           <Button
             type="button"
             size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={onPreviewAsClient}
-            title="Ver como cliente"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
             variant={copied ? "default" : "outline"}
             className={cn("h-8 transition-colors", copied && "bg-success hover:bg-success text-success-foreground")}
             onClick={handleCopy}
