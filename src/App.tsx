@@ -51,6 +51,8 @@ import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
 import AdminAuditoriaPage from "./pages/admin/AdminAuditoriaPage";
 import AdminPropostasIaPage from "./pages/admin/AdminPropostasIaPage";
 import IaPropostasPage from "./pages/configuracoes/integracoes/IaPropostasPage";
+import EtapasFunilPage from "./pages/configuracoes/crm/EtapasFunilPage";
+import MotivosDescartePage from "./pages/configuracoes/crm/MotivosDescartePage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
@@ -181,6 +183,8 @@ const App = () => (
               <Route path="sistema/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
               <Route path="sistema/auditoria" element={<AdminAuditoriaPage />} />
               <Route path="integracoes/ia-propostas" element={<IaPropostasPage />} />
+              <Route path="crm/etapas" element={<EtapasFunilPage />} />
+              <Route path="crm/motivos-descarte" element={<MotivosDescartePage />} />
             </Route>
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
