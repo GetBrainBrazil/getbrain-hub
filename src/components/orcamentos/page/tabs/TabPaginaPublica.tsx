@@ -2,18 +2,19 @@
  * Tab "Página Pública" — preview ao vivo da página que o cliente vê + bloco
  * de acesso (link, senha, ver como cliente) + mockup interativo.
  *
- * Iframe estratégia: aponta pra `/p/{token}?internal_preview=1` para reutilizar
- * 100% da página pública real. Quando ainda não existe access_token (proposta
- * em rascunho), mostramos placeholder convidando a enviar.
+ * Iframe estratégia: usa `preview-proposal-as-internal` para obter um JWT
+ * curto (5min) e renderizar a página pública real em /p/{token}?preview={jwt},
+ * pulando o gate de senha. Recarrega o JWT sob demanda.
  */
-import { useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Eye, RefreshCw, Send } from "lucide-react";
+import { ExternalLink, Eye, RefreshCw, Send, Loader2, AlertTriangle } from "lucide-react";
 import { AcessoClienteCard } from "@/components/orcamentos/AcessoClienteCard";
 import type { ProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   proposal: ProposalDetail;
@@ -36,10 +37,40 @@ export function TabPaginaPublica({
   onPasswordUpdated,
 }: Props) {
   const accessToken = (proposal as any).access_token as string | null;
-  const previewSrc = useMemo(
-    () => (accessToken ? `/p/${accessToken}?internal_preview=1` : null),
-    [accessToken],
-  );
+  const [previewJwt, setPreviewJwt] = useState<string | null>(null);
+  const [loadingJwt, setLoadingJwt] = useState(false);
+  const [jwtError, setJwtError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchJwt = useCallback(async () => {
+    if (!accessToken) return;
+    setLoadingJwt(true);
+    setJwtError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "preview-proposal-as-internal",
+        { body: { proposal_id: proposal.id } },
+      );
+      if (error) throw error;
+      const jwt = (data as any)?.access_jwt as string | undefined;
+      if (!jwt) throw new Error("Falha ao gerar token de preview");
+      setPreviewJwt(jwt);
+    } catch (e: any) {
+      setJwtError(e?.message || "Falha ao gerar preview");
+    } finally {
+      setLoadingJwt(false);
+    }
+  }, [accessToken, proposal.id]);
+
+  // Busca JWT na primeira montagem da tab quando há token público.
+  useEffect(() => {
+    if (accessToken && !previewJwt) fetchJwt();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
+
+  const previewSrc = accessToken && previewJwt
+    ? `/p/${accessToken}?preview=${encodeURIComponent(previewJwt)}&_=${refreshKey}`
+    : null;
 
   return (
     <div className="space-y-4">
@@ -57,7 +88,7 @@ export function TabPaginaPublica({
           {accessToken && (
             <Button size="sm" variant="outline" onClick={onPreviewAsClient} className="h-8">
               <Eye className="h-3.5 w-3.5 mr-1.5" />
-              Ver como cliente
+              Abrir em nova aba
             </Button>
           )}
         </div>
@@ -99,37 +130,40 @@ export function TabPaginaPublica({
       {/* Preview ao vivo */}
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-3 py-2 bg-muted/30">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Pré-visualização ao vivo
             </h3>
             {accessToken && (
-              <span className="text-[10px] text-muted-foreground font-mono">
+              <span className="text-[10px] text-muted-foreground font-mono truncate">
                 /p/{accessToken.slice(0, 8)}…
               </span>
             )}
           </div>
-          {previewSrc && (
-            <div className="flex items-center gap-1">
+          {accessToken && (
+            <div className="flex items-center gap-1 shrink-0">
               <Button
                 size="sm"
                 variant="ghost"
                 className="h-7"
                 onClick={() => {
-                  const iframe = document.getElementById(
-                    "proposal-public-preview",
-                  ) as HTMLIFrameElement | null;
-                  if (iframe) iframe.src = iframe.src;
+                  fetchJwt();
+                  setRefreshKey((k) => k + 1);
                 }}
-                title="Recarregar preview"
+                disabled={loadingJwt}
+                title="Recarregar preview (renova token)"
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                {loadingJwt ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 className="h-7"
-                onClick={() => window.open(previewSrc, "_blank", "noopener,noreferrer")}
+                onClick={onPreviewAsClient}
                 title="Abrir em nova aba"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -138,16 +172,7 @@ export function TabPaginaPublica({
           )}
         </div>
 
-        {previewSrc ? (
-          <div className="bg-muted/20" style={{ height: "min(75vh, 900px)" }}>
-            <iframe
-              id="proposal-public-preview"
-              src={previewSrc}
-              className="w-full h-full border-0"
-              title="Pré-visualização da página pública"
-            />
-          </div>
-        ) : (
+        {!accessToken ? (
           <div className="p-10 text-center space-y-3">
             <Eye className="h-10 w-10 text-muted-foreground/30 mx-auto" />
             <p className="text-sm text-foreground">A página pública ainda não foi gerada.</p>
@@ -159,6 +184,30 @@ export function TabPaginaPublica({
               <Send className="h-3.5 w-3.5 mr-1.5" />
               Gerar e enviar
             </Button>
+          </div>
+        ) : jwtError ? (
+          <div className="p-10 text-center space-y-3">
+            <AlertTriangle className="h-10 w-10 text-amber-500/60 mx-auto" />
+            <p className="text-sm text-foreground">Não foi possível gerar o preview</p>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">{jwtError}</p>
+            <Button size="sm" variant="outline" onClick={fetchJwt}>
+              Tentar de novo
+            </Button>
+          </div>
+        ) : !previewSrc ? (
+          <div className="p-10 text-center space-y-2">
+            <Loader2 className="h-6 w-6 text-muted-foreground/40 mx-auto animate-spin" />
+            <p className="text-xs text-muted-foreground">Gerando token de preview…</p>
+          </div>
+        ) : (
+          <div className="bg-muted/20" style={{ height: "min(75vh, 900px)" }}>
+            <iframe
+              key={refreshKey}
+              src={previewSrc}
+              className="w-full h-full border-0"
+              title="Pré-visualização da página pública"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            />
           </div>
         )}
       </Card>
