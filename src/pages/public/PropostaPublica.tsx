@@ -25,7 +25,7 @@ import ProposalChatBubble from "@/components/orcamentos/ProposalChatBubble";
 import { GETBRAIN_INFO, whatsappUrl as buildWhatsappUrl } from "@/lib/getbrain-info";
 import { DEFAULT_PAGE_SETTINGS, mergeWithDefaults, type PublicPageSettings } from "@/lib/publicPageDefaults";
 import { getIcon } from "@/lib/iconMap";
-import logoGetBrain from "@/assets/logo-getbrain.png";
+import logoGetBrain from "@/assets/logo-getbrain-oficial.svg";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -772,17 +772,16 @@ function ProposalView({
         <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-5 flex items-center gap-4">
           <button
             onClick={() => scrollTo("hero")}
-            className="flex items-center gap-3 min-w-0 group"
+            className="flex items-center gap-4 min-w-0 group"
           >
-            <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 p-1">
-              <img
-                src={logoGetBrain}
-                alt="GetBrain"
-                className="h-full w-full object-contain"
-                draggable={false}
-              />
-            </div>
-            <div className="min-w-0 text-left">
+            <img
+              src={logoGetBrain}
+              alt="GetBrain"
+              className="h-8 sm:h-9 w-auto flex-shrink-0"
+              draggable={false}
+            />
+            <div className="hidden sm:block h-6 w-px bg-white/10" />
+            <div className="min-w-0 text-left hidden sm:block">
               <div className="text-[9px] font-mono-display uppercase tracking-[0.3em] text-white/40 leading-none">
                 Proposta
               </div>
@@ -1803,12 +1802,18 @@ function AuthorAvatar({
     );
   }
 
+  // Sem foto do autor → mostra a logo oficial da GetBrain ao invés do "G" azul.
   return (
     <div
-      style={{ ...dim, fontSize }}
-      className={`rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white ${className}`}
+      style={dim}
+      className={`rounded-full bg-white flex items-center justify-center overflow-hidden ring-2 ring-white/10 ${className}`}
     >
-      {initial}
+      <img
+        src={logoGetBrain}
+        alt={author?.name || "GetBrain"}
+        className="h-[70%] w-[70%] object-contain"
+        draggable={false}
+      />
     </div>
   );
 }

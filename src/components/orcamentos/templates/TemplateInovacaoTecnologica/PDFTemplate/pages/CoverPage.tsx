@@ -12,7 +12,7 @@
  */
 
 import { Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
-import logoGetBrain from "@/assets/logo-getbrain.svg";
+import logoGetBrain from "@/assets/logo-getbrain-oficial.svg";
 import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { colors, fontSizes, spacing } from "../styles";
 import { formatDateBR } from "../components/format";

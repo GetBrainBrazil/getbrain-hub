@@ -15,7 +15,7 @@
  */
 import QRCode from "qrcode";
 import { generateQrDataUrl } from "./generateQrDataUrl";
-import logoGetBrain from "@/assets/logo-getbrain.png";
+import logoGetBrain from "@/assets/logo-getbrain-oficial.svg";
 
 const QR_SIZE = 480;
 const LOGO_RATIO = 0.18; // fração do tamanho do QR
