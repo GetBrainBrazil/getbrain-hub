@@ -177,7 +177,7 @@ const App = () => (
               <Route path="financeiro/colaboradores" element={<FinColaboradoresPage />} />
               <Route path="sistema/usuarios" element={<AdminUsuariosList />} />
               <Route path="sistema/permissoes" element={<AdminPermissoesPage />} />
-              <Route path="sistema/logs" element={<Navigate to="/admin/auditoria" replace />} />
+              <Route path="sistema/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
               <Route path="sistema/auditoria" element={<AdminAuditoriaPage />} />
             </Route>
             {/* Compat: rota antiga /configuracoes/setores */}
@@ -188,8 +188,8 @@ const App = () => (
               <Route path="usuarios" element={<AdminUsuariosList />} />
               <Route path="permissoes" element={<AdminPermissoesPage />} />
               <Route path="agencia" element={<Navigate to="/admin/usuarios" replace />} />
-              <Route path="auditoria" element={<AdminAuditoriaPage />} />
-              <Route path="logs" element={<Navigate to="/admin/auditoria" replace />} />
+              <Route path="auditoria" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
+              <Route path="logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
               <Route path="propostas-ia" element={<AdminPropostasIaPage />} />
             </Route>
             <Route path="/admin/usuarios/:id" element={<AdminRoute><UsuarioFichaPage mode="admin" /></AdminRoute>} />
