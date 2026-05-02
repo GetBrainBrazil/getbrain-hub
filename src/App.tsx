@@ -50,6 +50,7 @@ import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
 import AdminAuditoriaPage from "./pages/admin/AdminAuditoriaPage";
 import AdminPropostasIaPage from "./pages/admin/AdminPropostasIaPage";
+import IaPropostasPage from "./pages/configuracoes/integracoes/IaPropostasPage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
@@ -179,7 +180,7 @@ const App = () => (
               <Route path="sistema/permissoes" element={<AdminPermissoesPage />} />
               <Route path="sistema/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
               <Route path="sistema/auditoria" element={<AdminAuditoriaPage />} />
-            </Route>
+              <Route path="integracoes/ia-propostas" element={<IaPropostasPage />} />
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
