@@ -1,13 +1,16 @@
 /**
- * Tab "Cliente" — dados do cliente (nome, cidade, logo, cor de marca).
+ * Tab "Cliente" — vínculo com CRM (deal) + dados de identidade.
  *
- * Edição inline no padrão Notion-like (campos sem borda forte, autosave do hook).
+ * - CrmDealLinkPicker: vincula a um deal e oferece importação de dados.
+ * - Edição inline no padrão Notion-like (campos sem borda forte, autosave do hook).
  */
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
 import { Button } from "@/components/ui/button";
+import { CrmDealLinkPicker } from "@/components/orcamentos/page/CrmDealLinkPicker";
+import type { ScopeItem } from "@/lib/orcamentos/calculateTotal";
 
 interface Props {
   proposalId: string;
@@ -19,10 +22,19 @@ interface Props {
     clientBrandColor: string;
   };
   setField: (field: any, value: any) => void;
-  dealClientLink?: { id: string; code: string; title: string } | null;
+  setItems: (items: ScopeItem[]) => void;
+  dealClientLink?: { id: string; code: string; title: string; stage?: string } | null;
+  onLinkChanged?: () => void;
 }
 
-export function TabCliente({ proposalId, state, setField, dealClientLink }: Props) {
+export function TabCliente({
+  proposalId,
+  state,
+  setField,
+  setItems,
+  dealClientLink,
+  onLinkChanged,
+}: Props) {
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Título da proposta */}
