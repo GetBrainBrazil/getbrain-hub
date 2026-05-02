@@ -28,10 +28,12 @@ type ViewMode = "kanban" | "table";
 const STATUS_TABS: { v: StatusFilter; label: string }[] = [
   { v: "todos", label: "Todos" },
   { v: "rascunho", label: "Rascunho" },
-  { v: "enviada", label: "Enviado" },
-  { v: "convertida", label: "Aceito" },
-  { v: "recusada", label: "Recusado" },
-  { v: "expirada", label: "Expirado" },
+  { v: "enviada", label: "Enviada" },
+  { v: "visualizada", label: "Visualizada" },
+  { v: "interesse_manifestado", label: "Com interesse" },
+  { v: "convertida", label: "Convertida" },
+  { v: "recusada", label: "Recusada" },
+  { v: "expirada", label: "Expirada" },
 ];
 
 export default function Orcamentos() {
