@@ -4,11 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
  * Solicita um JWT curto (5min) para pré-visualizar a proposta como o cliente
  * verá. Aciona a edge function `preview-proposal-as-internal` (auth obrigatória)
  * e abre uma nova aba em /p/{token}?preview={jwt}.
+ *
+ * Retorna o URL gerado e indica se a abertura foi bloqueada por popup blocker
+ * — caller pode oferecer fallback (copiar para clipboard / abrir na mesma aba).
  */
 export async function previewProposalAsClient(params: {
   proposalId: string;
   accessToken: string | null;
-}): Promise<void> {
+}): Promise<{ url: string; popupBlocked: boolean }> {
   const { proposalId, accessToken } = params;
   if (!accessToken) {
     throw new Error("Esta proposta ainda não tem link público — gere e envie primeiro.");
@@ -23,5 +26,6 @@ export async function previewProposalAsClient(params: {
 
   const base = window.location.origin;
   const url = `${base}/p/${accessToken}?preview=${encodeURIComponent(jwt)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  const win = window.open(url, "_blank", "noopener,noreferrer");
+  return { url, popupBlocked: !win };
 }
