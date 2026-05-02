@@ -138,31 +138,6 @@ export default function OrcamentoEditarDetalhe() {
     setScopeItems(canonicalToScopeItems(itemsRows as any));
   }, [itemsRows, itemsDirty]);
 
-  const previewProposal = useMemo(
-    () => ({
-      client_company_name: clientName,
-      client_logo_url: clientLogoUrl,
-      scope_items: scopeItems,
-      maintenance_monthly_value: typeof maintenance === "number" ? maintenance : null,
-      maintenance_description: maintenanceDesc || null,
-      implementation_days: implementationDays,
-      validation_days: validationDays,
-      considerations,
-      valid_until: validUntil,
-    }),
-    [
-      clientName,
-      clientLogoUrl,
-      scopeItems,
-      maintenance,
-      maintenanceDesc,
-      implementationDays,
-      validationDays,
-      considerations,
-      validUntil,
-    ]
-  );
-
   function markDirty<T>(setter: (v: T) => void) {
     return (v: T) => {
       setter(v);
