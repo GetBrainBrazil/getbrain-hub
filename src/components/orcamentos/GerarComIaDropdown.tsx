@@ -44,6 +44,10 @@ const TYPE_LABELS: Record<GenerationType, { label: string; help: string }> = {
   pain_context: { label: "Só contexto da dor", help: "" },
   solution_overview: { label: "Só visão da solução", help: "" },
   item_description: { label: "Descrições dos itens", help: "Loop por item" },
+  item_descriptions_batch: {
+    label: "Descrições dos módulos (lote)",
+    help: "Gera descrição p/ cada módulo do escopo",
+  },
 };
 
 export function GerarComIaDropdown({
