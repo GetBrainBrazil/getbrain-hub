@@ -25,6 +25,7 @@ import ProposalChatBubble from "@/components/orcamentos/ProposalChatBubble";
 import { GETBRAIN_INFO, whatsappUrl as buildWhatsappUrl } from "@/lib/getbrain-info";
 import { DEFAULT_PAGE_SETTINGS, mergeWithDefaults, type PublicPageSettings } from "@/lib/publicPageDefaults";
 import { getIcon } from "@/lib/iconMap";
+import logoGetBrain from "@/assets/logo-getbrain.svg";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
