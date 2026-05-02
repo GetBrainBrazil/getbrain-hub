@@ -198,7 +198,7 @@ function SortableItem({
                 placeholder="Bullets curtos, um por linha…"
                 className="min-h-[60px] border-0 bg-transparent px-1 text-sm shadow-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring resize-none"
               />
-              {item.value > 0 && (
+              {showValue && item.value > 0 && (
                 <div className="px-1 text-[10px] text-success/80 tabular-nums">
                   {formatBRL(item.value)}
                 </div>
