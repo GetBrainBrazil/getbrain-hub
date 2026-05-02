@@ -12,13 +12,12 @@ import {
   useDuplicateProposal,
   useUpdateProposal,
 } from "@/hooks/orcamentos/useUpdateProposal";
-import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
+import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
 import { OrcamentoKPICards } from "@/components/orcamentos/OrcamentoKPICards";
 import { OrcamentoTabela } from "@/components/orcamentos/OrcamentoTabela";
 import { OrcamentoKanban } from "@/components/orcamentos/OrcamentoKanban";
 
 import { NovoOrcamentoModal } from "@/components/orcamentos/NovoOrcamentoModal";
-import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
@@ -52,7 +51,6 @@ export default function Orcamentos() {
     "kanban"
   );
   const [novoOpen, setNovoOpen] = useState(false);
-  const [pdfRow, setPdfRow] = useState<any | null>(null);
 
   // No Kanban ignoramos o filtro de status (Kanban mostra tudo, dividido por coluna).
   // O filtro só age na tabela.
@@ -61,7 +59,7 @@ export default function Orcamentos() {
   const update = useUpdateProposal();
   const del = useDeleteProposal();
   const dup = useDuplicateProposal();
-  const gen = useGeneratePDF();
+  const gen = useGenerateProposalPDF();
 
   const isEmpty = useMemo(() => !isLoading && data.length === 0, [
     isLoading,
@@ -99,18 +97,12 @@ export default function Orcamentos() {
       return;
     }
     if (action === "download") {
-      setPdfRow(row);
-      await new Promise((r) => setTimeout(r, 50));
-      gen.mutate(
-        {
-          proposalId: row.id,
-          code: row.code,
-          clientName: row.client_company_name,
-          elementId: `pdf-list-${row.id}`,
-          snapshot: buildSnapshot(row),
-        },
-        { onSettled: () => setPdfRow(null) }
-      );
+      gen.mutate({
+        proposalId: row.id,
+        proposal: row,
+        templateKey: row.template_key,
+        triggerDownload: true,
+      });
       return;
     }
     if (action === "mark-sent") {
