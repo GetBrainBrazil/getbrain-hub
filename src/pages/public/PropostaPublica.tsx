@@ -1693,3 +1693,55 @@ function RoadmapTimeline({
     </div>
   );
 }
+
+/**
+ * Avatar circular do autor da proposta. Usa a foto de perfil do operador
+ * GetBrain (profiles.avatar_url, vinda da edge `get-proposal-public-data`).
+ *
+ * Fallback: gradiente cyan→blue + inicial do primeiro nome (ou prop
+ * `fallbackInitial` quando o autor for null, p.ex. propostas antigas sem
+ * created_by).
+ */
+function AuthorAvatar({
+  author,
+  size,
+  fallbackInitial,
+  className = "",
+}: {
+  author: { name: string; avatar_url: string | null } | null;
+  size: number;
+  fallbackInitial?: string;
+  className?: string;
+}) {
+  const initial =
+    author?.name?.trim().slice(0, 1).toUpperCase() ||
+    fallbackInitial ||
+    "G";
+  const dim = { width: size, height: size };
+  const fontSize = Math.max(14, Math.round(size * 0.42));
+
+  if (author?.avatar_url) {
+    return (
+      <img
+        src={author.avatar_url}
+        alt={author.name}
+        style={dim}
+        className={`rounded-full object-cover ring-2 ring-white/10 ${className}`}
+        draggable={false}
+        onError={(e) => {
+          // Foto removida/expirada → degrada pra fallback sem quebrar layout.
+          (e.currentTarget as HTMLImageElement).style.display = "none";
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{ ...dim, fontSize }}
+      className={`rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white ${className}`}
+    >
+      {initial}
+    </div>
+  );
+}
