@@ -15,7 +15,7 @@ import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Lock, Settings2, Building2, Users, Tag, Briefcase, Wallet,
   Shield, History, FolderTree, UserRound, Truck, Landmark,
-  Tags, Target, Layers,
+  Tags, Target, Layers, Sparkles, Plug, Workflow, XCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,15 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    key: "crm",
+    label: "CRM",
+    icon: Workflow,
+    tabs: [
+      { key: "etapas", label: "Etapas do funil", path: "/configuracoes/crm/etapas", icon: Workflow },
+      { key: "motivos-descarte", label: "Motivos de descarte", path: "/configuracoes/crm/motivos-descarte", icon: XCircle },
+    ],
+  },
+  {
     key: "sistema",
     label: "Sistema",
     icon: Shield,
@@ -58,6 +67,14 @@ const SECTIONS: Section[] = [
       { key: "usuarios", label: "Usuários", path: "/configuracoes/sistema/usuarios", icon: Users },
       { key: "permissoes", label: "Permissões", path: "/configuracoes/sistema/permissoes", icon: Shield },
       { key: "auditoria", label: "Auditoria", path: "/configuracoes/sistema/auditoria", icon: History },
+    ],
+  },
+  {
+    key: "integracoes",
+    label: "Integrações",
+    icon: Plug,
+    tabs: [
+      { key: "ia-propostas", label: "IA das Propostas", path: "/configuracoes/integracoes/ia-propostas", icon: Sparkles },
     ],
   },
 ];
