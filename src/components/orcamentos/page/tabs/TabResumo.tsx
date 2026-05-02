@@ -550,3 +550,181 @@ function NarrativePreview({
     </div>
   );
 }
+
+// ───────────── Bloco do link público ─────────────
+function PublicLinkBlock({
+  accessToken,
+  validUntilLabel,
+  interactionsCount,
+  onPreviewAsClient,
+  onCopyLink,
+  onProtectedAction,
+}: {
+  accessToken: string | null;
+  validUntilLabel: string;
+  interactionsCount: number;
+  onPreviewAsClient: () => void;
+  onCopyLink: () => void;
+  onProtectedAction: (label: string) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+
+  const fullUrl = accessToken ? `${window.location.origin}/p/${accessToken}` : null;
+  const displayUrl = fullUrl
+    ? fullUrl.replace(/^https?:\/\//, "")
+    : null;
+
+  useEffect(() => {
+    if (!qrOpen || !fullUrl) return;
+    if (qrUrl) return;
+    let cancelled = false;
+    generateQrDataUrl(fullUrl).then((url) => {
+      if (!cancelled) setQrUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [qrOpen, fullUrl, qrUrl]);
+
+  function handleCopy() {
+    if (!fullUrl) return;
+    onCopyLink();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }
+
+  function handleOpenInTab() {
+    if (!fullUrl) return;
+    window.open(fullUrl, "_blank", "noopener,noreferrer");
+  }
+
+  if (!accessToken || !fullUrl || !displayUrl) {
+    return (
+      <Card className="p-4 border-dashed border-muted-foreground/30 bg-muted/20">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="rounded-md bg-muted p-2 text-muted-foreground shrink-0">
+            <Lock className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              Esta proposta ainda não tem link público
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Gere e envie a proposta para criar um link pré-autenticado que o cliente pode acessar.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            onClick={() => onProtectedAction("Link público")}
+          >
+            Como gerar?
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-4 border-accent/30 bg-accent/5 space-y-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-accent flex items-center gap-1.5">
+          <Link2 className="h-3 w-3" />
+          Link público da proposta
+        </p>
+        <div className="flex items-center gap-1">
+          <Popover open={qrOpen} onOpenChange={setQrOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                title="QR code"
+              >
+                <QrCode className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto p-3">
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-xs font-medium">QR para o cliente escanear</p>
+                {qrUrl ? (
+                  <img src={qrUrl} alt="QR code" className="h-44 w-44 rounded bg-white p-2" />
+                ) : (
+                  <div className="h-44 w-44 flex items-center justify-center text-xs text-muted-foreground">
+                    Gerando…
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground max-w-[176px] text-center break-all">
+                  {displayUrl}
+                </p>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            onClick={handleOpenInTab}
+            title="Abrir em nova aba"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            onClick={onPreviewAsClient}
+            title="Ver como cliente"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={copied ? "default" : "outline"}
+            className={cn("h-8 transition-colors", copied && "bg-success hover:bg-success text-success-foreground")}
+            onClick={handleCopy}
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 mr-1.5" />
+                Copiado
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5 mr-1.5" />
+                Copiar
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="block w-full text-left font-mono text-xs text-foreground/90 break-all hover:text-accent transition-colors bg-background/50 rounded px-2 py-1.5 border border-border/40"
+        title="Clique para copiar"
+      >
+        {displayUrl}
+      </button>
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+        <span className="inline-flex items-center gap-1">
+          <Calendar className="h-3 w-3" />
+          {validUntilLabel}
+        </span>
+        <span>·</span>
+        <span>
+          {interactionsCount > 0
+            ? `${interactionsCount} ${interactionsCount === 1 ? "interação registrada" : "interações registradas"}`
+            : "Nenhuma visualização ainda"}
+        </span>
+      </div>
+    </Card>
+  );
+}
