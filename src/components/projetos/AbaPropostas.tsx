@@ -327,7 +327,7 @@ export function AbaPropostas({ projectId }: Props) {
         action={
           sourceDealId && (
             <Button size="sm" variant="outline" asChild>
-              <Link to={`/crm/deals/${sourceDealId}`}>
+              <Link to={`/crm/deals/${sourceDealCode ?? sourceDealId}`}>
                 <ExternalLink className="h-3.5 w-3.5" /> Abrir deal de origem
               </Link>
             </Button>
@@ -356,7 +356,7 @@ export function AbaPropostas({ projectId }: Props) {
             description={`O deal ${sourceDealCode ?? "de origem"} ainda não tem proposta gerada. Volte ao deal pra criar a primeira versão.`}
             action={
               <Button size="sm" asChild>
-                <Link to={`/crm/deals/${sourceDealId}`}>
+                <Link to={`/crm/deals/${sourceDealCode ?? sourceDealId}`}>
                   <Sparkles className="h-3.5 w-3.5" /> Ir pro deal e gerar
                 </Link>
               </Button>
@@ -379,7 +379,7 @@ export function AbaPropostas({ projectId }: Props) {
         action={
           sourceDealId && (
             <Button size="sm" variant="ghost" asChild>
-              <Link to={`/crm/deals/${sourceDealId}`}>
+              <Link to={`/crm/deals/${sourceDealCode ?? sourceDealId}`}>
                 <Pencil className="h-3.5 w-3.5" /> Editar no deal
               </Link>
             </Button>
@@ -424,7 +424,7 @@ export function AbaPropostas({ projectId }: Props) {
         action={
           sourceDealId && (
             <Button size="sm" variant="ghost" asChild>
-              <Link to={`/crm/deals/${sourceDealId}`}>
+              <Link to={`/crm/deals/${sourceDealCode ?? sourceDealId}`}>
                 <Pencil className="h-3.5 w-3.5" /> Editar no deal
               </Link>
             </Button>
