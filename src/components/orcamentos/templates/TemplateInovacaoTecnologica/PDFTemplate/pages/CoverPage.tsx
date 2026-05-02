@@ -200,6 +200,16 @@ export function CoverPage({ data, qrCodeDataUrl, proposalAccessUrl, isDraft }: P
           <Text style={[coverStyles.footerLabel, { marginTop: 6 }]}>Válida até</Text>
           <Text style={coverStyles.footerValue}>{formatDateBR(data.expires_at)}</Text>
         </View>
+        <View style={{ alignItems: "center" }}>
+          {qrCodeDataUrl ? (
+            <>
+              <Image src={qrCodeDataUrl} style={{ width: 70, height: 70, backgroundColor: "#fff", padding: 4, borderRadius: 4 }} />
+              <Text style={[coverStyles.footerLabel, { marginTop: 6, textAlign: "center" }]}>
+                Acesse a versão digital
+              </Text>
+            </>
+          ) : null}
+        </View>
         <View style={{ alignItems: "flex-end" }}>
           <Text style={coverStyles.footerLabel}>Documento</Text>
           <Text style={coverStyles.footerValue}>{data.code}</Text>
@@ -208,6 +218,9 @@ export function CoverPage({ data, qrCodeDataUrl, proposalAccessUrl, isDraft }: P
           </Text>
         </View>
       </View>
+      {isDraft && <Watermark />}
+      {/* proposalAccessUrl reservado para futura página de QR dedicada */}
+      {proposalAccessUrl ? null : null}
     </Page>
   );
 }
