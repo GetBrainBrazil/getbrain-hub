@@ -291,7 +291,10 @@ function PasswordGate(props: {
   onPwdChange: (v: string) => void;
   onToggleShow: () => void;
   onSubmit: (e?: React.FormEvent) => void;
+  settings: PublicPageSettings;
 }) {
+  const s = props.settings;
+  const wppNumber = s.contact_whatsapp || GETBRAIN_INFO.whatsapp;
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0a0e1a] text-white flex flex-col">
       <div className="pointer-events-none absolute inset-0">
