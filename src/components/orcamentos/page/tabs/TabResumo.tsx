@@ -561,22 +561,28 @@ function NarrativePreview({
 // ───────────── Bloco do link público ─────────────
 function PublicLinkBlock({
   accessToken,
+  accessPassword,
   validUntilLabel,
   interactionsCount,
   onPreviewAsClient,
   onCopyLink,
   onProtectedAction,
+  onOpenPasswordDialog,
 }: {
   accessToken: string | null;
+  accessPassword: string | null;
   validUntilLabel: string;
   interactionsCount: number;
   onPreviewAsClient: () => void;
   onCopyLink: () => void;
   onProtectedAction: (label: string) => void;
+  onOpenPasswordDialog: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [pwdRevealed, setPwdRevealed] = useState(false);
+  const [pwdCopied, setPwdCopied] = useState(false);
 
   const fullUrl = accessToken ? `${window.location.origin}/p/${accessToken}` : null;
   const displayUrl = fullUrl
@@ -600,6 +606,18 @@ function PublicLinkBlock({
     onCopyLink();
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
+  }
+
+  async function handleCopyPassword() {
+    if (!accessPassword) return;
+    try {
+      await navigator.clipboard.writeText(accessPassword);
+      setPwdCopied(true);
+      toast.success("Senha copiada");
+      setTimeout(() => setPwdCopied(false), 1800);
+    } catch {
+      toast.error("Não foi possível copiar — copie manualmente");
+    }
   }
 
   function handleOpenInTab() {
