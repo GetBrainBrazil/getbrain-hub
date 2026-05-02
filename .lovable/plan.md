@@ -1,144 +1,98 @@
+## Problema atual
+
+A sub-aba **Conteúdo** hoje é uma pilha de 8 accordions, todos com tipografia muito pequena (10–11px), labels em cinza fraco, sem hierarquia clara, sem busca e sem nenhuma forma de ver o impacto da edição. O usuário precisa abrir/fechar acordeões para chegar em qualquer campo, e não consegue identificar visualmente em qual seção da página pública cada bloco aparece.
+
 ## Objetivo
 
-Hoje a página pública (`/p/{token}`) tem **vários textos hard-coded** espalhados pelo `PropostaPublica.tsx`: textos institucionais da GetBrain (about), 6 cards de capacidades, lista de 17 tecnologias, microcopy do hero, scroll cue, headlines de seção ("O ponto de partida", "O que vamos construir", "Capítulos da entrega", "Os números", "A jornada", "Vamos começar?"), texto da seção "Próximos passos", labels do footer, etc.
+Transformar essa tela num **editor de CMS profissional** — claro, navegável, com preview integrada, e com cada campo "amarrado" visualmente à seção correspondente da página pública.
 
-Vou centralizar **todo conteúdo institucional editável** numa tabela `public_page_settings` (configuração global única, por organização) e remodelar a tab "Página Pública" pra ser o editor visual completo desses conteúdos + a parte específica da proposta atual (link, senha, mockup, preview).
-
-Conteúdos **específicos da proposta** (carta IA, escopo, contexto, solução, valores) continuam onde estão — eles já são editáveis pelas outras tabs.
-
-## O que vai ser editável
-
-**Conteúdo institucional global** (afeta todas as propostas, edita uma vez):
-- Hero: eyebrows ("Estratégia · Tecnologia · Resultado"), scroll cue ("Role para baixo")
-- Headlines/eyebrows de cada seção (Carta, Contexto, Solução, Escopo, Investimento, Cronograma, Sobre, Próximos passos)
-- Sobre a GetBrain: parágrafos descritivos (lista editável)
-- Cards de capacidades: lista editável (ícone, título, descrição) — começa com os 6 atuais
-- Stack tecnológico: lista editável de tags
-- Próximos passos: título e dois parágrafos explicativos
-- Footer: tagline, labels de contato
-- Tela de senha: título, subtítulo, label do botão
-- Contato global: WhatsApp, email, número exibido (vem de `GETBRAIN_INFO`, mas editável aqui também)
-
-**Conteúdo específico da proposta** (já existe, mantém):
-- Carta IA, contexto, solução, escopo, valores → outras tabs
-
-## Mudanças no banco
-
-Nova tabela `public_page_settings` (singleton por organização):
-
-```sql
-create table public.public_page_settings (
-  id uuid primary key default gen_random_uuid(),
-  organization_id uuid not null unique, -- garante 1 registro por org
-  hero_eyebrows text[] default array['Estratégia','Tecnologia','Resultado'],
-  hero_scroll_cue text default 'Role para baixo',
-  section_titles jsonb default '{...}'::jsonb,    -- { contexto: "O ponto de partida", ... }
-  section_eyebrows jsonb default '{...}'::jsonb,  -- { contexto: "Contexto", ... }
-  about_paragraphs text[],                          -- substitui ABOUT_GETBRAIN_PARAGRAPHS
-  capabilities jsonb,                               -- [{icon:"Brain", title, desc}, ...]
-  tech_stack text[],                                -- ["React","TypeScript",...]
-  next_steps_title text default 'Vamos começar?',
-  next_steps_paragraphs text[],
-  footer_tagline text,
-  footer_contact_label text,
-  password_gate_title text default 'Proposta protegida',
-  password_gate_subtitle text default 'Digite a senha que você recebeu junto com o link.',
-  password_gate_button text default 'Acessar proposta',
-  contact_whatsapp text,
-  contact_email text,
-  contact_display_name text,
-  updated_at timestamptz default now(),
-  updated_by uuid
-);
-```
-
-RLS: SELECT por authenticated; INSERT/UPDATE/DELETE só admin. Trigger `updated_at`. Seed inicial automático na primeira leitura via edge.
-
-A edge function `get-proposal-public-data` passa a também retornar esses settings (join via `organization_id`), pra serem consumidos junto com os dados da proposta.
-
-## Mudanças no frontend
-
-### 1. `PropostaPublica.tsx`
-- Substitui todos os textos hard-coded por leitura do novo objeto `pageSettings` que vem do payload.
-- Fallback pros valores atuais caso a tabela ainda não tenha registro (compatibilidade).
-- Capabilities renderizadas dinamicamente, com lookup de ícone via mapa `lucide-react`.
-
-### 2. Nova tab "Página Pública" (remodelada)
-
-Reorganizada com sub-abas internas, layout limpo e prático:
+## Novo layout
 
 ```text
-┌──────────────────────────────────────────────────────┐
-│  [Acesso]  [Conteúdo Global]  [Pré-visualização]    │  ← sub-tabs
-├──────────────────────────────────────────────────────┤
-│                                                      │
-│   conteúdo da sub-aba ativa                         │
-│                                                      │
-└──────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│ [Conteúdo global · afeta todas as propostas]    [⟳ salvo 14:32] [👁]   │
+├──────────────┬─────────────────────────────────────────────────────────┤
+│ 🔎 Buscar…   │ Hero & navegação                                        │
+│              │ ─────────────────────────────────────────────────────   │
+│ ▸ Hero       │ Etiquetas exibidas no topo                              │
+│ ▸ Seções     │ [ Estratégia × ] [ Tecnologia × ] [ Resultado × ] [+]   │
+│ ▸ Sobre   ●  │                                                         │
+│ ▸ Capacid.   │ Texto de "role para baixo"                              │
+│ ▸ Stack      │ ┌────────────────────────────────────────────────────┐  │
+│ ▸ Próximos   │ │ Role para baixo                                    │  │
+│ ▸ Senha      │ └────────────────────────────────────────────────────┘  │
+│ ▸ Rodapé     │                                                         │
+│              │ 💡 Dica: aparece logo abaixo do título principal.       │
+│ ────────     │                                                         │
+│ 👁 Abrir     │                                                         │
+│ pré-visual   │                                                         │
+└──────────────┴─────────────────────────────────────────────────────────┘
 ```
 
-- **Acesso** (atual conteúdo): link, senha, mockup, ver como cliente.
-- **Conteúdo Global** (NOVO): editor visual, em accordions colapsáveis por bloco:
-  - Hero & navegação (eyebrows, scroll cue)
-  - Títulos das seções (grid 2 colunas: eyebrow + title por seção)
-  - Sobre a GetBrain (TextArea para lista de parágrafos, drag-to-reorder)
-  - Cards de capacidades (cards inline editáveis: ícone picker, título, descrição, botão "+ Adicionar")
-  - Stack tecnológico (tags com input, igual chips/badges editáveis)
-  - Próximos passos (campos do CTA final)
-  - Tela de senha (título, subtítulo, botão)
-  - Footer & contato (WhatsApp, email, tagline)
-  - Cada bloco com **autosave on blur** (padrão da memória `inline-edit-and-tabs`)
-  - Indicador "Salvo às HH:MM" no topo
-  - Aviso "Estas alterações afetam todas as propostas"
-- **Pré-visualização** (atual iframe): preview ao vivo que reflete as alterações em tempo real (recarrega ao salvar).
+### 1. Navegação lateral (em vez de accordions)
+- Sidebar fixa à esquerda (≥md), com 8 itens agrupados em **3 categorias**:
+  - **Estrutura da página**: Hero, Títulos das seções, CTA Próximos passos
+  - **Institucional**: Sobre a GetBrain, Cards de capacidades, Stack tecnológico
+  - **Acesso & contato**: Tela de senha, Rodapé & contato
+- Cada item mostra ícone, nome, e um **dot accent** quando tem alteração não persistida.
+- Em mobile, a sidebar vira um `Select` no topo (mesma navegação, sem perder espaço).
 
-### 3. Hooks novos
-- `usePublicPageSettings()` — react-query, lê settings, expõe `update(field, value)` com autosave + invalidate.
-- Helper `iconMap` em `src/lib/iconMap.ts` mapeando strings → componentes lucide.
+### 2. Busca global de campos
+- Input no topo da sidebar filtra os itens por nome **e** por palavra contida em qualquer label/placeholder/valor atual. Resolve "onde mudo o texto X?".
 
-## Fluxo do usuário
+### 3. Painel de edição (direita)
+- Cada bloco tem **header** com título 16px + descrição curta + ícone, separador, e os campos com **labels 12px legíveis** (não 10px cinza fraco).
+- Cada grupo de campo recebe uma **dica contextual** ("aparece logo abaixo do hero", "exibido no rodapé") — ajuda o usuário a entender impacto.
+- Inputs/textarea com tamanho confortável (`h-9`, `text-sm`), espaçamento `space-y-4` em vez de `space-y-2`.
+- Indicador de salvamento por campo: bordinha verde piscando 1s após o blur quando salvou (mais sutil que o toast atual).
 
-1. Você abre uma proposta → tab Página Pública.
-2. Sub-aba "Conteúdo Global" → edita parágrafos do "Sobre", troca um card de capacidade, adiciona uma tecnologia.
-3. Cada blur salva no banco automaticamente.
-4. Sub-aba "Pré-visualização" → vê a página atualizada (botão refresh + auto-refresh ao trocar de sub-aba).
-5. Toda outra proposta (atual e futura) já reflete essas mudanças.
+### 4. Editor de "Títulos das seções" repaginado
+Hoje é uma tabela de 9 linhas estilo planilha. Vira um **grid de cards**, um por seção, cada um com:
+- Pequeno preview de como o eyebrow + título vão renderizar (texto pequeno mono uppercase + título em serif).
+- Dois inputs lado-a-lado abaixo.
+- Ordem reflete a ordem real da página pública.
 
-## UI/UX da nova tab
+### 5. Cards de capacidades
+- Mantém o picker de ícone, mas o card fica maior (mostra preview real do ícone num círculo com o tom accent), com handle de drag para reordenar (em vez dos 2 botões up/down sempre visíveis).
+- Botão "+ Adicionar" vira tile pontilhado no fim do grid.
 
-- Visual consistente com o resto do editor (Card cinza-escuro, mesma tipografia).
-- Toolbar fixa no topo com: badge "Conteúdo global · afeta todas as propostas", indicador de save, botão "Resetar para padrão".
-- Bloco "Cards de capacidades" usa grid responsivo de mini-cards com hover overlay pra editar/excluir/reordenar.
-- Bloco "Stack tecnológico" usa input estilo "tags": digite + Enter pra adicionar, X pra remover, drag pra reordenar.
-- Bloco "Sobre a GetBrain" usa lista de TextArea com botões + (entre parágrafos) e × (remover).
-- Mobile-first: accordions colapsam por padrão no mobile, desktop pode abrir vários ao mesmo tempo.
+### 6. Editor de tags (eyebrows, stack)
+- Pílulas com altura confortável (`h-7`), input embutido com placeholder "+ adicionar".
+- Mostra contador `(3)` ao lado do label.
 
-## Arquivos novos/alterados
+### 7. Header da sub-aba
+- Faixa única com:
+  - chip "🌐 Conteúdo global · afeta todas as propostas"
+  - status de save (Salvando… / Salvo às HH:mm)
+  - botão **"Pré-visualizar"** que abre a sub-aba Preview já no estado atual (em vez do usuário ter que clicar manualmente em outra tab)
 
-**Banco:**
-- migration: criar `public_page_settings` + RLS + trigger updated_at + seed function.
+## Arquivos afetados
 
-**Edge:**
-- `get-proposal-public-data/index.ts`: incluir `page_settings` no payload.
+- **Reescrita**: `src/components/orcamentos/page/tabs/pagina-publica/SubTabConteudo.tsx`
+  - troca Accordion por layout sidebar + painel
+  - implementa busca, agrupamento, indicadores
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/SidebarConteudo.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelHero.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelSecoes.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelSobre.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelCapacidades.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelStack.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelProximos.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelSenha.tsx`
+- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelRodape.tsx`
+- **Refino visual**: editores existentes (`EditorTags`, `EditorTextoLista`, `EditorCapabilities`, `EditorSecoes`) — paddings, tamanhos, drag handle nos cards.
+- **Atualização**: `index.tsx` ganha prop para abrir a sub-aba Preview a partir do botão do header.
 
-**Frontend:**
-- novo: `src/lib/iconMap.ts`
-- novo: `src/hooks/orcamentos/usePublicPageSettings.ts`
-- novo: `src/components/orcamentos/page/tabs/pagina-publica/` com:
-  - `index.tsx` (sub-tabs)
-  - `SubTabAcesso.tsx` (extrai parte atual)
-  - `SubTabConteudo.tsx` (editor)
-  - `SubTabPreview.tsx` (extrai iframe atual)
-  - `editores/EditorTextoLista.tsx` (lista editável de parágrafos)
-  - `editores/EditorCapabilities.tsx` (cards)
-  - `editores/EditorTags.tsx` (chips de tech stack)
-  - `editores/EditorSecao.tsx` (eyebrow + title pairs)
-- alterar: `src/components/orcamentos/page/tabs/TabPaginaPublica.tsx` → vira wrapper que renderiza o novo `pagina-publica/index.tsx`.
-- alterar: `src/pages/public/PropostaPublica.tsx` → consumir `pageSettings` do payload, fallback pros defaults atuais.
-- deprecar (manter apenas como fallback constants): `src/content/about-getbrain.tsx`.
+## Detalhes técnicos
 
-## Observações
+- **Estado da seção ativa** persistido com `usePersistedState("proposal-pagina-publica-conteudo-secao", "hero")` para o usuário voltar onde estava.
+- **Busca** usa `useMemo` filtrando contra um índice in-memory `{ id, label, group, keywords[] }`.
+- **Dirty dot**: cada painel chama `onDirty(id)` enquanto valor local difere do salvo; limpa ao receber confirmação do `usePublicPageSettings`.
+- **Drag handle** dos capabilities usa `@dnd-kit/sortable` se já presente; caso contrário, mantém setas mas movidas para um menu kebab no canto.
+- Mobile: `useIsMobile()` troca sidebar por Select sticky no topo. Cards stack em 1 coluna; tabela de seções vira lista vertical.
+- Nada muda no schema, no hook `usePublicPageSettings`, na edge function ou na página pública — é puramente UI/UX da aba admin.
 
-- Mantenho `GETBRAIN_INFO` em `src/lib/getbrain-info.ts` como fonte para PDFs e emails (essas coisas precisam de constante de build). A tela pública lê do `pageSettings` quando disponível, com fallback pro `GETBRAIN_INFO`.
-- Settings é singleton **por organização** (não por proposta) — uma única configuração global para o cliente ver consistente entre propostas.
-- Se quiser no futuro overrides por proposta (ex.: mudar o "Sobre" só pra um cliente específico), adicionamos campos opcionais em `proposals` que prevalecem sobre os settings — mas isso fica fora desse escopo.
+## Fora do escopo
+
+- Sub-abas Acesso e Pré-visualização (não foram apontadas como problema).
+- Adicionar novos campos editáveis (mantemos exatamente os mesmos do schema atual).
