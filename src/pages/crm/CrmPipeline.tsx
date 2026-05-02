@@ -193,6 +193,7 @@ function FilterChip({
       </button>
     </span>
   );
+}
 
 export default function CrmPipeline() {
   const navigate = useNavigate();
