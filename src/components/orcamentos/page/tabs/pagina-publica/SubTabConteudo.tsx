@@ -41,9 +41,10 @@ import { PainelConsideracoes } from "./conteudo/PainelConsideracoes";
 import type { SecaoMeta } from "./conteudo/types";
 import type { ProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 
-const GROUPS: { label: string; items: SecaoMeta[] }[] = [
+const GROUPS: { label: string; scope: "proposta" | "global"; items: SecaoMeta[] }[] = [
   {
     label: "Esta proposta",
+    scope: "proposta",
     items: [
       { id: "p.boas-vindas", group: "proposta", label: "Boas-vindas", description: "Mensagem do hero", icon: "MessageCircle", keywords: ["boas-vindas","welcome","hero","mensagem"] },
       { id: "p.contexto",    group: "proposta", label: "Contexto / dor", description: "Cenário do cliente", icon: "AlertCircle", keywords: ["contexto","dor","problema"] },
@@ -58,6 +59,7 @@ const GROUPS: { label: string; items: SecaoMeta[] }[] = [
   },
   {
     label: "Global · todas as propostas",
+    scope: "global",
     items: [
       { id: "g.hero", group: "global", label: "Hero & navegação", description: "Etiquetas e scroll cue", icon: "Sparkles", keywords: ["hero","topo","eyebrow"] },
       { id: "g.secoes", group: "global", label: "Títulos das seções", description: "Eyebrow + título", icon: "Type", keywords: ["título","seção","eyebrow"] },
