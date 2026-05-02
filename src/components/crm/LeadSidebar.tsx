@@ -3,7 +3,7 @@ import { Building2, ExternalLink, Mail, Phone, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ComboboxCreate } from '@/components/crm/ComboboxCreate';
+
 import { FieldLabel } from '@/components/crm/inlineFields';
 import { useCompanyStats, useCompanyDeals, useCompanyLeads } from '@/hooks/crm/useCrmDetails';
 import { useCrmActors, usePeopleByCompany } from '@/hooks/crm/useCrmReference';
@@ -89,14 +89,18 @@ export function LeadSidebar({ lead, save }: Props) {
 
       {/* CONTATO */}
       <Section title="Contato">
-        <ComboboxCreate
-          value={lead.contact_person_id ?? ''}
-          onChange={(v) => save({ contact_person_id: v || null })}
-          options={contacts.map((c) => ({ value: c.id, label: c.full_name }))}
-          placeholder="Selecionar contato"
-          allowCreate={false}
-          emptyText="Sem contatos cadastrados"
-        />
+        <Select
+          value={lead.contact_person_id ?? 'none'}
+          onValueChange={(v) => save({ contact_person_id: v === 'none' ? null : v })}
+        >
+          <SelectTrigger><SelectValue placeholder="Selecionar contato" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sem contato</SelectItem>
+            {contacts.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {contact && (
           <div className="mt-2 space-y-1 rounded-md border border-border/60 bg-background/30 p-2.5 text-xs">
             <p className="font-medium text-foreground">{contact.full_name}</p>
