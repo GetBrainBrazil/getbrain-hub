@@ -396,15 +396,57 @@ export function useUpdateCalendarActivity() {
 export function useCreateCalendarActivity() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { title: string; type: ActivityType; scheduled_at: string; duration_minutes?: number | null; owner_actor_id?: string | null; description?: string | null }) => {
-      const { data, error } = await sb.from('deal_activities').insert({ ...payload, organization_id: '00000000-0000-0000-0000-000000000001', deal_id: null, lead_id: null }).select().single();
+    mutationFn: async (payload: {
+      title: string;
+      type: ActivityType;
+      scheduled_at: string;
+      duration_minutes?: number | null;
+      owner_actor_id?: string | null;
+      description?: string | null;
+      deal_id?: string | null;
+      lead_id?: string | null;
+    }) => {
+      const { data, error } = await sb
+        .from('deal_activities')
+        .insert({
+          ...payload,
+          organization_id: '00000000-0000-0000-0000-000000000001',
+          deal_id: payload.deal_id ?? null,
+          lead_id: payload.lead_id ?? null,
+        })
+        .select()
+        .single();
       if (error) throw error;
       return data as DealActivity;
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['crm-calendar-events'] });
+      qc.invalidateQueries({ queryKey: ['crm-calendar-kpis'] });
       qc.invalidateQueries({ queryKey: ['crm-upcoming-activities'] });
       qc.invalidateQueries({ queryKey: ['crm-dashboard-alerts'] });
+      qc.invalidateQueries({ queryKey: ['crm-deal-activities'] });
+      qc.invalidateQueries({ queryKey: ['crm-lead-activities'] });
+    },
+  });
+}
+
+export function useDeleteCalendarActivity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sb
+        .from('deal_activities')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['crm-calendar-events'] });
+      qc.invalidateQueries({ queryKey: ['crm-calendar-kpis'] });
+      qc.invalidateQueries({ queryKey: ['crm-upcoming-activities'] });
+      qc.invalidateQueries({ queryKey: ['crm-dashboard-alerts'] });
+      qc.invalidateQueries({ queryKey: ['crm-deal-activities'] });
+      qc.invalidateQueries({ queryKey: ['crm-lead-activities'] });
     },
   });
 }

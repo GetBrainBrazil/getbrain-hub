@@ -48,3 +48,43 @@ export function useCalendarEvents(filters: CalendarFilters) {
     staleTime: 30_000,
   });
 }
+
+/** KPIs operacionais do calendário: hoje, atrasadas, esta semana, realizadas últimos 7 dias. */
+export function useCalendarKpis(filters: { types?: ActivityType[]; owners?: string[] }) {
+  return useQuery({
+    queryKey: ['crm-calendar-kpis', filters.types, filters.owners],
+    queryFn: async () => {
+      const now = new Date();
+      const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+      const weekEnd = new Date(now); weekEnd.setDate(now.getDate() + 7);
+      const sevenAgo = new Date(now); sevenAgo.setDate(now.getDate() - 7);
+
+      const apply = (q: any) => {
+        let r = q;
+        if (filters.types?.length) r = r.in('type', filters.types);
+        if (filters.owners?.length) r = r.in('owner_actor_id', filters.owners);
+        return r;
+      };
+
+      const [hoje, atrasadas, semana, feitas7d] = await Promise.all([
+        apply((sb as any).from('deal_activities').select('id', { count: 'exact', head: true }).is('deleted_at', null).is('happened_at', null)
+          .gte('scheduled_at', todayStart.toISOString()).lte('scheduled_at', todayEnd.toISOString())),
+        apply((sb as any).from('deal_activities').select('id', { count: 'exact', head: true }).is('deleted_at', null).is('happened_at', null)
+          .lt('scheduled_at', now.toISOString())),
+        apply((sb as any).from('deal_activities').select('id', { count: 'exact', head: true }).is('deleted_at', null).is('happened_at', null)
+          .gte('scheduled_at', now.toISOString()).lte('scheduled_at', weekEnd.toISOString())),
+        apply((sb as any).from('deal_activities').select('id', { count: 'exact', head: true }).is('deleted_at', null)
+          .gte('happened_at', sevenAgo.toISOString())),
+      ]);
+
+      return {
+        hoje: hoje.count ?? 0,
+        atrasadas: atrasadas.count ?? 0,
+        semana: semana.count ?? 0,
+        feitas7d: feitas7d.count ?? 0,
+      };
+    },
+    staleTime: 30_000,
+  });
+}

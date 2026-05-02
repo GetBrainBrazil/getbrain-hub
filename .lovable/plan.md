@@ -1,152 +1,123 @@
 
-# Reconstruir o submódulo de Lead com propósito claro
+# Calendário comercial — repensado
 
-## 1. O que é um Lead nesse sistema (decisão conceitual)
+## Para que serve (objetivo real)
 
-Um **Lead** é um *candidato a virar oportunidade*. Ele existe por um motivo só: **decidir, no menor tempo possível, se vale gastar energia montando uma proposta**. Tudo que não serve a essa decisão pertence ao Deal.
+O calendário NÃO é um Google Calendar bonito. É a **central operacional do dia comercial**: onde o time vê **o que precisa fazer agora**, marca **feito / remarcar / não atendeu**, e cai no Lead/Deal correto em 1 clique.
 
-Regra de ouro: **se você precisa de mais de 1 minuto para preencher um lead, o lead está pedindo a coisa errada.**
+Hoje o módulo falha porque:
+- A visão padrão é **Mês** (8 linhas vazias quando o pipeline tem pouca atividade — exatamente o que aparece no print).
+- Cada célula do mês é gigante (148px) e mostra no máximo 3 atividades sem distinção visual de tipo.
+- A coluna "Próximas e atrasadas" duplica informação e some no mobile.
+- Sem KPIs ("quantas vencidas? quantas hoje?"), sem ação inline (precisa abrir o Lead/Deal pra remarcar).
+- Filtros e navegação ocupam 2 barras separadas.
+- O dialog "Nova atividade" não permite vincular a Lead/Deal e usa `<input datetime-local>` cru.
 
-### Ciclo de vida (5 estados, sem mudança de schema)
-
-```text
-novo  →  triagem_agendada  →  triagem_feita  →  convertido (vira Deal)
-                                              ↘  descartado (com motivo)
-```
-
-- **novo**: alguém pingou. Tem origem e contato. Falta marcar a conversa.
-- **triagem_agendada**: tem data/hora/canal da call de qualificação.
-- **triagem_feita**: a call rolou; existe um *resumo* e um *veredito* (avançar / descartar).
-- **convertido**: virou Deal. Lead vira read-only com link para o Deal.
-- **descartado**: tem motivo registrado. Pode ser reaberto.
-
-## 2. Como você vai usar (fluxo real, do seu lado)
-
-1. Cria lead em 10 segundos: `empresa + contato + origem + título curto`. Status: `novo`.
-2. Marca a triagem: clica "Agendar triagem", define data/hora/canal. Status vira `triagem_agendada`.
-3. **Faz a triagem.** Volta na tela e preenche **um campo só**: `resumo da triagem` (texto livre, o que importou). Marca como feita. Status: `triagem_feita`.
-4. Decide:
-   - **"Vale proposta"** → clica `Converter em Deal`. O Deal nasce já com empresa/contato/dono/origem/resumo da triagem grudados, e você qualifica dor/escopo/valores **lá**, onde realmente importa.
-   - **"Não vale"** → `Descartar` com motivo. Fim.
-
-**O que você não faz mais no Lead:** preencher categoria de dor, custo da dor, horas perdidas, fit, urgência, contexto de negócio, solução atual. Isso tudo é trabalho do Deal — fazer antes da triagem é chute, fazer depois é retrabalho duplo.
-
-## 3. Nova UI do Lead Detail (3 zonas, não 4)
+## Nova estrutura
 
 ```text
-┌─ HEADER ─────────────────────────────────────────────┐
-│ LEAD-009 · Sunbright Engenharia · [Triagem agendada] │
-│ Título do lead (inline)                              │
-│ R$ estimado · Daniel · Indicação · há 3d             │
-│ ▶ Próximo passo: "Triagem em 05/05 14h" [Ver agenda] │
-│ [Marcar triagem feita] [Reagendar] [Descartar]       │
-├─ MAIN ───────────────────────┬─ SIDEBAR ─────────────┤
-│ 01 Origem & primeiro contato │ EMPRESA               │
-│   • Origem (combobox)        │  link + KPIs reais    │
-│   • Valor estimado           │  (deals, MRR)         │
-│   • O que sabemos (textarea  │ ─────                 │
-│     curta — 3 linhas)        │ CONTATO PRINCIPAL     │
-│                              │  nome, papel, contato │
-│ 02 Triagem                   │ ─────                 │
-│   • Quando (datetime)        │ DONO                  │
-│   • Canal (combobox)         │ ─────                 │
-│   • Aconteceu em + duração   │ STATUS                │
-│   • Resumo da triagem (rich) │  ChipGroup 5 estados  │
-│   • [Marcar como feita]      │ ─────                 │
-│                              │ HISTÓRICO DA EMPRESA  │
-│ 03 Veredito                  │  últimos 3 leads/deals│
-│   • Banner contextual:       │                       │
-│     - se feita+sem deal:     │                       │
-│       [Converter em Deal] ⭐ │                       │
-│     - se convertido:         │                       │
-│       link p/ DEAL-XXX       │                       │
-│     - se descartado:         │                       │
-│       motivo + [Reabrir]     │                       │
-└──────────────────────────────┴───────────────────────┘
-[Atividades] [Timeline]  ← tabs auxiliares, não principais
-[Zona de risco]
+┌─────────────────────────────────────────────────────────────┐
+│ Header sticky                                                │
+│  Calendário comercial                       [+ Nova ativid.] │
+│  Hoje · Semana · Mês · Agenda    ◀ 02–08 mai 2026 ▶  Hoje    │
+├─────────────────────────────────────────────────────────────┤
+│ KPI strip (4 cards densos, padrão CrmKpiStrip)               │
+│  Hoje 3 · Atrasadas 2 · Esta semana 11 · Realizadas 7d 18    │
+├─────────────────────────────────────────────────────────────┤
+│ Filtros pill (Tipo · Owner · Status · Vinculado a)           │
+├──────────────────────────────────┬──────────────────────────┤
+│  VIEW (Hoje / Semana / Mês /     │  Painel lateral           │
+│         Agenda)                  │  ─────────────            │
+│                                  │  Atrasadas (vermelho)     │
+│                                  │  Hoje                     │
+│                                  │  Próximas 7d              │
+│                                  │  (lista compacta clicável)│
+└──────────────────────────────────┴──────────────────────────┘
+            ↓ clique numa atividade
+        Drawer lateral (Sheet) com detalhes + ações
 ```
 
-**Zonas removidas vs hoje:**
-- ❌ "01 Qualificação" (urgência + fit + contexto) → vai para o Deal
-- ❌ "02 Dor & Contexto" (categorias, custo, horas, solução atual) → vai para o Deal
-- ❌ "04 Próximo passo & notas livres" — substituído pelo banner do header (1 ação clara) e pelo `resumo da triagem`
+### Views
 
-## 4. Mudanças técnicas
+- **Hoje** (default em mobile): timeline vertical com horas (08–20h), blocos coloridos por tipo, "agora" marcado por linha horizontal.
+- **Semana** (default em desktop): grid 7 colunas × horas, blocos compactos. Substitui o "Mês vazio" como visão primária — é onde 90% da operação real acontece.
+- **Mês**: mantida, mas com células menores (h-24), mostrando apenas pontinhos coloridos por tipo + contador. Clicar no dia abre a Semana correspondente.
+- **Agenda**: lista agrupada por dia (padrão da auditoria unificada), com seções colapsáveis "Atrasadas / Hoje / Amanhã / Esta semana / Próximas".
 
-### Schema (migration nova)
-Remover do `leads` os 8 campos que duplicavam o Deal:
-```sql
-ALTER TABLE public.leads
-  DROP COLUMN IF EXISTS pain_categories,
-  DROP COLUMN IF EXISTS pain_cost_brl_monthly,
-  DROP COLUMN IF EXISTS pain_hours_monthly,
-  DROP COLUMN IF EXISTS current_solution,
-  DROP COLUMN IF EXISTS urgency,
-  DROP COLUMN IF EXISTS fit,
-  DROP COLUMN IF EXISTS business_context,
-  DROP COLUMN IF EXISTS next_step,
-  DROP COLUMN IF EXISTS next_step_date;
-DROP TRIGGER IF EXISTS trg_validate_lead_qualifiers ON public.leads;
-DROP FUNCTION IF EXISTS public.validate_lead_qualifiers();
+### Bloco de atividade (visual consistente)
+
+```text
+┌──────────────────────────────┐
+│ 🟦 14:30  Reunião virtual    │  ← cor da borda esquerda = tipo
+│ Discovery — Acme Corp        │  ← título
+│ DEAL-042 · João Silva        │  ← link + owner
+└──────────────────────────────┘
 ```
 
-**Mantém** no `leads`: `pain_description` (renomeado conceitualmente para "o que sabemos / sinal de interesse"), `triagem_summary`, `triagem_channel`, `triagem_duration_minutes`, `triagem_scheduled_at`, `triagem_happened_at`, `notes`, `lost_reason`.
+Cores por tipo (já existem tokens no design system): reunião virtual = accent, presencial = primary, ligação = warning, email = muted, whatsapp = success, outro = neutro.
 
-### `convert_lead_to_deal` (nova versão)
-- Continua copiando: empresa, contato, dono, título, valor estimado, origem.
-- **Para de tentar copiar** os campos removidos.
-- **Novo**: concatena `pain_description` + `triagem_summary` no `deals.business_context` do Deal recém-criado, como ponto de partida — o vendedor refina lá.
+### Drawer de detalhes (ao clicar)
 
-### Tipos (`src/types/crm.ts`)
-- Remove `LeadUrgency`, `LeadFit` e os 9 campos do tipo `Lead`.
+Sheet lateral direita (padrão `RecorrenciaDrawer` / `VendaDrawer`) com:
+- Título editável inline
+- Data/hora com `DatePicker` + `TimePicker` (não `datetime-local` cru)
+- Tipo (Combobox), Owner (Combobox de actors), Duração
+- **Vínculo**: campo "Vincular a" com busca de Deal/Lead (combobox unificado)
+- Descrição (Textarea)
+- **Botões de ação rápida**:
+  - ✅ Marcar como feita (com campo opcional "Resultado")
+  - 🔄 Remarcar (+1d / +1sem / data custom)
+  - 📞 Não atendeu (cria nova atividade no dia seguinte)
+  - 🗑️ Cancelar
+- Link "Abrir Lead/Deal completo →"
 
-### Componentes
-- **Apaga**: `ConvertLeadDialog` cheio de checklist de campos (vira diálogo simples), `inlineFields.tsx` se só era usado pelo Lead (Deal já tem versão própria — confirmar antes de apagar).
-- **Reescreve `CrmLeadDetail.tsx`**: 3 zonas, header com banner de próximo passo único, sidebar enxuta.
-- **Reescreve `LeadHeader.tsx`**: ações reduzidas a `Marcar triagem feita` / `Reagendar` / `Descartar` / `Converter em Deal` (a última só aparece em `triagem_feita`).
-- **Mantém**: `LeadSidebar` (já é boa, só remove o que não existe mais).
-- **Mantém**: tabs `Atividades` e `Timeline` (úteis e consistentes com Deal).
+### Dialog "Nova atividade" reformulado
 
-### UI polish (correções de inconsistência que já existem)
-- Trocar `<select>` HTML cru por `Combobox` no canal da triagem.
-- Trocar `<input type="date">` cru por `DatePicker` consistente.
-- Timeline passa a usar o mesmo agrupamento por dia do `AdminAuditoriaPage` (já existe o componente).
+- Mesmo formulário do drawer (componente compartilhado `ActivityForm`).
+- Campo "Vincular a" obrigatório-ish (com opção "Sem vínculo" explícita).
+- Pré-preenche owner = usuário logado.
+- Pré-preenche horário = próxima meia hora redonda.
 
-## 5. Arquivos afetados
+## Arquivos
 
-**Migration nova**
-- `supabase/migrations/<ts>_lead_simplification.sql` — remove colunas + reescreve `convert_lead_to_deal`.
+**Novos:**
+- `src/components/crm/calendar/ActivityForm.tsx` — formulário compartilhado (criar/editar)
+- `src/components/crm/calendar/ActivityDrawer.tsx` — Sheet de detalhes + ações rápidas
+- `src/components/crm/calendar/ActivityBlock.tsx` — bloco visual reutilizável (cor por tipo)
+- `src/components/crm/calendar/CalendarKpis.tsx` — strip de 4 KPIs
+- `src/components/crm/calendar/WeekView.tsx` — grid semanal horas×dias
+- `src/components/crm/calendar/TodayView.tsx` — timeline vertical do dia
+- `src/components/crm/calendar/MonthView.tsx` — mês compacto (refatorado do atual)
+- `src/components/crm/calendar/AgendaView.tsx` — lista agrupada por dia
+- `src/components/crm/calendar/LinkToEntityCombobox.tsx` — busca unificada Deal+Lead
 
-**Editar**
-- `src/types/crm.ts` — encolhe interface `Lead`.
-- `src/pages/crm/CrmLeadDetail.tsx` — reescrita (3 zonas).
-- `src/components/crm/LeadHeader.tsx` — banner de próximo passo + ações reduzidas.
-- `src/components/crm/LeadSidebar.tsx` — remove campos inexistentes.
-- `src/components/crm/ConvertLeadDialog.tsx` — simplifica (sem checklist de campos qualitativos).
-- `src/hooks/crm/useCrmDetails.ts` — `useUpdateLeadField` já é genérico, só perde tipos.
+**Editados:**
+- `src/pages/crm/CrmCalendar.tsx` — vira shell magro (header + filtros + KPIs + view router + painel lateral)
+- `src/hooks/crm/useCrmDashboard.ts` — `useCreateCalendarActivity` aceita `deal_id` / `lead_id`; adicionar `useDeleteCalendarActivity`
+- `src/hooks/crm/useCalendar.ts` — adicionar hook `useCalendarKpis(range)` para os 4 contadores
 
-**Possivelmente apagar (após verificar que só Lead usava)**
-- `src/components/crm/inlineFields.tsx` — se Deal não importar, remove.
+**Sem migrações de banco** — `deal_activities` já tem todas as colunas necessárias (`deal_id`, `lead_id`, `outcome`, `duration_minutes`, `participants`).
 
-## 6. Critérios de aceite
+## Detalhes técnicos
 
-- Criar um lead leva ≤30s (empresa, contato, origem, título).
-- A tela do lead tem **uma única ação destacada por status** — nunca múltiplas competindo.
-- Nenhum campo de dor estruturada / urgência / fit aparece no Lead.
-- Conversão para Deal cria um Deal com empresa/contato/dono/origem/resumo já preenchidos, e abre direto no Deal recém-criado.
-- Lead descartado mostra motivo em destaque e botão de reabrir.
-- Lead convertido vira read-only com link clicável para o Deal gerado.
-- Mobile: header empilhado, sidebar em Sheet, ações em barra fixa no rodapé.
+- View padrão: **Semana** (desktop) / **Hoje** (mobile, via `useIsMobile`).
+- Persistência: `usePersistedState('crm-calendar-view-v2', ...)` — chave nova pra não conflitar com a antiga.
+- Range query: a `useCalendarEvents` já aceita `start`/`end`, basta passar a semana ou o dia.
+- KPIs em paralelo com a query principal, mesmos filtros aplicados.
+- Confirmações de ação destrutiva via `useConfirm()` (regra de memória, nunca `confirm()` nativo).
+- Cache invalidation: usar `invalidateCrmCaches`/helpers existentes nas mutações.
+- Mobile: views Hoje/Agenda em full-width; Semana/Mês ficam atrás de um aviso "melhor em telas maiores" + fallback Agenda (padrão atual mantido).
+- Cores por tipo centralizadas em `src/lib/crm/activityColors.ts` (novo arquivo pequeno).
 
-## 7. O que isso resolve (por que não é "mais do mesmo")
+## O que sai
 
-| Antes | Depois |
-|---|---|
-| Lead = mini-Deal com 4 zonas e ~20 campos | Lead = ficha de triagem com 3 zonas e 6 campos |
-| Mesma dor preenchida 2x (Lead → Deal) | Dor preenchida 1x, no Deal |
-| 4 ações no header competindo | 1 ação destacada por status |
-| `<select>` e `<input date>` crus quebrando padrão | Combobox + DatePicker consistentes |
-| Timeline simples destoa do resto | Timeline agrupada por dia (igual auditoria) |
+- A coluna fixa "Próximas e atrasadas" — vira parte do painel lateral só nas views Semana/Mês, e some nas views Hoje/Agenda (que já mostram a mesma info).
+- O bloco morto `{false && (...)}` no código atual (lixo).
+- O `<input type="datetime-local">` cru.
 
-O Lead vira o que ele deveria ser: **um filtro rápido**. O Deal continua sendo o lugar do trabalho pesado de qualificação.
+## O que você ganha
+
+1. Abre o calendário e em 2 segundos vê: **o que está atrasado, o que é hoje, o que vem essa semana**.
+2. Marca feito / remarca / cancela **sem sair da tela**.
+3. Cria atividade já vinculada ao Deal/Lead certo.
+4. UX e densidade visual idênticos ao Pipeline e à Auditoria — sem mais "telão vazio de mês".
