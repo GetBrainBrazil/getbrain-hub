@@ -398,10 +398,17 @@ function ProposalView({
   accessJwt: string | null;
 }) {
   const brand = proposal.client_brand_color || DEFAULT_BRAND;
-  const total = useMemo(
+  const itemsTotal = useMemo(
     () => proposal.items.reduce((acc, it) => acc + Number(it.total ?? 0), 0),
     [proposal.items],
   );
+  // Valor de investimento: prioriza coluna implementation_value;
+  // fallback para soma dos itens se não estiver definido.
+  const total = Number(proposal.implementation_value ?? 0) > 0
+    ? Number(proposal.implementation_value)
+    : itemsTotal;
+  const installments = Number(proposal.installments_count ?? 0);
+  const installmentValue = installments > 1 ? total / installments : 0;
   const clientLabel = proposal.client_name || proposal.client_company_name;
   const firstName = proposal.recipient_first_name || null;
   const [interestSent, setInterestSent] = useState(false);
