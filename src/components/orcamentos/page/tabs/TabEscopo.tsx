@@ -32,6 +32,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { GerarComIaDropdown } from "@/components/orcamentos/GerarComIaDropdown";
+import { GerarDescricoesIaButton } from "@/components/orcamentos/GerarDescricoesIaButton";
 import { formatBRL, type ScopeItem } from "@/lib/orcamentos/calculateTotal";
 import type { GenerationType } from "@/lib/orcamentos/generateContent";
 
