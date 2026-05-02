@@ -45,6 +45,8 @@ export interface ProposalFormState {
   painContext: string;
   solutionOverview: string;
   clientBrandColor: string;
+  installmentsCount: number | "";
+  firstInstallmentDate: string;
 }
 
 const EMPTY_STATE: ProposalFormState = {
@@ -66,6 +68,8 @@ const EMPTY_STATE: ProposalFormState = {
   painContext: "",
   solutionOverview: "",
   clientBrandColor: "",
+  installmentsCount: "",
+  firstInstallmentDate: "",
 };
 
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
@@ -121,6 +125,10 @@ export function useProposalEditorState(proposalId: string | undefined) {
       painContext: (data as any).pain_context || "",
       solutionOverview: (data as any).solution_overview || "",
       clientBrandColor: (data as any).client_brand_color || "",
+      installmentsCount: (data as any).installments_count
+        ? Number((data as any).installments_count)
+        : "",
+      firstInstallmentDate: (data as any).first_installment_date || "",
     });
     setDirty(false);
     setItemsDirty(false);
@@ -186,6 +194,11 @@ export function useProposalEditorState(proposalId: string | undefined) {
           pain_context: state.painContext.trim() || null,
           solution_overview: state.solutionOverview.trim() || null,
           client_brand_color: state.clientBrandColor.trim() || null,
+          installments_count:
+            typeof state.installmentsCount === "number" && state.installmentsCount > 0
+              ? state.installmentsCount
+              : null,
+          first_installment_date: state.firstInstallmentDate || null,
           ...extra,
         },
       });
@@ -253,6 +266,11 @@ export function useProposalEditorState(proposalId: string | undefined) {
       valid_until: state.validUntil,
       mockup_url: state.mockupUrl,
       template_key: state.templateKey,
+      installments_count:
+        typeof state.installmentsCount === "number" && state.installmentsCount > 0
+          ? state.installmentsCount
+          : null,
+      first_installment_date: state.firstInstallmentDate || null,
     };
   }, [detail.data, proposalId, state]);
 

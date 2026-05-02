@@ -4188,9 +4188,11 @@ export type Database = {
           deleted_at: string | null
           executive_summary: string | null
           expires_at: string | null
+          first_installment_date: string | null
           first_viewed_at: string | null
           id: string
           implementation_days: number | null
+          installments_count: number | null
           last_viewed_at: string | null
           maintenance_description: string | null
           maintenance_monthly_value: number | null
@@ -4236,9 +4238,11 @@ export type Database = {
           deleted_at?: string | null
           executive_summary?: string | null
           expires_at?: string | null
+          first_installment_date?: string | null
           first_viewed_at?: string | null
           id?: string
           implementation_days?: number | null
+          installments_count?: number | null
           last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null
@@ -4284,9 +4288,11 @@ export type Database = {
           deleted_at?: string | null
           executive_summary?: string | null
           expires_at?: string | null
+          first_installment_date?: string | null
           first_viewed_at?: string | null
           id?: string
           implementation_days?: number | null
+          installments_count?: number | null
           last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null

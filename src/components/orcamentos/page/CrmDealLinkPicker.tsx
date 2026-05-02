@@ -58,10 +58,13 @@ interface DealRow {
   estimated_mrr_value: number | null;
   estimated_implementation_value: number | null;
   discount_valid_until: string | null;
+  installments_count: number | null;
+  first_installment_date: string | null;
   company?: {
     id: string;
     trade_name: string | null;
     legal_name: string;
+    logo_url: string | null;
   } | null;
 }
 
@@ -110,7 +113,7 @@ export function CrmDealLinkPicker({
       const q = supabase
         .from("deals")
         .select(
-          "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, company:companies(id, trade_name, legal_name)",
+          "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, installments_count, first_installment_date, company:companies(id, trade_name, legal_name, logo_url)",
         )
         .is("deleted_at", null)
         .order("updated_at", { ascending: false })
@@ -169,7 +172,7 @@ export function CrmDealLinkPicker({
     const { data, error } = await supabase
       .from("deals")
       .select(
-        "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, company:companies(id, trade_name, legal_name)",
+        "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, installments_count, first_installment_date, company:companies(id, trade_name, legal_name, logo_url)",
       )
       .eq("id", currentDeal.id)
       .maybeSingle();
@@ -364,6 +367,13 @@ function ImportDealDialog({
         apply: () => setField("clientName", companyName),
       },
       {
+        key: "logo",
+        label: "Logo do cliente",
+        preview: deal.company?.logo_url || null,
+        available: !!deal.company?.logo_url,
+        apply: () => setField("clientLogoUrl", deal.company?.logo_url || null),
+      },
+      {
         key: "pain",
         label: "Contexto e dor",
         preview: deal.pain_description,
@@ -399,6 +409,20 @@ function ImportDealDialog({
           : null,
         available: !!deal.estimated_mrr_value,
         apply: () => setField("maintenance", Number(deal.estimated_mrr_value)),
+      },
+      {
+        key: "installments",
+        label: "Parcelamento da implementação",
+        preview: deal.installments_count
+          ? `${deal.installments_count}× ${deal.first_installment_date ? `· 1ª parcela em ${deal.first_installment_date}` : ""}`
+          : null,
+        available: !!deal.installments_count,
+        apply: () => {
+          setField("installmentsCount", Number(deal.installments_count));
+          if (deal.first_installment_date) {
+            setField("firstInstallmentDate", deal.first_installment_date);
+          }
+        },
       },
       {
         key: "valid",
