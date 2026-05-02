@@ -89,7 +89,7 @@ export function AcessoClienteCard({
   async function handlePreview() {
     setPreviewing(true);
     try {
-      await previewProposalAsClient(proposalId);
+      await previewProposalAsClient({ proposalId, accessToken });
     } catch (e: any) {
       toast.error(e?.message || "Falha ao abrir preview");
     } finally {
@@ -222,11 +222,12 @@ export function AcessoClienteCard({
       {pwdDialogOpen && (
         <RedefinirSenhaDialog
           open={pwdDialogOpen}
-          onOpenChange={setPwdDialogOpen}
+          onOpenChange={(o) => {
+            setPwdDialogOpen(o);
+            if (!o) onPasswordUpdated();
+          }}
           proposalId={proposalId}
           proposalCode={proposalCode}
-          clientName={clientName}
-          onSuccess={onPasswordUpdated}
         />
       )}
       {dialog}
