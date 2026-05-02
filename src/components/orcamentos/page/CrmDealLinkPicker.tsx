@@ -60,6 +60,11 @@ interface DealRow {
   discount_valid_until: string | null;
   installments_count: number | null;
   first_installment_date: string | null;
+  mrr_start_trigger: string | null;
+  mrr_start_date: string | null;
+  mrr_duration_months: number | null;
+  mrr_discount_value: number | null;
+  mrr_discount_months: number | null;
   company?: {
     id: string;
     trade_name: string | null;
