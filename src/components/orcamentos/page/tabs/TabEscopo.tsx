@@ -1,23 +1,30 @@
 /**
  * Tab "Escopo" — itens (NotionItemsEditor) + manutenção mensal + prazos +
- * considerações.
+ * considerações + narrativa (boas-vindas, resumo executivo, contexto/dor,
+ * visão da solução). A narrativa antes vivia em "Conteúdo IA".
  *
  * Cada bloco em Card separado para dar respiro visual e ajudar a navegação
  * vertical longa.
  */
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
+import { GerarComIaDropdown } from "@/components/orcamentos/GerarComIaDropdown";
 import {
   calculateScopeTotal,
   formatBRL,
   type ScopeItem,
 } from "@/lib/orcamentos/calculateTotal";
+import type { GenerationType } from "@/lib/orcamentos/generateContent";
 
 interface Props {
+  proposalId: string;
+  hasDealLink: boolean;
+  isLocked: boolean;
   state: {
     scopeItems: ScopeItem[];
     maintenance: number | "";
@@ -26,13 +33,29 @@ interface Props {
     validationDays: number;
     considerations: string[];
     validUntil: string;
+    welcomeMessage: string;
+    executiveSummary: string;
+    painContext: string;
+    solutionOverview: string;
   };
   setField: (field: any, value: any) => void;
   setItems: (items: ScopeItem[]) => void;
   onOpenItemDetails: (idx: number) => void;
+  dealPainDescription?: string | null;
+  onAiGenerated: (type: GenerationType, content: any) => void;
 }
 
-export function TabEscopo({ state, setField, setItems, onOpenItemDetails }: Props) {
+export function TabEscopo({
+  proposalId,
+  hasDealLink,
+  isLocked,
+  state,
+  setField,
+  setItems,
+  onOpenItemDetails,
+  dealPainDescription,
+  onAiGenerated,
+}: Props) {
   const total = calculateScopeTotal(state.scopeItems);
   const monthly =
     typeof state.maintenance === "number" && state.maintenance > 0 ? state.maintenance : 0;
