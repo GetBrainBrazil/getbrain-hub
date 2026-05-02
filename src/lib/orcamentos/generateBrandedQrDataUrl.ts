@@ -18,9 +18,13 @@ import { generateQrDataUrl } from "./generateQrDataUrl";
 import logoGetBrain from "@/assets/logo-getbrain-oficial.svg";
 
 const QR_SIZE = 480;
-const LOGO_RATIO = 0.18; // fração do tamanho do QR
-const PADDING_RATIO = 0.22; // quadrado branco atrás da logo
-const RADIUS_RATIO = 0.18; // raio dos cantos do quadrado branco
+// A logo oficial é horizontal (~262x75). Mantemos a área central enxuta
+// pra preservar a leitura do QR (errorCorrection H tolera ~30%).
+const LOGO_WIDTH_RATIO = 0.26; // largura da logo em relação ao QR
+const LOGO_ASPECT = 262.5 / 75; // proporção do SVG oficial
+const PADDING_X_RATIO = 0.06; // respiro horizontal dentro do quadrado branco
+const PADDING_Y_RATIO = 0.04; // respiro vertical
+const RADIUS_RATIO = 0.22;
 
 function roundedRect(
   ctx: CanvasRenderingContext2D,
@@ -78,27 +82,29 @@ export async function generateBrandedQrDataUrl(url: string): Promise<string | nu
 
     ctx.drawImage(qrImg, 0, 0, QR_SIZE, QR_SIZE);
 
-    // 4. Quadrado branco com cantos arredondados atrás da logo
-    const padSize = QR_SIZE * PADDING_RATIO;
-    const padX = (QR_SIZE - padSize) / 2;
-    const padY = (QR_SIZE - padSize) / 2;
-    const radius = padSize * RADIUS_RATIO;
+    // 4. Calcula tamanho da logo (horizontal) e do quadrado branco atrás
+    const logoW = QR_SIZE * LOGO_WIDTH_RATIO;
+    const logoH = logoW / LOGO_ASPECT;
+    const padW = logoW + QR_SIZE * PADDING_X_RATIO * 2;
+    const padH = logoH + QR_SIZE * PADDING_Y_RATIO * 2;
+    const padX = (QR_SIZE - padW) / 2;
+    const padY = (QR_SIZE - padH) / 2;
+    const radius = Math.min(padW, padH) * RADIUS_RATIO;
 
     ctx.fillStyle = "#ffffff";
-    roundedRect(ctx, padX, padY, padSize, padSize, radius);
+    roundedRect(ctx, padX, padY, padW, padH, radius);
     ctx.fill();
 
     // borda sutil pra separar do padrão do QR
     ctx.strokeStyle = "rgba(10, 14, 26, 0.08)";
     ctx.lineWidth = 1;
-    roundedRect(ctx, padX + 0.5, padY + 0.5, padSize - 1, padSize - 1, radius);
+    roundedRect(ctx, padX + 0.5, padY + 0.5, padW - 1, padH - 1, radius);
     ctx.stroke();
 
-    // 5. Logo centralizada
-    const logoSize = QR_SIZE * LOGO_RATIO;
-    const logoX = (QR_SIZE - logoSize) / 2;
-    const logoY = (QR_SIZE - logoSize) / 2;
-    ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+    // 5. Logo centralizada (preservando proporção horizontal)
+    const logoX = (QR_SIZE - logoW) / 2;
+    const logoY = (QR_SIZE - logoH) / 2;
+    ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
 
     return canvas.toDataURL("image/png");
   } catch (e) {
