@@ -243,33 +243,42 @@ export function TabResumo({
         </Card>
       )}
 
-      {/* Ações rápidas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      {/* Bloco do link público */}
+      <PublicLinkBlock
+        accessToken={(proposal as any).access_token || null}
+        validUntilLabel={validityChip}
+        interactionsCount={interactionsCount}
+        onPreviewAsClient={onPreviewAsClient}
+        onCopyLink={onCopyLink}
+        onProtectedAction={(label) => handleProtectedAction(label)}
+      />
+
+      {/* Ações secundárias */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <ActionButton
           icon={<Eye className="h-4 w-4" />}
           label="Ver como cliente"
-          subtitle={hasLink ? "Pré-autenticado" : "Após enviar"}
+          subtitle={hasLink ? "Abre em nova aba" : "Disponível após enviar"}
           enabled={hasLink}
           onClick={hasLink ? onPreviewAsClient : () => handleProtectedAction("Ver como cliente")}
         />
         <ActionButton
-          icon={<Link2 className="h-4 w-4" />}
-          label="Copiar link"
-          subtitle={hasLink ? "/p/" + (proposal as any).access_token?.slice(0, 8) + "…" : "Após enviar"}
-          enabled={hasLink}
-          onClick={hasLink ? onCopyLink : () => handleProtectedAction("Copiar link")}
-        />
-        <ActionButton
           icon={<FileText className="h-4 w-4" />}
           label="Pré-visualizar PDF"
-          subtitle="Versão atual"
+          subtitle="Renderiza sem criar versão"
           enabled
           onClick={onPreviewPdf}
         />
         <ActionButton
           icon={<Activity className="h-4 w-4" />}
-          label="Tracking"
-          subtitle={hasLink ? "Quem viu / interagiu" : "Sem dados ainda"}
+          label="Tracking & histórico"
+          subtitle={
+            hasLink
+              ? interactionsCount > 0
+                ? `${interactionsCount} ${interactionsCount === 1 ? "evento registrado" : "eventos registrados"}`
+                : "Sem visualizações ainda"
+              : "Disponível após enviar"
+          }
           enabled
           onClick={onOpenTracking}
         />
