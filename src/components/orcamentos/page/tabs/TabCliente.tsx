@@ -145,20 +145,6 @@ export function TabCliente({
         </div>
       </Card>
 
-      {dealClientLink && (
-        <p className="text-[11px] text-muted-foreground">
-          Vinculada ao deal{" "}
-          <a
-            href={`/crm/deals/${dealClientLink.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline font-mono"
-          >
-            {dealClientLink.code}
-          </a>{" "}
-          — {dealClientLink.title}
-        </p>
-      )}
     </div>
   );
 }
