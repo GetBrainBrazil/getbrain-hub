@@ -91,8 +91,10 @@ export function useGenerateProposalPDF() {
         // 1) Mapear dados → shape do template
         const data = mapProposalToTemplateData(proposal);
 
-        // 2) URL pública (preparada pro QR code do 10D-2). Apenas best-effort.
+        // 2) URL pública + QR + watermark conforme status
         const accessUrl = `${window.location.origin}/p/${proposalId}`;
+        const qrCodeDataUrl = await generateQrDataUrl(accessUrl);
+        const watermark = watermarkFor(proposal);
 
         // 3) Render React-PDF → blob
         const blob = await pdf(
@@ -100,6 +102,8 @@ export function useGenerateProposalPDF() {
             data={data}
             templateVersion={templateVersion}
             proposalAccessUrl={accessUrl}
+            qrCodeDataUrl={qrCodeDataUrl}
+            watermark={watermark}
           />,
         ).toBlob();
 
