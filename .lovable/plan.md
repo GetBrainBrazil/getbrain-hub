@@ -1,38 +1,29 @@
-Vou corrigir os pontos onde ainda aparece o quadrado/bolinha azul com “G” e garantir que a logo anexada seja usada de forma consistente nas propostas.
+Vou interligar 100% o stepper dentro do card do deal com o Kanban, nas duas direções, mantendo as confirmações já existentes (proposta obrigatória, motivo de perda, dialog de "ganho").
 
-Plano:
+## O que já funciona hoje
 
-1. Adicionar a logo anexada como asset oficial da proposta
-   - Copiar `logogetbrain-2.svg` para `src/assets` com um nome claro, por exemplo `logo-getbrain-oficial.svg`.
-   - Usar esse asset nas telas públicas e na geração do QR Code.
+- **Card → Kanban**: o stepper no `DealHeader` (`StageStepper`) chama `handleStageChange` em `CrmDealDetail`, que usa `useUpdateDealField` e invalida `['crm-deals']` (Kanban) + `['crm-metrics']`. Isso já reflete na hora.
+- **Mesmas regras de negócio do Kanban**: ao clicar em "Convertido", abre o `DealWonDialog`; em "Perdido", pede o motivo; em "Qualificado/Proposta" sem proposta vinculada, abre o `NeedsProposalDialog`. Reaproveita os mesmos diálogos do Pipeline.
 
-2. Trocar o topo da proposta pública
-   - Em `src/pages/public/PropostaPublica.tsx`, substituir o ícone compacto que hoje pode aparecer como “G”/badge por uma renderização da logo anexada.
-   - Ajustar o tamanho no header para ficar legível, sem estourar o layout: desktop e mobile.
-   - Manter o código da proposta ao lado, como no print, mas com a marca correta.
+## O que falta (o gap real)
 
-3. Remover o fallback visual “G” do autor
-   - O fallback atual do `AuthorAvatar` usa gradiente azul e inicial “G” quando não há foto do autor.
-   - Vou trocar esse fallback por um avatar com a logo anexada, evitando que o “G” azul apareça em seções como “Carta de Daniel” e CTA final.
+- **Kanban → Card**: ao arrastar no Kanban, `useUpdateDealStage` faz patch otimista só nas listas `['crm-deals']` e invalida apenas `['crm-deals']` e `['crm-metrics']` — **não invalida `['crm-deal-code', code]`**, que alimenta o stepper do detalhe. Se o card estiver aberto em outra aba/janela ou for aberto logo após a mudança, o stepper só atualiza no próximo refetch (foco/tempo).
 
-4. Atualizar o QR Code personalizado
-   - O QR Code já tem lógica de logo centralizada, mas está importando `logo-getbrain.png`.
-   - Vou apontar a geração para a logo anexada, mantendo correção de erro alta (`H`) e fundo branco atrás da marca para continuar escaneável.
-   - Se necessário, ajusto a proporção da logo no centro para ficar bonito sem prejudicar a leitura.
+## Mudança proposta
 
-5. Revisar usos restantes de marca na proposta
-   - Verificar imports e ocorrências de `logo-getbrain.png/svg` e `GetBrain` na proposta pública e PDF.
-   - Padronizar os pontos visuais principais: tela de senha, header da proposta, footer e QR Code.
-   - Não vou remover textos institucionais como “GetBrain” onde eles são conteúdo da proposta; o foco é trocar a logo/ícone visual incorreto.
+Em `src/hooks/crm/useDeals.ts`, dentro de `useUpdateDealStage`:
 
-Arquivos previstos:
-- `src/assets/logo-getbrain-oficial.svg` novo asset a partir do arquivo anexado.
-- `src/pages/public/PropostaPublica.tsx` para header, tela de senha/footer e fallback do avatar.
-- `src/lib/orcamentos/generateBrandedQrDataUrl.ts` para usar a logo anexada no QR Code.
-- Possivelmente `src/components/orcamentos/templates/TemplateInovacaoTecnologica/PDFTemplate/pages/CoverPage.tsx` se o PDF também estiver usando uma versão antiga da logo.
+1. **Patch otimista também no detalhe**: percorrer caches existentes em `['crm-deal-code', *]`, achar o deal pelo `id` e atualizar `stage`, `probability_pct`, `lost_reason`, `estimated_value`.
+2. **Invalidação completa no `onSettled`**: além de `crm-deals` e `crm-metrics`, invalidar `['crm-deal-code']` (todos os codes) e `['crm-deal-audit']` para a timeline do deal refletir a mudança.
 
-Resultado esperado:
-- O “G” azul do print deixa de aparecer.
-- A proposta pública passa a exibir a logo anexada no topo.
-- O QR Code continua funcional e passa a usar a logo anexada no centro.
-- A marca visual fica consistente nas propostas.
+Resultado: arrastar um card no Kanban atualiza o stepper do detalhe instantaneamente, mesmo se o detalhe já estiver aberto.
+
+## Verificação
+
+- Mover card no Kanban → abrir detalhe → stepper já no estágio novo, sem refresh.
+- Clicar no stepper dentro do card → coluna correta no Kanban, com mesma confirmação (won/lost/proposta).
+- Tab "Timeline" do deal mostra a transição vinda do Kanban.
+
+## Arquivos editados
+
+- `src/hooks/crm/useDeals.ts` — ajustes no `useUpdateDealStage` (otimista + invalidações).
