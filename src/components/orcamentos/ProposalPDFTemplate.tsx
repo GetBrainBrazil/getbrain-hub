@@ -13,7 +13,7 @@ interface Props {
  */
 export function ProposalPDFTemplate({ proposal, domId = "proposal-pdf-template" }: Props) {
   const template = getTemplate(proposal.template_key as TemplateKey | undefined);
-  const Component = template.Component;
+  const Component = template.WebComponent;
   return (
     <div id={domId} style={{ backgroundColor: "#fff" }}>
       <Component proposal={proposal} />
