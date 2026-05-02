@@ -6,6 +6,7 @@ import { CurrencyInput, IntegerInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ComboboxCreate } from "@/components/crm/ComboboxCreate";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
