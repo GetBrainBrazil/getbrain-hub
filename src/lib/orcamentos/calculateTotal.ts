@@ -9,6 +9,7 @@ export interface ProposalItemRow {
   id: string;
   proposal_id: string;
   description: string;
+  long_description?: string | null;
   quantity: number;
   unit_price: number;
   total: number;
