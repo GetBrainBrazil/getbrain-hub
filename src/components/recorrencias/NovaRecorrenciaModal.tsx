@@ -6,6 +6,7 @@ import { CurrencyInput, IntegerInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ComboboxCreate } from "@/components/crm/ComboboxCreate";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -266,16 +267,81 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
             <summary className="text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer">Vínculos (opcional)</summary>
             <div className="grid grid-cols-2 gap-3 mt-3">
               {form.direction === "receita" && (
-                <RefSelect label="Cliente" value={form.cliente_id} onChange={(v) => update("cliente_id", v)} options={refs.clientes} />
+                <RefCombo
+                  label="Cliente" value={form.cliente_id}
+                  onChange={(v) => update("cliente_id", v)}
+                  options={refs.clientes}
+                  onCreate={async (nome) => {
+                    const { data, error } = await supabase.from("clientes").insert({ nome }).select("id, nome").single();
+                    if (error) throw error;
+                    setRefs((s) => ({ ...s, clientes: [...s.clientes, data].sort((a: any, b: any) => a.nome.localeCompare(b.nome)) }));
+                    update("cliente_id", data.id);
+                  }}
+                />
               )}
               {form.direction === "despesa" && (
-                <RefSelect label="Fornecedor" value={form.fornecedor_id} onChange={(v) => update("fornecedor_id", v)} options={refs.fornecedores} />
+                <RefCombo
+                  label="Fornecedor" value={form.fornecedor_id}
+                  onChange={(v) => update("fornecedor_id", v)}
+                  options={refs.fornecedores}
+                  onCreate={async (nome) => {
+                    const { data, error } = await supabase.from("fornecedores").insert({ nome }).select("id, nome").single();
+                    if (error) throw error;
+                    setRefs((s) => ({ ...s, fornecedores: [...s.fornecedores, data].sort((a: any, b: any) => a.nome.localeCompare(b.nome)) }));
+                    update("fornecedor_id", data.id);
+                  }}
+                />
               )}
-              <RefSelect label="Projeto" value={form.projeto_id} onChange={(v) => update("projeto_id", v)} options={refs.projetos.map((p: any) => ({ id: p.id, nome: `${p.code} — ${p.name}` }))} />
-              <RefSelect label="Categoria" value={form.categoria_id} onChange={(v) => update("categoria_id", v)} options={filteredCategorias} />
-              <RefSelect label="Centro de custo" value={form.centro_custo_id} onChange={(v) => update("centro_custo_id", v)} options={refs.centros} />
-              <RefSelect label="Conta bancária" value={form.conta_bancaria_id} onChange={(v) => update("conta_bancaria_id", v)} options={refs.contas} />
-              <RefSelect label="Meio de pagamento" value={form.meio_pagamento_id} onChange={(v) => update("meio_pagamento_id", v)} options={refs.meios} />
+              <RefCombo
+                label="Projeto" value={form.projeto_id}
+                onChange={(v) => update("projeto_id", v)}
+                options={refs.projetos.map((p: any) => ({ id: p.id, nome: `${p.code} — ${p.name}` }))}
+              />
+              <RefCombo
+                label="Categoria" value={form.categoria_id}
+                onChange={(v) => update("categoria_id", v)}
+                options={filteredCategorias}
+                onCreate={async (nome) => {
+                  const tipo = form.direction === "receita" ? "receitas" : "despesas";
+                  const { data, error } = await supabase.from("categorias").insert({ nome, tipo }).select("id, nome, tipo").single();
+                  if (error) throw error;
+                  setRefs((s) => ({ ...s, categorias: [...s.categorias, data].sort((a: any, b: any) => a.nome.localeCompare(b.nome)) }));
+                  update("categoria_id", data.id);
+                }}
+              />
+              <RefCombo
+                label="Centro de custo" value={form.centro_custo_id}
+                onChange={(v) => update("centro_custo_id", v)}
+                options={refs.centros}
+                onCreate={async (nome) => {
+                  const { data, error } = await supabase.from("centros_custo").insert({ nome }).select("id, nome").single();
+                  if (error) throw error;
+                  setRefs((s) => ({ ...s, centros: [...s.centros, data].sort((a: any, b: any) => a.nome.localeCompare(b.nome)) }));
+                  update("centro_custo_id", data.id);
+                }}
+              />
+              <RefCombo
+                label="Conta bancária" value={form.conta_bancaria_id}
+                onChange={(v) => update("conta_bancaria_id", v)}
+                options={refs.contas}
+                onCreate={async (nome) => {
+                  const { data, error } = await supabase.from("contas_bancarias").insert({ nome }).select("id, nome").single();
+                  if (error) throw error;
+                  setRefs((s) => ({ ...s, contas: [...s.contas, data].sort((a: any, b: any) => a.nome.localeCompare(b.nome)) }));
+                  update("conta_bancaria_id", data.id);
+                }}
+              />
+              <RefCombo
+                label="Meio de pagamento" value={form.meio_pagamento_id}
+                onChange={(v) => update("meio_pagamento_id", v)}
+                options={refs.meios}
+                onCreate={async (nome) => {
+                  const { data, error } = await supabase.from("meios_pagamento").insert({ nome }).select("id, nome").single();
+                  if (error) throw error;
+                  setRefs((s) => ({ ...s, meios: [...s.meios, data].sort((a: any, b: any) => a.nome.localeCompare(b.nome)) }));
+                  update("meio_pagamento_id", data.id);
+                }}
+              />
             </div>
           </details>
 
@@ -298,25 +364,35 @@ export function NovaRecorrenciaModal({ open, onOpenChange, defaultProjectId }: P
   );
 }
 
-function RefSelect({
-  label, value, onChange, options,
+function RefCombo({
+  label, value, onChange, options, onCreate,
 }: {
   label: string; value: string | null | undefined;
   onChange: (v: string | null) => void;
   options: { id: string; nome: string }[];
+  onCreate?: (nome: string) => Promise<void>;
 }) {
   return (
     <div>
       <Label className="text-xs">{label}</Label>
-      <Select value={value || "__none__"} onValueChange={(v) => onChange(v === "__none__" ? null : v)}>
-        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="__none__">— Nenhum —</SelectItem>
-          {options.map((o) => (
-            <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ComboboxCreate
+        value={value || ""}
+        onChange={(v) => onChange(v || null)}
+        options={[
+          { value: "", label: "— Nenhum —" },
+          ...options.map((o) => ({ value: o.id, label: o.nome })),
+        ]}
+        onCreate={onCreate ? async (nome) => {
+          try {
+            await onCreate(nome);
+            toast.success(`${label} criado`);
+          } catch (e: any) {
+            toast.error(e?.message || `Erro ao criar ${label.toLowerCase()}`);
+          }
+        } : undefined}
+        placeholder="— Nenhum —"
+        searchPlaceholder={onCreate ? "Buscar ou digitar para criar…" : "Buscar…"}
+      />
     </div>
   );
 }
