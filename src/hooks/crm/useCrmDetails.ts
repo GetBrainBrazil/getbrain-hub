@@ -52,7 +52,7 @@ async function hydrateLeads(rows: unknown[]): Promise<Lead[]> {
   const personMap = new Map<string, CrmPerson>((people ?? []).map((x: CrmPerson) => [x.id, x]));
   const actorMap = new Map<string, CrmActor>((actors ?? []).map((x: CrmActor) => [x.id, x]));
   const dealMap = new Map<string, { id: string; code: string }>((deals ?? []).map((x: { id: string; code: string }) => [x.id, x]));
-  return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), pain_categories: Array.isArray(d.pain_categories) ? d.pain_categories : [], pain_cost_brl_monthly: d.pain_cost_brl_monthly === null || d.pain_cost_brl_monthly === undefined ? null : Number(d.pain_cost_brl_monthly), pain_hours_monthly: d.pain_hours_monthly === null || d.pain_hours_monthly === undefined ? null : Number(d.pain_hours_monthly), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null, converted_deal_code: d.converted_to_deal_id ? dealMap.get(d.converted_to_deal_id)?.code ?? null : null }));
+  return list.map((d) => ({ ...d, estimated_value: d.estimated_value === null ? null : Number(d.estimated_value), company: companyMap.get(d.company_id) ?? null, contact: d.contact_person_id ? personMap.get(d.contact_person_id) ?? null : null, owner: d.owner_actor_id ? actorMap.get(d.owner_actor_id) ?? null : null, converted_deal_code: d.converted_to_deal_id ? dealMap.get(d.converted_to_deal_id)?.code ?? null : null }));
 }
 
 export function useDealByCode(code?: string) {
