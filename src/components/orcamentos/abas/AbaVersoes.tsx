@@ -68,10 +68,24 @@ export function AbaVersoes({ proposalId }: Props) {
 
   if (!data || data.length === 0) {
     return (
-      <Card className="p-6 text-center text-sm text-muted-foreground border-dashed">
-        Nenhum PDF gerado ainda. Vá pro editor e clique em "PDF" pra gerar a
-        primeira versão.
-      </Card>
+      <>
+        <Card className="p-6 text-center text-sm text-muted-foreground border-dashed space-y-3">
+          <p>Nenhum PDF gerado ainda.</p>
+          <Button
+            size="sm"
+            onClick={handleRegenerate}
+            disabled={regen.isPending || !proposal}
+          >
+            {regen.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Gerar primeira versão
+          </Button>
+        </Card>
+        {confirmDialog}
+      </>
     );
   }
 
