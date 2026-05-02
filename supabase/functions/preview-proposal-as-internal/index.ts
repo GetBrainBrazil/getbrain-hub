@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       {
         proposal_id: prop.id,
         preview: true,
-        sub: claims.claims.sub,
+        sub: userId,
         exp: getNumericDate(PREVIEW_TTL_SECONDS),
       },
       key,
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       entity_id: prop.id,
       action: "status_change",
       changes: {},
-      metadata: { kind: "preview_as_internal", user_id: claims.claims.sub },
+      metadata: { kind: "preview_as_internal", user_id: userId },
     });
 
     return json({
