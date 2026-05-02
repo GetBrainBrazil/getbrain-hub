@@ -14,13 +14,20 @@ import {
   Minus,
   MessageCircle,
   ThumbsUp,
+  Sparkles,
+  CheckCircle2,
+  Zap,
+  Brain,
+  Target,
+  Rocket,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ABOUT_GETBRAIN_PARAGRAPHS } from "@/content/about-getbrain";
-import ProposalChatBox from "@/components/orcamentos/ProposalChatBox";
+import ProposalChatBubble from "@/components/orcamentos/ProposalChatBubble";
+import { GETBRAIN_INFO, whatsappUrl as buildWhatsappUrl } from "@/lib/getbrain-info";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -356,7 +363,7 @@ function PasswordGate(props: {
           <p className="text-center text-xs text-white/40 mt-6">
             Problemas?{" "}
             <a
-              href="https://wa.me/5511999999999"
+              href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`}
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-cyan-400"
@@ -414,6 +421,16 @@ function ProposalView({
   const [interestSent, setInterestSent] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [scrolled, setScrolled] = useState(false);
+
+  // Carta IA + Roadmap IA
+  const [openingLetter, setOpeningLetter] = useState<string | null>(
+    proposal.public_opening_letter,
+  );
+  const [letterLoading, setLetterLoading] = useState(false);
+  const [roadmap, setRoadmap] = useState<PublicProposal["public_roadmap"]>(
+    proposal.public_roadmap,
+  );
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
   const sessionToken = useMemo(
     () => getOrCreateSessionToken(proposal.code),
     [proposal.code],
@@ -469,6 +486,28 @@ function ProposalView({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Auto-gera carta IA + roadmap se ainda não estiverem em cache
+  useEffect(() => {
+    if (!accessJwt) return;
+    if (!openingLetter && !letterLoading) {
+      setLetterLoading(true);
+      callEdge("generate-proposal-opening-letter", {}, accessJwt)
+        .then((r) => {
+          if (r.ok && r.data?.letter) setOpeningLetter(r.data.letter as string);
+        })
+        .finally(() => setLetterLoading(false));
+    }
+    if (!roadmap && !roadmapLoading && proposal.items.length > 0) {
+      setRoadmapLoading(true);
+      callEdge("generate-proposal-roadmap", {}, accessJwt)
+        .then((r) => {
+          if (r.ok && r.data?.roadmap) setRoadmap(r.data.roadmap);
+        })
+        .finally(() => setRoadmapLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessJwt]);
+
   // reveal-on-scroll
   useEffect(() => {
     const els = document.querySelectorAll<HTMLElement>(".reveal");
@@ -507,7 +546,7 @@ function ProposalView({
 
   const visibleSections = SECTIONS.filter((s) => {
     if (s.id === "hero") return true;
-    if (s.id === "carta") return !!proposal.executive_summary;
+    if (s.id === "carta") return true; // sempre exibida (IA gera mesmo sem executive_summary)
     if (s.id === "contexto") return !!proposal.pain_context;
     if (s.id === "solucao") return !!proposal.solution_overview;
     if (s.id === "escopo") return proposal.items.length > 0;
@@ -748,35 +787,58 @@ function ProposalView({
         </div>
       </section>
 
-      {/* ============================ CARTA DE ABERTURA ============================ */}
-      {proposal.executive_summary && (
-        <section id="carta" className="editorial-light scroll-mt-16">
-          <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-32 sm:py-44 grid lg:grid-cols-12 gap-12">
-            <div className="lg:col-span-3">
-              <div className="reveal text-[10px] font-mono-display uppercase tracking-[0.4em] text-muted-ink">
-                <span className="text-brand">—</span> Carta de abertura
-              </div>
+      {/* ============================ CARTA DE ABERTURA (IA) ============================ */}
+      <section id="carta" className="editorial-light scroll-mt-16">
+        <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-32 sm:py-44 grid lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-3">
+            <div className="reveal text-[10px] font-mono-display uppercase tracking-[0.4em] text-muted-ink flex items-center gap-2">
+              <Sparkles className="h-3 w-3 text-brand" />
+              <span>Carta de Daniel</span>
             </div>
-            <div className="lg:col-span-8 lg:col-start-5">
-              <p className="reveal font-editorial-display text-3xl sm:text-5xl lg:text-6xl leading-[1.15] tracking-tight font-light">
-                {greeting}
-              </p>
-              <div className="reveal mt-10 prose prose-lg max-w-none prose-p:text-slate-700 prose-p:leading-relaxed prose-p:font-light prose-strong:text-slate-900">
-                <ReactMarkdown>{proposal.executive_summary}</ReactMarkdown>
+            <div className="reveal hidden lg:block mt-6 text-xs text-muted-ink/70 leading-relaxed font-light max-w-[18ch]">
+              Escrita especialmente para {clientLabel}.
+            </div>
+          </div>
+          <div className="lg:col-span-8 lg:col-start-5">
+            <p className="reveal font-editorial-display text-3xl sm:text-5xl lg:text-6xl leading-[1.15] tracking-tight font-light">
+              {greeting}
+            </p>
+            <div className="reveal mt-10 min-h-[120px]">
+              {openingLetter ? (
+                <div className="prose prose-lg max-w-none prose-p:text-slate-700 prose-p:leading-relaxed prose-p:font-light prose-p:text-[1.15rem] prose-strong:text-slate-900">
+                  {openingLetter.split(/\n\n+/).map((para, i) => (
+                    <p key={i}>{para.trim()}</p>
+                  ))}
+                </div>
+              ) : letterLoading ? (
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-4 bg-slate-900/8 rounded w-[95%]" />
+                  <div className="h-4 bg-slate-900/8 rounded w-[88%]" />
+                  <div className="h-4 bg-slate-900/8 rounded w-[92%]" />
+                  <div className="h-4 bg-slate-900/8 rounded w-[60%]" />
+                  <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-brand pt-3 flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Daniel está escrevendo...
+                  </div>
+                </div>
+              ) : proposal.executive_summary ? (
+                <div className="prose prose-lg max-w-none prose-p:text-slate-700 prose-p:leading-relaxed prose-p:font-light prose-strong:text-slate-900">
+                  <ReactMarkdown>{proposal.executive_summary}</ReactMarkdown>
+                </div>
+              ) : null}
+            </div>
+            <div className="reveal mt-12 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white">
+                D
               </div>
-              <div className="reveal mt-12 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white">
-                  D
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-slate-900">Daniel</div>
-                  <div className="text-xs text-muted-ink">Fundador · GetBrain</div>
-                </div>
+              <div>
+                <div className="text-sm font-medium text-slate-900">Daniel</div>
+                <div className="text-xs text-muted-ink">Fundador · GetBrain</div>
               </div>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* ============================ CONTEXTO ============================ */}
       {proposal.pain_context && (
@@ -921,11 +983,21 @@ function ProposalView({
           title="A jornada"
           theme="dark"
         >
-          <CronogramaEditorial
-            implementationDays={proposal.implementation_days ?? 0}
-            validationDays={proposal.validation_days ?? 0}
+          <RoadmapTimeline
+            roadmap={roadmap}
+            loading={roadmapLoading}
             brand={brand}
           />
+          <div className="mt-16 pt-12 border-t border-white/10">
+            <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-white/45 mb-6">
+              Visão macro do prazo
+            </div>
+            <CronogramaEditorial
+              implementationDays={proposal.implementation_days ?? 0}
+              validationDays={proposal.validation_days ?? 0}
+              brand={brand}
+            />
+          </div>
         </EditorialSection>
       )}
 
@@ -982,13 +1054,91 @@ function ProposalView({
         id="sobre"
         number="08"
         eyebrow="Sobre"
-        title="GetBrain"
+        title="A GetBrain"
         theme="light"
       >
-        <div className="reveal max-w-3xl space-y-6 text-slate-700 text-lg leading-relaxed font-light">
+        <div className="reveal max-w-3xl space-y-6 text-slate-700 text-lg leading-relaxed font-light mb-16">
           {ABOUT_GETBRAIN_PARAGRAPHS.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
+        </div>
+
+        {/* Capability cards */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+          {[
+            {
+              icon: Brain,
+              title: "IA aplicada",
+              desc: "Agentes, RAG, automações com LLMs — não é hype, é ferramenta.",
+            },
+            {
+              icon: Zap,
+              title: "Engenharia enxuta",
+              desc: "Stack moderna, sem over-engineering. Deploy contínuo desde o dia 1.",
+            },
+            {
+              icon: Target,
+              title: "Foco no resultado",
+              desc: "Métricas claras de sucesso, ciclos curtos, ajuste no caminho.",
+            },
+            {
+              icon: Rocket,
+              title: "Time-to-market",
+              desc: "MVP no ar em semanas, não em meses. Iterar com dados reais.",
+            },
+            {
+              icon: CheckCircle2,
+              title: "Parceria de longo prazo",
+              desc: "Manutenção evolutiva, contexto preservado, mesmo time sempre.",
+            },
+            {
+              icon: Sparkles,
+              title: "Atendimento sênior",
+              desc: "Daniel diretamente envolvido. Sem camada de 'gerente de conta'.",
+            },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className="reveal group bg-white border border-slate-900/8 rounded-2xl p-6 hover:border-brand hover:shadow-lg transition-all"
+            >
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                style={{
+                  background: "color-mix(in srgb, var(--brand) 12%, transparent)",
+                  color: "var(--brand)",
+                }}
+              >
+                <Icon className="h-5 w-5" />
+              </div>
+              <h4 className="font-editorial-display text-xl text-slate-900 mb-2 leading-tight">
+                {title}
+              </h4>
+              <p className="text-sm text-slate-600 leading-relaxed font-light">
+                {desc}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tech stack scroll */}
+        <div className="reveal pt-12 border-t border-slate-900/8">
+          <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-6">
+            Tecnologias que usamos
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              "React", "TypeScript", "Node.js", "Python", "Supabase", "PostgreSQL",
+              "OpenAI", "Anthropic", "Gemini", "LangChain", "Tailwind", "Vite",
+              "Vercel", "Lovable Cloud", "n8n", "Zapier", "WhatsApp API",
+            ].map((tech) => (
+              <span
+                key={tech}
+                className="text-xs font-mono-display px-3 py-1.5 rounded-full bg-slate-900/5 text-slate-700 border border-slate-900/8 hover:border-brand hover:text-brand transition-colors"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
         </div>
       </EditorialSection>
 
@@ -1001,10 +1151,14 @@ function ProposalView({
           <h2 className="reveal font-editorial-display text-5xl sm:text-7xl lg:text-8xl tracking-tight font-light leading-[1.05] max-w-[18ch]">
             <span className="brand-dot">Vamos começar?</span>
           </h2>
-          <p className="reveal mt-8 text-lg text-white/65 max-w-2xl font-light leading-relaxed">
-            Se essa proposta faz sentido, é só avisar — o Daniel é chamado na hora.
-            Se quiser ajustar algo ou tirar uma dúvida, fale pelo WhatsApp ou pelo
-            chat aqui no canto.
+          <p className="reveal mt-8 text-lg text-white/70 max-w-2xl font-light leading-relaxed">
+            Se faz sentido, clique em <strong className="text-white">"Quero avançar"</strong> — o
+            Daniel é avisado na hora pelo WhatsApp e te procura em algumas horas para
+            alinhar contrato e cronograma.
+          </p>
+          <p className="reveal mt-3 text-sm text-white/50 max-w-2xl font-light leading-relaxed">
+            Se preferir tirar dúvidas antes, fale pelo WhatsApp ou converse com o
+            agente IA no canto inferior direito — ele conhece esta proposta inteira.
           </p>
 
           <div className="reveal mt-12 flex flex-wrap gap-3">
@@ -1020,9 +1174,7 @@ function ProposalView({
               </span>
             </button>
             <a
-              href={`https://wa.me/5511999999999?text=${encodeURIComponent(
-                `Olá Daniel, quero avançar com a proposta ${proposal.code}`,
-              )}`}
+              href={buildWhatsappUrl(`Olá Daniel, quero avançar com a proposta ${proposal.code}`)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 text-sm font-mono-display uppercase tracking-[0.2em] text-white/70 hover:text-white border border-white/15 hover:border-white/40 rounded-full px-5 h-12 transition-all"
@@ -1068,8 +1220,8 @@ function ProposalView({
             <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-white/35 mb-2">
               Contato
             </div>
-            <a href="https://wa.me/5511999999999" target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
-              wa.me/Daniel
+            <a href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`} target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
+              WhatsApp do Daniel
             </a>
             <a href="mailto:daniel@getbrain.com.br" className="block text-sm text-white/70 hover:text-white transition-colors">
               daniel@getbrain.com.br
@@ -1084,13 +1236,14 @@ function ProposalView({
         </div>
       </footer>
 
-      {/* CHAT IA */}
-      <ProposalChatBox
+      {/* CHAT IA — bolinha flutuante */}
+      <ProposalChatBubble
         brand={brand}
         disabled={isPreview}
         accessJwt={accessJwt}
         sessionToken={sessionToken}
         proposalCode={proposal.code}
+        clientFirstName={firstName}
         onManifestInterest={handleManifestInterest}
       />
     </div>
@@ -1351,6 +1504,99 @@ function CronogramaEditorial({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+function RoadmapTimeline({
+  roadmap,
+  loading,
+  brand,
+}: {
+  roadmap: PublicProposal["public_roadmap"];
+  loading: boolean;
+  brand: string;
+}) {
+  if (loading && !roadmap) {
+    return (
+      <div className="reveal space-y-6">
+        <div className="flex items-center gap-2 text-[10px] font-mono-display uppercase tracking-[0.3em] text-brand mb-2">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Organizando o roadmap com IA...
+        </div>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-32 rounded-2xl bg-white/5 border border-white/10 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (!roadmap || !roadmap.phases || roadmap.phases.length === 0) {
+    return (
+      <div className="reveal text-white/55 text-sm font-light">
+        Roadmap detalhado é construído junto com você na primeira semana.
+      </div>
+    );
+  }
+
+  return (
+    <div className="reveal space-y-3">
+      <div className="flex items-center gap-2 text-[10px] font-mono-display uppercase tracking-[0.3em] text-brand mb-6">
+        <Sparkles className="h-3 w-3" />
+        Roadmap priorizado · primeira entrega o quanto antes
+      </div>
+      <ol className="relative space-y-4">
+        {/* linha vertical */}
+        <div
+          className="absolute left-[18px] top-3 bottom-3 w-px"
+          style={{ background: `linear-gradient(to bottom, ${brand}, ${brand}22)` }}
+        />
+        {roadmap.phases.map((phase) => (
+          <li key={phase.number} className="relative pl-14">
+            <div
+              className="absolute left-0 top-2 h-9 w-9 rounded-full flex items-center justify-center font-mono-display text-xs font-bold text-slate-900 shadow-lg"
+              style={{ background: brand }}
+            >
+              {String(phase.number).padStart(2, "0")}
+            </div>
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 hover:border-white/25 transition-colors">
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 mb-3">
+                <h3 className="font-editorial-display text-2xl sm:text-3xl text-white font-light leading-tight">
+                  {phase.title}
+                </h3>
+                <span className="text-[10px] font-mono-display uppercase tracking-[0.25em] text-brand whitespace-nowrap">
+                  ~ {phase.duration_days} dias
+                </span>
+              </div>
+              <p className="text-white/75 leading-relaxed text-base mb-4 font-light">
+                <span className="text-[10px] font-mono-display uppercase tracking-[0.25em] text-white/45 mr-2">
+                  Resultado:
+                </span>
+                {phase.outcome}
+              </p>
+              {phase.deliverables?.length > 0 && (
+                <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 mt-3">
+                  {phase.deliverables.map((d, i) => (
+                    <li
+                      key={i}
+                      className="flex items-baseline gap-2 text-sm text-white/65"
+                    >
+                      <CheckCircle2
+                        className="h-3.5 w-3.5 flex-shrink-0 mt-0.5"
+                        style={{ color: brand }}
+                      />
+                      <span className="font-light">{d}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
