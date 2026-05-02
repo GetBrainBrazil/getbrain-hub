@@ -262,18 +262,29 @@ export function useProposalEditorState(proposalId: string | undefined) {
   const setField = useCallback(
     <K extends keyof ProposalFormState>(field: K, value: ProposalFormState[K]) => {
       revisionRef.current += 1;
-      setState((s) => ({ ...s, [field]: value }));
+      setState((s) => {
+        const next = { ...s, [field]: value };
+        if (proposalId) writeLocalDraft(proposalId, next, itemsDirty);
+        return next;
+      });
       setDirty(true);
     },
-    [],
+    [itemsDirty, proposalId],
   );
 
-  const setItems = useCallback((next: ScopeItem[]) => {
-    revisionRef.current += 1;
-    setState((s) => ({ ...s, scopeItems: next }));
-    setItemsDirty(true);
-    setDirty(true);
-  }, []);
+  const setItems = useCallback(
+    (next: ScopeItem[]) => {
+      revisionRef.current += 1;
+      setState((s) => {
+        const nextState = { ...s, scopeItems: next };
+        if (proposalId) writeLocalDraft(proposalId, nextState, true);
+        return nextState;
+      });
+      setItemsDirty(true);
+      setDirty(true);
+    },
+    [proposalId],
+  );
 
   /**
    * Persiste a proposta. Quando `silent`, omite toast (autosave).
