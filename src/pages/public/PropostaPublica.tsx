@@ -826,27 +826,27 @@ function ProposalView({
           <div className="hairline mb-8" />
           <div className="reveal grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-10">
             <KpiEditorial
-              label="Investimento"
+              label={s.kpi_labels?.investimento || "Investimento"}
               value={formatBRL(total)}
               brand={brand}
             />
             {!!proposal.maintenance_monthly_value && proposal.maintenance_monthly_value > 0 && (
               <KpiEditorial
-                label="Mensalidade"
+                label={s.kpi_labels?.mensalidade || "Mensalidade"}
                 value={`${formatBRL(Number(proposal.maintenance_monthly_value))}`}
                 suffix="/mês"
               />
             )}
             {!!proposal.implementation_days && (
               <KpiEditorial
-                label="Implementação"
+                label={s.kpi_labels?.implementacao || "Implementação"}
                 value={`${proposal.implementation_days}`}
                 suffix=" dias"
               />
             )}
             {expiresInDays !== null && (
               <KpiEditorial
-                label="Válida até"
+                label={s.kpi_labels?.validade || "Válida até"}
                 value={formatDate(proposal.expires_at)}
                 suffix={` · ${expiresInDays}d`}
               />
