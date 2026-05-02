@@ -320,6 +320,7 @@ export default function OrcamentoEditarDetalhe() {
             onCopyLink={handleCopyLink}
             onOpenTracking={() => setTrackingOpen(true)}
             onPreviewPdf={() => setPreviewPdfOpen(true)}
+            onOpenSendDialog={handleOpenSendDialog}
             onGoToTab={(t) => isProposalTabKey(t) && handleTabChange(t)}
           />
         )}
