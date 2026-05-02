@@ -5,7 +5,7 @@
  *  PainelHeader  → topo do painel (ícone + título grande + chip de escopo)
  *  CampoGroup    → agrupador opcional (card interno com título uppercase)
  *  Campo         → label + controle + hint (com ícone)
- *  CommitInput / CommitTextarea → autosave on blur, com flash visual
+ *  CommitInput / CommitTextarea → autosave enquanto digita, com flash visual
  */
 import { ReactNode, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -130,6 +130,16 @@ export function CommitInput({ value, onCommit, placeholder, onDirtyChange, maxLe
   const [v, setV] = useState(value);
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => setV(value), [value]);
+  useEffect(() => {
+    if (v === value) return;
+    const id = setTimeout(() => {
+      onCommit(v);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1100);
+      onDirtyChange?.(false);
+    }, 500);
+    return () => clearTimeout(id);
+  }, [v, value, onCommit, onDirtyChange]);
   return (
     <div className="relative">
       <Input
@@ -167,6 +177,16 @@ export function CommitTextarea({ value, onCommit, placeholder, onDirtyChange, ro
   const [v, setV] = useState(value);
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => setV(value), [value]);
+  useEffect(() => {
+    if (v === value) return;
+    const id = setTimeout(() => {
+      onCommit(v);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1100);
+      onDirtyChange?.(false);
+    }, 600);
+    return () => clearTimeout(id);
+  }, [v, value, onCommit, onDirtyChange]);
   return (
     <div className="relative">
       <Textarea
