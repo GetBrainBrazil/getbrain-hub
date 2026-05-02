@@ -47,6 +47,11 @@ interface PublicProposal {
   mockup_url: string | null;
   sent_at: string | null;
   recipient_first_name: string | null;
+  implementation_value: number | null;
+  installments_count: number | null;
+  first_installment_date: string | null;
+  public_opening_letter: string | null;
+  public_roadmap: { phases: Array<{ number: number; title: string; duration_days: number; outcome: string; deliverables: string[] }> } | null;
   items: Array<{
     id: string;
     description: string;
@@ -393,10 +398,17 @@ function ProposalView({
   accessJwt: string | null;
 }) {
   const brand = proposal.client_brand_color || DEFAULT_BRAND;
-  const total = useMemo(
+  const itemsTotal = useMemo(
     () => proposal.items.reduce((acc, it) => acc + Number(it.total ?? 0), 0),
     [proposal.items],
   );
+  // Valor de investimento: prioriza coluna implementation_value;
+  // fallback para soma dos itens se não estiver definido.
+  const total = Number(proposal.implementation_value ?? 0) > 0
+    ? Number(proposal.implementation_value)
+    : itemsTotal;
+  const installments = Number(proposal.installments_count ?? 0);
+  const installmentValue = installments > 1 ? total / installments : 0;
   const clientLabel = proposal.client_name || proposal.client_company_name;
   const firstName = proposal.recipient_first_name || null;
   const [interestSent, setInterestSent] = useState(false);

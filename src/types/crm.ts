@@ -5,6 +5,7 @@ export type DealStage =
   | 'descobrindo'
   | 'proposta_na_mesa'
   | 'ajustando'
+  | 'com_interesse'
   | 'ganho'
   | 'perdido'
   | 'gelado';

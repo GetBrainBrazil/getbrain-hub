@@ -1,7 +1,7 @@
 // Edge function: notify-daniel
 // Internal endpoint (chamada por outras edge functions com service role).
-// Envia notificação ao Daniel via Resend (email) e Z-API (WhatsApp).
-// Cada canal é best-effort: falha em um não derruba o outro.
+// Lê destinatários da tabela proposal_notification_recipients e envia
+// email (Resend) e WhatsApp (Z-API) — best-effort por canal/destinatário.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -10,9 +10,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
-
-const DANIEL_EMAIL = Deno.env.get("DANIEL_NOTIFICATION_EMAIL") ||
-  "daniel@getbrain.com.br";
 
 type NotificationKind =
   | "first_view"
@@ -26,6 +23,16 @@ interface NotifyBody {
   proposal_id: string;
   kind: NotificationKind;
   context?: Record<string, unknown>;
+}
+
+interface Recipient {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  notify_email: boolean;
+  notify_whatsapp: boolean;
+  events: string[];
 }
 
 Deno.serve(async (req) => {
@@ -44,7 +51,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Carregar proposta + settings
     const { data: prop } = await admin
       .from("proposals")
       .select(
@@ -54,25 +60,19 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!prop) return json({ error: "proposal_not_found" }, 404);
 
-    const { data: settings } = await admin
-      .from("proposal_ai_settings")
-      .select(
-        "notify_on_first_view, notify_on_pdf_download, notify_on_high_engagement, notify_on_manifested_interest",
-      )
+    // Buscar recipients ativos que recebem este tipo de evento
+    const { data: recipients } = await admin
+      .from("proposal_notification_recipients")
+      .select("id, name, email, phone, notify_email, notify_whatsapp, events")
       .eq("organization_id", prop.organization_id)
-      .maybeSingle();
+      .eq("is_active", true);
 
-    // Respeita configuração por kind
-    const allow: Record<NotificationKind, boolean> = {
-      first_view: settings?.notify_on_first_view ?? true,
-      pdf_download: settings?.notify_on_pdf_download ?? false,
-      high_engagement: settings?.notify_on_high_engagement ?? true,
-      manifested_interest: settings?.notify_on_manifested_interest ?? true,
-      chat_started: settings?.notify_on_high_engagement ?? true,
-      chat_escalation: true, // sempre notifica escalation
-    };
-    if (!allow[body.kind]) {
-      return json({ skipped: true, reason: "disabled_in_settings" });
+    const eligible = (recipients ?? []).filter((r: Recipient) =>
+      r.events?.includes(body.kind)
+    );
+
+    if (eligible.length === 0) {
+      return json({ ok: true, skipped: true, reason: "no_recipients" });
     }
 
     const clientLabel = prop.client_name || prop.client_company_name ||
@@ -81,7 +81,8 @@ Deno.serve(async (req) => {
       first_view: `👀 ${clientLabel} abriu a proposta ${prop.code}`,
       pdf_download: `📄 ${clientLabel} baixou o PDF de ${prop.code}`,
       high_engagement: `🔥 Alto engajamento na proposta ${prop.code}`,
-      manifested_interest: `✨ ${clientLabel} manifestou interesse na ${prop.code}`,
+      manifested_interest:
+        `✨ ${clientLabel} manifestou interesse na ${prop.code} — quero avançar!`,
       chat_started: `💬 ${clientLabel} iniciou chat na proposta ${prop.code}`,
       chat_escalation: `🚨 Cliente pediu humano em ${prop.code}`,
     };
@@ -93,37 +94,35 @@ Deno.serve(async (req) => {
     const message =
       `${subject}\n\nProposta: ${prop.title ?? "(sem título)"} (${prop.code})\nCliente: ${clientLabel}${ctxStr}`;
 
-    // Disparos paralelos (best-effort)
-    const [emailResult, whatsappResult] = await Promise.allSettled([
-      sendEmail(subject, message, body, prop),
-      sendWhatsapp(subject, body, prop),
-    ]);
+    const results: any[] = [];
 
-    // Audit log
+    for (const r of eligible as Recipient[]) {
+      const tasks: Promise<any>[] = [];
+      if (r.notify_email && r.email) {
+        tasks.push(sendEmail(r.email, subject, message, body, prop));
+      }
+      if (r.notify_whatsapp && r.phone) {
+        tasks.push(sendWhatsapp(r.phone, subject, body, prop));
+      }
+      const settled = await Promise.allSettled(tasks);
+      results.push({
+        recipient_id: r.id,
+        name: r.name,
+        outcomes: settled.map((s) =>
+          s.status === "fulfilled" ? s.value : { ok: false, error: String(s.reason) }
+        ),
+      });
+    }
+
     await admin.from("audit_logs").insert({
       organization_id: prop.organization_id,
       entity_type: "proposal",
       entity_id: prop.id,
       action: "daniel_notified",
-      changes: {
-        kind: body.kind,
-        email_ok: emailResult.status === "fulfilled" &&
-          (emailResult.value as any)?.ok,
-        whatsapp_ok: whatsappResult.status === "fulfilled" &&
-          (whatsappResult.value as any)?.ok,
-        context: body.context ?? null,
-      },
+      changes: { kind: body.kind, recipients_count: eligible.length, results },
     }).then(() => {}).catch(() => {});
 
-    return json({
-      ok: true,
-      email: emailResult.status === "fulfilled"
-        ? emailResult.value
-        : { ok: false, error: String(emailResult.reason) },
-      whatsapp: whatsappResult.status === "fulfilled"
-        ? whatsappResult.value
-        : { ok: false, error: String(whatsappResult.reason) },
-    });
+    return json({ ok: true, recipients: eligible.length, results });
   } catch (e) {
     console.error("notify-daniel error", e);
     return json({ error: "internal", details: String(e) }, 500);
@@ -131,15 +130,16 @@ Deno.serve(async (req) => {
 });
 
 async function sendEmail(
+  to: string,
   subject: string,
   message: string,
   body: NotifyBody,
   prop: any,
-): Promise<{ ok: boolean; status?: number; error?: string }> {
+): Promise<{ channel: "email"; ok: boolean; status?: number; error?: string }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
   if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
-    return { ok: false, error: "missing_resend_credentials" };
+    return { channel: "email", ok: false, error: "missing_resend_credentials" };
   }
 
   const html = `
@@ -176,7 +176,7 @@ async function sendEmail(
       },
       body: JSON.stringify({
         from: "GetBrain Propostas <propostas@notify.getbrain.com.br>",
-        to: [DANIEL_EMAIL],
+        to: [to],
         subject,
         html,
         text: message,
@@ -187,39 +187,44 @@ async function sendEmail(
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
     console.error("resend send failed", res.status, errText);
-    return { ok: false, status: res.status, error: errText.slice(0, 200) };
+    return { channel: "email", ok: false, status: res.status, error: errText.slice(0, 200) };
   }
-  return { ok: true, status: res.status };
+  return { channel: "email", ok: true, status: res.status };
 }
 
 async function sendWhatsapp(
+  phone: string,
   subject: string,
   _body: NotifyBody,
   _prop: any,
-): Promise<{ ok: boolean; error?: string }> {
-  const instance = Deno.env.get("Z_API_DANIEL_INSTANCE_ID");
-  const token = Deno.env.get("Z_API_DANIEL_TOKEN");
-  const phone = Deno.env.get("Z_API_DANIEL_PHONE");
-  if (!instance || !token || !phone) {
-    return { ok: false, error: "zapi_not_configured" };
+): Promise<{ channel: "whatsapp"; ok: boolean; error?: string }> {
+  const instance = Deno.env.get("Z_API_INSTANCE_ID") ||
+    Deno.env.get("Z_API_DANIEL_INSTANCE_ID");
+  const token = Deno.env.get("Z_API_TOKEN") ||
+    Deno.env.get("Z_API_DANIEL_TOKEN");
+  const clientToken = Deno.env.get("Z_API_CLIENT_TOKEN");
+  if (!instance || !token) {
+    return { channel: "whatsapp", ok: false, error: "zapi_not_configured" };
   }
 
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (clientToken) headers["Client-Token"] = clientToken;
     const res = await fetch(
       `https://api.z-api.io/instances/${instance}/token/${token}/send-text`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ phone, message: subject }),
       },
     );
     if (!res.ok) {
       const t = await res.text().catch(() => "");
-      return { ok: false, error: `${res.status}: ${t.slice(0, 200)}` };
+      return { channel: "whatsapp", ok: false, error: `${res.status}: ${t.slice(0, 200)}` };
     }
-    return { ok: true };
+    return { channel: "whatsapp", ok: true };
   } catch (e) {
-    return { ok: false, error: String(e) };
+    return { channel: "whatsapp", ok: false, error: String(e) };
   }
 }
 

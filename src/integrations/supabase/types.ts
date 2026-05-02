@@ -4030,6 +4030,59 @@ export type Database = {
           },
         ]
       }
+      proposal_notification_recipients: {
+        Row: {
+          created_at: string
+          email: string | null
+          events: string[]
+          human_id: string | null
+          id: string
+          is_active: boolean
+          name: string | null
+          notify_email: boolean
+          notify_whatsapp: boolean
+          organization_id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          events?: string[]
+          human_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          notify_email?: boolean
+          notify_whatsapp?: boolean
+          organization_id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          events?: string[]
+          human_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          notify_email?: boolean
+          notify_whatsapp?: boolean
+          organization_id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_notification_recipients_human_id_fkey"
+            columns: ["human_id"]
+            isOneToOne: false
+            referencedRelation: "humans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_public_slugs: {
         Row: {
           created_at: string
@@ -4211,6 +4264,8 @@ export type Database = {
           pdf_generated_at: string | null
           pdf_url: string | null
           project_id: string | null
+          public_opening_letter: string | null
+          public_roadmap: Json | null
           rejected_at: string | null
           rejection_reason: string | null
           scope_items: Json
@@ -4267,6 +4322,8 @@ export type Database = {
           pdf_generated_at?: string | null
           pdf_url?: string | null
           project_id?: string | null
+          public_opening_letter?: string | null
+          public_roadmap?: Json | null
           rejected_at?: string | null
           rejection_reason?: string | null
           scope_items?: Json
@@ -4323,6 +4380,8 @@ export type Database = {
           pdf_generated_at?: string | null
           pdf_url?: string | null
           project_id?: string | null
+          public_opening_letter?: string | null
+          public_roadmap?: Json | null
           rejected_at?: string | null
           rejection_reason?: string | null
           scope_items?: Json
@@ -5666,6 +5725,7 @@ export type Database = {
         | "descobrindo"
         | "proposta_na_mesa"
         | "ajustando"
+        | "com_interesse"
         | "ganho"
         | "perdido"
         | "gelado"
@@ -5997,6 +6057,7 @@ export const Constants = {
         "descobrindo",
         "proposta_na_mesa",
         "ajustando",
+        "com_interesse",
         "ganho",
         "perdido",
         "gelado",
