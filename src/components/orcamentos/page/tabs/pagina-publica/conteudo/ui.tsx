@@ -24,7 +24,7 @@ export function PainelHeader({ icon, title, description, action }: PainelHeaderP
     <div className="pb-4 mb-5 border-b border-border/60 flex items-start justify-between gap-3">
       <div className="flex items-start gap-3">
         <div className="h-9 w-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
-          <Icon className="h-4.5 w-4.5" />
+          <Icon className="h-4 w-4" />
         </div>
         <div>
           <h3 className="text-base font-semibold text-foreground leading-tight">{title}</h3>
