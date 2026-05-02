@@ -275,6 +275,11 @@ export default function OrcamentoEditarDetalhe() {
     }
   }
 
+  const handleUpdateField = useCallback(
+    (field: string, value: any) => update.mutate({ id: data.id, payload: { [field]: value } }),
+    [data.id, update],
+  );
+
   async function handleDelete() {
     const ok = await confirm({
       title: "Excluir esta proposta?",
@@ -401,9 +406,7 @@ export default function OrcamentoEditarDetalhe() {
               proposal={data}
               state={state}
               setField={setField}
-              onUpdateField={(field, value) =>
-                update.mutate({ id: data.id, payload: { [field]: value } })
-              }
+              onUpdateField={handleUpdateField}
               onDelete={handleDelete}
             />
             {/* Anexos integrados ao bloco de configurações para evitar uma 10ª aba */}
