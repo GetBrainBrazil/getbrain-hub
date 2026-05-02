@@ -1,16 +1,14 @@
 /**
- * Tab "Cliente" — vínculo com CRM (deal) + dados de identidade.
+ * Tab "Cliente" — dados de identidade do cliente.
  *
- * - CrmDealLinkPicker: vincula a um deal e oferece importação de dados.
- * - Edição inline no padrão Notion-like (campos sem borda forte, autosave do hook).
+ * O vínculo com CRM e a importação de dados ficam na tab Resumo
+ * (single source of truth pra evitar duplicidade de UI).
  */
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
 import { Button } from "@/components/ui/button";
-import { CrmDealLinkPicker } from "@/components/orcamentos/page/CrmDealLinkPicker";
-import type { ScopeItem } from "@/lib/orcamentos/calculateTotal";
 
 interface Props {
   proposalId: string;
@@ -22,30 +20,11 @@ interface Props {
     clientBrandColor: string;
   };
   setField: (field: any, value: any) => void;
-  setItems: (items: ScopeItem[]) => void;
-  dealClientLink?: { id: string; code: string; title: string; stage?: string } | null;
-  onLinkChanged?: () => void;
 }
 
-export function TabCliente({
-  proposalId,
-  state,
-  setField,
-  setItems,
-  dealClientLink,
-  onLinkChanged,
-}: Props) {
+export function TabCliente({ proposalId, state, setField }: Props) {
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Vínculo com CRM (no topo — fonte de verdade dos dados) */}
-      <CrmDealLinkPicker
-        proposalId={proposalId}
-        currentDeal={dealClientLink || null}
-        setField={setField}
-        setItems={setItems}
-        onLinkChanged={onLinkChanged}
-      />
-
       {/* Título da proposta */}
       <section className="space-y-2">
         <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
