@@ -220,6 +220,7 @@ export default function PropostaPublica() {
         onPwdChange={setPwdInput}
         onToggleShow={() => setShowPwd((v) => !v)}
         onSubmit={handleLogin}
+        settings={pageSettings}
       />
     );
   }
@@ -227,6 +228,7 @@ export default function PropostaPublica() {
   return (
     <ProposalView
       proposal={proposal}
+      pageSettings={pageSettings}
       onDownloadPdf={handleDownloadPdf}
       isPreview={isPreview}
       accessJwt={accessJwt}
