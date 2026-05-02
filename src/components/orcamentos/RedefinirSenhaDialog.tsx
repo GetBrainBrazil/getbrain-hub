@@ -19,6 +19,7 @@ interface Props {
   proposalCode: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUpdated?: () => void;
 }
 
 export function RedefinirSenhaDialog({
@@ -26,6 +27,7 @@ export function RedefinirSenhaDialog({
   proposalCode,
   open,
   onOpenChange,
+  onUpdated,
 }: Props) {
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -40,6 +42,7 @@ export function RedefinirSenhaDialog({
     try {
       await setProposalPassword({ proposalId, plainPassword: password });
       toast.success("Senha redefinida com sucesso");
+      onUpdated?.();
       onOpenChange(false);
       setPassword("");
     } catch (e: any) {
