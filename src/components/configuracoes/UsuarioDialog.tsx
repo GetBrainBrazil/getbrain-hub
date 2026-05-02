@@ -12,6 +12,7 @@ import { useCargos } from "@/hooks/useCargos";
 import { Usuario, useCreateUsuario, useUpdateUsuario, uploadAvatar } from "@/hooks/useUsuarios";
 import { supabase } from "@/integrations/supabase/client";
 import { AvatarCropDialog } from "@/components/shared/AvatarCropDialog";
+import { formatPhoneBR } from "@/lib/formatters";
 
 interface Props {
   open: boolean;
