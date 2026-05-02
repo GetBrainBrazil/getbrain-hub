@@ -983,11 +983,21 @@ function ProposalView({
           title="A jornada"
           theme="dark"
         >
-          <CronogramaEditorial
-            implementationDays={proposal.implementation_days ?? 0}
-            validationDays={proposal.validation_days ?? 0}
+          <RoadmapTimeline
+            roadmap={roadmap}
+            loading={roadmapLoading}
             brand={brand}
           />
+          <div className="mt-16 pt-12 border-t border-white/10">
+            <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-white/45 mb-6">
+              Visão macro do prazo
+            </div>
+            <CronogramaEditorial
+              implementationDays={proposal.implementation_days ?? 0}
+              validationDays={proposal.validation_days ?? 0}
+              brand={brand}
+            />
+          </div>
         </EditorialSection>
       )}
 
