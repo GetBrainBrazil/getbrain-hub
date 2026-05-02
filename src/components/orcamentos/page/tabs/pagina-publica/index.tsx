@@ -53,7 +53,10 @@ export function PaginaPublicaTab(props: Props) {
         <SubTabAcesso {...props} />
       </TabsContent>
       <TabsContent value="conteudo" className="mt-4">
-        <SubTabConteudo onSettingsChanged={() => setPreviewBust((k) => k + 1)} />
+        <SubTabConteudo
+          onSettingsChanged={() => setPreviewBust((k) => k + 1)}
+          onOpenPreview={() => setActive("preview")}
+        />
       </TabsContent>
       <TabsContent value="preview" className="mt-4">
         <SubTabPreview

@@ -1,52 +1,98 @@
 /**
- * SubTab "Conteúdo Global" — editor visual completo do conteúdo
- * institucional editável da página pública. Cada bloco é um Accordion;
- * cada campo persiste on blur via `usePublicPageSettings.update()`.
+ * SubTab "Conteúdo Global" — editor visual remodelado em layout sidebar + painel.
+ *
+ * - Sidebar à esquerda lista 8 painéis agrupados em 3 categorias, com busca.
+ * - Painel à direita renderiza o painel ativo. Cada painel autosalva on blur.
+ * - Header mostra status global de save e botão para abrir a sub-aba Preview.
+ * - Estado da seção ativa persiste via usePersistedState.
  *
  * IMPORTANTE: as edições aqui afetam TODAS as propostas da organização.
  */
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Globe, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
+import { Loader2, Globe, Check, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { usePublicPageSettings } from "@/hooks/orcamentos/usePublicPageSettings";
-import { EditorTextoLista } from "./editores/EditorTextoLista";
-import { EditorTags } from "./editores/EditorTags";
-import { EditorCapabilities } from "./editores/EditorCapabilities";
-import { EditorSecoes } from "./editores/EditorSecoes";
+import { SidebarConteudo } from "./conteudo/SidebarConteudo";
+import { PainelHero } from "./conteudo/PainelHero";
+import { PainelSecoes } from "./conteudo/PainelSecoes";
+import { PainelSobre } from "./conteudo/PainelSobre";
+import { PainelCapacidades } from "./conteudo/PainelCapacidades";
+import { PainelStack } from "./conteudo/PainelStack";
+import { PainelProximos } from "./conteudo/PainelProximos";
+import { PainelSenha } from "./conteudo/PainelSenha";
+import { PainelRodape } from "./conteudo/PainelRodape";
+import type { SecaoMeta } from "./conteudo/types";
 
-const SECTION_KEYS = [
-  { key: "carta", label: "Abertura" },
-  { key: "contexto", label: "Contexto" },
-  { key: "solucao", label: "Solução" },
-  { key: "escopo", label: "Escopo" },
-  { key: "investimento", label: "Investimento" },
-  { key: "cronograma", label: "Cronograma" },
-  { key: "sobre", label: "Sobre" },
-  { key: "proximos", label: "Próximos passos" },
+const GROUPS: { label: string; items: SecaoMeta[] }[] = [
+  {
+    label: "Estrutura da página",
+    items: [
+      { id: "hero", group: "estrutura", label: "Hero & navegação", description: "Etiquetas e indicação de scroll", icon: "Sparkles", keywords: ["hero", "topo", "scroll", "eyebrow", "etiqueta"] },
+      { id: "secoes", group: "estrutura", label: "Títulos das seções", description: "Eyebrow e título de cada bloco", icon: "Type", keywords: ["seção", "título", "eyebrow", "abertura", "contexto", "solução", "escopo", "investimento", "cronograma", "sobre", "próximos"] },
+      { id: "proximos", group: "estrutura", label: "CTA Próximos passos", description: 'Bloco final antes de "Quero avançar"', icon: "ArrowRight", keywords: ["cta", "próximos", "avançar", "fechamento"] },
+    ],
+  },
+  {
+    label: "Institucional",
+    items: [
+      { id: "sobre", group: "institucional", label: "Sobre a GetBrain", description: "Parágrafos descritivos", icon: "Building2", keywords: ["sobre", "empresa", "parágrafo", "descrição"] },
+      { id: "capacidades", group: "institucional", label: "Cards de capacidades", description: 'Cards exibidos na seção "Sobre"', icon: "LayoutGrid", keywords: ["capacidade", "card", "ícone"] },
+      { id: "stack", group: "institucional", label: "Stack tecnológico", description: "Tags de tecnologias usadas", icon: "Cpu", keywords: ["stack", "tecnologia", "tag", "react", "typescript"] },
+    ],
+  },
+  {
+    label: "Acesso & contato",
+    items: [
+      { id: "senha", group: "acesso", label: "Tela de senha", description: "Texto exibido antes do acesso", icon: "Lock", keywords: ["senha", "gate", "privado", "acesso"] },
+      { id: "rodape", group: "acesso", label: "Rodapé & contato", description: "Tagline, WhatsApp, e-mail", icon: "MessageCircle", keywords: ["rodapé", "footer", "whatsapp", "email", "contato", "tagline"] },
+    ],
+  },
 ];
 
 interface Props {
-  /** Chamado após cada save bem-sucedido para forçar refresh do iframe na sub-aba Preview. */
+  /** Chamado após cada save para forçar reload do iframe na sub-aba Preview. */
   onSettingsChanged?: () => void;
+  /** Permite o header trocar para a sub-aba Pré-visualização. */
+  onOpenPreview?: () => void;
 }
 
-export function SubTabConteudo({ onSettingsChanged }: Props) {
+export function SubTabConteudo({ onSettingsChanged, onOpenPreview }: Props) {
   const { settings, isLoading, update, isSaving } = usePublicPageSettings();
+  const [active, setActive] = usePersistedState<string>(
+    "proposal-pagina-publica-conteudo-secao",
+    "hero",
+  );
+  const [query, setQuery] = useState("");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [dirty, setDirty] = useState<Record<string, boolean>>({});
 
-  // wrapper que registra o save e notifica o pai
-  const persist = async <K extends Parameters<typeof update>[0]>(
-    field: K,
-    value: any,
-  ) => {
+  const persist = async <K extends Parameters<typeof update>[0]>(field: K, value: any) => {
     await update(field as any, value);
     setSavedAt(new Date());
+    setDirty((d) => ({ ...d, [active]: false }));
     onSettingsChanged?.();
   };
+
+  const setDirtyForActive = (v: boolean) =>
+    setDirty((d) => (d[active] === v ? d : { ...d, [active]: v }));
+
+  const ActivePanel = useMemo(() => {
+    if (!settings) return null;
+    const props = { settings, persist, setDirty: setDirtyForActive } as any;
+    switch (active) {
+      case "hero": return <PainelHero {...props} />;
+      case "secoes": return <PainelSecoes {...props} />;
+      case "sobre": return <PainelSobre {...props} />;
+      case "capacidades": return <PainelCapacidades {...props} />;
+      case "stack": return <PainelStack {...props} />;
+      case "proximos": return <PainelProximos {...props} />;
+      case "senha": return <PainelSenha {...props} />;
+      case "rodape": return <PainelRodape {...props} />;
+      default: return <PainelHero {...props} />;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, settings]);
 
   if (isLoading || !settings) {
     return (
@@ -58,264 +104,50 @@ export function SubTabConteudo({ onSettingsChanged }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Toolbar / aviso */}
-      <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2 rounded-md bg-accent/5 border border-accent/20">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2 rounded-lg bg-accent/5 border border-accent/20">
         <div className="flex items-center gap-2">
           <Globe className="h-3.5 w-3.5 text-accent" />
-          <span className="text-[11px] text-foreground">
-            <strong className="text-accent">Conteúdo global</strong> · alterações afetam todas as propostas
+          <span className="text-xs text-foreground">
+            <strong className="text-accent">Conteúdo global</strong>
+            <span className="text-muted-foreground"> · alterações afetam todas as propostas</span>
           </span>
         </div>
-        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-          {isSaving ? (
-            <><Loader2 className="h-3 w-3 animate-spin" /> Salvando…</>
-          ) : savedAt ? (
-            <><Check className="h-3 w-3 text-emerald-500" /> Salvo às {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
-          ) : null}
+        <div className="flex items-center gap-2">
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1 min-w-[110px] justify-end">
+            {isSaving ? (
+              <><Loader2 className="h-3 w-3 animate-spin" /> Salvando…</>
+            ) : savedAt ? (
+              <><Check className="h-3 w-3 text-emerald-500" /> Salvo às {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+            ) : (
+              <span className="opacity-0">·</span>
+            )}
+          </div>
+          {onOpenPreview && (
+            <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={onOpenPreview}>
+              <Eye className="h-3.5 w-3.5" />
+              Pré-visualizar
+            </Button>
+          )}
         </div>
       </div>
 
-      <Accordion type="multiple" defaultValue={["sobre"]} className="space-y-2">
-        {/* Hero */}
-        <Card>
-          <AccordionItem value="hero" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">Hero & navegação</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Etiquetas do topo e indicação de scroll</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 space-y-3">
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Eyebrows do hero (separadas por ·)</Label>
-                <EditorTags
-                  value={settings.hero_eyebrows}
-                  onCommit={(v) => persist("hero_eyebrows", v)}
-                  placeholder="ex.: Estratégia"
-                />
-              </div>
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Texto de "Role para baixo"</Label>
-                <CommitInput
-                  value={settings.hero_scroll_cue}
-                  onCommit={(v) => persist("hero_scroll_cue", v)}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-
-        {/* Títulos das seções */}
-        <Card>
-          <AccordionItem value="secoes" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">Títulos das seções</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Eyebrow e título de cada bloco da página</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <EditorSecoes
-                eyebrows={settings.section_eyebrows}
-                titles={settings.section_titles}
-                sections={SECTION_KEYS}
-                onCommitEyebrows={(v) => persist("section_eyebrows", v)}
-                onCommitTitles={(v) => persist("section_titles", v)}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-
-        {/* Sobre */}
-        <Card>
-          <AccordionItem value="sobre" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">Sobre a GetBrain</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Parágrafos descritivos da empresa</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <EditorTextoLista
-                value={settings.about_paragraphs}
-                onCommit={(v) => persist("about_paragraphs", v)}
-                placeholder="Escreva um parágrafo…"
-                addLabel="Adicionar parágrafo"
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-
-        {/* Capabilities */}
-        <Card>
-          <AccordionItem value="capabilities" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">Cards de capacidades</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Os cards exibidos na seção "Sobre"</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <EditorCapabilities
-                value={settings.capabilities}
-                onCommit={(v) => persist("capabilities", v)}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-
-        {/* Tech stack */}
-        <Card>
-          <AccordionItem value="tech" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">Stack tecnológico</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Tecnologias exibidas em scroll horizontal</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <EditorTags
-                value={settings.tech_stack}
-                onCommit={(v) => persist("tech_stack", v)}
-                placeholder="React, TypeScript…"
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-
-        {/* Próximos passos */}
-        <Card>
-          <AccordionItem value="proximos" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">CTA "Próximos passos"</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Bloco final antes do botão "Quero avançar"</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 space-y-3">
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Título</Label>
-                <CommitInput
-                  value={settings.next_steps_title}
-                  onCommit={(v) => persist("next_steps_title", v)}
-                />
-              </div>
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Parágrafos</Label>
-                <EditorTextoLista
-                  value={settings.next_steps_paragraphs}
-                  onCommit={(v) => persist("next_steps_paragraphs", v)}
-                  placeholder="Texto explicativo…"
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-
-        {/* Tela de senha */}
-        <Card>
-          <AccordionItem value="senha" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">Tela de senha</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Texto exibido antes de o cliente acessar</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 space-y-3">
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Título</Label>
-                <CommitInput value={settings.password_gate_title} onCommit={(v) => persist("password_gate_title", v)} />
-              </div>
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Subtítulo</Label>
-                <CommitTextarea value={settings.password_gate_subtitle} onCommit={(v) => persist("password_gate_subtitle", v)} />
-              </div>
-              <div>
-                <Label className="text-[11px] text-muted-foreground">Botão</Label>
-                <CommitInput value={settings.password_gate_button} onCommit={(v) => persist("password_gate_button", v)} />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-
-        {/* Footer & contato */}
-        <Card>
-          <AccordionItem value="footer" className="border-0">
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="text-left">
-                <div className="text-sm font-medium">Rodapé & contato</div>
-                <div className="text-[10px] text-muted-foreground font-normal">Tagline e canais exibidos no rodapé</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-[11px] text-muted-foreground">Tagline</Label>
-                  <CommitInput value={settings.footer_tagline} onCommit={(v) => persist("footer_tagline", v)} />
-                </div>
-                <div>
-                  <Label className="text-[11px] text-muted-foreground">Label "falar com a gente"</Label>
-                  <CommitInput value={settings.footer_contact_label} onCommit={(v) => persist("footer_contact_label", v)} />
-                </div>
-                <div>
-                  <Label className="text-[11px] text-muted-foreground">Nome de exibição</Label>
-                  <CommitInput
-                    value={settings.contact_display_name ?? ""}
-                    onCommit={(v) => persist("contact_display_name", v || null)}
-                    placeholder="Daniel — GetBrain"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[11px] text-muted-foreground">WhatsApp (E.164)</Label>
-                  <CommitInput
-                    value={settings.contact_whatsapp ?? ""}
-                    onCommit={(v) => persist("contact_whatsapp", v || null)}
-                    placeholder="5521973818244"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label className="text-[11px] text-muted-foreground">Email de contato</Label>
-                  <CommitInput
-                    value={settings.contact_email ?? ""}
-                    onCommit={(v) => persist("contact_email", v || null)}
-                    placeholder="contato@getbrain.com.br"
-                  />
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Card>
-      </Accordion>
+      {/* Layout sidebar + painel */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <SidebarConteudo
+          groups={GROUPS}
+          active={active}
+          onChange={setActive}
+          query={query}
+          onQueryChange={setQuery}
+          dirty={dirty}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
+            {ActivePanel}
+          </div>
+        </div>
+      </div>
     </div>
-  );
-}
-
-/* ---------- Helpers internos: input/textarea com commit on blur ---------- */
-function CommitInput({ value, onCommit, placeholder }: { value: string; onCommit: (v: string) => void; placeholder?: string }) {
-  const [v, setV] = useState(value);
-  useEffect(() => setV(value), [value]);
-  return (
-    <Input
-      value={v}
-      onChange={(e) => setV(e.target.value)}
-      onBlur={() => { if (v !== value) onCommit(v); }}
-      placeholder={placeholder}
-      className="h-8 text-sm"
-    />
-  );
-}
-
-function CommitTextarea({ value, onCommit, placeholder }: { value: string; onCommit: (v: string) => void; placeholder?: string }) {
-  const [v, setV] = useState(value);
-  useEffect(() => setV(value), [value]);
-  return (
-    <Textarea
-      value={v}
-      onChange={(e) => setV(e.target.value)}
-      onBlur={() => { if (v !== value) onCommit(v); }}
-      placeholder={placeholder}
-      rows={2}
-      className="text-sm resize-y"
-    />
   );
 }
