@@ -122,6 +122,7 @@ export default function PropostaPublica() {
   const previewJwt = searchParams.get("preview");
   const [accessJwt, setAccessJwt] = useState<string | null>(null);
   const [proposal, setProposal] = useState<PublicProposal | null>(null);
+  const [pageSettings, setPageSettings] = useState<PublicPageSettings>(DEFAULT_PAGE_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [pwdInput, setPwdInput] = useState("");
