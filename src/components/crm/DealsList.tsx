@@ -151,7 +151,21 @@ export function DealsList({ deals, overdueDepsByDeal, onClearFilters }: Props) {
                     )}>{nextStepWhen.text}</span>
                   </TableCell>
                   <TableCell className="px-2 py-1.5 text-right text-sm font-semibold text-foreground tabular-nums">
-                    {deal.estimated_value ? formatCurrency(Number(deal.estimated_value)) : '—'}
+                    {(() => {
+                      const impl = Number(deal.estimated_implementation_value ?? 0);
+                      const mrr = Number(deal.estimated_mrr_value ?? 0);
+                      if (impl === 0 && mrr === 0) return '—';
+                      return (
+                        <span className="inline-flex flex-col items-end leading-tight">
+                          <span>{impl > 0 ? formatCurrency(impl) : '—'}</span>
+                          {mrr > 0 && (
+                            <span className="text-[10px] font-normal text-muted-foreground">
+                              + {formatCurrency(mrr)}/mês
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="px-2 py-1.5 text-right text-xs text-muted-foreground tabular-nums">{deal.probability_pct}%</TableCell>
                   <TableCell className="px-2 py-1.5 text-right text-xs text-muted-foreground tabular-nums">{closeLabel(deal.expected_close_date)}</TableCell>
@@ -167,11 +181,13 @@ export function DealsList({ deals, overdueDepsByDeal, onClearFilters }: Props) {
 
 export function sortDeals(deals: Deal[], sort: DealsListSort): Deal[] {
   const arr = [...deals];
+  // Valor = implementação one-time (alinhado com a coluna "Valor" exibida).
+  const valueOf = (d: Deal) => Number(d.estimated_implementation_value ?? 0);
   if (sort === 'value') {
-    return arr.sort((a, b) => Number(b.estimated_value ?? 0) - Number(a.estimated_value ?? 0));
+    return arr.sort((a, b) => valueOf(b) - valueOf(a));
   }
   if (sort === 'value_asc') {
-    return arr.sort((a, b) => Number(a.estimated_value ?? 0) - Number(b.estimated_value ?? 0));
+    return arr.sort((a, b) => valueOf(a) - valueOf(b));
   }
   if (sort === 'probability') {
     return arr.sort((a, b) => b.probability_pct - a.probability_pct);
