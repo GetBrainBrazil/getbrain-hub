@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye, Activity } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye, Activity, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
+import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
+import { PreviewPdfDialog } from "@/components/orcamentos/PreviewPdfDialog";
 import { useProposalItems, useReplaceProposalItems } from "@/hooks/orcamentos/useProposalItems";
 import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
@@ -64,6 +66,8 @@ export default function OrcamentoEditarDetalhe() {
   const replaceItems = useReplaceProposalItems();
   const update = useUpdateProposal();
   const gen = useGeneratePDF();
+  const genV2 = useGenerateProposalPDF();
+  const [previewPdfOpen, setPreviewPdfOpen] = useState(false);
 
   // Local form state — edits are batched until "Salvar" or auto-save on blur
   const [title, setTitle] = useState("");
