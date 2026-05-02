@@ -49,7 +49,7 @@ import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
 import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
 import AdminAuditoriaPage from "./pages/admin/AdminAuditoriaPage";
-import AdminPropostasIaPage from "./pages/admin/AdminPropostasIaPage";
+
 import IaPropostasPage from "./pages/configuracoes/integracoes/IaPropostasPage";
 import EtapasFunilPage from "./pages/configuracoes/crm/EtapasFunilPage";
 import MotivosDescartePage from "./pages/configuracoes/crm/MotivosDescartePage";
