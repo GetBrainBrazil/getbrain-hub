@@ -8,7 +8,7 @@
  */
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link2, Type, Eye } from "lucide-react";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { useState } from "react";
 import type { ProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { SubTabAcesso } from "./SubTabAcesso";
