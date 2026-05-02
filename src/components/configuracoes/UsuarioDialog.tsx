@@ -185,6 +185,12 @@ export function UsuarioDialog({ open, onOpenChange, usuario }: Props) {
           </Button>
         </DialogFooter>
       </DialogContent>
+      <AvatarCropDialog
+        open={!!pendingFile}
+        file={pendingFile}
+        onCancel={handleCancelCrop}
+        onConfirm={handleConfirmCrop}
+      />
     </Dialog>
   );
 }
