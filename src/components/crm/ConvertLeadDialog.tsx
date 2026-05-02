@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addMonths, format } from 'date-fns';
-import { CheckCircle2, ArrowRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,6 +20,11 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
+/**
+ * Diálogo enxuto: o Lead já foi triado, agora só precisamos definir
+ * os 4 dados mínimos do Deal recém-nascido. Toda a qualificação rica
+ * (dor, custo, fit, etc.) acontece DENTRO do Deal — não aqui.
+ */
 export function ConvertLeadDialog({ lead, open, onOpenChange }: Props) {
   const navigate = useNavigate();
   const convert = useConvertLeadToDealFull();
@@ -48,20 +53,18 @@ export function ConvertLeadDialog({ lead, open, onOpenChange }: Props) {
 
   if (!lead) return null;
 
-  const willMigrate = [
-    { ok: !!lead.pain_description, label: 'Descrição da dor' },
-    { ok: (lead.pain_categories?.length ?? 0) > 0, label: `Categorias da dor (${lead.pain_categories?.length ?? 0})` },
-    { ok: lead.pain_cost_brl_monthly !== null, label: 'Custo da dor R$/mês' },
-    { ok: lead.pain_hours_monthly !== null, label: 'Horas perdidas/mês' },
-    { ok: !!lead.current_solution, label: 'Solução atual' },
-    { ok: !!lead.business_context, label: 'Contexto de negócio' },
+  const carriedOver = [
+    { ok: !!lead.company_id, label: 'Empresa' },
     { ok: !!lead.contact_person_id, label: 'Contato principal' },
+    { ok: !!lead.owner_actor_id, label: 'Dono' },
+    { ok: !!lead.source, label: 'Origem' },
+    { ok: !!lead.triagem_summary || !!lead.pain_description, label: 'Resumo da triagem → Contexto do Deal' },
     { ok: !!lead.notes, label: 'Notas' },
   ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Converter {lead.code} em Deal</DialogTitle>
         </DialogHeader>
@@ -76,7 +79,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange }: Props) {
             <Select value={form.stage} onValueChange={(v) => setForm((f) => ({ ...f, stage: v as DealStage }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {DEAL_STAGES.filter((s) => !s.startsWith('fechado') && s !== 'ganho' && s !== 'perdido' && s !== 'gelado').map((s) => (
+                {DEAL_STAGES.filter((s) => s !== 'ganho' && s !== 'perdido' && s !== 'gelado').map((s) => (
                   <SelectItem key={s} value={s}>{DEAL_STAGE_LABEL[s]}</SelectItem>
                 ))}
               </SelectContent>
@@ -125,10 +128,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange }: Props) {
 
         <div className="rounded-md border border-border bg-muted/20 p-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Migra automaticamente para o Deal
+            Levado para o novo deal
           </p>
           <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-            {willMigrate.map((m) => (
+            {carriedOver.map((m) => (
               <li key={m.label} className="flex items-center gap-1.5 text-xs">
                 <CheckCircle2 className={m.ok ? 'h-3.5 w-3.5 text-success' : 'h-3.5 w-3.5 text-muted-foreground/40'} />
                 <span className={m.ok ? 'text-foreground' : 'text-muted-foreground/60 line-through'}>
@@ -142,6 +145,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange }: Props) {
               Valor inicial do deal: <span className="font-mono font-semibold text-foreground">{formatCurrency(Number(lead.estimated_value))}</span>
             </p>
           )}
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            A qualificação detalhada (dor, custo, fit, escopo, valores) é feita dentro do Deal, depois da conversão.
+          </p>
         </div>
 
         <DialogFooter>

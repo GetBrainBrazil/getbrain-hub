@@ -1,122 +1,152 @@
-## Para que serve esse submódulo (Lead Detail)
 
-Um Lead é a fase **anterior ao Deal**: ainda estamos qualificando se faz sentido investir tempo numa proposta. O detalhe precisa responder, em uma tela, três perguntas:
+# Reconstruir o submódulo de Lead com propósito claro
 
-1. **Quem é** essa oportunidade? (empresa, contato, dono, origem, valor estimado)
-2. **Vale qualificar?** (dor declarada, contexto, urgência, fit)
-3. **Próximo passo claro** (agendar triagem → executar triagem → converter em Deal **ou** descartar com motivo)
+## 1. O que é um Lead nesse sistema (decisão conceitual)
 
-Hoje a tela tem só dois retângulos pretos de Markdown ("Dor" e "Notas") e uma sidebar genérica. Sem fluxo, sem dados conectados, sem visual do sistema.
+Um **Lead** é um *candidato a virar oportunidade*. Ele existe por um motivo só: **decidir, no menor tempo possível, se vale gastar energia montando uma proposta**. Tudo que não serve a essa decisão pertence ao Deal.
 
-## Nova estrutura (espelha CrmDealDetail)
+Regra de ouro: **se você precisa de mais de 1 minuto para preencher um lead, o lead está pedindo a coisa errada.**
+
+### Ciclo de vida (5 estados, sem mudança de schema)
 
 ```text
-┌─ Breadcrumb: CRM › Leads › LEAD-009 ────────────────── x ┐
-├─ HEADER ──────────────────────────────────────────────────┤
-│  LEAD-009 · Sunbright Engenharia · [Triagem agendada]     │
-│  Título do lead (inline edit)                             │
-│  R$ 4.000  ·  Daniel  ·  Indicação  ·  criado há 3d       │
-│  Próximo passo: "Triagem agendada p/ 05/05 14h" [Ver →]   │
-│  [Converter em Deal]  [Agendar triagem]  [Descartar]      │
-├─ MAIN (1fr) ─────────────────────┬─ SIDEBAR (360) ───────┤
-│ [Detalhes][Atividades][Timeline] │ STATUS DO LEAD        │
-│                                  │ ChipGroup 5 estágios  │
-│ 01 Qualificação                  │ ─────                 │
-│   • Origem (Combobox)            │ EMPRESA               │
-│   • Valor estimado (Currency)    │  card c/ link + KPI   │
-│   • Urgência (chips B/M/A)       │  porte, indústria     │
-│   • Fit (chips Bom/Médio/Ruim)   │ ─────                 │
-│                                  │ CONTATO PRINCIPAL     │
-│ 02 Dor & Contexto                │  nome, cargo, e-mail  │
-│   • Categorias da dor (multi)    │  (multi se houver)    │
-│   • Descrição da dor (rich)      │ ─────                 │
-│   • Custo R$/mês  +  Horas/mês   │ DONO + colaborador    │
-│   • Solução atual                │ ─────                 │
-│                                  │ TRIAGEM               │
-│ 03 Triagem                       │  Agendada (data/hora) │
-│   • Agenda da triagem            │  Aconteceu (data/hora)│
-│   • Resumo do que rolou          │  duração / canal      │
-│   • Decisão: avançar / descartar │ ─────                 │
-│                                  │ METADATA              │
-│ 04 Anotações livres              │  criado em / por      │
-│   RichTextEditor (sem .md box)   │  última atualização   │
-│                                  │                       │
-└──────────────────────────────────┴───────────────────────┘
-   [Zona de risco] (excluir lead)
+novo  →  triagem_agendada  →  triagem_feita  →  convertido (vira Deal)
+                                              ↘  descartado (com motivo)
 ```
 
-## Tabs
+- **novo**: alguém pingou. Tem origem e contato. Falta marcar a conversa.
+- **triagem_agendada**: tem data/hora/canal da call de qualificação.
+- **triagem_feita**: a call rolou; existe um *resumo* e um *veredito* (avançar / descartar).
+- **convertido**: virou Deal. Lead vira read-only com link para o Deal.
+- **descartado**: tem motivo registrado. Pode ser reaberto.
 
-- **Detalhes** — as 4 zonas acima, todas autosave on blur (padrão Deal).
-- **Atividades** — `<ActivityPanel entity={{type:'lead'}} />` já existe.
-- **Timeline** — auditoria via `useEntityAudit('lead')`, com agrupamento por dia (mesmo visual do AdminAuditoriaPage).
+## 2. Como você vai usar (fluxo real, do seu lado)
 
-## Componentes/UI reaproveitados do Deal (sem reinventar)
+1. Cria lead em 10 segundos: `empresa + contato + origem + título curto`. Status: `novo`.
+2. Marca a triagem: clica "Agendar triagem", define data/hora/canal. Status vira `triagem_agendada`.
+3. **Faz a triagem.** Volta na tela e preenche **um campo só**: `resumo da triagem` (texto livre, o que importou). Marca como feita. Status: `triagem_feita`.
+4. Decide:
+   - **"Vale proposta"** → clica `Converter em Deal`. O Deal nasce já com empresa/contato/dono/origem/resumo da triagem grudados, e você qualifica dor/escopo/valores **lá**, onde realmente importa.
+   - **"Não vale"** → `Descartar` com motivo. Fim.
 
-- `ZoneSection` (numeradas 01..04) — extrair para `src/components/crm/ZoneSection.tsx` para uso compartilhado Deal/Lead.
-- `ChipGroup`, `FieldLabel` — idem, mover para `src/components/crm/inlineFields.tsx`.
-- `InlineText`, `InlineMoney`, `InlineInteger` — idem.
-- `RichTextEditor` (`@/components/ui/rich-text-editor`) substitui os `MarkdownSplitEditor` pretos.
-- `PainCategoriesMultiSelect` — já existe, reutilizar igual ao Deal.
-- `DealHeader` inspira o novo `LeadHeader` (mesmo padrão de chips + ações).
-- `ConvertDialog` mantém-se, mas movido para `src/components/crm/ConvertLeadDialog.tsx` e enriquecido com pré-preenchimento de tudo (origem, owner, dor, valor) + checklist visual de "o que vai migrar".
+**O que você não faz mais no Lead:** preencher categoria de dor, custo da dor, horas perdidas, fit, urgência, contexto de negócio, solução atual. Isso tudo é trabalho do Deal — fazer antes da triagem é chute, fazer depois é retrabalho duplo.
 
-## Sidebar conectada (cross-módulo, valor real)
+## 3. Nova UI do Lead Detail (3 zonas, não 4)
 
-- **Empresa**: card clicável com nome, indústria, porte, status do relacionamento, badge "X deals · Y projetos · MRR R$ Z" via `useCompanyStats(company_id)` (já existe).
-- **Contato principal**: usa `usePrimaryContact` (já existe). Mostra nome, papel, e-mail, telefone com ações `mailto:` / `tel:`. Botão "Trocar contato" abre Combobox de pessoas da empresa.
-- **Dono**: `useCrmActors`, com avatar.
-- **Triagem**: dois `Input type=datetime-local` + auto-cálculo de "atrasada/há tantos dias".
-- **Histórico relacionado**: lista compacta de últimos 3 leads/deals da mesma empresa (via `useCompanyLeads` / `useCompanyDeals`), para contexto.
+```text
+┌─ HEADER ─────────────────────────────────────────────┐
+│ LEAD-009 · Sunbright Engenharia · [Triagem agendada] │
+│ Título do lead (inline)                              │
+│ R$ estimado · Daniel · Indicação · há 3d             │
+│ ▶ Próximo passo: "Triagem em 05/05 14h" [Ver agenda] │
+│ [Marcar triagem feita] [Reagendar] [Descartar]       │
+├─ MAIN ───────────────────────┬─ SIDEBAR ─────────────┤
+│ 01 Origem & primeiro contato │ EMPRESA               │
+│   • Origem (combobox)        │  link + KPIs reais    │
+│   • Valor estimado           │  (deals, MRR)         │
+│   • O que sabemos (textarea  │ ─────                 │
+│     curta — 3 linhas)        │ CONTATO PRINCIPAL     │
+│                              │  nome, papel, contato │
+│ 02 Triagem                   │ ─────                 │
+│   • Quando (datetime)        │ DONO                  │
+│   • Canal (combobox)         │ ─────                 │
+│   • Aconteceu em + duração   │ STATUS                │
+│   • Resumo da triagem (rich) │  ChipGroup 5 estados  │
+│   • [Marcar como feita]      │ ─────                 │
+│                              │ HISTÓRICO DA EMPRESA  │
+│ 03 Veredito                  │  últimos 3 leads/deals│
+│   • Banner contextual:       │                       │
+│     - se feita+sem deal:     │                       │
+│       [Converter em Deal] ⭐ │                       │
+│     - se convertido:         │                       │
+│       link p/ DEAL-XXX       │                       │
+│     - se descartado:         │                       │
+│       motivo + [Reabrir]     │                       │
+└──────────────────────────────┴───────────────────────┘
+[Atividades] [Timeline]  ← tabs auxiliares, não principais
+[Zona de risco]
+```
 
-## Header rico
+**Zonas removidas vs hoje:**
+- ❌ "01 Qualificação" (urgência + fit + contexto) → vai para o Deal
+- ❌ "02 Dor & Contexto" (categorias, custo, horas, solução atual) → vai para o Deal
+- ❌ "04 Próximo passo & notas livres" — substituído pelo banner do header (1 ação clara) e pelo `resumo da triagem`
 
-- Code mono + chip empresa (link) + status badge colorido por estágio.
-- Linha de meta: valor, dono (avatar), origem, idade do lead.
-- **Banner de próximo passo**: lê `triagem_scheduled_at` / `triagem_happened_at` / `status` e gera um CTA claro:
-  - novo → "Agendar triagem"
-  - triagem_agendada → "Triagem em 2 dias — preparar"
-  - triagem_feita → "Pronto para converter em Deal"
-  - descartado → motivo + botão "Reabrir"
-  - convertido → link p/ deal gerado
-- Botões: `Converter em Deal` (habilitado só em `triagem_feita`, com tooltip explicativo se não), `Agendar triagem` (abre datetime), `Descartar` (motivo obrigatório).
+## 4. Mudanças técnicas
 
-## Novos campos opcionais (sem migration obrigatória)
+### Schema (migration nova)
+Remover do `leads` os 8 campos que duplicavam o Deal:
+```sql
+ALTER TABLE public.leads
+  DROP COLUMN IF EXISTS pain_categories,
+  DROP COLUMN IF EXISTS pain_cost_brl_monthly,
+  DROP COLUMN IF EXISTS pain_hours_monthly,
+  DROP COLUMN IF EXISTS current_solution,
+  DROP COLUMN IF EXISTS urgency,
+  DROP COLUMN IF EXISTS fit,
+  DROP COLUMN IF EXISTS business_context,
+  DROP COLUMN IF EXISTS next_step,
+  DROP COLUMN IF EXISTS next_step_date;
+DROP TRIGGER IF EXISTS trg_validate_lead_qualifiers ON public.leads;
+DROP FUNCTION IF EXISTS public.validate_lead_qualifiers();
+```
 
-Preferimos não inflar schema agora — usamos campos existentes:
-- `urgency` e `fit` ficam armazenados em `notes` como JSON estruturado **só se** o usuário pedir persistência. Por padrão usamos o que já existe: `pain_description`, `pain_categories` (Lead **não** tem hoje — checar e, se faltar, adicionar via migration: `pain_categories text[]`, `pain_cost_brl_monthly numeric`, `pain_hours_monthly int`, `current_solution text`, `urgency text`, `fit text`).
+**Mantém** no `leads`: `pain_description` (renomeado conceitualmente para "o que sabemos / sinal de interesse"), `triagem_summary`, `triagem_channel`, `triagem_duration_minutes`, `triagem_scheduled_at`, `triagem_happened_at`, `notes`, `lost_reason`.
 
-→ **Faremos a migration**: estende `leads` com as mesmas colunas qualitativas do Deal, para que o handoff Lead→Deal seja 1:1 (já temos `close_deal_as_won` espelhando isso na outra ponta).
+### `convert_lead_to_deal` (nova versão)
+- Continua copiando: empresa, contato, dono, título, valor estimado, origem.
+- **Para de tentar copiar** os campos removidos.
+- **Novo**: concatena `pain_description` + `triagem_summary` no `deals.business_context` do Deal recém-criado, como ponto de partida — o vendedor refina lá.
 
-## Responsividade
+### Tipos (`src/types/crm.ts`)
+- Remove `LeadUrgency`, `LeadFit` e os 9 campos do tipo `Lead`.
 
-- Mobile: header empilhado, ações em barra fixa no rodapé, sidebar vira `Sheet` acionado por botão "Detalhes" (padrão usado em outros módulos do sistema), tabs com scroll horizontal.
-- Desktop ≥1024: layout 2 colunas como hoje.
+### Componentes
+- **Apaga**: `ConvertLeadDialog` cheio de checklist de campos (vira diálogo simples), `inlineFields.tsx` se só era usado pelo Lead (Deal já tem versão própria — confirmar antes de apagar).
+- **Reescreve `CrmLeadDetail.tsx`**: 3 zonas, header com banner de próximo passo único, sidebar enxuta.
+- **Reescreve `LeadHeader.tsx`**: ações reduzidas a `Marcar triagem feita` / `Reagendar` / `Descartar` / `Converter em Deal` (a última só aparece em `triagem_feita`).
+- **Mantém**: `LeadSidebar` (já é boa, só remove o que não existe mais).
+- **Mantém**: tabs `Atividades` e `Timeline` (úteis e consistentes com Deal).
 
-## Arquivos a criar / editar
+### UI polish (correções de inconsistência que já existem)
+- Trocar `<select>` HTML cru por `Combobox` no canal da triagem.
+- Trocar `<input type="date">` cru por `DatePicker` consistente.
+- Timeline passa a usar o mesmo agrupamento por dia do `AdminAuditoriaPage` (já existe o componente).
+
+## 5. Arquivos afetados
+
+**Migration nova**
+- `supabase/migrations/<ts>_lead_simplification.sql` — remove colunas + reescreve `convert_lead_to_deal`.
 
 **Editar**
-- `src/pages/crm/CrmLeadDetail.tsx` — reescrita completa.
-- `src/types/crm.ts` — Lead recebe campos qualitativos novos.
-- `src/hooks/crm/useLeads.ts` / `useCrmDetails.ts` — `useUpdateLeadField` deve aceitar todos os novos campos (já genérico).
+- `src/types/crm.ts` — encolhe interface `Lead`.
+- `src/pages/crm/CrmLeadDetail.tsx` — reescrita (3 zonas).
+- `src/components/crm/LeadHeader.tsx` — banner de próximo passo + ações reduzidas.
+- `src/components/crm/LeadSidebar.tsx` — remove campos inexistentes.
+- `src/components/crm/ConvertLeadDialog.tsx` — simplifica (sem checklist de campos qualitativos).
+- `src/hooks/crm/useCrmDetails.ts` — `useUpdateLeadField` já é genérico, só perde tipos.
 
-**Criar**
-- `src/components/crm/ZoneSection.tsx` — extraído do Deal.
-- `src/components/crm/inlineFields.tsx` — `InlineText`, `InlineMoney`, `InlineInteger`, `ChipGroup`, `FieldLabel`.
-- `src/components/crm/LeadHeader.tsx` — header rico com banner de próximo passo.
-- `src/components/crm/LeadSidebar.tsx` — sidebar conectada.
-- `src/components/crm/ConvertLeadDialog.tsx` — extraído + enriquecido.
-- `supabase/migrations/<ts>_lead_qualification_fields.sql` — colunas qualitativas no `leads`.
+**Possivelmente apagar (após verificar que só Lead usava)**
+- `src/components/crm/inlineFields.tsx` — se Deal não importar, remove.
 
-**Refatorar (depois, sem quebrar)**
-- `CrmDealDetail.tsx` passa a importar `ZoneSection` / `inlineFields` dos novos paths (apaga as cópias internas).
+## 6. Critérios de aceite
 
-## Critérios de aceite
+- Criar um lead leva ≤30s (empresa, contato, origem, título).
+- A tela do lead tem **uma única ação destacada por status** — nunca múltiplas competindo.
+- Nenhum campo de dor estruturada / urgência / fit aparece no Lead.
+- Conversão para Deal cria um Deal com empresa/contato/dono/origem/resumo já preenchidos, e abre direto no Deal recém-criado.
+- Lead descartado mostra motivo em destaque e botão de reabrir.
+- Lead convertido vira read-only com link clicável para o Deal gerado.
+- Mobile: header empilhado, sidebar em Sheet, ações em barra fixa no rodapé.
 
-- Tela do lead segue exatamente o vocabulário visual do Deal (zonas numeradas, chips, autosave, sem caixa preta de Markdown).
-- Toda edição salva on blur, sem botão "Salvar" por seção.
-- Header sempre mostra **um único próximo passo claro** baseado no status.
-- Sidebar mostra dados reais conectados de Empresa, Contato e Dono — clicáveis.
-- Conversão para Deal copia 100% dos novos campos qualitativos.
-- Mobile: usável com uma mão, sidebar em Sheet.
-- Lead descartado mostra motivo destacado e botão de reabrir; lead convertido mostra link clicável para o deal.
+## 7. O que isso resolve (por que não é "mais do mesmo")
+
+| Antes | Depois |
+|---|---|
+| Lead = mini-Deal com 4 zonas e ~20 campos | Lead = ficha de triagem com 3 zonas e 6 campos |
+| Mesma dor preenchida 2x (Lead → Deal) | Dor preenchida 1x, no Deal |
+| 4 ações no header competindo | 1 ação destacada por status |
+| `<select>` e `<input date>` crus quebrando padrão | Combobox + DatePicker consistentes |
+| Timeline simples destoa do resto | Timeline agrupada por dia (igual auditoria) |
+
+O Lead vira o que ele deveria ser: **um filtro rápido**. O Deal continua sendo o lugar do trabalho pesado de qualificação.

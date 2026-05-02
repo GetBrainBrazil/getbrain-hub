@@ -5,44 +5,30 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { ActivityPanel } from '@/components/crm/ActivityPanel';
 import { DetailBreadcrumb, DetailShell } from '@/components/crm/CrmDetailShared';
 import { DangerZone } from '@/components/crm/DangerZone';
 import { ZoneSection } from '@/components/crm/ZoneSection';
-import { ChipGroup, FieldLabel, InlineMoney, InlineInteger, InlineText } from '@/components/crm/inlineFields';
+import { FieldLabel, InlineInteger, InlineText } from '@/components/crm/inlineFields';
 import { LeadHeader } from '@/components/crm/LeadHeader';
 import { LeadSidebar } from '@/components/crm/LeadSidebar';
 import { ConvertLeadDialog } from '@/components/crm/ConvertLeadDialog';
-import { PainCategoriesMultiSelect } from '@/components/crm/PainCategoriesMultiSelect';
-import { useActivitiesForEntity, useEntityAudit, useLeadByCode, useUpdateLeadField } from '@/hooks/crm/useCrmDetails';
+import {
+  useActivitiesForEntity, useEntityAudit, useLeadByCode, useUpdateLeadField,
+} from '@/hooks/crm/useCrmDetails';
 import { useDeleteLead } from '@/hooks/crm/useLeads';
 import { invalidateCrmCaches } from '@/lib/cacheInvalidation';
-import type { Lead, LeadFit, LeadUrgency } from '@/types/crm';
+import type { Lead } from '@/types/crm';
 
-const URGENCY_OPTIONS: LeadUrgency[] = ['baixa', 'media', 'alta', 'critica'];
-const URGENCY_LABEL: Record<LeadUrgency, string> = {
-  baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica',
-};
-const URGENCY_COLOR: Partial<Record<LeadUrgency, string>> = {
-  baixa: 'bg-muted/40 text-foreground border-border',
-  media: 'bg-warning/15 text-warning border-warning/40',
-  alta: 'bg-destructive/15 text-destructive border-destructive/40',
-  critica: 'bg-destructive/30 text-destructive border-destructive',
-};
-
-const FIT_OPTIONS: LeadFit[] = ['bom', 'medio', 'ruim'];
-const FIT_LABEL: Record<LeadFit, string> = { bom: 'Bom', medio: 'Médio', ruim: 'Ruim' };
-const FIT_COLOR: Partial<Record<LeadFit, string>> = {
-  bom: 'bg-success/15 text-success border-success/40',
-  medio: 'bg-warning/15 text-warning border-warning/40',
-  ruim: 'bg-destructive/15 text-destructive border-destructive/40',
-};
-
-const TRIAGEM_CHANNELS = ['Google Meet', 'Zoom', 'WhatsApp', 'Telefone', 'Presencial', 'Outro'] as const;
+const TRIAGEM_CHANNELS = [
+  'Google Meet', 'Zoom', 'WhatsApp', 'Telefone', 'Presencial', 'Outro',
+] as const;
 
 function MiniTimeline({ rows }: { rows: { id: string; created_at: string; action: string }[] }) {
   if (!rows.length) {
@@ -52,15 +38,32 @@ function MiniTimeline({ rows }: { rows: { id: string; created_at: string; action
       </div>
     );
   }
+
+  // agrupa por dia (mesmo padrão visual do AdminAuditoriaPage)
+  const groups = rows.reduce<Record<string, typeof rows>>((acc, r) => {
+    const day = new Date(r.created_at).toLocaleDateString('pt-BR');
+    (acc[day] = acc[day] || []).push(r);
+    return acc;
+  }, {});
+
   return (
-    <div className="space-y-3">
-      {rows.map((r) => (
-        <article key={r.id} className="rounded-lg border border-border bg-card/40 p-4 text-sm">
-          <p>{r.action}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {new Date(r.created_at).toLocaleString('pt-BR')}
+    <div className="space-y-6">
+      {Object.entries(groups).map(([day, evts]) => (
+        <div key={day}>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {day}
           </p>
-        </article>
+          <div className="space-y-2">
+            {evts.map((r) => (
+              <article key={r.id} className="rounded-lg border border-border bg-card/40 p-3 text-sm">
+                <p>{r.action}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {new Date(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -75,6 +78,8 @@ export default function CrmLeadDetail() {
 
   const [convertOpen, setConvertOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState('');
   const [reason, setReason] = useState('');
 
   const save = (updates: Partial<Lead>) => {
@@ -107,7 +112,13 @@ export default function CrmLeadDetail() {
     );
   }
 
+  const isLocked = lead.status === 'convertido';
   const canConvert = lead.status === 'triagem_feita';
+
+  const openSchedule = () => {
+    setScheduleAt(lead.triagem_scheduled_at ? lead.triagem_scheduled_at.slice(0, 16) : '');
+    setScheduleOpen(true);
+  };
 
   return (
     <DetailShell>
@@ -129,7 +140,7 @@ export default function CrmLeadDetail() {
           }
           setConvertOpen(true);
         }}
-        onScheduleTriagem={() => save({ status: 'triagem_agendada' })}
+        onScheduleTriagem={openSchedule}
         onMarkTriagemDone={() =>
           save({
             status: 'triagem_feita',
@@ -164,113 +175,52 @@ export default function CrmLeadDetail() {
             </TabsList>
 
             <TabsContent value="details" className="mt-5 space-y-5">
-              {/* 01 — Qualificação */}
-              <ZoneSection number={1} title="Qualificação" hint="Quão urgente e quão bem encaixa?">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <FieldLabel hint="quanto tempo até virar problema?">Urgência</FieldLabel>
-                    <ChipGroup<LeadUrgency>
-                      options={URGENCY_OPTIONS}
-                      value={lead.urgency}
-                      onChange={(v) => save({ urgency: v })}
-                      labels={URGENCY_LABEL}
-                      colors={URGENCY_COLOR}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <FieldLabel hint="match com o nosso jeito de entregar">Fit</FieldLabel>
-                    <ChipGroup<LeadFit>
-                      options={FIT_OPTIONS}
-                      value={lead.fit}
-                      onChange={(v) => save({ fit: v })}
-                      labels={FIT_LABEL}
-                      colors={FIT_COLOR}
-                    />
-                  </div>
-                </div>
+              {/* 01 — Origem & primeiro contato */}
+              <ZoneSection
+                number={1}
+                title="Origem & primeiro contato"
+                hint="O mínimo para decidir se vale uma triagem"
+              >
                 <div className="space-y-2">
-                  <FieldLabel hint="setor, porte, cenário do mercado, etapa de maturidade">
-                    Contexto de negócio
+                  <FieldLabel hint="o que motivou esse lead — sinal de interesse, indicação, mensagem recebida...">
+                    O que sabemos
                   </FieldLabel>
-                  <InlineText
-                    value={lead.business_context}
-                    onSave={(v) => save({ business_context: v })}
-                    placeholder="O que você sabe sobre essa empresa, mercado e momento dela?"
-                    multiline
-                    minHeight={100}
-                  />
-                </div>
-              </ZoneSection>
-
-              {/* 02 — Dor & Contexto */}
-              <ZoneSection number={2} title="Dor & Contexto" hint="O problema que justifica investir em uma proposta">
-                <div className="space-y-2">
-                  <FieldLabel hint="selecione uma ou mais — gerenciadas em Configurações">
-                    Categorias da dor
-                  </FieldLabel>
-                  <PainCategoriesMultiSelect
-                    value={lead.pain_categories ?? []}
-                    onChange={(v) => save({ pain_categories: v })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <FieldLabel hint="seja específico — vagueza vira escopo ruim">Descrição da dor</FieldLabel>
                   <InlineText
                     value={lead.pain_description}
                     onSave={(v) => save({ pain_description: v })}
-                    placeholder={`1. O que acontece hoje?\n2. Quem sente?\n3. Qual o impacto (dinheiro, tempo, retrabalho)?\n4. O que já tentaram?`}
+                    placeholder="Ex: chegou via indicação do João. Disse que tem problema com X. Quer entender se podemos ajudar."
                     multiline
-                    minHeight={140}
+                    minHeight={90}
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <FieldLabel hint="estimativa do cliente, ok ser aproximado">Custo da dor (R$/mês)</FieldLabel>
-                    <InlineMoney
-                      value={lead.pain_cost_brl_monthly}
-                      onSave={(v) => save({ pain_cost_brl_monthly: v })}
-                      placeholder="R$ 0,00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <FieldLabel>Horas perdidas (h/mês)</FieldLabel>
-                    <InlineInteger
-                      value={lead.pain_hours_monthly}
-                      onSave={(v) => save({ pain_hours_monthly: v })}
-                      placeholder="0"
-                      suffix="h"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <FieldLabel hint="planilha, sistema legado, processo manual...">
-                    Solução atual / workaround
-                  </FieldLabel>
-                  <InlineText
-                    value={lead.current_solution}
-                    onSave={(v) => save({ current_solution: v })}
-                    placeholder="O que usam hoje para mitigar essa dor?"
-                    multiline
-                    minHeight={80}
-                  />
-                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Origem, valor estimado, dono e contato ficam na barra lateral. Sem encher de campos antes da triagem.
+                </p>
               </ZoneSection>
 
-              {/* 03 — Triagem */}
-              <ZoneSection number={3} title="Triagem" hint="Resumo da reunião de qualificação">
+              {/* 02 — Triagem */}
+              <ZoneSection
+                number={2}
+                title="Triagem"
+                hint="A conversa de qualificação que decide se vira Deal"
+              >
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <FieldLabel>Canal</FieldLabel>
-                    <select
-                      value={lead.triagem_channel ?? ''}
-                      onChange={(e) => save({ triagem_channel: e.target.value || null })}
-                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    <Select
+                      value={lead.triagem_channel ?? 'none'}
+                      onValueChange={(v) => save({ triagem_channel: v === 'none' ? null : v })}
                     >
-                      <option value="">— Selecionar —</option>
-                      {TRIAGEM_CHANNELS.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="bg-background/60">
+                        <SelectValue placeholder="Selecionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— Não definido —</SelectItem>
+                        {TRIAGEM_CHANNELS.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <FieldLabel>Duração (minutos)</FieldLabel>
@@ -283,50 +233,102 @@ export default function CrmLeadDetail() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <FieldLabel hint="o que rolou, decisores envolvidos, sinais de compra/cautela">
+                  <FieldLabel hint="o que rolou, sinais de compra/cautela, decisores, próximos passos comerciais">
                     Resumo da triagem
                   </FieldLabel>
                   <InlineText
                     value={lead.triagem_summary}
                     onSave={(v) => save({ triagem_summary: v })}
-                    placeholder="O que você descobriu na conversa? Qual a leitura?"
+                    placeholder={`O que você descobriu na conversa?\n\nEsse texto vai virar o "Contexto" inicial do Deal quando você converter.`}
                     multiline
-                    minHeight={120}
+                    minHeight={140}
                   />
                 </div>
+                {lead.status !== 'triagem_feita' && lead.status !== 'convertido' && lead.status !== 'descartado' && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        save({
+                          status: 'triagem_feita',
+                          triagem_happened_at: lead.triagem_happened_at ?? new Date().toISOString(),
+                        })
+                      }
+                    >
+                      Marcar triagem como feita
+                    </Button>
+                  </div>
+                )}
               </ZoneSection>
 
-              {/* 04 — Próximo passo + notas livres */}
-              <ZoneSection number={4} title="Próximo passo & notas" hint="Ação clara que destrava o lead">
-                <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
-                  <div className="space-y-2">
-                    <FieldLabel>Próximo passo</FieldLabel>
-                    <InlineText
-                      value={lead.next_step}
-                      onSave={(v) => save({ next_step: v })}
-                      placeholder="Ex: enviar proposta inicial, marcar follow-up..."
-                    />
+              {/* 03 — Veredito */}
+              <ZoneSection
+                number={3}
+                title="Veredito"
+                hint="A decisão depois da triagem"
+              >
+                {lead.status === 'convertido' && lead.converted_deal_code ? (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                    <p className="text-sm font-medium text-primary">Lead convertido</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Toda a qualificação detalhada agora vive no deal abaixo.
+                    </p>
+                    <Button asChild size="sm" className="mt-3">
+                      <Link to={`/crm/deals/${lead.converted_deal_code}`}>
+                        Abrir {lead.converted_deal_code}
+                      </Link>
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <FieldLabel>Quando</FieldLabel>
-                    <input
-                      type="date"
-                      value={lead.next_step_date ?? ''}
-                      onChange={(e) => save({ next_step_date: e.target.value || null })}
-                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    />
+                ) : lead.status === 'descartado' ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                    <p className="text-sm font-medium text-destructive">Descartado</p>
+                    {lead.lost_reason && (
+                      <p className="text-xs text-muted-foreground">{lead.lost_reason}</p>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => save({ status: 'novo', lost_reason: null })}
+                    >
+                      Reabrir lead
+                    </Button>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <FieldLabel>Notas livres</FieldLabel>
-                  <InlineText
-                    value={lead.notes}
-                    onSave={(v) => save({ notes: v })}
-                    placeholder="Qualquer outra anotação sobre este lead."
-                    multiline
-                    minHeight={120}
-                  />
-                </div>
+                ) : canConvert ? (
+                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-success/30 bg-success/5 p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">Pronto para virar Deal</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Empresa, contato, dono, origem e o resumo da triagem vão junto.
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={() => setConvertOpen(true)}>
+                      Converter em Deal
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDiscardOpen(true)}>
+                      Descartar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                    Faça a triagem antes de decidir converter ou descartar.
+                  </div>
+                )}
+              </ZoneSection>
+
+              {/* Notas livres (sutil, fora das 3 zonas — opcional) */}
+              <ZoneSection
+                number={4}
+                title="Notas livres"
+                hint="Anotações soltas que não cabem em nenhum lugar acima (opcional)"
+              >
+                <InlineText
+                  value={lead.notes}
+                  onSave={(v) => save({ notes: v })}
+                  placeholder="Use só se precisar."
+                  multiline
+                  minHeight={80}
+                />
               </ZoneSection>
             </TabsContent>
 
@@ -348,6 +350,39 @@ export default function CrmLeadDetail() {
 
       <ConvertLeadDialog lead={lead} open={convertOpen} onOpenChange={setConvertOpen} />
 
+      {/* Agendar triagem */}
+      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Agendar triagem</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <FieldLabel>Data e hora</FieldLabel>
+            <Input
+              type="datetime-local"
+              value={scheduleAt}
+              onChange={(e) => setScheduleAt(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancelar</Button>
+            <Button
+              disabled={!scheduleAt}
+              onClick={() => {
+                save({
+                  status: 'triagem_agendada',
+                  triagem_scheduled_at: new Date(scheduleAt).toISOString(),
+                });
+                setScheduleOpen(false);
+              }}
+            >
+              Agendar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Descartar */}
       <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <DialogContent>
           <DialogHeader>
@@ -376,7 +411,7 @@ export default function CrmLeadDetail() {
         </DialogContent>
       </Dialog>
 
-      <DangerZoneLead lead={lead} />
+      {!isLocked && <DangerZoneLead lead={lead} />}
     </DetailShell>
   );
 }

@@ -84,26 +84,14 @@ export interface CrmCompany { id: string; legal_name: string; trade_name: string
 export interface CrmPerson { id: string; full_name: string; email: string | null; phone?: string | null; role_in_company?: string | null; }
 export interface CrmActor { id: string; display_name: string; avatar_url?: string | null; }
 
-export type LeadUrgency = 'baixa' | 'media' | 'alta' | 'critica';
-export type LeadFit = 'bom' | 'medio' | 'ruim';
-
 export interface Lead {
   id: string; code: string; title: string; company_id: string; contact_person_id: string | null; owner_actor_id: string | null;
   status: LeadStatus; source: string | null; estimated_value: number | null; pain_description: string | null; notes: string | null;
   triagem_scheduled_at: string | null; triagem_happened_at: string | null; lost_reason: string | null; converted_to_deal_id: string | null; converted_at: string | null;
-  // qualificação (espelha deal)
-  pain_categories: string[];
-  pain_cost_brl_monthly: number | null;
-  pain_hours_monthly: number | null;
-  current_solution: string | null;
-  urgency: LeadUrgency | null;
-  fit: LeadFit | null;
-  business_context: string | null;
+  // triagem (que se mantém — define se vira Deal ou não)
   triagem_summary: string | null;
   triagem_channel: string | null;
   triagem_duration_minutes: number | null;
-  next_step: string | null;
-  next_step_date: string | null;
   created_at?: string; company?: CrmCompany | null; contact?: CrmPerson | null; owner?: CrmActor | null; converted_deal_code?: string | null;
 }
 
