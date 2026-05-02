@@ -113,7 +113,7 @@ export function CrmDealLinkPicker({
       const q = supabase
         .from("deals")
         .select(
-          "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, company:companies(id, trade_name, legal_name)",
+          "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, installments_count, first_installment_date, company:companies(id, trade_name, legal_name, logo_url)",
         )
         .is("deleted_at", null)
         .order("updated_at", { ascending: false })
@@ -172,7 +172,7 @@ export function CrmDealLinkPicker({
     const { data, error } = await supabase
       .from("deals")
       .select(
-        "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, company:companies(id, trade_name, legal_name)",
+        "id, code, title, stage, company_id, estimated_value, pain_description, business_context, scope_summary, scope_in, scope_bullets, deliverables, estimated_mrr_value, estimated_implementation_value, discount_valid_until, installments_count, first_installment_date, company:companies(id, trade_name, legal_name, logo_url)",
       )
       .eq("id", currentDeal.id)
       .maybeSingle();
