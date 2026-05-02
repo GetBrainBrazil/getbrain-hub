@@ -58,10 +58,13 @@ interface DealRow {
   estimated_mrr_value: number | null;
   estimated_implementation_value: number | null;
   discount_valid_until: string | null;
+  installments_count: number | null;
+  first_installment_date: string | null;
   company?: {
     id: string;
     trade_name: string | null;
     legal_name: string;
+    logo_url: string | null;
   } | null;
 }
 
