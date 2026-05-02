@@ -23,6 +23,7 @@ export function useProposalItems(proposalId: string | undefined) {
 export interface ItemDraft {
   id?: string;
   description: string;
+  long_description?: string | null;
   quantity: number;
   unit_price: number;
   order_index: number;
@@ -55,6 +56,7 @@ export function useReplaceProposalItems() {
       const rows = items.map((it, i) => ({
         proposal_id: proposalId,
         description: it.description || "Item",
+        long_description: it.long_description ?? null,
         quantity: it.quantity || 1,
         unit_price: it.unit_price || 0,
         order_index: i,
