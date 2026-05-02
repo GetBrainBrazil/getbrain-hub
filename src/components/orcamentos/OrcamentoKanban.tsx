@@ -30,7 +30,24 @@ import { effectiveStatus } from "@/lib/orcamentos/calculateTotal";
 import { logProposalStatusChange } from "@/lib/orcamentos/auditLog";
 import { useQueryClient } from "@tanstack/react-query";
 
-type ColumnId = "rascunho" | "enviada" | "convertida" | "recusada" | "expirada";
+type ColumnId =
+  | "rascunho"
+  | "enviada"
+  | "visualizada"
+  | "interesse_manifestado"
+  | "convertida"
+  | "recusada"
+  | "expirada";
+
+const ALL_COLUMNS: ColumnId[] = [
+  "rascunho",
+  "enviada",
+  "visualizada",
+  "interesse_manifestado",
+  "convertida",
+  "recusada",
+  "expirada",
+];
 
 interface Props {
   rows: ProposalRow[];
@@ -58,13 +75,15 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
     const buckets: Record<ColumnId, ProposalRow[]> = {
       rascunho: [],
       enviada: [],
+      visualizada: [],
+      interesse_manifestado: [],
       convertida: [],
       recusada: [],
       expirada: [],
     };
     for (const r of rows) {
       const eff = effectiveStatus(r.status, r.valid_until);
-      const colId: ColumnId = (["rascunho","enviada","convertida","recusada","expirada"].includes(eff) ? eff : "rascunho") as ColumnId;
+      const colId: ColumnId = (ALL_COLUMNS.includes(eff as ColumnId) ? eff : "rascunho") as ColumnId;
       if (buckets[colId]) buckets[colId].push(r);
     }
     return buckets;
@@ -163,6 +182,20 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
               accentClass="text-primary"
             />
             <OrcamentoKanbanColumn
+              id="visualizada"
+              label="Visualizada"
+              rows={columns.visualizada}
+              onCardClick={onCardClick}
+              accentClass="text-accent"
+            />
+            <OrcamentoKanbanColumn
+              id="interesse_manifestado"
+              label="Com interesse"
+              rows={columns.interesse_manifestado}
+              onCardClick={onCardClick}
+              accentClass="text-accent"
+            />
+            <OrcamentoKanbanColumn
               id="convertida"
               label="Convertida"
               rows={columns.convertida}
@@ -223,6 +256,8 @@ export function OrcamentoKanban({ rows, onCardClick }: Props) {
 const LABEL: Record<ColumnId, string> = {
   rascunho: "Rascunho",
   enviada: "Enviada",
+  visualizada: "Visualizada",
+  interesse_manifestado: "Com interesse",
   convertida: "Convertida",
   recusada: "Recusada",
   expirada: "Expirada",
@@ -290,6 +325,28 @@ function MoveDialogBody({
         <DialogDescription>
           As datas de envio, aceite e recusa serão limpas. O motivo da recusa
           (se houver) também será apagado.
+        </DialogDescription>
+      </DialogHeader>
+    );
+  }
+  if (target === "visualizada") {
+    return (
+      <DialogHeader>
+        <DialogTitle>Marcar {row.code} como visualizada?</DialogTitle>
+        <DialogDescription>
+          Normalmente este status muda sozinho quando o cliente abre a página
+          pública. Forçar manualmente é útil só para correção de histórico.
+        </DialogDescription>
+      </DialogHeader>
+    );
+  }
+  if (target === "interesse_manifestado") {
+    return (
+      <DialogHeader>
+        <DialogTitle>Marcar {row.code} como "com interesse"?</DialogTitle>
+        <DialogDescription>
+          Indica que o cliente clicou em "Tenho interesse" na página pública.
+          Normalmente é automático — confirme apenas se for ajuste manual.
         </DialogDescription>
       </DialogHeader>
     );

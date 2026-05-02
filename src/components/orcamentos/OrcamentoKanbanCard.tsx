@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { OrcamentoStatusBadge } from "./OrcamentoStatusBadge";
-import { Calendar, FileSignature } from "lucide-react";
+import { Calendar, FileSignature, Link2 } from "lucide-react";
 import {
   calculateScopeTotal,
   effectiveStatus,
@@ -9,6 +9,7 @@ import {
 } from "@/lib/orcamentos/calculateTotal";
 import type { ProposalRow } from "@/hooks/orcamentos/useProposals";
 import { useDraggable } from "@dnd-kit/core";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   proposal: ProposalRow;
@@ -99,6 +100,7 @@ function CardBody({
   eff: ReturnType<typeof effectiveStatus>;
   monthly: number;
 }) {
+  const navigate = useNavigate();
   return (
     <>
       <div className="flex items-center justify-between">
@@ -110,6 +112,21 @@ function CardBody({
       <div className="text-sm font-medium leading-tight line-clamp-2">
         {proposal.client_company_name}
       </div>
+      {proposal.deal?.code && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/crm/deals/${proposal.deal!.id}`);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-mono font-semibold text-accent hover:bg-accent/20 transition-colors max-w-full"
+          title={proposal.deal.title}
+        >
+          <Link2 className="h-2.5 w-2.5 shrink-0" />
+          <span className="truncate">{proposal.deal.code}</span>
+        </button>
+      )}
       <div className="text-success font-bold text-sm tabular-nums">
         {formatBRL(total)}
       </div>
