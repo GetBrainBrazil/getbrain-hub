@@ -238,24 +238,38 @@ export default function CrmPipeline() {
   const sortedListDeals = useSortedDeals(listDeals, sort);
 
   // KPIs reagem aos filtros aplicados (estágio, tipo, dono, origem, valor, busca).
-  // Em modo Lista usa listDeals (já oculta fechados quando não há filtro de estágio);
-  // em modo Kanban usa filteredDeals (representa o que está visível nas colunas).
+  // Sempre exclui deals fechados (ganho/perdido) — só pipeline ativo conta.
+  // Pipeline e MRR ficam separados; nada de TCV de 12 meses.
   const homeKpis = useMemo(() => {
-    const base = viewMode === 'lista' ? listDeals : filteredDeals;
+    const base = (viewMode === 'lista' ? listDeals : filteredDeals).filter(
+      (d) => ACTIVE_STAGES.includes(d.stage),
+    );
     const todayIso = new Date().toISOString().slice(0, 10);
-    const pipeline = base.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0);
-    const forecast = base.reduce(
-      (s, d) => s + Number(d.estimated_value ?? 0) * (d.probability_pct / 100),
+    const impl = (d: any) => Number(d.estimated_implementation_value ?? 0);
+    const mrr = (d: any) => Number(d.estimated_mrr_value ?? 0);
+
+    const pipeline = base.reduce((s, d) => s + impl(d), 0);
+    const mrrPipeline = base.reduce((s, d) => s + mrr(d), 0);
+    const forecastImpl = base.reduce(
+      (s, d) => s + impl(d) * (d.probability_pct / 100),
       0,
     );
-    const withValue = base.filter((d) => Number(d.estimated_value ?? 0) > 0).length;
-    const ticketMedio = withValue > 0 ? pipeline / withValue : 0;
+    const forecastMrr = base.reduce(
+      (s, d) => s + mrr(d) * (d.probability_pct / 100),
+      0,
+    );
+    const withImpl = base.filter((d) => impl(d) > 0);
+    const ticketMedio = withImpl.length > 0
+      ? withImpl.reduce((s, d) => s + impl(d), 0) / withImpl.length
+      : 0;
     const overdueNextStep = base.filter(
       (d) => d.next_step_date && d.next_step_date < todayIso,
     ).length;
     return {
       pipeline,
-      forecast,
+      mrrPipeline,
+      forecastImpl,
+      forecastMrr,
       ticketMedio,
       dealsCount: base.length,
       overdueNextStep,
@@ -335,17 +349,12 @@ export default function CrmPipeline() {
     try {
       // Persiste implementação + MRR no deal. estimated_value só é setado se ainda estiver vazio,
       // para não sobrescrever uma estimativa anterior do usuário.
-      const dealUpdate: {
-        estimated_implementation_value: number;
-        estimated_mrr_value: number | null;
-        estimated_value?: number;
-      } = {
+      // estimated_value (legado) NÃO é mais sobrescrito automaticamente.
+      // Os KPIs do funil leem implementação e MRR separados.
+      const dealUpdate = {
         estimated_implementation_value: implementationValue,
         estimated_mrr_value: mrrValue ?? null,
       };
-      if (!deal.estimated_value) {
-        dealUpdate.estimated_value = implementationValue + (mrrValue ?? 0) * 12;
-      }
       const { error: updErr } = await supabase
         .from('deals')
         .update(dealUpdate)
@@ -543,33 +552,39 @@ export default function CrmPipeline() {
           </div>
         </div>
 
-        {/* KPIs — recalculados conforme filtros aplicados */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
+        {/* KPIs — apenas deals ativos. Implementação e MRR ficam separados. */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-5">
           <HomeKpi
             label="Pipeline"
             value={formatCurrency(homeKpis.pipeline)}
-            hint={`${homeKpis.dealsCount} ${homeKpis.dealsCount === 1 ? 'deal' : 'deals'}`}
-            tooltip="Soma do valor estimado de todos os deals atualmente visíveis (após os filtros aplicados). Representa o tamanho bruto da carteira em negociação — sem ajuste por probabilidade."
+            hint={`${homeKpis.dealsCount} ${homeKpis.dealsCount === 1 ? 'deal ativo' : 'deals ativos'}`}
+            tooltip="Soma da implementação (one-time) dos deals ATIVOS visíveis. Deals ganhos ou perdidos não entram aqui."
+          />
+          <HomeKpi
+            label="MRR pipeline"
+            value={`${formatCurrency(homeKpis.mrrPipeline)}/mês`}
+            hint="mensalidade em negociação"
+            tooltip="Soma da mensalidade (MRR) estimada dos deals ATIVOS visíveis. Receita recorrente potencial — não é multiplicada por meses."
           />
           <HomeKpi
             label="Forecast ponderado"
-            value={formatCurrency(homeKpis.forecast)}
+            value={formatCurrency(homeKpis.forecastImpl)}
             tone="accent"
-            hint="ajustado pela probabilidade"
-            tooltip="Soma de (valor × probabilidade do estágio) dos deals visíveis. É a previsão realista de receita: deals em estágios iniciais entram com peso menor, deals próximos do fechamento pesam mais."
+            hint={homeKpis.forecastMrr > 0 ? `+ ${formatCurrency(homeKpis.forecastMrr)}/mês` : 'ajustado pela probabilidade'}
+            tooltip="Implementação × probabilidade do estágio de cada deal ativo. O segundo número é o MRR ponderado da mesma forma."
           />
           <HomeKpi
             label="Ticket médio"
             value={formatCurrency(homeKpis.ticketMedio)}
-            hint="por deal com valor"
-            tooltip="Pipeline ÷ quantidade de deals visíveis com valor preenchido (> 0). Mostra o porte médio dos negócios na seleção atual — útil para comparar segmentos quando você filtra por origem, dono ou tipo."
+            hint="implementação por deal"
+            tooltip="Média da implementação entre os deals ativos com valor preenchido (> 0). Mostra o porte típico das propostas em negociação."
           />
           <HomeKpi
             label="Próximo passo atrasado"
             value={String(homeKpis.overdueNextStep)}
             tone={homeKpis.overdueNextStep > 0 ? 'destructive' : undefined}
             hint={homeKpis.overdueNextStep === 1 ? 'deal parado' : 'deals parados'}
-            tooltip="Deals visíveis cuja data do próximo passo já passou. Sinal de que a negociação está estagnada e precisa de uma ação sua hoje (ligação, follow-up, envio de proposta etc.)."
+            tooltip="Deals ativos visíveis cuja data do próximo passo já passou. Sinal de que a negociação precisa de uma ação sua hoje."
           />
 
         </div>

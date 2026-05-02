@@ -738,13 +738,11 @@ export default function CrmDealDetail() {
     setCreatingProposal(true);
     let newProposalId: string | null = null;
     try {
-      const dealUpdate: { estimated_implementation_value: number; estimated_mrr_value: number | null; estimated_value?: number } = {
+      // estimated_value (legado) não é mais sobrescrito; KPIs leem impl + MRR separados.
+      const dealUpdate = {
         estimated_implementation_value: implementationValue,
         estimated_mrr_value: mrrValue ?? null,
       };
-      if (!deal.estimated_value) {
-        dealUpdate.estimated_value = implementationValue + (mrrValue ?? 0) * 12;
-      }
       const { error: updErr } = await supabase.from('deals').update(dealUpdate).eq('id', deal.id);
       if (updErr) throw updErr;
 
