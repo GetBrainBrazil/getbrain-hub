@@ -120,6 +120,8 @@ import { AbaDependencias } from "@/components/projetos/AbaDependencias";
 import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
 import { AbaOperacional } from "@/components/projetos/AbaOperacional";
 import { AbaTarefas } from "@/components/projetos/AbaTarefas";
+import { AbaPropostas } from "@/components/projetos/AbaPropostas";
+import { useProjectProposals } from "@/hooks/projetos/useProjectProposals";
 import { CardContatos } from "@/components/projetos/CardContatos";
 import { useProjectContacts } from "@/hooks/projetos/useProjectContacts";
 import { usePersistedState } from "@/hooks/use-persisted-state";
