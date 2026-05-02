@@ -182,21 +182,11 @@ export function ProposalActionBar({
           )}
 
           {!isReadOnly && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSave}
-              disabled={!isDirty || isSaving}
-              className="h-8"
-              title="Forçar save (auto-save já roda em segundo plano)"
-            >
-              {isSaving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
-              )}
-              <span className="hidden md:inline">Salvar</span>
-            </Button>
+            <SaveStatusIndicator
+              isDirty={isDirty}
+              isSaving={isSaving}
+              lastSavedAt={lastSavedAt}
+            />
           )}
 
           {showSendButton && (
