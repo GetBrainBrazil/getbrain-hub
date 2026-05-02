@@ -73,9 +73,9 @@ Deno.serve(async (req) => {
       return json({ error: "rate_limited" }, 429);
     }
 
-    // Comparar senha
+    // Comparar senha (usar versão sync — Worker não disponível no edge runtime)
     const passwordOk = prop.access_password_hash
-      ? await bcrypt.compare(password, prop.access_password_hash)
+      ? bcrypt.compareSync(password, prop.access_password_hash)
       : false;
 
     // Registrar tentativa
