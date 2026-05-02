@@ -1054,13 +1054,91 @@ function ProposalView({
         id="sobre"
         number="08"
         eyebrow="Sobre"
-        title="GetBrain"
+        title="A GetBrain"
         theme="light"
       >
-        <div className="reveal max-w-3xl space-y-6 text-slate-700 text-lg leading-relaxed font-light">
+        <div className="reveal max-w-3xl space-y-6 text-slate-700 text-lg leading-relaxed font-light mb-16">
           {ABOUT_GETBRAIN_PARAGRAPHS.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
+        </div>
+
+        {/* Capability cards */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+          {[
+            {
+              icon: Brain,
+              title: "IA aplicada",
+              desc: "Agentes, RAG, automações com LLMs — não é hype, é ferramenta.",
+            },
+            {
+              icon: Zap,
+              title: "Engenharia enxuta",
+              desc: "Stack moderna, sem over-engineering. Deploy contínuo desde o dia 1.",
+            },
+            {
+              icon: Target,
+              title: "Foco no resultado",
+              desc: "Métricas claras de sucesso, ciclos curtos, ajuste no caminho.",
+            },
+            {
+              icon: Rocket,
+              title: "Time-to-market",
+              desc: "MVP no ar em semanas, não em meses. Iterar com dados reais.",
+            },
+            {
+              icon: CheckCircle2,
+              title: "Parceria de longo prazo",
+              desc: "Manutenção evolutiva, contexto preservado, mesmo time sempre.",
+            },
+            {
+              icon: Sparkles,
+              title: "Atendimento sênior",
+              desc: "Daniel diretamente envolvido. Sem camada de 'gerente de conta'.",
+            },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className="reveal group bg-white border border-slate-900/8 rounded-2xl p-6 hover:border-brand hover:shadow-lg transition-all"
+            >
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                style={{
+                  background: "color-mix(in srgb, var(--brand) 12%, transparent)",
+                  color: "var(--brand)",
+                }}
+              >
+                <Icon className="h-5 w-5" />
+              </div>
+              <h4 className="font-editorial-display text-xl text-slate-900 mb-2 leading-tight">
+                {title}
+              </h4>
+              <p className="text-sm text-slate-600 leading-relaxed font-light">
+                {desc}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tech stack scroll */}
+        <div className="reveal pt-12 border-t border-slate-900/8">
+          <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-6">
+            Tecnologias que usamos
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              "React", "TypeScript", "Node.js", "Python", "Supabase", "PostgreSQL",
+              "OpenAI", "Anthropic", "Gemini", "LangChain", "Tailwind", "Vite",
+              "Vercel", "Lovable Cloud", "n8n", "Zapier", "WhatsApp API",
+            ].map((tech) => (
+              <span
+                key={tech}
+                className="text-xs font-mono-display px-3 py-1.5 rounded-full bg-slate-900/5 text-slate-700 border border-slate-900/8 hover:border-brand hover:text-brand transition-colors"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
         </div>
       </EditorialSection>
 
