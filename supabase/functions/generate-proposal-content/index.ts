@@ -24,12 +24,17 @@ type GenerationType =
   | "executive_summary"
   | "pain_context"
   | "solution_overview"
-  | "item_description";
+  | "item_description"
+  | "item_descriptions_batch";
 
 interface ReqBody {
   proposal_id: string;
   generation_type: GenerationType;
   item_id?: string;
+  /** Para item_descriptions_batch: títulos dos módulos do scope_items JSON. */
+  scope_titles?: string[];
+  /** Para item_descriptions_batch: índices a processar (default: todos). */
+  item_indices?: number[];
 }
 
 const SYSTEM_PROMPT = `Você é assistente comercial da GetBrain, empresa brasileira que constrói sistemas personalizados com IA integrada.
