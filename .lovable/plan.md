@@ -1,201 +1,152 @@
-# Redesign /financeiro/propostas — escopo completo
+# Refundação da página de proposta — correções e melhorias
 
-Objetivo: transformar o editor de proposta num cockpit de venda, gerar uma "proposta web" personalizada por cliente, um PDF independente, mockups interativos navegáveis, suporte a anexos (organograma etc.) e replicar tudo isso dentro do card do deal no CRM — só com as propostas daquele cliente/deal.
+Cinco problemas relatados, divididos em 4 entregas independentes. Cada fase é testável isoladamente.
 
-## 1. Reorganização do editor `/financeiro/orcamentos/:id/editar`
+---
 
-Hoje é um formulão linear de ~890 linhas. Vai virar um layout de **3 áreas fixas** com abas no centro:
+## Fase 1 — Aba Resumo: ações funcionando + densidade
 
-```text
-┌────────────────────────────────────────────────────────────────┐
-│ Header: código · status · template · totais · Salvar · Ações   │
-├──────────────┬──────────────────────────────┬──────────────────┤
-│ Sidebar      │ Conteúdo (abas)              │ Live Preview     │
-│ esquerda     │                              │ (toggle web/pdf) │
-│ ─ Cliente    │ • Resumo & Identidade        │                  │
-│ ─ Senha      │ • Escopo & Itens             │                  │
-│ ─ Validade   │ • Cronograma & Considerações │                  │
-│ ─ Link       │ • Mockup interativo          │                  │
-│ ─ Tracking   │ • Anexos                     │                  │
-│              │ • Versões & Histórico        │                  │
-└──────────────┴──────────────────────────────┴──────────────────┘
-```
+**Problema:** Os 4 botões ("Ver como cliente", "Copiar link", "Pré-visualizar PDF", "Tracking") aparecem desabilitados/sem efeito quando a proposta ainda é rascunho (sem `access_token`), e os outros silenciosamente falham. Também não há feedback visual claro do porquê.
 
-Sidebar esquerda mostra cartões compactos sempre visíveis (cliente + cor + logo, senha com botão olho/copiar/regenerar, link público com QR + copiar, validade, contadores de view). Central usa abas persistidas com `usePersistedState`. Direita mantém `LivePdfPreview` mas ganha toggle "Web | PDF" pra alternar entre o iframe da proposta web e o do PDF.
+**Correções:**
 
-Mobile (< md): sidebar vira bottom sheet de "Resumo da proposta", preview vira tab extra.
+1. **Botões com link público** ("Ver como cliente", "Copiar link") — em vez de ficarem `disabled` mudos, mostrar tooltip explicativo "Disponível após gerar e enviar a proposta" e, ao clicar, oferecer atalho "Gerar e enviar agora" (abre o `GerarEEnviarDialog`).
+2. **Pré-visualizar PDF** — funciona sem link público (gera PDF local). Validar que abre o `PreviewPdfDialog` com dados ao vivo (snapshot do `buildPreviewProposal`). Hoje está corretamente cabeado, mas a tela mostra que nada acontece — investigar se `PreviewPdfDialog` espera campos que não existem no snapshot e adicionar fallback.
+3. **Tracking** — habilitar mesmo sem envio (mostrar mensagem "ainda sem visualizações"). Hoje o `PropostaTrackingSheet` provavelmente não aceita proposta sem token.
+4. **Layout** — aumentar densidade (cards menores, ícones com cor de marca), e mover "Próximos passos" para o topo quando a proposta é rascunho (orientar Daniel sobre o que falta).
+5. **Banner de status** — quando rascunho sem itens / sem validade, exibir card amarelo com checklist do que falta antes de poder enviar.
 
-## 2. Proposta Web em subdomínio GetBrain
+---
 
-Hoje a página pública existe em `/p/:token`. Vamos:
+## Fase 2 — Aba Cliente: vínculo com CRM
 
-- Manter a rota técnica `/p/:token` no app principal.
-- Configurar `**propostas.getbrain.com.br**` (custom domain) apontando pro mesmo deploy, redirecionando `propostas.getbrain.com.br/{slug-cliente}` → `/p/{token}` por meio de uma tabela `proposal_public_slugs (slug, proposal_id, token)`. Slug é gerado a partir do nome da empresa + sufixo numérico se colidir. Edge function `resolve-proposal-slug` faz a tradução server-side.
-- Esse mesmo subdomínio é o que aparece no QR code do PDF e no botão "Copiar link" do editor.
+**Problema:** Hoje a aba só mostra um link tímido para o deal no rodapé. O Daniel quer **selecionar/trocar o lead/empresa no CRM e puxar tudo** (dor, contato, escopo, tipo de projeto…).
 
-Visual da proposta web (redesign do `PropostaPublica.tsx`):
+**Componente novo:** `CrmDealLinkPicker.tsx`
 
-- Hero cheio de tela com logo do cliente, cor de marca aplicada como acento, título "Proposta {{empresa}}" e CTA "Começar".
-- Seções com scroll-snap: Boas-vindas → Sobre a GetBrain → Sua Dor → Nossa Solução → Escopo (cards com expand) → Cronograma → Investimento → Mockup (embed) → Anexos → Considerações → Aceite/Recusar.
-- Sticky nav lateral com índice clicável, igual ao TOC do PDF.
-- Seção "Mockup interativo" com embed em iframe + botão "Abrir em nova aba".
-- Seção "Anexos" com grid de cards (preview imagem/pdf, tamanho, download).
-- Botão flutuante de chat (já existe `ProposalChatBox`) e CTA fixa de aceitar/recusar no rodapé.
+- Card no topo da aba "Cliente" com 3 estados:
+  - **Sem deal vinculado**: combobox de busca em `deals` (filtra ganhos/em negociação), botão "Vincular".
+  - **Com deal vinculado**: mostra resumo (código do deal, empresa, contato principal, estágio, dor) com link para abrir o deal em nova aba e botão "Trocar deal".
+  - **Conflito** (campos da proposta divergem do deal): banner "Dados desatualizados — sincronizar do CRM?" com diff por campo.
+- Botão **"Importar do CRM"** com checkboxes do que sobrescrever:
+  - Identidade (nome, CNPJ, cidade, logo da empresa)
+  - Contexto comercial (dor, contato decisor, origem, setor) → vai para campos da proposta
+  - Escopo sugerido (acceptance criteria do deal viram itens iniciais; pergunta se substitui ou anexa)
+  - Tipo de projeto / template recomendado
 
-## 3. Senha auto-gerada + editável
+**Backend:**
 
-Já existe `defaultProposalPassword(slug)` e `RedefinirSenhaDialog` + edge `hash-proposal-password`. Vamos:
+- RPC `import_deal_into_proposal(p_proposal_id, p_deal_id, p_fields jsonb)` — espelha a lógica de `create_proposal_from_deal` mas para uma proposta já existente. Atualiza só os campos pedidos, registra em `audit_logs` com `action='deal_import'` e diff do antes/depois.
+- Reutiliza joins já existentes em `useProposalDetail` (deal já carrega code, title, stage); estender o `select` para trazer `pain_description`, `company`, `primary_contact`, `acceptance_criteria`.
 
-- Garantir que toda proposta nova nasça com `{slug}@2026` (já acontece no `createProposalFromDeal`; replicar no `NovoOrcamentoModal`).
-- Card "Acesso" na sidebar do editor mostrando: senha em texto mascarado (botão olho), copiar, regenerar (volta pro padrão se nome mudar) e "Definir nova senha" (abre o dialog atual).
-- Plain password fica salva em coluna nova `access_password_plain` (criptografada at-rest pelo Postgres, mas legível pra quem edita a proposta) — necessária pra você ver/copiar depois. Hash continua em `access_password_hash` pra validação pública.
+**Cache invalidation:** após import, invalidar `proposal`, `proposal_items`, `audit_logs` via `invalidateProposalCaches` (criar helper se não existir em `cacheInvalidation.ts`).
 
-## 4. Mockup interativo interno (gerador parametrizado)
+---
 
-Decisão: gerador interno React, hospedado dentro do próprio app GetBrain em rota pública sem autenticação `/m/:proposalId`. Domínio: `propostas.getbrain.com.br/m/:slug` (mesmo subdomínio da proposta).
+## Fase 3 — Página Pública (UI/UX + correção do iframe)
 
-Como funciona:
+**Problema 1 (correção):** o iframe não carrega — provavelmente porque `preview-proposal-as-internal` ainda está retornando 500 em alguns cenários, ou porque `/p/{token}?preview={jwt}` não está reconhecendo o JWT em `PropostaPublica.tsx` para pular o gate de senha.
 
-- Tabela nova `proposal_mockups (id, proposal_id, brand_color, logo_url, modules jsonb, generated_at, version)`.
-- Aba "Mockup interativo" no editor tem um wizard simples:
-  1. Confirma logo + cor de marca (puxa da proposta).
-  2. Lista os módulos: pré-preenchida a partir dos itens do escopo (cada item vira um módulo). Você pode renomear, reordenar, marcar tipo (CRUD, Dashboard, Aprovações, Calendário, Relatório, Configurações).
-  3. Define perfis de usuário (default: Admin, Operador, Visualizador) — afeta o painel "Usuários".
-- "Gerar mockup" salva o JSON e libera o link. Não tem build externo, é uma rota React que lê esse JSON e renderiza dinamicamente.
+**Diagnóstico:**
 
-Telas geradas (todas client-side, sem backend, dados fakes mas coerentes):
+1. Conferir logs da edge function via `supabase--edge_function_logs` para confirmar.
+2. Conferir `src/pages/public/PropostaPublica.tsx` — se ele lê `?preview=` e valida o JWT chamando `verify-proposal-access` num modo especial ou se ignora completamente o gate.
+3. Se o JWT não for reconhecido, ajustar `verify-proposal-access` para aceitar header `Authorization: Bearer <preview_jwt>` e bypassar o `password_hash`.
 
-- **Login**: tela limpa branca, logo do cliente, cor de marca nos botões, qualquer e-mail/senha entra.
-- **Shell do app**: sidebar com módulos do escopo + "Usuários" + "Configurações" + avatar.
-- **Dashboard**: cards de KPI + gráficos (Recharts) com dados sintéticos coerentes ao setor do cliente.
-- **Cada módulo CRUD**: lista (tabela com filtros), drawer de criação, detalhe com abas, ações em lote — tudo navegável, com `useState` local pra simular create/edit/delete.
-- **Aprovações**: kanban drag-and-drop fake.
-- **Usuários**: tabela com convidar/desativar/role.
-- **Admin**: configurações de empresa, integrações (toggles fake), permissões por perfil.
+**Problema 2 (UX):** card único pesado, sem hierarquia.
 
-Lógica que faz parecer real: estado local persiste durante a sessão (localStorage por proposalId), filtros/ordenação funcionam, drawers abrem com formulários validados, toasts de sucesso. Sem backend, sem Lovable API externa — controle total e zero dependência de chave.
+**Redesign da aba:**
 
-Botão "Abrir mockup" no editor + link no PDF + embed na proposta web.
+- **Topo — Status do link** (compact strip): badge "Online" / "Sem link", URL clicável copiável, expira em X dias, contador de views, último acesso.
+- **Bloco Acesso do cliente** (hoje): mantido, mas redesenhado como dois cards lado a lado:
+  - Card 1: Link público (URL, QR code mini, copiar, abrir em nova aba)
+  - Card 2: Senha (mostrar/ocultar, redefinir, copiar)
+- **Bloco Mockup interativo**: mantido, melhorar visual.
+- **Preview ao vivo**:
+  - Toolbar com 3 toggles de viewport (Mobile 375px / Tablet 768px / Desktop 100%) que ajustam `width` do iframe via CSS.
+  - Botão "Recarregar" e "Abrir em nova aba" como hoje.
+  - Loading skeleton estruturado (não só um spinner).
+  - Banner amarelo discreto quando proposta dirty: "Você tem alterações não salvas — o preview mostra a versão salva".
+  - Erro de JWT: card com botão "Tentar de novo" + link "Por que isso acontece?" → tooltip explica que o preview usa um token de 5min.
 
-## 5. Anexos (organograma e outros)
+**Página pública em si (`/p/{token}`):** auditoria visual rápida no `PropostaPublica.tsx` — ajustar tipografia, espaçamento, CTA "Tenho interesse" com cor de marca da proposta (`client_brand_color`).
 
-- Bucket privado novo `proposal-attachments` com path `{proposal_id}/{uuid}-{filename}`.
-- Tabela `proposal_attachments (id, proposal_id, file_path, mime_type, size_bytes, label, kind, display_order, created_at, created_by)` onde `kind` ∈ `organograma | documento | imagem | outro`.
-- Aba "Anexos" no editor: drag-and-drop, preview thumbnail (imagens via signed URL, PDFs via ícone), edição inline de label, reordenação por drag, exclusão.
-- Edge function `get-proposal-attachment-public` que valida o token de acesso e devolve URL assinada (60s) — pra a página pública não precisar abrir o bucket.
-- Na proposta web: seção "Documentos" com grid de cards (preview + label + download).
-- No PDF: nova página "Anexos" listando label, ícone do tipo, tamanho — quando for imagem (organograma típico), embarca a imagem inline; quando for PDF, mostra cartão com link clicável que aponta pro subdomínio da proposta.
+---
 
-## 6. Card do CRM — Painel completo do deal
+## Fase 4 — Histórico detalhado + revisão do "Conteúdo IA"
 
-`DealProposalsSection` é substituído por `DealProposalsPanel` mostrando **só** as propostas daquele deal (filtro `deal_id` já existe). Para cada proposta, um card expansível com:
+**Problema 1 (Histórico):** hoje só mostra mudanças de status. Daniel quer **quem, quando e o quê**, com mais granularidade.
 
-- Header: código, status badge, valor total + mensal, validade.
-- Linha de ações primárias: Copiar link público, Copiar senha, Abrir mockup, Baixar PDF, Regenerar PDF, Marcar enviada/aceita/recusada.
-- Tabs internas (collapsible): **Resumo** (cliente + escopo resumido), **Anexos** (mesma lista da aba do editor, com upload), **Tracking** (views + chat resumido), **Versões** (lista + download de cada uma).
-- Ações de edição inline no próprio card: trocar template, editar título, editar validade, redefinir senha, alterar cor de marca, regenerar mockup. Mudanças usam `useUpdateProposal` direto, com autosave + toast.
-- Botão "Abrir editor completo" leva pra `/financeiro/orcamentos/:id/editar` quando precisar mexer em escopo/itens detalhados (que tem editor mais pesado).
+**Mudanças em `AbaHistorico.tsx` + `useProposalAuditLog.ts`:**
 
-Botão "Gerar nova proposta a partir deste deal" mantém o fluxo atual (edge `create_proposal_from_deal`), agora com confirmação visual de senha gerada.
+- Cobrir mais ações: `update`, `password_set`, `link_generated`, `pdf_generated`, `sent`, `viewed_by_client` (puxar de `proposal_views`), `interest_manifested`, `version_created`, `interaction_added`, `deal_import`, `archived`, `restored`.
+- Para cada entrada, mostrar:
+  - Avatar + nome do ator (já existe)
+  - Ícone + label da ação (mapa em `src/lib/orcamentos/auditFormatters.ts` novo)
+  - **Data e hora completas** com `dd/MM/yyyy HH:mm:ss` + relativo ("há 2 horas")
+  - Resumo legível em pt-BR ("alterou cliente de X para Y", "gerou versão v3", "enviou link por WhatsApp")
+  - Drawer lateral "Ver detalhes" com diff JSON (antes/depois) para entradas de `update` — usa `Sheet` do shadcn
+- Filtros no topo: tipo de ação (multiselect), ator (multiselect), período (hoje / 7d / 30d / tudo).
+- Agrupamento por dia (header sticky com data, igual `/admin/auditoria`).
+- Paginação infinita ou "Carregar mais 50".
 
-## 7. Detalhes técnicos
+**Helpers:**
 
-### Migrations
+- `src/lib/orcamentos/auditFormatters.ts` — mapa `action → { icon, label, formatSummary(entry) }` reutilizando padrão de `src/lib/audit/formatters.ts`.
+- Estender `useProposalAuditLog` para também buscar `proposal_views` (visualizações do cliente) e mesclar no feed por data.
 
-```sql
--- Slugs públicos
-create table proposal_public_slugs (
-  slug text primary key,
-  proposal_id uuid not null references proposals(id) on delete cascade,
-  created_at timestamptz not null default now()
-);
-create index on proposal_public_slugs(proposal_id);
+**Problema 2 (Conteúdo IA):** Daniel achou descartável.
 
--- Mockups
-create table proposal_mockups (
-  id uuid primary key default gen_random_uuid(),
-  proposal_id uuid not null unique references proposals(id) on delete cascade,
-  brand_color text not null default '#06b6d4',
-  logo_url text,
-  modules jsonb not null default '[]'::jsonb,
-  user_profiles jsonb not null default '[]'::jsonb,
-  version int not null default 1,
-  generated_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+**Decisão:** **remover a aba "Conteúdo IA"** e redistribuir:
 
--- Anexos
-create table proposal_attachments (
-  id uuid primary key default gen_random_uuid(),
-  proposal_id uuid not null references proposals(id) on delete cascade,
-  file_path text not null,
-  mime_type text not null,
-  size_bytes int not null,
-  label text not null,
-  kind text not null default 'documento',
-  display_order int not null default 0,
-  created_by uuid references auth.users(id),
-  created_at timestamptz not null default now()
-);
-create index on proposal_attachments(proposal_id, display_order);
+- "Boas-vindas", "Resumo executivo", "Contexto e dor", "Visão da solução" → vão para **Aba Escopo** como bloco superior recolhível "Narrativa da proposta" (Daniel já passa muito tempo lá).
+- O dropdown "Gerar com IA" vira um botão flutuante no topo do bloco de narrativa, com mesmas opções.
+- Atualiza `ProposalTabsBar` para 8 abas: Resumo, Cliente, Escopo, Página Pública, Histórico, Interações, Versões, Configurações.
+- Atualiza `getInitialTab` e os deep-links existentes.
 
--- Senha em texto pra você ver/copiar (hash continua sendo a fonte de verdade pública)
-alter table proposals add column access_password_plain text;
-```
+---
 
-Tudo com RLS `authenticated_all` (alinhado com o resto da tabela `proposals`). Bucket `proposal-attachments` privado, sem políticas públicas — acesso só via edge function que valida token.
+## Detalhes técnicos
 
-### Edge functions novas/atualizadas
+**Arquivos a criar:**
 
-- `resolve-proposal-slug`: dado `{slug}`, devolve `{token}` ou 404.
-- `get-proposal-attachment-public`: dado `{token, attachment_id}`, valida acesso e devolve signed URL.
-- `register-proposal-pdf-version`: já existe; passa a incluir snapshot de anexos e mockup version.
-- `create-proposal-mockup`: opcional, só pra criar a row inicial e o slug em uma transação.
+- `src/components/orcamentos/page/CrmDealLinkPicker.tsx`
+- `src/components/orcamentos/page/CrmImportDialog.tsx`
+- `src/components/orcamentos/page/PublicPagePreviewToolbar.tsx`
+- `src/components/orcamentos/page/HistoryEntryRow.tsx`
+- `src/components/orcamentos/page/HistoryDetailDrawer.tsx`
+- `src/lib/orcamentos/auditFormatters.ts`
+- Migration: RPC `import_deal_into_proposal`
 
-### Rotas novas
+**Arquivos a editar:**
 
-- `/m/:slug` — mockup interativo público (sem auth).
-- `propostas.getbrain.com.br/{slug}` — proposta web (resolve via edge → `/p/:token`).
+- `src/pages/financeiro/OrcamentoEditarDetalhe.tsx` (remover tab `conteudo_ia`, mover narrativa pra escopo)
+- `src/components/orcamentos/page/ProposalTabsBar.tsx` (8 abas)
+- `src/components/orcamentos/page/tabs/TabResumo.tsx` (botões com fallback)
+- `src/components/orcamentos/page/tabs/TabCliente.tsx` (CrmDealLinkPicker no topo)
+- `src/components/orcamentos/page/tabs/TabEscopo.tsx` (bloco narrativa + IA)
+- `src/components/orcamentos/page/tabs/TabPaginaPublica.tsx` (redesign + viewport toggles)
+- `src/components/orcamentos/abas/AbaHistorico.tsx` (feed enriquecido)
+- `src/hooks/orcamentos/useProposalAuditLog.ts` (mais ações + proposal_views)
+- `src/hooks/orcamentos/useProposalDetail.ts` (estender select do deal)
+- `supabase/functions/verify-proposal-access/index.ts` (aceitar JWT de preview)
+- `src/pages/public/PropostaPublica.tsx` (validar `?preview=` e usar `client_brand_color`)
+- `src/lib/cacheInvalidation.ts` (helper `invalidateProposalCaches`)
 
-### Componentes a criar
+**Arquivos a deletar:**
 
-- `src/components/orcamentos/editor/ProposalEditorShell.tsx` (3 colunas)
-- `src/components/orcamentos/editor/sidebar/{ClienteCard,SenhaCard,LinkCard,ValidadeCard,TrackingCard}.tsx`
-- `src/components/orcamentos/editor/abas/{AbaIdentidade,AbaEscopo,AbaCronograma,AbaMockup,AbaAnexos,AbaVersoes}.tsx` (consolidando os atuais)
-- `src/components/orcamentos/anexos/{AnexosUploader,AnexoCard,AnexosGrid}.tsx`
-- `src/components/orcamentos/mockup/{MockupWizard,ModuleEditor,ProfilesEditor}.tsx`
-- `src/components/mockup/{MockupShell,MockupLogin,MockupDashboard,MockupCRUDModule,MockupKanban,MockupUsers,MockupAdmin}.tsx` (renderer público)
-- `src/components/orcamentos/crm/DealProposalsPanel.tsx` (substitui `DealProposalsSection`)
-- `src/pages/public/MockupPublico.tsx`
+- `src/components/orcamentos/page/tabs/TabConteudoIA.tsx`
 
-### Hooks novos
+**Sequência de execução proposta:**
 
-- `useProposalAttachments(proposalId)`, `useUploadAttachment`, `useDeleteAttachment`
-- `useProposalMockup(proposalId)`, `useUpsertMockup`, `useGeneratePublicSlug`
-- `useResetProposalPassword` (envolve a edge `hash-proposal-password` + atualiza `access_password_plain`)
+1. **Fase 1** (Resumo) — 1 entrega curta, baixa risco.
+2. **Fase 4** parte A (remover Conteúdo IA + mover narrativa) — antes da Fase 2 para não tocar 2x na mesma estrutura.
+3. **Fase 2** (Cliente + CRM) — entrega maior, inclui RPC.
+4. **Fase 3** (Página Pública) — depende de diagnóstico do JWT.
+5. **Fase 4** parte B (Histórico) — última, isolada.
 
-### Custom domain
+Cada fase termina com um checkpoint visual no preview.
 
-- `propostas.getbrain.com.br` precisa ser configurado no painel de domínios do Lovable (não consigo automatizar). Vou avisar o passo a passo no fim da implementação.
+**Confirmação antes de começar:** seguir nessa ordem ou prefere outra prioridade?
 
-## 8. O que NÃO entra agora
-
-- Geração de mockup via API do Lovable (decisão: gerador interno é suficiente e mais robusto agora).
-- Editor visual drag-and-drop de telas do mockup (a estrutura é dirigida pelos módulos do escopo, não por design livre).
-- Refinamentos do template PDF além das páginas novas de Mockup e Anexos (cabe num próximo turno).
-
-## 9. Ordem de implementação
-
-1. Migrations (slugs, mockups, anexos, password_plain) + bucket + RLS.
-2. Anexos: hooks + aba no editor + render na proposta web + página de anexos no PDF.
-3. Senha: card na sidebar + persistência do plain + botões.
-4. Mockup: tabela + wizard no editor + renderer público em `/m/:slug` + embed na proposta web.
-5. Slug público + edge `resolve-proposal-slug` + ajuste do QR.
-6. Redesign do shell do editor (3 colunas + abas consolidadas).
-7. Redesign da proposta web (`PropostaPublica.tsx`).
-8. `DealProposalsPanel` substituindo `DealProposalsSection` no card do CRM.
-9. Custom domain `propostas.getbrain.com.br` (passo manual seu).
-
-Cada bloco é independente o suficiente pra eu entregar, você revisar e seguir. Posso ir do 1 ao 4 num primeiro turno se aprovar tudo.  
-  
-Eu preciso de um botão para abrir o site e ver qual seria  a visão do cliente também
+Eu quero usar IA para partes estratégicas desse módulo, caso você veja um modo interessante de usar para me facilitar, me oergunte. eu vquero poder cadastrar templates de propostas também, estou construindo um no canva e o modelo do site eu quero reformular também, depois me diga qual é o melhor modelo de eu fazer isso
