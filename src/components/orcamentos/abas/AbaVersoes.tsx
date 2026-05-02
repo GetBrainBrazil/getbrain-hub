@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, FileSearch, Loader2 } from "lucide-react";
+import { Download, FileSearch, Loader2, RefreshCw } from "lucide-react";
 import { useProposalVersions } from "@/hooks/orcamentos/useProposalVersions";
+import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
+import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
 import { SnapshotViewerDialog } from "../SnapshotViewerDialog";
 import { openProposalPdf } from "@/lib/orcamentos/storage";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface Props {
   proposalId: string;
@@ -13,11 +16,35 @@ interface Props {
 
 export function AbaVersoes({ proposalId }: Props) {
   const { data, isLoading } = useProposalVersions(proposalId);
+  const { data: proposal } = useProposalDetail(proposalId);
+  const regen = useGenerateProposalPDF();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const [viewSnapshot, setViewSnapshot] = useState<Record<string, any> | null>(
     null
   );
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [snapshotMeta, setSnapshotMeta] = useState<string>("");
+
+  async function handleRegenerate() {
+    if (!proposal) {
+      toast.error("Proposta ainda carregando");
+      return;
+    }
+    const ok = await confirm({
+      title: "Regenerar PDF?",
+      description:
+        "Cria uma nova versão do PDF usando o conteúdo atual da proposta. As versões anteriores são preservadas.",
+      confirmLabel: "Regenerar",
+    });
+    if (!ok) return;
+    regen.mutate({
+      proposalId,
+      proposal,
+      templateKey: (proposal as any).template_key,
+      isRegeneration: true,
+      triggerDownload: false,
+    });
+  }
 
   async function handleDownload(versionId: string, path: string) {
     setDownloadingId(versionId);
