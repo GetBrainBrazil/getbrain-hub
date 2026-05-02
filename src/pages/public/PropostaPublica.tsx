@@ -1273,12 +1273,18 @@ function ProposalView({
 
           <div className="flex flex-wrap items-end gap-8 justify-between text-white/55">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white text-xl">
-                {contactDisplayName.slice(0, 1).toUpperCase()}
-              </div>
+              <AuthorAvatar
+                author={proposal.author}
+                size={56}
+                fallbackInitial={contactDisplayName.slice(0, 1).toUpperCase()}
+              />
               <div>
-                <div className="text-white text-base font-medium">{contactDisplayName}</div>
-                <div className="text-xs font-mono-display uppercase tracking-[0.2em]">Fundador · GetBrain</div>
+                <div className="text-white text-base font-medium">
+                  {proposal.author?.name ?? contactDisplayName}
+                </div>
+                <div className="text-xs font-mono-display uppercase tracking-[0.2em]">
+                  {proposal.author?.role_label ?? "Fundador · GetBrain"}
+                </div>
               </div>
             </div>
             <div className="text-xs font-mono-display uppercase tracking-[0.2em]">
