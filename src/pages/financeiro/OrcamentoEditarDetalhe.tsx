@@ -59,6 +59,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 
 import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
+import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
 import { effectiveStatus, type ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 import type { GenerationType } from "@/lib/orcamentos/generateContent";
 import { Card } from "@/components/ui/card";
