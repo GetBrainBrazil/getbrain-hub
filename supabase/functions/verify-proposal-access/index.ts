@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
 
     if (propErr || !prop) return json({ error: "invalid_token" }, 404);
 
-    // Status válido
-    const validStatuses = ["enviada", "visualizada", "interesse_manifestado"];
+    // Status válido (rascunho permitido para teste pelo autor antes de enviar)
+    const validStatuses = ["rascunho", "enviada", "visualizada", "interesse_manifestado"];
     if (!validStatuses.includes(prop.status)) {
       return json({ error: "invalid_token" }, 403);
     }
