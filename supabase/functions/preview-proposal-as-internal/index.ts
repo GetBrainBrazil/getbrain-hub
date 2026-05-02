@@ -30,10 +30,11 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
     const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claims?.claims?.sub) {
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user?.id) {
       return json({ error: "unauthorized" }, 401);
     }
+    const userId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
     const proposalId = String(body?.proposal_id ?? "").trim();
@@ -61,7 +62,7 @@ Deno.serve(async (req) => {
       {
         proposal_id: prop.id,
         preview: true,
-        sub: claims.claims.sub,
+        sub: userId,
         exp: getNumericDate(PREVIEW_TTL_SECONDS),
       },
       key,
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
       entity_id: prop.id,
       action: "status_change",
       changes: {},
-      metadata: { kind: "preview_as_internal", user_id: claims.claims.sub },
+      metadata: { kind: "preview_as_internal", user_id: userId },
     });
 
     return json({
