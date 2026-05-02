@@ -1,63 +1,100 @@
-## O que muda
+## Direção visual
 
-Duas adições no editor de proposta:
+Inspirado no editorial elegante de imobiliariadorio.com.br — adaptado à identidade GetBrain (dark + neon), mas trazendo o que torna aquele site único:
 
-### 1. Senha de acesso visível abaixo do link público
+- **Hero cinematográfico em tela cheia** com headline serif gigantesco e ponto de acento neon (•)
+- **Tipografia editorial**: serif de display (Fraunces) para títulos + sans (Inter Tight) para corpo, com "kicker" em caixa-alta espaçada (`tracking-[0.4em]`)
+- **Densidade controlada**: muito ar entre seções (160–200px), uma ideia por viewport
+- **Micro-detalhes**: pontos de acento neon, separadores ultra-finos, números grandes em fonte mono, "role para baixo" sutil
+- **Layout misto**: fundo escuro profundo no hero/CTAs intercalado com seções claras (off-white #f8f7f3) para destaque editorial — tipo revista
+- **Logo do cliente em destaque** como protagonista, não como decoração
+- **Hover states discretos**, transições longas (700ms+), reveal cinematográfico
 
-No bloco "Link público da proposta" da aba Resumo, adicionar uma segunda linha com a senha (oculta por padrão, com botão de mostrar/copiar) e um botão pequeno "Trocar senha" que abre o `RedefinirSenhaDialog` que já existe.
-
-A senha em texto fica em `proposals.access_password_plain` (já existe, é populada pelo "Gerar e enviar" e atualizada pelo "Redefinir senha"). Quando estiver `null` (proposta antiga), mostra "—" e oferece o botão de redefinir.
-
-Layout proposto dentro do `PublicLinkBlock`:
+## Estrutura nova (uma seção = uma cena)
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│ LINK PÚBLICO DA PROPOSTA              [QR][↗][👁][Copiar]│
-│ hub.getbrain.com.br/p/YwZzgqHA…                         │
-│ ─────────────────────────────────────────────────────── │
-│ 🔑 Senha:  •••••••••   [👁] [⧉]   [Trocar senha]        │
-│ Vence em 31 dias · Nenhuma visualização ainda           │
-└─────────────────────────────────────────────────────────┘
+[1] HERO TELA CHEIA
+    - Logo cliente + "PROPOSTA EXCLUSIVA PARA"
+    - Headline serif: "Sunbright Engenharia•" (ponto neon)
+    - Sub: 1 linha curta poética
+    - 3 KPIs minimalistas em linha (sem cards, só números grandes)
+    - "ROLE PARA BAIXO" + linha vertical animada
+
+[2] CARTA DE ABERTURA (fundo off-white, serif grande)
+    - "Olá, Vanessa." (nome do contato primário do CRM)
+    - Resumo executivo em prosa editorial
+
+[3] O CONTEXTO (dark)
+    - Eyebrow "01 · CONTEXTO"
+    - Headline serif + parágrafo com aspas grandes nas dores
+
+[4] A SOLUÇÃO (off-white)
+    - Eyebrow "02 · SOLUÇÃO"
+    - Texto editorial
+
+[5] ESCOPO (dark, lista numerada vertical)
+    - Cada item como "capítulo" numerado em mono grande
+    - Título serif + descrição sans
+    - Expand inline elegante (sem accordion barulhento)
+
+[6] INVESTIMENTO (split editorial)
+    - Esquerda: número gigante R$ X em serif
+    - Direita: tabela limpa com hairline dividers
+    - Manutenção como bloco separado abaixo
+
+[7] CRONOGRAMA (timeline horizontal cinematográfica)
+
+[8] SOBRE GETBRAIN (off-white, formato manifesto)
+
+[9] PRÓXIMOS PASSOS (hero invertido)
+    - Headline serif "Vamos começar?"
+    - 2 CTAs grandes: "Quero avançar" + WhatsApp direto pro Daniel
+    - Assinatura: "Daniel · GetBrain" com avatar circular
+
+[10] FOOTER mínimo (estilo o do site da imobiliária)
 ```
 
-### 2. "Gerar e enviar" entrega de fato por WhatsApp/Email para o contato principal do CRM
+## Navegação
 
-Hoje o `GerarEEnviarDialog` na fase de sucesso mostra três botões (WhatsApp/Email/Abrir) que apenas abrem `wa.me/?text=...` e `mailto:?body=...` sem destinatário. Nada vai automaticamente para o contato do CRM.
+- **Top bar**: minimalista, transparente no hero, sólida ao rolar; logo GetBrain + código proposta + botão PDF
+- **Sidebar lateral fixa em desktop**: substituída por **dot navigation vertical** (estilo bullets) à direita, com label que aparece no hover
+- **Mobile**: nav em drawer + barra inferior com "Quero avançar" sempre visível
 
-A nova versão vai:
+## Tipografia e cores
 
-1. **Buscar o contato principal automaticamente** — quando a proposta tem `company_id`, carrega de `company_people` o registro com `is_primary_contact = true`, com `full_name`, `email` e `phone` da tabela `people`. (Para a proposta atual: Vanessa, `admin@sunbrightengenharia.com.br`, `5521976526871`.)
-2. **Mostrar um cartão "Destinatário"** já na tela de gerar/enviar, com nome + email + telefone, e checkboxes "Enviar por email" e "Enviar por WhatsApp" (ambos marcados por padrão se o contato tiver email/phone respectivamente). Permitir editar email/telefone se quiser ajustar antes de enviar. Se não houver contato principal, mostrar aviso com link "Cadastrar contato no CRM".
-3. **Ao clicar em "Gerar e enviar"**:
-   - Faz tudo que já fazia: define senha, marca como `enviada`, gera token, registra evento `sent`.
-   - Se "Enviar por WhatsApp" marcado: abre `https://wa.me/<phone-limpo>?text=<mensagem>` em nova aba (com o número do contato preenchido). Pré-formata mensagem com saudação personalizada usando primeiro nome.
-   - Se "Enviar por email" marcado: invoca a edge function `send-proposal-email` (nova, descrita abaixo) que envia HTML formatado direto para o email do contato.
-   - Registra cada canal usado em `proposal_interactions` (`channel: 'email' | 'whatsapp'`, `direction: 'outbound'`, `auto_generated: true`) — assim aparece no Tracking.
+- **Display**: Fraunces (serif) — peso 400/600 para títulos
+- **Body**: Inter Tight (sans) — 400/500
+- **Mono**: JetBrains Mono — para números, eyebrows, códigos
+- **Paleta**:
+  - Dark: `#0a0e1a` (atual) com camadas `#0f1420`
+  - Off-white editorial: `#f8f7f3` (intercalar seções)
+  - Acento: `--brand` do cliente (default cyan #22D3EE) usado parcimoniosamente, principalmente como ponto/sublinhado
+  - Texto dark mode: branco com 92/68/40% opacidade em hierarquia
+  - Texto light mode: `#0a0e1a` com 90/60/40%
 
-### 3. Decisão: como enviar o email?
+## Detalhes que fazem diferença (do imobiliariadorio)
 
-Esta é a parte que precisa de escolha sua, porque envolve provisionamento. Opções:
+- Ponto colorido após títulos (`Headline•`)
+- Eyebrow com pontos separadores: `EXCLUSIVIDADE · DISCRIÇÃO · EXCELÊNCIA`
+- Indicador "ROLE PARA BAIXO" no hero com linha vertical
+- Botões pill com borda fina e hover suave
+- Separadores horizontais hairline (1px com 8% opacidade)
+- Footer dark com 2 colunas: navegação + contato
 
-**A. Lovable Email (recomendada) com domínio próprio da GetBrain.** Vou pedir pra você configurar `notify.getbrain.com.br` (ou o subdomínio que preferir). O email sai como "GetBrain <propostas@getbrain.com.br>", deliverability boa, sem mexer com Resend/SendGrid. Setup é guiado por um modal que abre uma vez; depois só funciona.
+## Detalhes técnicos
 
-**B. Resend via connector da Lovable.** Você cria conta no Resend, conecta como connector da Lovable, e o email sai pelo Resend usando seu domínio verificado lá. Útil se você já tem conta Resend ativa.
+- Arquivo principal: `src/pages/public/PropostaPublica.tsx` — substituir `ProposalView` mantendo o `PasswordGate` atual e toda lógica de tracking/auth/PDF
+- Carregar Fraunces e Inter Tight via Google Fonts no `<head>` do `index.html` (não afeta o app interno, só a página pública usa)
+- Manter compatibilidade com todos os campos existentes (`executive_summary`, `pain_context`, `solution_overview`, `items`, `considerations`, `mockup_url`, `maintenance_*`, etc.)
+- Buscar nome do contato primário via `usePrimaryContact` (já existe) usando `proposal.company_id` — usado na carta de abertura e assinatura
+- Manter `ProposalChatBox` flutuante no canto
+- Manter banner de preview no topo quando `isPreview`
+- Animações: keep `reveal/reveal-in`, adicionar `reveal-from-left/right` para variar
+- Responsividade mobile-first: hero serif escala de 4xl→7xl, sidebar de pontos some em <lg, tabela investimento vira cards
+- Sem mudanças de schema, sem novos endpoints, sem migrations
 
-**C. Por enquanto sem email — apenas WhatsApp.** Implementamos só o canal WhatsApp agora (que não precisa de infra) e deixamos email pra um próximo passo. Você ainda ganha 80% do valor (WhatsApp é o canal mais usado para isso na prática).
+## Fora de escopo
 
-A opção A é a mais limpa para o longo prazo. A C é a mais rápida de entregar agora.
-
-## Arquivos afetados
-
-- `src/components/orcamentos/page/tabs/TabResumo.tsx` — `PublicLinkBlock` ganha linha de senha + botão "Trocar senha".
-- `src/pages/financeiro/OrcamentoEditarDetalhe.tsx` — passa `accessPassword` e `onOpenPwdDialog` para `TabResumo`.
-- `src/components/orcamentos/GerarEEnviarDialog.tsx` — fase form ganha cartão de destinatário (carregado via novo hook), checkboxes de canais; fase success mantém botões manuais como fallback mas pré-preenche destinatário.
-- `src/hooks/crm/usePrimaryContact.ts` — novo hook: dado `company_id`, retorna `{ name, email, phone }` do contato principal.
-- `src/lib/orcamentos/sendProposal.ts` — novo helper: formata mensagem, dispara WhatsApp e/ou edge function de email, registra interações.
-- `supabase/functions/send-proposal-email/index.ts` — apenas se você escolher A ou B. Recebe `{ proposalId, recipientEmail, recipientName, message, link, password }`, manda email via Lovable Email (opção A) ou Resend (opção B), com template HTML simples e branded.
-
-## Resultado esperado
-
-- Senha de acesso visível e copiável diretamente no Resumo, com botão de redefinir.
-- "Gerar e enviar" deixa de ser só "criar token" e vira de fato envio: identifica o contato principal do CRM, sugere os canais disponíveis, e envia. Tudo registrado no Tracking.
-
-Antes de começar a implementar, preciso que você responda: **qual canal de email — A, B ou C?**
+- Não vou mudar o `PasswordGate` (já está bom, igual ao screenshot anterior)
+- Não vou mexer no editor interno de proposta nem no `TabResumo`
+- Não vou trocar Tailwind por outra lib
