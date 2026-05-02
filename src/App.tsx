@@ -44,7 +44,7 @@ import CrmLeadsAndCompanies from "./pages/crm/CrmLeadsAndCompanies";
 
 import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
 import Clientes from "./pages/Clientes";
-import AdminLayout from "./pages/admin/AdminLayout";
+
 import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
 import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
