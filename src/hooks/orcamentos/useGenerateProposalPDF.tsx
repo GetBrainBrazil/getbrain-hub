@@ -158,7 +158,8 @@ export function useGenerateProposalPDF() {
       }
     },
     onSuccess: (res, vars) => {
-      invalidateProposalCaches(qc, vars.proposalId);
+      invalidateProposalCaches(qc, { proposalId: vars.proposalId });
+      qc.invalidateQueries({ queryKey: ["proposal_versions", vars.proposalId] });
       toast.success(
         vars.isRegeneration
           ? `Versão v${res.versionNumber} regenerada`
