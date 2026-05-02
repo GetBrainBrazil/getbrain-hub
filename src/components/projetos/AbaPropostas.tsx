@@ -144,11 +144,26 @@ function MetaPill({
 function ProposalCard({
   proposal,
   isActive,
+  busy,
+  onOpen,
+  onDuplicate,
+  onCopyLink,
+  onMarkSent,
+  onMarkAccepted,
+  onMarkRejected,
+  onDelete,
 }: {
   proposal: ProjectProposalRow;
   isActive: boolean;
+  busy: boolean;
+  onOpen: () => void;
+  onDuplicate: () => void;
+  onCopyLink: () => void;
+  onMarkSent: () => void;
+  onMarkAccepted: () => void;
+  onMarkRejected: () => void;
+  onDelete: () => void;
 }) {
-  const navigate = useNavigate();
   const [openingPdf, setOpeningPdf] = useState(false);
 
   const total = calculateScopeTotal(proposal.scope_items ?? []);
@@ -156,7 +171,8 @@ function ProposalCard({
   const monthly = proposal.maintenance_monthly_value ?? 0;
   const publicUrl = buildPublicProposalUrl(proposal.access_token);
 
-  async function handleOpenPdf() {
+  async function handleOpenPdf(e: React.MouseEvent) {
+    e.stopPropagation();
     if (!proposal.pdf_url) return;
     setOpeningPdf(true);
     try {
@@ -168,13 +184,24 @@ function ProposalCard({
     }
   }
 
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       className={cn(
-        "relative rounded-lg border bg-card/40 transition-colors",
+        "group relative cursor-pointer rounded-lg border bg-card/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
         isActive
           ? "border-accent/60 ring-1 ring-accent/20"
-          : "border-border/70 hover:border-border",
+          : "border-border/70 hover:border-accent/40",
       )}
     >
       {isActive && (
@@ -211,6 +238,75 @@ function ProposalCard({
               </span>
             </div>
           )}
+
+          {/* Menu ⋯ */}
+          <div onClick={stop}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  disabled={busy}
+                  aria-label="Ações da proposta"
+                >
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MoreVertical className="h-4 w-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={onOpen}>
+                  <Pencil className="h-4 w-4" /> Abrir editor
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDuplicate}>
+                  <CopyIcon className="h-4 w-4" /> Duplicar como nova versão
+                </DropdownMenuItem>
+                {publicUrl && (
+                  <DropdownMenuItem onClick={onCopyLink}>
+                    <Link2 className="h-4 w-4" /> Copiar link público
+                  </DropdownMenuItem>
+                )}
+                {proposal.pdf_url && (
+                  <DropdownMenuItem onClick={handleOpenPdf}>
+                    <Download className="h-4 w-4" /> Baixar PDF
+                  </DropdownMenuItem>
+                )}
+
+                {(proposal.status === "rascunho" ||
+                  proposal.status === "enviada") && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {proposal.status === "rascunho" && (
+                      <DropdownMenuItem onClick={onMarkSent}>
+                        <Send className="h-4 w-4" /> Marcar como enviada
+                      </DropdownMenuItem>
+                    )}
+                    {proposal.status === "enviada" && (
+                      <>
+                        <DropdownMenuItem onClick={onMarkAccepted}>
+                          <Check className="h-4 w-4 text-success" /> Marcar como aceita
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={onMarkRejected}>
+                          <XIcon className="h-4 w-4 text-destructive" /> Marcar como recusada
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </>
+                )}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-4 w-4" /> Excluir proposta
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -266,8 +362,8 @@ function ProposalCard({
           )}
         </div>
 
-        {/* Ações */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+        {/* Ações inline (desktop) — duplicam atalhos do menu */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3" onClick={stop}>
           <Button
             size="sm"
             variant="outline"
@@ -285,7 +381,7 @@ function ProposalCard({
 
           {publicUrl && (
             <Button size="sm" variant="outline" asChild>
-              <a href={publicUrl} target="_blank" rel="noreferrer">
+              <a href={publicUrl} target="_blank" rel="noreferrer" onClick={stop}>
                 <Globe className="h-3.5 w-3.5" /> Página pública
               </a>
             </Button>
@@ -295,7 +391,10 @@ function ProposalCard({
             size="sm"
             variant="ghost"
             className="ml-auto"
-            onClick={() => navigate(`/financeiro/orcamentos/${proposal.id}/editar`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
           >
             <Pencil className="h-3.5 w-3.5" /> Editor completo
             <ArrowUpRight className="h-3 w-3 opacity-60" />
