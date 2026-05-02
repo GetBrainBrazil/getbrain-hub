@@ -247,3 +247,36 @@ function SortableItem({
     </div>
   );
 }
+
+/**
+ * Textarea que cresce automaticamente conforme o conteúdo, sem scroll interno.
+ */
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={2}
+      className="w-full min-h-[40px] border-0 bg-transparent px-1 py-1 text-sm shadow-none resize-none overflow-hidden outline-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring rounded-md placeholder:text-muted-foreground"
+    />
+  );
+}
