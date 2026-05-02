@@ -47,6 +47,11 @@ interface PublicProposal {
   mockup_url: string | null;
   sent_at: string | null;
   recipient_first_name: string | null;
+  implementation_value: number | null;
+  installments_count: number | null;
+  first_installment_date: string | null;
+  public_opening_letter: string | null;
+  public_roadmap: { phases: Array<{ number: number; title: string; duration_days: number; outcome: string; deliverables: string[] }> } | null;
   items: Array<{
     id: string;
     description: string;
