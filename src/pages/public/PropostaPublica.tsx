@@ -363,7 +363,7 @@ function PasswordGate(props: {
           <p className="text-center text-xs text-white/40 mt-6">
             Problemas?{" "}
             <a
-              href="https://wa.me/5511999999999"
+              href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`}
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-cyan-400"
@@ -1027,9 +1027,7 @@ function ProposalView({
               </span>
             </button>
             <a
-              href={`https://wa.me/5511999999999?text=${encodeURIComponent(
-                `Olá Daniel, quero avançar com a proposta ${proposal.code}`,
-              )}`}
+              href={buildWhatsappUrl(`Olá Daniel, quero avançar com a proposta ${proposal.code}`)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 text-sm font-mono-display uppercase tracking-[0.2em] text-white/70 hover:text-white border border-white/15 hover:border-white/40 rounded-full px-5 h-12 transition-all"
@@ -1075,8 +1073,8 @@ function ProposalView({
             <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-white/35 mb-2">
               Contato
             </div>
-            <a href="https://wa.me/5511999999999" target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
-              wa.me/Daniel
+            <a href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`} target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
+              WhatsApp do Daniel
             </a>
             <a href="mailto:daniel@getbrain.com.br" className="block text-sm text-white/70 hover:text-white transition-colors">
               daniel@getbrain.com.br
