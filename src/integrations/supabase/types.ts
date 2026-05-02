@@ -3599,6 +3599,59 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_attachments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_order: number
+          file_path: string
+          id: string
+          kind: string
+          label: string
+          mime_type: string
+          proposal_id: string
+          show_in_pdf: boolean
+          show_in_web: boolean
+          size_bytes: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          file_path: string
+          id?: string
+          kind?: string
+          label: string
+          mime_type: string
+          proposal_id: string
+          show_in_pdf?: boolean
+          show_in_web?: boolean
+          size_bytes?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          file_path?: string
+          id?: string
+          kind?: string
+          label?: string
+          mime_type?: string
+          proposal_id?: string
+          show_in_pdf?: boolean
+          show_in_web?: boolean
+          size_bytes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_attachments_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_chat_messages: {
         Row: {
           content: string
@@ -3856,6 +3909,88 @@ export type Database = {
           },
         ]
       }
+      proposal_mockups: {
+        Row: {
+          brand_color: string
+          client_company_name: string | null
+          created_by: string | null
+          enabled: boolean
+          generated_at: string
+          id: string
+          logo_url: string | null
+          modules: Json
+          proposal_id: string
+          updated_at: string
+          user_profiles: Json
+          version: number
+        }
+        Insert: {
+          brand_color?: string
+          client_company_name?: string | null
+          created_by?: string | null
+          enabled?: boolean
+          generated_at?: string
+          id?: string
+          logo_url?: string | null
+          modules?: Json
+          proposal_id: string
+          updated_at?: string
+          user_profiles?: Json
+          version?: number
+        }
+        Update: {
+          brand_color?: string
+          client_company_name?: string | null
+          created_by?: string | null
+          enabled?: boolean
+          generated_at?: string
+          id?: string
+          logo_url?: string | null
+          modules?: Json
+          proposal_id?: string
+          updated_at?: string
+          user_profiles?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_mockups_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_public_slugs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          proposal_id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          proposal_id: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          proposal_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_public_slugs_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_versions: {
         Row: {
           created_at: string
@@ -3972,6 +4107,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           access_password_hash: string | null
+          access_password_plain: string | null
           access_token: string | null
           client_brand_color: string | null
           client_city: string | null
@@ -4019,6 +4155,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           access_password_hash?: string | null
+          access_password_plain?: string | null
           access_token?: string | null
           client_brand_color?: string | null
           client_city?: string | null
@@ -4066,6 +4203,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           access_password_hash?: string | null
+          access_password_plain?: string | null
           access_token?: string | null
           client_brand_color?: string | null
           client_city?: string | null

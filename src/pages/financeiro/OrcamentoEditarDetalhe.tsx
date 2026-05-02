@@ -24,6 +24,8 @@ import { RedefinirSenhaDialog } from "@/components/orcamentos/RedefinirSenhaDial
 import { ItemDetailsDialog } from "@/components/orcamentos/ItemDetailsDialog";
 import { GerarComIaDropdown } from "@/components/orcamentos/GerarComIaDropdown";
 import { PropostaTrackingSheet } from "@/components/orcamentos/PropostaTrackingSheet";
+import { AcessoClienteCard } from "@/components/orcamentos/AcessoClienteCard";
+import { AbaAnexos } from "@/components/orcamentos/abas/AbaAnexos";
 import type { GenerationType } from "@/lib/orcamentos/generateContent";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
 import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
@@ -788,6 +790,27 @@ export default function OrcamentoEditarDetalhe() {
               <p className="text-[10px] text-muted-foreground">
                 CTA destacado na página pública e QR code no PDF.
               </p>
+            </section>
+
+            {/* Acesso do cliente — link, senha visível, ver como cliente */}
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Acesso do cliente</h2>
+              <AcessoClienteCard
+                proposalId={data.id}
+                proposalCode={data.code}
+                clientName={clientName || data.client_company_name}
+                accessToken={(data as any).access_token ?? null}
+                passwordPlain={(data as any).access_password_plain ?? null}
+                hasPasswordHash={!!(data as any).access_password_hash}
+                onPasswordUpdated={() => {
+                  setLastSavedAt(new Date());
+                }}
+              />
+            </section>
+
+            {/* Anexos (organograma, documentos, imagens) */}
+            <section className="space-y-2">
+              <AbaAnexos proposalId={data.id} />
             </section>
 
             {data.status === "recusada" && (

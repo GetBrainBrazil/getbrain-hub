@@ -34,10 +34,13 @@ export async function setProposalPassword(params: {
   const hash = (data as any)?.hash as string | undefined;
   if (!hash) throw new Error("Falha ao gerar hash da senha");
 
-  // 3. Grava
+  // 3. Grava hash + plain (plain só é visível pra usuários autenticados — RLS authenticated_all)
   const upd = await supabase
     .from("proposals" as any)
-    .update({ access_password_hash: hash })
+    .update({
+      access_password_hash: hash,
+      access_password_plain: plainPassword,
+    })
     .eq("id", proposalId);
   if (upd.error) throw upd.error;
 
