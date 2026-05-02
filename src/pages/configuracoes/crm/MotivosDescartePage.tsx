@@ -71,7 +71,7 @@ export default function MotivosDescartePage() {
     const ok = await confirm({
       title: "Remover motivo?",
       description: `O motivo "${item.label}" será removido. Deals já marcados com ele continuam intactos.`,
-      confirmText: "Remover", variant: "destructive",
+      confirmLabel: "Remover", variant: "destructive",
     });
     if (!ok) return;
     const { error } = await supabase.from("deal_lost_reasons" as any).delete().eq("id", item.id);
