@@ -43,7 +43,7 @@ export default function MotivosDescartePage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [creating, setCreating] = useState(false);
-  const confirm = useConfirm();
+  const { confirm, dialog } = useConfirm();
 
   async function load() {
     setLoading(true);
@@ -154,8 +154,8 @@ export default function MotivosDescartePage() {
                   <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </button>
                 <ColorPickerPopover
-                  color={item.color}
-                  onChange={(c) => void patch(item.id, { color: c })}
+                  value={item.color}
+                  onCommit={(c) => void patch(item.id, { color: c })}
                 />
               </div>
               <Input
