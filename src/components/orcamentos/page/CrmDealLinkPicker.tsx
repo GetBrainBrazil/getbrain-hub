@@ -564,12 +564,10 @@ function parseScopeItems(deal: DealRow): ScopeItem[] {
     });
   }
 
-  // Se temos um valor total estimado e itens sem valor, distribui igualmente
-  const hasZeroValues = items.length > 0 && items.every((i) => !i.value);
-  if (hasZeroValues && totalValue > 0) {
-    const per = Math.round((totalValue / items.length) * 100) / 100;
-    items.forEach((i) => (i.value = per));
-  }
-
+  // NÃO distribuir o valor da implementação entre os itens — o
+  // estimated_implementation_value do CRM é o preço cheio do projeto, não a
+  // soma de itens precificados. Os itens são descrições do escopo (deliverables
+  // ou scope_bullets) e ficam sem valor a menos que o vendedor tenha cadastrado
+  // value > 0 nos scope_bullets.
   return items;
 }
