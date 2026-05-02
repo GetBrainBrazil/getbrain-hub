@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Plus, Trash2, KeyRound, FileText, MapPin, User as UserIcon, Pencil } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, KeyRound, FileText, MapPin, User as UserIcon, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import { UserHeaderCard } from "@/components/admin/UserHeaderCard";
 import { DangerZoneCard } from "@/components/admin/DangerZoneCard";
 import { NovoContratoDialog } from "@/components/admin/NovoContratoDialog";
 import { lookupCep } from "@/lib/cep";
-import { formatPhoneBR } from "@/lib/formatters";
+import { formatPhoneBR, formatCEP, formatUF } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { logAction } from "@/hooks/useLogAction";
 
