@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useCargos } from "@/hooks/useCargos";
 import { Usuario, useCreateUsuario, useUpdateUsuario, uploadAvatar } from "@/hooks/useUsuarios";
 import { supabase } from "@/integrations/supabase/client";
+import { AvatarCropDialog } from "@/components/shared/AvatarCropDialog";
 
 interface Props {
   open: boolean;
@@ -33,6 +34,7 @@ export function UsuarioDialog({ open, onOpenChange, usuario }: Props) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -46,19 +48,35 @@ export function UsuarioDialog({ open, onOpenChange, usuario }: Props) {
     }
   }, [open, usuario]);
 
-  async function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Máx 2MB");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setPendingFile(file);
+  }
+
+  async function handleConfirmCrop(blob: Blob) {
     setUploading(true);
     try {
       const targetId = usuario?.id ?? (await supabase.auth.getUser()).data.user?.id ?? "tmp";
-      const url = await uploadAvatar(file, targetId);
+      const url = await uploadAvatar(blob, targetId);
       setAvatarUrl(url);
+      setPendingFile(null);
+      if (fileRef.current) fileRef.current.value = "";
     } catch (err: any) {
       toast.error("Erro ao enviar foto: " + err.message);
     } finally {
       setUploading(false);
     }
+  }
+
+  function handleCancelCrop() {
+    setPendingFile(null);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   async function handleSubmit() {
@@ -167,6 +185,12 @@ export function UsuarioDialog({ open, onOpenChange, usuario }: Props) {
           </Button>
         </DialogFooter>
       </DialogContent>
+      <AvatarCropDialog
+        open={!!pendingFile}
+        file={pendingFile}
+        onCancel={handleCancelCrop}
+        onConfirm={handleConfirmCrop}
+      />
     </Dialog>
   );
 }

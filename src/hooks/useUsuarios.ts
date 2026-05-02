@@ -80,10 +80,14 @@ export function useDeleteUsuario() {
   });
 }
 
-export async function uploadAvatar(file: File, userId: string): Promise<string> {
-  const ext = file.name.split(".").pop() ?? "png";
+export async function uploadAvatar(file: File | Blob, userId: string): Promise<string> {
+  const isFile = file instanceof File;
+  const ext = isFile ? (file.name.split(".").pop() ?? "jpg") : "jpg";
+  const contentType = file.type || "image/jpeg";
   const path = `${userId}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+  const { error } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { upsert: true, contentType });
   if (error) throw error;
   const { data } = supabase.storage.from("avatars").getPublicUrl(path);
   return data.publicUrl;
