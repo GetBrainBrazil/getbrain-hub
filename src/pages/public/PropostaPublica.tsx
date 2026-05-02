@@ -1091,13 +1091,14 @@ function ProposalView({
         </div>
       </footer>
 
-      {/* CHAT IA */}
-      <ProposalChatBox
+      {/* CHAT IA — bolinha flutuante */}
+      <ProposalChatBubble
         brand={brand}
         disabled={isPreview}
         accessJwt={accessJwt}
         sessionToken={sessionToken}
         proposalCode={proposal.code}
+        clientFirstName={firstName}
         onManifestInterest={handleManifestInterest}
       />
     </div>
