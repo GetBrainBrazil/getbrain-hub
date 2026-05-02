@@ -93,7 +93,7 @@ export function useGenerateProposalPDF() {
         const data = mapProposalToTemplateData(proposal);
 
         // 2) URL pública + QR + watermark conforme status
-        const accessUrl = `${window.location.origin}/p/${proposalId}`;
+        const accessUrl = buildPublicProposalUrl(proposalId)!;
         const qrCodeDataUrl = await generateQrDataUrl(accessUrl);
         const watermark = watermarkFor(proposal);
 
@@ -200,7 +200,7 @@ export async function renderProposalPdfPreview(
   const data = mapProposalToTemplateData(proposal);
   // Usa access_token quando existir (link público real); fallback p/ id em rascunhos
   const tokenOrId = (proposal as any)?.access_token || proposal?.id;
-  const accessUrl = `${window.location.origin}/p/${tokenOrId}`;
+  const accessUrl = `${PUBLIC_PROPOSAL_BASE}/${tokenOrId}`;
   const qrCodeDataUrl = await generateQrDataUrl(accessUrl);
   const watermark = watermarkFor(proposal);
   const blob = await pdf(
