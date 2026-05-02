@@ -238,3 +238,59 @@ export function ProposalActionBar({
     </footer>
   );
 }
+
+/**
+ * Indicador discreto de status do autosave. Substitui o antigo botão "Salvar"
+ * (que era redundante: o autosave debounced de 600ms + flush em pagehide já
+ * garante persistência). Mostra 3 estados:
+ *  - "Alterações pendentes…" enquanto o usuário digita
+ *  - "Salvando…"             durante a mutação
+ *  - "Salvo às HH:MM"        após sucesso
+ */
+function SaveStatusIndicator({
+  isDirty,
+  isSaving,
+  lastSavedAt,
+}: {
+  isDirty: boolean;
+  isSaving: boolean;
+  lastSavedAt: Date | null;
+}) {
+  let label: string;
+  let Icon = Check;
+  let tone = "text-muted-foreground";
+
+  if (isSaving) {
+    label = "Salvando…";
+    Icon = Loader2;
+    tone = "text-muted-foreground";
+  } else if (isDirty) {
+    label = "Alterações pendentes";
+    Icon = CloudUpload;
+    tone = "text-amber-500";
+  } else if (lastSavedAt) {
+    const hh = String(lastSavedAt.getHours()).padStart(2, "0");
+    const mm = String(lastSavedAt.getMinutes()).padStart(2, "0");
+    label = `Salvo às ${hh}:${mm}`;
+    Icon = Check;
+    tone = "text-emerald-500";
+  } else {
+    label = "Tudo salvo";
+    Icon = Check;
+    tone = "text-emerald-500";
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 px-2 h-8 rounded-md text-[11px] font-medium select-none",
+        tone,
+      )}
+      title="O autosave grava cada alteração automaticamente em segundo plano."
+      aria-live="polite"
+    >
+      <Icon className={cn("h-3.5 w-3.5", isSaving && "animate-spin")} />
+      <span className="hidden sm:inline">{label}</span>
+    </div>
+  );
+}
