@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Plus, Trash2, KeyRound, FileText, MapPin, User as UserIcon, Pencil } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, KeyRound, FileText, MapPin, User as UserIcon, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import { UserHeaderCard } from "@/components/admin/UserHeaderCard";
 import { DangerZoneCard } from "@/components/admin/DangerZoneCard";
 import { NovoContratoDialog } from "@/components/admin/NovoContratoDialog";
 import { lookupCep } from "@/lib/cep";
-import { formatPhoneBR } from "@/lib/formatters";
+import { formatPhoneBR, formatCEP, formatUF } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { logAction } from "@/hooks/useLogAction";
 
@@ -59,6 +59,8 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
   // senha
   const [senha1, setSenha1] = useState("");
   const [senha2, setSenha2] = useState("");
+  const [cepLoading, setCepLoading] = useState(false);
+  const lastLookedUpCep = useRef<string | null>(null);
 
   useEffect(() => {
     if (ficha) {
@@ -66,7 +68,8 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
       setEmail(ficha.email ?? "");
       setTelefone(ficha.telefone ?? "");
       setCargoId(ficha.cargo_id ?? "");
-      setCep(ficha.cep ?? "");
+      setCep(formatCEP(ficha.cep ?? ""));
+      lastLookedUpCep.current = (ficha.cep ?? "").replace(/\D/g, "") || null;
       setPais(ficha.pais ?? "Brasil");
       setEndereco(ficha.endereco ?? "");
       setNumero(ficha.numero ?? "");
@@ -80,15 +83,34 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
     }
   }, [ficha]);
 
-  async function handleCepBlur() {
-    const r = await lookupCep(cep);
-    if (r) {
-      setEndereco(r.logradouro || endereco);
-      setBairro(r.bairro || bairro);
-      setCidade(r.localidade || cidade);
-      setEstado(r.uf || estado);
-    }
-  }
+  // Auto-lookup do CEP: dispara quando atinge 8 dígitos e sobrescreve campos.
+  useEffect(() => {
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    if (lastLookedUpCep.current === digits) return;
+    const t = setTimeout(async () => {
+      setCepLoading(true);
+      try {
+        const r = await lookupCep(digits);
+        if (!r) {
+          toast.error("CEP não encontrado");
+          return;
+        }
+        lastLookedUpCep.current = digits;
+        setEndereco(r.logradouro ?? "");
+        setBairro(r.bairro ?? "");
+        setCidade(r.localidade ?? "");
+        setEstado(formatUF(r.uf ?? ""));
+        setPais("Brasil");
+        toast.success("Endereço preenchido pelo CEP");
+      } catch {
+        toast.error("Falha ao buscar CEP");
+      } finally {
+        setCepLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [cep]);
 
   async function saveDados() {
     if (!userId) return;
@@ -240,40 +262,53 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">CEP</Label>
-                <Input value={cep} onChange={e => setCep(e.target.value)} onBlur={handleCepBlur} placeholder="00000-000" disabled={!canEdit} />
+                <div className="relative">
+                  <Input
+                    value={cep}
+                    onChange={e => setCep(formatCEP(e.target.value))}
+                    placeholder="00000-000"
+                    inputMode="numeric"
+                    maxLength={9}
+                    disabled={!canEdit}
+                    className={cepLoading ? "pr-9" : undefined}
+                  />
+                  {cepLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  )}
+                </div>
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">País</Label>
-                <Input value={pais} onChange={e => setPais(e.target.value)} disabled={!canEdit} />
+                <Input value={pais} onChange={e => setPais(e.target.value)} maxLength={60} disabled={!canEdit} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Endereço</Label>
-                <Input value={endereco} onChange={e => setEndereco(e.target.value)} disabled={!canEdit} />
+                <Input value={endereco} onChange={e => setEndereco(e.target.value)} maxLength={120} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Número</Label>
-                <Input value={numero} onChange={e => setNumero(e.target.value)} disabled={!canEdit} />
+                <Input value={numero} onChange={e => setNumero(e.target.value)} maxLength={10} disabled={!canEdit} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Complemento</Label>
-                <Input value={complemento} onChange={e => setComplemento(e.target.value)} disabled={!canEdit} />
+                <Input value={complemento} onChange={e => setComplemento(e.target.value)} maxLength={60} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Bairro</Label>
-                <Input value={bairro} onChange={e => setBairro(e.target.value)} disabled={!canEdit} />
+                <Input value={bairro} onChange={e => setBairro(e.target.value)} maxLength={80} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cidade</Label>
-                <Input value={cidade} onChange={e => setCidade(e.target.value)} disabled={!canEdit} />
+                <Input value={cidade} onChange={e => setCidade(e.target.value)} maxLength={80} disabled={!canEdit} />
               </div>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Estado</Label>
-              <Input value={estado} onChange={e => setEstado(e.target.value)} disabled={!canEdit} />
+              <Input value={estado} onChange={e => setEstado(formatUF(e.target.value))} maxLength={2} placeholder="UF" disabled={!canEdit} />
             </div>
 
             <div className="border-t pt-5">
@@ -283,7 +318,7 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome</Label>
-                <Input value={emerNome} onChange={e => setEmerNome(e.target.value)} disabled={!canEdit} />
+                <Input value={emerNome} onChange={e => setEmerNome(e.target.value)} maxLength={100} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Telefone</Label>
@@ -292,7 +327,7 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
             </div>
             <div className="border-t pt-5">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Plano de Saúde</Label>
-              <Input value={planoSaude} onChange={e => setPlanoSaude(e.target.value)} placeholder="Ex: Unimed, SulAmérica" disabled={!canEdit} />
+              <Input value={planoSaude} onChange={e => setPlanoSaude(e.target.value)} placeholder="Ex: Unimed, SulAmérica" maxLength={60} disabled={!canEdit} />
             </div>
             <div className="flex justify-end pt-2 border-t">
               <Button onClick={saveEndereco} disabled={!canEdit || updatePerfil.isPending} className="gap-2 w-full sm:w-auto">

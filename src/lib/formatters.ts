@@ -10,6 +10,19 @@ export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat("pt-BR").format(d);
 }
 
+/** Máscara progressiva de CEP brasileiro: 00000-000 (máx 8 dígitos). */
+export function formatCEP(value: string | null | undefined): string {
+  if (!value) return "";
+  const d = String(value).replace(/\D/g, "").slice(0, 8);
+  return d.length <= 5 ? d : `${d.slice(0, 5)}-${d.slice(5)}`;
+}
+
+/** Sigla de UF: maiúsculas, máx 2 letras. */
+export function formatUF(value: string | null | undefined): string {
+  if (!value) return "";
+  return String(value).replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+}
+
 /**
  * Formata um número de telefone com detecção automática de DDI.
  *

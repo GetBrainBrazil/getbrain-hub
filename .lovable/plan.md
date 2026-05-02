@@ -1,53 +1,78 @@
-## Avatar com recorte (crop) antes do upload
+## Auto-preenchimento por CEP + máscaras nos campos de endereço
 
-Hoje, ao escolher uma imagem em `UserHeaderCard` (ou no `UsuarioDialog`), ela é enviada direto para o storage `avatars`. Resultado: a foto fica esticada/descentralizada porque o `Avatar` é redondo e a imagem original raramente é quadrada.
+Hoje, na aba **Endereço & Emergência** do perfil (`UsuarioFichaPage`):
+- O lookup de CEP só dispara no `onBlur` e nunca sobrescreve o que já está preenchido.
+- CEP, UF e telefones de emergência aceitam qualquer texto livre.
 
-A proposta é interceptar o arquivo escolhido, abrir um **modal de recorte** com área circular 1:1, deixar o usuário arrastar/zoom e só então gerar o blob final que vai pro storage.
+A proposta deixa o CEP totalmente automático e padroniza máscaras em todos os campos do formulário.
 
-### O que o usuário vai ver
+### Comportamento desejado
 
-1. Clica no ícone da câmera no avatar.
-2. Escolhe um arquivo (JPG/PNG, até 2MB — limite atual mantido).
-3. Abre um dialog "Ajustar foto de perfil" com:
-   - Preview central com **máscara circular** sobre a imagem.
-   - Controles: arrastar a imagem, slider de **Zoom** (1x–3x) e botão **Girar 90°**.
-   - Rodapé: "Cancelar" / "Salvar foto".
-4. Ao salvar:
-   - Recorte é exportado em **512×512 px JPEG (quality 0.9)** via canvas.
-   - Faz upload no bucket `avatars` (mesmo fluxo de hoje).
-   - Atualiza `profiles.avatar_url`, mostra toast "Foto atualizada".
+1. Usuário digita o CEP → máscara aplica `00000-000` enquanto digita.
+2. Quando atinge **8 dígitos**, dispara automaticamente o lookup ViaCEP (com debounce de ~400ms para evitar chamadas em cada tecla).
+3. Resposta válida → **sobrescreve** logradouro, bairro, cidade, UF e país (mesmo que já estivessem preenchidos), e mostra um toast `Endereço preenchido pelo CEP`.
+4. CEP inválido (ViaCEP retorna `erro`) → toast `CEP não encontrado`, sem mexer nos campos.
+5. Se o usuário trocar o CEP depois, o ciclo repete: novo CEP de 8 dígitos = novo preenchimento automático.
+6. Indicador visual de "buscando…" no campo CEP enquanto a chamada está em curso (ícone `Loader2` à direita do input).
 
-### Arquivos
+### Máscaras aplicadas
 
-**Novo**
-- `src/components/shared/AvatarCropDialog.tsx`
-  - Props: `open`, `file: File | null`, `onCancel()`, `onConfirm(blob: Blob)`.
-  - Usa `react-easy-crop` (lib pequena, popular, já compatível com o stack) para a UX de pan/zoom/rotate.
-  - Função utilitária local `getCroppedBlob(imageSrc, pixelCrop, rotation, size=512)` desenhando num `<canvas>` offscreen e retornando JPEG blob.
+| Campo | Máscara |
+|---|---|
+| CEP | `00000-000` (`formatCEP`) |
+| Estado (UF) | 2 letras maiúsculas (`formatUF`) |
+| Telefone (Celular já existente) | `formatPhoneBR` (já feito) |
+| Telefone do contato de emergência | `formatPhoneBR` (já feito) |
+| Número (endereço) | apenas dígitos + até 6 chars (livre p/ "S/N" não — ver abaixo) |
 
-**Editado**
-- `src/hooks/useUsuarios.ts`
-  - `uploadAvatar` aceita `File | Blob` (hoje só `File`). Ajustar tipagem e usar `contentType: "image/jpeg"` quando vier blob; extensão padrão `jpg`.
-- `src/components/admin/UserHeaderCard.tsx`
-  - `onPick` apenas guarda o arquivo em estado e abre o `AvatarCropDialog`. Upload acontece no `onConfirm(blob)`.
-  - Manter validação de tamanho (≤2MB) antes de abrir o crop.
-- `src/components/configuracoes/UsuarioDialog.tsx`
-  - Mesmo tratamento: arquivo selecionado → abre crop → confirma → faz upload → set `avatar_url`.
+Decisão sobre **Número**: aceitar dígitos + letras (alguns endereços têm "123A", "S/N") sem máscara restritiva — apenas `maxLength=10`. Sem mudança funcional.
 
-### Dependência nova
+Os outros campos (Endereço, Complemento, Bairro, Cidade, País, Nome de emergência, Plano de saúde) **não recebem máscara** — são texto livre. Apenas `maxLength` defensivo (100–150 chars).
 
-- `react-easy-crop` (≈10KB gz, MIT). Instalada via `bun add react-easy-crop`.
+### Arquivos editados
+
+**`src/lib/formatters.ts`**
+Adicionar:
+```ts
+export function formatCEP(value: string | null | undefined): string {
+  if (!value) return "";
+  const d = String(value).replace(/\D/g, "").slice(0, 8);
+  return d.length <= 5 ? d : `${d.slice(0,5)}-${d.slice(5)}`;
+}
+export function formatUF(value: string | null | undefined): string {
+  if (!value) return "";
+  return String(value).replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+}
+```
+
+**`src/pages/admin/UsuarioFichaPage.tsx`**
+- Importar `formatCEP`, `formatUF` de `@/lib/formatters`.
+- Estado novo: `const [cepLoading, setCepLoading] = useState(false);` e ref `lastLookedUpCep` para evitar refazer a busca do mesmo CEP.
+- `useEffect` que observa `cep`: extrai dígitos; se `length === 8` e diferente do último lookup, dispara `lookupCep` com debounce de 400ms via `setTimeout` cancelável; ao terminar, sobrescreve `endereco`, `bairro`, `cidade`, `estado`, `pais`. Toasts de sucesso/erro.
+- Substituir o input do CEP:
+  ```tsx
+  <Input
+    value={cep}
+    onChange={e => setCep(formatCEP(e.target.value))}
+    placeholder="00000-000"
+    inputMode="numeric"
+    maxLength={9}
+    disabled={!canEdit}
+  />
+  ```
+  com um wrapper `relative` para mostrar o `Loader2` quando `cepLoading`.
+- Remover o handler manual `handleCepBlur` (substituído pelo efeito).
+- Trocar input do Estado: `onChange={e => setEstado(formatUF(e.target.value))}` `maxLength={2}`.
+- Adicionar `maxLength` em endereço (120), complemento (60), bairro (80), cidade (80), país (60), número (10), nome emergência (100), plano saúde (60).
 
 ### Detalhes técnicos
 
-- `aspect = 1`, `cropShape = "round"`, `showGrid = false` no `Cropper` para refletir o avatar circular real.
-- Output sempre 512×512 (suficiente para o `h-24 w-24` do header e qualquer reuso). Garante peso baixo (~50–80KB) e qualidade nítida em telas retina.
-- Rotação aplicada no canvas antes do crop para não depender de EXIF.
-- Reset do `<input type="file">` (`fileRef.current.value = ""`) após confirmar/cancelar para permitir reabrir o mesmo arquivo.
-- Sem mudanças no schema, no bucket nem em RLS.
+- O debounce vive dentro do `useEffect`; cleanup cancela o timer anterior se o usuário continuar digitando.
+- `lastLookedUpCep` é uma `useRef<string | null>` para evitar lookup duplicado quando a `ficha` carrega e popula o estado inicial. Setar o ref também depois do primeiro fill vindo da `ficha` para não disparar busca redundante.
+- Não há mudança de schema. A função `lookupCep` em `src/lib/cep.ts` já cobre o cenário; nada muda lá.
+- Validação visual mínima — `formatCEP` impede caracteres inválidos, então a chamada só dispara com 8 dígitos.
 
 ### Fora de escopo
 
-- Filtros / ajustes de cor.
-- Upload de avatar em outros lugares que não usam `uploadAvatar` (ActorAvatar etc. continuam só lendo `avatar_url`).
-- Crop para imagens fora do contexto de avatar (logo da agência, anexos de proposta etc.) — pode ser uma extensão futura reaproveitando o mesmo componente.
+- Aplicar a mesma lógica em outras telas (Clientes, Fornecedores, Contratos) — pode ser feito em iteração futura reaproveitando o efeito.
+- Trocar provedor de CEP por BrasilAPI/AwesomeAPI — ViaCEP segue suficiente.
