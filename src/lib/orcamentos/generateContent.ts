@@ -5,7 +5,8 @@ export type GenerationType =
   | "executive_summary"
   | "pain_context"
   | "solution_overview"
-  | "item_description";
+  | "item_description"
+  | "item_descriptions_batch";
 
 export interface GenerationResult {
   content:
