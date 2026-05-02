@@ -41,7 +41,7 @@ import CrmDealDetail from "./pages/crm/CrmDealDetail";
 import CrmDashboard from "./pages/crm/CrmDashboard";
 import CrmCalendar from "./pages/crm/CrmCalendar";
 import CrmLeadsAndCompanies from "./pages/crm/CrmLeadsAndCompanies";
-import CrmSettings from "./pages/crm/CrmSettings";
+
 import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
 import Clientes from "./pages/Clientes";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -160,7 +160,7 @@ const App = () => (
               <Route path="leads" element={<CrmLeadsAndCompanies />} />
               <Route path="empresas" element={<Navigate to="/crm/leads" replace />} />
               <Route path="calendario" element={<CrmCalendar />} />
-              <Route path="configuracoes" element={<CrmSettings />} />
+              <Route path="configuracoes" element={<Navigate to="/configuracoes/crm/etapas" replace />} />
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             {/* Centro de Configurações Gerais (admin-only) */}
