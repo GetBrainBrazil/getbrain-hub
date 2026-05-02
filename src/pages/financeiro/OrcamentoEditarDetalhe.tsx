@@ -380,6 +380,7 @@ export default function OrcamentoEditarDetalhe() {
             proposal={data}
             state={state}
             setField={setField}
+            setItems={setItems}
             onPreviewAsClient={handlePreviewAsClient}
             onOpenSendDialog={handleOpenSendDialog}
             onPasswordUpdated={() => {
