@@ -4192,11 +4192,17 @@ export type Database = {
           first_viewed_at: string | null
           id: string
           implementation_days: number | null
+          implementation_value: number | null
           installments_count: number | null
           last_viewed_at: string | null
           maintenance_description: string | null
           maintenance_monthly_value: number | null
           mockup_url: string | null
+          mrr_discount_months: number | null
+          mrr_discount_value: number | null
+          mrr_duration_months: number | null
+          mrr_start_date: string | null
+          mrr_start_trigger: string | null
           organization_id: string
           pain_context: string | null
           pdf_generated_at: string | null
@@ -4242,11 +4248,17 @@ export type Database = {
           first_viewed_at?: string | null
           id?: string
           implementation_days?: number | null
+          implementation_value?: number | null
           installments_count?: number | null
           last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null
           mockup_url?: string | null
+          mrr_discount_months?: number | null
+          mrr_discount_value?: number | null
+          mrr_duration_months?: number | null
+          mrr_start_date?: string | null
+          mrr_start_trigger?: string | null
           organization_id: string
           pain_context?: string | null
           pdf_generated_at?: string | null
@@ -4292,11 +4304,17 @@ export type Database = {
           first_viewed_at?: string | null
           id?: string
           implementation_days?: number | null
+          implementation_value?: number | null
           installments_count?: number | null
           last_viewed_at?: string | null
           maintenance_description?: string | null
           maintenance_monthly_value?: number | null
           mockup_url?: string | null
+          mrr_discount_months?: number | null
+          mrr_discount_value?: number | null
+          mrr_duration_months?: number | null
+          mrr_start_date?: string | null
+          mrr_start_trigger?: string | null
           organization_id?: string
           pain_context?: string | null
           pdf_generated_at?: string | null
