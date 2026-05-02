@@ -59,6 +59,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 
 import { defaultProposalPassword } from "@/lib/orcamentos/companySlug";
 import { previewProposalAsClient } from "@/lib/orcamentos/previewAsClient";
+import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
 import { effectiveStatus, type ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 import type { GenerationType } from "@/lib/orcamentos/generateContent";
 import { Card } from "@/components/ui/card";
@@ -215,7 +216,7 @@ export default function OrcamentoEditarDetalhe() {
       toast.error("Esta proposta ainda não tem link público");
       return;
     }
-    const url = `${window.location.origin}/p/${accessToken}`;
+    const url = buildPublicProposalUrl(accessToken)!;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copiado");
@@ -256,7 +257,7 @@ export default function OrcamentoEditarDetalhe() {
       toast.error("Disponível após enviar a proposta");
       return;
     }
-    const url = `${window.location.origin}/p/${accessToken}`;
+    const url = buildPublicProposalUrl(accessToken)!;
     const msg = `Olá! Segue o link da nossa proposta para a ${state.clientName || data.client_company_name}: ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
     // Auto-registro silencioso

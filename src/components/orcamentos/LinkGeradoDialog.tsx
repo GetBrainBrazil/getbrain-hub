@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
 
 interface Props {
   open: boolean;
@@ -22,8 +23,6 @@ interface Props {
   password?: string | null;
 }
 
-const PUBLIC_BASE = "https://hub.getbrain.com.br/p";
-
 export function LinkGeradoDialog({
   open,
   onOpenChange,
@@ -33,7 +32,7 @@ export function LinkGeradoDialog({
 }: Props) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedPwd, setCopiedPwd] = useState(false);
-  const url = accessToken ? `${PUBLIC_BASE}/${accessToken}` : "";
+  const url = buildPublicProposalUrl(accessToken) ?? "";
 
   async function copyTo(text: string, setFlag: (b: boolean) => void, label: string) {
     try {
