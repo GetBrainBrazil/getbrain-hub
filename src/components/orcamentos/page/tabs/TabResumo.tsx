@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Eye,
+  EyeOff,
   Link2,
   FileText,
   Activity,
@@ -31,6 +32,8 @@ import {
   QrCode,
   Check,
   Lock,
+  KeyRound,
+  RefreshCcw,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useEffect, useState } from "react";
@@ -58,6 +61,7 @@ interface Props {
   onPreviewPdf: () => void;
   onOpenSendDialog: () => void;
   onGoToTab: (tab: string) => void;
+  onOpenPasswordDialog: () => void;
   // Novos — para o picker de CRM funcionar direto do Resumo
   setField: (field: any, value: any) => void;
   setItems: (items: ScopeItem[]) => void;
@@ -75,6 +79,7 @@ export function TabResumo({
   onPreviewPdf,
   onOpenSendDialog,
   onGoToTab,
+  onOpenPasswordDialog,
   setField,
   setItems,
   dealClientLink,
@@ -246,11 +251,13 @@ export function TabResumo({
       {/* Bloco do link público */}
       <PublicLinkBlock
         accessToken={(proposal as any).access_token || null}
+        accessPassword={(proposal as any).access_password_plain || null}
         validUntilLabel={validityChip}
         interactionsCount={interactionsCount}
         onPreviewAsClient={onPreviewAsClient}
         onCopyLink={onCopyLink}
         onProtectedAction={(label) => handleProtectedAction(label)}
+        onOpenPasswordDialog={onOpenPasswordDialog}
       />
 
       {/* Ações secundárias */}
@@ -554,22 +561,28 @@ function NarrativePreview({
 // ───────────── Bloco do link público ─────────────
 function PublicLinkBlock({
   accessToken,
+  accessPassword,
   validUntilLabel,
   interactionsCount,
   onPreviewAsClient,
   onCopyLink,
   onProtectedAction,
+  onOpenPasswordDialog,
 }: {
   accessToken: string | null;
+  accessPassword: string | null;
   validUntilLabel: string;
   interactionsCount: number;
   onPreviewAsClient: () => void;
   onCopyLink: () => void;
   onProtectedAction: (label: string) => void;
+  onOpenPasswordDialog: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [pwdRevealed, setPwdRevealed] = useState(false);
+  const [pwdCopied, setPwdCopied] = useState(false);
 
   const fullUrl = accessToken ? `${window.location.origin}/p/${accessToken}` : null;
   const displayUrl = fullUrl
@@ -593,6 +606,18 @@ function PublicLinkBlock({
     onCopyLink();
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
+  }
+
+  async function handleCopyPassword() {
+    if (!accessPassword) return;
+    try {
+      await navigator.clipboard.writeText(accessPassword);
+      setPwdCopied(true);
+      toast.success("Senha copiada");
+      setTimeout(() => setPwdCopied(false), 1800);
+    } catch {
+      toast.error("Não foi possível copiar — copie manualmente");
+    }
   }
 
   function handleOpenInTab() {
@@ -713,6 +738,61 @@ function PublicLinkBlock({
       >
         {displayUrl}
       </button>
+
+      {/* Linha da senha de acesso */}
+      <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-border/30 mt-1">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent">
+          <KeyRound className="h-3 w-3" />
+          Senha
+        </span>
+        {accessPassword ? (
+          <>
+            <code
+              className={cn(
+                "font-mono text-xs bg-background/50 rounded px-2 py-1 border border-border/40 select-all min-w-[110px] text-center",
+                !pwdRevealed && "tracking-[0.3em]"
+              )}
+            >
+              {pwdRevealed ? accessPassword : "•".repeat(Math.min(accessPassword.length, 10))}
+            </code>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={() => setPwdRevealed((v) => !v)}
+              title={pwdRevealed ? "Ocultar" : "Mostrar"}
+            >
+              {pwdRevealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn("h-7 w-7 p-0", pwdCopied && "text-success")}
+              onClick={handleCopyPassword}
+              title="Copiar senha"
+            >
+              {pwdCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            </Button>
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground italic">
+            Senha antiga — redefina para visualizar
+          </span>
+        )}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 ml-auto text-[11px] text-muted-foreground hover:text-accent"
+          onClick={onOpenPasswordDialog}
+        >
+          <RefreshCcw className="h-3 w-3 mr-1" />
+          Trocar senha
+        </Button>
+      </div>
+
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
         <span className="inline-flex items-center gap-1">
           <Calendar className="h-3 w-3" />

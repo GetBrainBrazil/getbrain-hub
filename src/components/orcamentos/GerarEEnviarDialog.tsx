@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Eye,
   EyeOff,
@@ -11,6 +11,10 @@ import {
   Mail,
   Sparkles,
   AlertTriangle,
+  User,
+  Phone,
+  AtSign,
+  UserX,
 } from "lucide-react";
 import {
   Dialog,
@@ -23,15 +27,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { setProposalPassword } from "@/lib/orcamentos/proposalPassword";
+import { usePrimaryContact } from "@/hooks/crm/usePrimaryContact";
+import { useRecordAutoInteraction } from "@/hooks/orcamentos/useProposalInteractions";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const PUBLIC_BASE = "https://hub.getbrain.com.br/p";
 
 interface Props {
   proposalId: string;
   proposalCode: string;
+  /** ID da company vinculada (CRM) — usado para carregar contato principal */
+  companyId?: string | null;
   /** Senha sugerida (ex: gerada por createProposalFromDeal). Editável. */
   suggestedPassword?: string;
   expiresAt: string;
@@ -44,9 +54,20 @@ interface Props {
 
 type Phase = "form" | "submitting" | "success";
 
+/** Limpa formato do telefone para o link wa.me — apenas dígitos. */
+function cleanPhone(raw: string): string {
+  return (raw || "").replace(/\D/g, "");
+}
+
+function firstName(full: string | null | undefined): string {
+  if (!full) return "";
+  return full.trim().split(/\s+/)[0] || "";
+}
+
 export function GerarEEnviarDialog({
   proposalId,
   proposalCode,
+  companyId,
   suggestedPassword = "",
   expiresAt,
   clientLabel,
@@ -62,6 +83,36 @@ export function GerarEEnviarDialog({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedPwd, setCopiedPwd] = useState(false);
   const [copiedBoth, setCopiedBoth] = useState(false);
+
+  // Contato principal do CRM
+  const primaryContact = usePrimaryContact(companyId);
+  const recordAuto = useRecordAutoInteraction();
+
+  // Destinatário editável (preenche a partir do contato principal quando carrega)
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [sendByWhatsapp, setSendByWhatsapp] = useState(true);
+  const [sendByEmail, setSendByEmail] = useState(false);
+
+  // Hidrata destinatário quando o contato carrega (e quando dialog abre)
+  useEffect(() => {
+    if (!open) return;
+    const c = primaryContact.data;
+    if (c) {
+      setRecipientName(c.fullName || "");
+      setRecipientEmail(c.email || "");
+      setRecipientPhone(c.phone || "");
+      setSendByWhatsapp(!!c.phone);
+      setSendByEmail(false); // email automático ainda não está disponível — ver §3 abaixo
+    } else {
+      setRecipientName("");
+      setRecipientEmail("");
+      setRecipientPhone("");
+      setSendByWhatsapp(false);
+      setSendByEmail(false);
+    }
+  }, [open, primaryContact.data]);
 
   // Reset on open
   function handleOpenChange(o: boolean) {
@@ -82,7 +133,12 @@ export function GerarEEnviarDialog({
   }
 
   const url = accessToken ? `${PUBLIC_BASE}/${accessToken}` : "";
-  const combinedMessage = `Olá! Segue a proposta ${proposalCode}:\n\n🔗 ${url}\n🔑 Senha: ${password}\n\nVálida até ${formatDate(validade)}.`;
+  const greeting = firstName(recipientName) ? `Olá, ${firstName(recipientName)}!` : "Olá!";
+  const combinedMessage = useMemo(
+    () =>
+      `${greeting} Segue a proposta ${proposalCode}:\n\n🔗 ${url}\n🔑 Senha: ${password}\n\nVálida até ${formatDate(validade)}.`,
+    [greeting, proposalCode, url, password, validade],
+  );
 
   async function copyTo(text: string, setFlag: (b: boolean) => void, label: string) {
     try {
@@ -95,6 +151,39 @@ export function GerarEEnviarDialog({
     }
   }
 
+  /** Dispara WhatsApp para o telefone informado e registra interação. */
+  function fireWhatsapp(token: string, msgOverride?: string) {
+    const phone = cleanPhone(recipientPhone);
+    const finalUrl = `${PUBLIC_BASE}/${token}`;
+    const finalMsg =
+      msgOverride ||
+      `${firstName(recipientName) ? `Olá, ${firstName(recipientName)}!` : "Olá!"} Segue a proposta ${proposalCode}:\n\n🔗 ${finalUrl}\n🔑 Senha: ${password}\n\nVálida até ${formatDate(validade)}.`;
+    const link = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(finalMsg)}`
+      : `https://wa.me/?text=${encodeURIComponent(finalMsg)}`;
+    const win = window.open(link, "_blank", "noopener,noreferrer");
+    if (!win) {
+      toast.warning("Pop-up bloqueado — copie a mensagem e abra o WhatsApp manualmente.", {
+        action: {
+          label: "Copiar mensagem",
+          onClick: () => copyTo(finalMsg, setCopiedBoth, "Mensagem completa"),
+        },
+        duration: 8000,
+      });
+      return;
+    }
+    recordAuto.mutate({
+      proposalId,
+      channel: "whatsapp",
+      direction: "outbound",
+      interactionAt: new Date().toISOString(),
+      summary: `Proposta enviada por WhatsApp${recipientName ? ` para ${recipientName}` : ""}`,
+      details: phone ? `Para: ${phone}` : null,
+      autoGenerated: true,
+      metadata: { trigger: "gerar_e_enviar", recipient_phone: phone || null },
+    });
+  }
+
   async function handleConfirm() {
     if (password.length < 4) {
       toast.error("Senha precisa ter ao menos 4 caracteres");
@@ -102,6 +191,10 @@ export function GerarEEnviarDialog({
     }
     if (!validade) {
       toast.error("Defina a data de validade");
+      return;
+    }
+    if (sendByWhatsapp && !cleanPhone(recipientPhone)) {
+      toast.error("Telefone do destinatário é obrigatório para WhatsApp");
       return;
     }
     setPhase("submitting");
@@ -123,11 +216,43 @@ export function GerarEEnviarDialog({
       await supabase.from("proposal_events" as any).insert({
         proposal_id: proposalId,
         event_type: "sent",
-        metadata: { source: "gerar_e_enviar" },
+        metadata: {
+          source: "gerar_e_enviar",
+          channels: [
+            sendByWhatsapp ? "whatsapp" : null,
+            sendByEmail ? "email" : null,
+          ].filter(Boolean),
+          recipient_name: recipientName || null,
+        },
       });
 
       const tk = (upd.data as any)?.access_token as string;
       setAccessToken(tk);
+
+      // Dispara canais escolhidos
+      if (sendByWhatsapp) {
+        fireWhatsapp(tk);
+      }
+      if (sendByEmail) {
+        // Por enquanto fallback para mailto: (sem provedor de email configurado)
+        const mailto = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(
+          `Proposta ${proposalCode} — GetBrain`,
+        )}&body=${encodeURIComponent(
+          `${greeting} Segue a proposta:\n\n${PUBLIC_BASE}/${tk}\nSenha: ${password}\nVálida até ${formatDate(validade)}`,
+        )}`;
+        window.open(mailto, "_blank");
+        recordAuto.mutate({
+          proposalId,
+          channel: "email",
+          direction: "outbound",
+          interactionAt: new Date().toISOString(),
+          summary: `Proposta enviada por email${recipientName ? ` para ${recipientName}` : ""}`,
+          details: recipientEmail || null,
+          autoGenerated: true,
+          metadata: { trigger: "gerar_e_enviar", recipient_email: recipientEmail || null, mode: "mailto" },
+        });
+      }
+
       setPhase("success");
       onDone?.({ accessToken: tk, password, expiresAt: validade });
     } catch (e: any) {
@@ -136,19 +261,22 @@ export function GerarEEnviarDialog({
     }
   }
 
+  const noContact = !primaryContact.isLoading && !primaryContact.data;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         {phase === "success" && accessToken ? (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-success" />
-                Proposta pronta para enviar
+                Proposta enviada
               </DialogTitle>
               <DialogDescription>
-                Compartilhe link e senha com {clientLabel}. Recomendamos canais
-                separados (link por email, senha por WhatsApp).
+                {sendByWhatsapp || sendByEmail
+                  ? `Disparada para ${recipientName || clientLabel}. Você ainda pode reenviar pelos atalhos abaixo.`
+                  : `Compartilhe link e senha com ${clientLabel}. Recomendamos canais separados.`}
               </DialogDescription>
             </DialogHeader>
 
@@ -186,8 +314,8 @@ export function GerarEEnviarDialog({
                 <div className="mt-2 flex gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400">
                   <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                   <span>
-                    <strong>Anote a senha agora.</strong> Por segurança, ela não
-                    pode ser recuperada depois — apenas redefinida.
+                    A senha fica visível no Resumo enquanto a proposta estiver ativa, e
+                    pode ser redefinida a qualquer momento.
                   </span>
                 </div>
               </div>
@@ -202,19 +330,23 @@ export function GerarEEnviarDialog({
               </Button>
 
               <div className="grid grid-cols-3 gap-2 pt-2">
-                <Button asChild variant="outline" size="sm">
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(combinedMessage)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    WhatsApp
-                  </a>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fireWhatsapp(accessToken!)}
+                  disabled={!cleanPhone(recipientPhone) && !recipientName}
+                  title={
+                    cleanPhone(recipientPhone)
+                      ? `Enviar para ${recipientPhone}`
+                      : "Abrir WhatsApp Web"
+                  }
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  {cleanPhone(recipientPhone) ? "Reenviar" : "WhatsApp"}
                 </Button>
                 <Button asChild variant="outline" size="sm">
                   <a
-                    href={`mailto:?subject=${encodeURIComponent(
+                    href={`mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(
                       `Proposta ${proposalCode} — GetBrain`,
                     )}&body=${encodeURIComponent(combinedMessage)}`}
                   >
@@ -242,12 +374,149 @@ export function GerarEEnviarDialog({
             <DialogHeader>
               <DialogTitle>Gerar e enviar {proposalCode}</DialogTitle>
               <DialogDescription>
-                A proposta será marcada como enviada, ganhará link público e a
-                senha será criptografada — sem volta.
+                A proposta será marcada como enviada, ganhará link público e senha. Em seguida,
+                disparamos pelos canais selecionados abaixo.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
+              {/* Cartão do destinatário */}
+              <div
+                className={cn(
+                  "rounded-lg border p-3 space-y-3",
+                  noContact
+                    ? "border-amber-500/30 bg-amber-500/5"
+                    : "border-accent/20 bg-accent/5",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    {noContact ? (
+                      <UserX className="h-4 w-4 text-amber-500" />
+                    ) : (
+                      <User className="h-4 w-4 text-accent" />
+                    )}
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Destinatário
+                      {primaryContact.data?.role && (
+                        <span className="ml-2 text-[10px] font-mono text-muted-foreground/70 normal-case">
+                          {primaryContact.data.role}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {primaryContact.isLoading && (
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+
+                {noContact ? (
+                  <p className="text-xs text-foreground/80">
+                    Esta empresa não tem contato cadastrado no CRM. Você pode preencher
+                    manualmente abaixo, ou{" "}
+                    {companyId ? (
+                      <a
+                        href={`/crm/empresas/${companyId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent hover:underline"
+                      >
+                        abrir o CRM em nova aba
+                      </a>
+                    ) : (
+                      "vincular um deal do CRM antes"
+                    )}
+                    .
+                  </p>
+                ) : null}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Nome</Label>
+                    <div className="relative">
+                      <User className="h-3.5 w-3.5 absolute left-2 top-2.5 text-muted-foreground" />
+                      <Input
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="Nome do contato"
+                        className="pl-7 h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">WhatsApp</Label>
+                    <div className="relative">
+                      <Phone className="h-3.5 w-3.5 absolute left-2 top-2.5 text-muted-foreground" />
+                      <Input
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value)}
+                        placeholder="55 21 9xxxx-xxxx"
+                        className="pl-7 h-9 text-sm font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label className="text-[11px] text-muted-foreground">Email</Label>
+                    <div className="relative">
+                      <AtSign className="h-3.5 w-3.5 absolute left-2 top-2.5 text-muted-foreground" />
+                      <Input
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        placeholder="email@empresa.com"
+                        type="email"
+                        className="pl-7 h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/40 pt-2 space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                    Canais
+                  </p>
+                  <label className="flex items-start gap-2 cursor-pointer text-sm">
+                    <Checkbox
+                      checked={sendByWhatsapp}
+                      onCheckedChange={(v) => setSendByWhatsapp(v === true)}
+                      disabled={!cleanPhone(recipientPhone)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <MessageCircle className="h-3.5 w-3.5 text-success" />
+                        WhatsApp
+                      </span>
+                      <p className="text-[11px] text-muted-foreground">
+                        {cleanPhone(recipientPhone)
+                          ? `Abre o WhatsApp já com a mensagem para ${recipientPhone}`
+                          : "Preencha o telefone para habilitar"}
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer text-sm">
+                    <Checkbox
+                      checked={sendByEmail}
+                      onCheckedChange={(v) => setSendByEmail(v === true)}
+                      disabled={!recipientEmail}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-primary" />
+                        Email
+                        <span className="text-[10px] font-mono uppercase text-muted-foreground/70 bg-muted/40 rounded px-1 py-0.5">
+                          via app de email
+                        </span>
+                      </span>
+                      <p className="text-[11px] text-muted-foreground">
+                        Por enquanto abre seu cliente de email com a mensagem pronta. Envio
+                        automático sai assim que configurarmos o domínio de envio.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="prop-password">Senha de acesso *</Label>
                 <div className="relative">
@@ -258,7 +527,6 @@ export function GerarEEnviarDialog({
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo 4 caracteres"
                     minLength={4}
-                    autoFocus
                     className="pr-10 font-mono"
                   />
                   <Button
@@ -307,7 +575,7 @@ export function GerarEEnviarDialog({
                 ) : (
                   <Send className="h-3.5 w-3.5" />
                 )}
-                Gerar e enviar
+                {sendByWhatsapp || sendByEmail ? "Gerar e enviar" : "Apenas gerar link"}
               </Button>
             </DialogFooter>
           </>

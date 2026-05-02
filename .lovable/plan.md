@@ -1,96 +1,63 @@
-## Diagnóstico dos botões
+## O que muda
 
-Investiguei a proposta `PROP-0006`:
-- `access_token` **existe** no banco (`YwZzgqHA...`), então `hasLink=true` e os botões **estão habilitados**.
-- "Ver como cliente" **na verdade funciona** (POST `preview-proposal-as-internal` → 200, JWT gerado), mas chama `window.open(...)` e o navegador provavelmente está bloqueando o popup. Sem feedback no toast, parece que "não abriu nada".
-- "Copiar link" mostra `/p/YwZzgqHA…` no subtítulo. Isso **é** o link real (truncado), não aleatório — o usuário só não sabe que aquele texto é o destino que vai pro clipboard, e o `…` parece ser um placeholder/preview qualquer.
-- "Pré-visualizar PDF" abre o dialog, fica em "Renderizando PDF…" e o usuário fechou antes de terminar (vi no replay). A renderização React-PDF de uma proposta cheia é lenta (>5s) e atualmente roda na thread principal sem limite de tempo nem mensagem de erro útil. Também há um bug cosmético: o QR aponta para `/p/{proposal.id}` em vez de `/p/{access_token}`.
-- "Tracking" abre, mas o console mostra warning de `forwardRef` no `PropostaTrackingSheet` (Empty component) — não impede o uso, mas suja o console.
+Duas adições no editor de proposta:
 
-## Plano de UX/UI
+### 1. Senha de acesso visível abaixo do link público
 
-### 1. Ações rápidas — feedback claro e ações secundárias
+No bloco "Link público da proposta" da aba Resumo, adicionar uma segunda linha com a senha (oculta por padrão, com botão de mostrar/copiar) e um botão pequeno "Trocar senha" que abre o `RedefinirSenhaDialog` que já existe.
 
-Reformular `ActionButton` em `TabResumo.tsx` para deixar comportamento óbvio e adicionar ações úteis:
+A senha em texto fica em `proposals.access_password_plain` (já existe, é populada pelo "Gerar e enviar" e atualizada pelo "Redefinir senha"). Quando estiver `null` (proposta antiga), mostra "—" e oferece o botão de redefinir.
 
-**a. Ver como cliente** (`onPreviewAsClient`):
-- Adicionar estado `loading` no botão enquanto a edge function roda (toast `loading → success/error`).
-- Se `window.open` retornar `null` (popup bloqueado), mostrar toast com botão "Abrir mesmo assim" que dispara `window.location.href` ou copia o URL para o clipboard.
-- No subtitle: trocar "Pré-autenticado" por "Abre em nova aba" para deixar claro o comportamento.
-
-**b. Copiar link** — virar um botão composto:
-- Mostrar o link **completo legível** abaixo do título (ex.: `core.getbrain.com.br/p/YwZzgqHA…`), com um ícone secundário "abrir" ao lado do "copiar".
-- Após copiar, mudar visual por 2s para "✓ Copiado" (state local).
-- Adicionar ícone "QR" pequeno que abre um popover com QR code do link (gerado via `qrcode` que já existe em `useGenerateProposalPDF`).
-
-**c. Pré-visualizar PDF** — renderização mais resiliente:
-- Trocar o spinner genérico por mensagem com etapas: "Montando layout… → Renderizando páginas… → Pronto".
-- Adicionar `try/catch` real no `PreviewPdfDialog` que mostra erro detalhado em vez de só fechar.
-- Adicionar timeout de 30s com toast "Demorou demais — baixar em vez disso?" + botão para chamar `handleDownloadPdf`.
-- Fix do QR no `renderProposalPdfPreview`: usar `proposal.access_token` quando existir, fallback para `proposal.id` apenas em rascunhos novos.
-- Adicionar botão "Baixar" e "Abrir em nova aba" no header do dialog (usando o blob URL gerado).
-
-**d. Tracking**:
-- Fix do warning de `forwardRef` no `PropostaTrackingSheet` (envolver `Empty` em `forwardRef` ou trocar por `<div>`).
-- Mostrar contador no subtitle quando há eventos: "3 visualizações · última 2h atrás" em vez de só "Quem viu / interagiu".
-
-### 2. Layout dos botões — mais informativo, menos genérico
-
-Trocar a grid de 4 cartões iguais por um layout em duas zonas:
+Layout proposto dentro do `PublicLinkBlock`:
 
 ```text
-┌───────────────────────────────────────────────────────────────────┐
-│  Link público da proposta                            [QR] [↗] [⧉] │
-│  core.getbrain.com.br/p/YwZzgqHAqCgAeyXIHSvSO7CYiFGL2_id          │
-│  Pré-autenticado — válido até 01/06/2026 · 0 visualizações        │
-└───────────────────────────────────────────────────────────────────┘
-┌─────────────┬──────────────────┬──────────────────────────────────┐
-│ Ver como    │ Pré-visualizar   │ Tracking & histórico             │
-│ cliente ↗   │ PDF (versão atual)│ 0 visualizações                  │
-└─────────────┴──────────────────┴──────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ LINK PÚBLICO DA PROPOSTA              [QR][↗][👁][Copiar]│
+│ hub.getbrain.com.br/p/YwZzgqHA…                         │
+│ ─────────────────────────────────────────────────────── │
+│ 🔑 Senha:  •••••••••   [👁] [⧉]   [Trocar senha]        │
+│ Vence em 31 dias · Nenhuma visualização ainda           │
+└─────────────────────────────────────────────────────────┘
 ```
 
-- Bloco superior dedicado ao **link** mostra a URL completa visível, com 3 ações inline: copiar, abrir em nova aba, mostrar QR.
-- Bloco inferior fica com 3 ações de contexto, cada uma com ícone + título + sub explicativo.
-- Quando `!hasLink` (proposta nunca enviada), o bloco superior vira um card cinza com "Esta proposta ainda não tem link público" + CTA "Gerar e enviar".
+### 2. "Gerar e enviar" entrega de fato por WhatsApp/Email para o contato principal do CRM
 
-### 3. Card de Vínculo com CRM — mais prático
+Hoje o `GerarEEnviarDialog` na fase de sucesso mostra três botões (WhatsApp/Email/Abrir) que apenas abrem `wa.me/?text=...` e `mailto:?body=...` sem destinatário. Nada vai automaticamente para o contato do CRM.
 
-Refatorar `CrmDealLinkPicker.tsx`:
+A nova versão vai:
 
-**Quando há vínculo:**
-- Cabeçalho com avatar/logo da empresa, código do deal, título, estágio, valor estimado (todos numa linha visualmente coesa, em vez do parágrafo atual).
-- Linha secundária com **3 chips clicáveis**: `Abrir deal no CRM ↗` · `Importar dados` · `Trocar deal` · `Desvincular`.
-- Quando não há campos novos para importar (proposta já tem todos os dados sincronizados), o chip "Importar dados" fica desabilitado com tooltip "Tudo já foi importado".
-- Mostrar pequeno "diff" inline: badge "3 campos novos disponíveis para importar" se a proposta foi vinculada mas não importou ainda, ou se o deal mudou.
+1. **Buscar o contato principal automaticamente** — quando a proposta tem `company_id`, carrega de `company_people` o registro com `is_primary_contact = true`, com `full_name`, `email` e `phone` da tabela `people`. (Para a proposta atual: Vanessa, `admin@sunbrightengenharia.com.br`, `5521976526871`.)
+2. **Mostrar um cartão "Destinatário"** já na tela de gerar/enviar, com nome + email + telefone, e checkboxes "Enviar por email" e "Enviar por WhatsApp" (ambos marcados por padrão se o contato tiver email/phone respectivamente). Permitir editar email/telefone se quiser ajustar antes de enviar. Se não houver contato principal, mostrar aviso com link "Cadastrar contato no CRM".
+3. **Ao clicar em "Gerar e enviar"**:
+   - Faz tudo que já fazia: define senha, marca como `enviada`, gera token, registra evento `sent`.
+   - Se "Enviar por WhatsApp" marcado: abre `https://wa.me/<phone-limpo>?text=<mensagem>` em nova aba (com o número do contato preenchido). Pré-formata mensagem com saudação personalizada usando primeiro nome.
+   - Se "Enviar por email" marcado: invoca a edge function `send-proposal-email` (nova, descrita abaixo) que envia HTML formatado direto para o email do contato.
+   - Registra cada canal usado em `proposal_interactions` (`channel: 'email' | 'whatsapp'`, `direction: 'outbound'`, `auto_generated: true`) — assim aparece no Tracking.
 
-**Quando não há vínculo:**
-- Estado vazio mais convidativo: ícone grande, título "Nenhum deal vinculado", subtítulo curto sobre o benefício, botão primário "Vincular deal do CRM".
+### 3. Decisão: como enviar o email?
 
-**Picker (popover):**
-- Mostrar logo da empresa em cada item (já temos `company.logo_url`).
-- Adicionar valor estimado e estágio com cor (badge colorido por estágio: azul/amarelo/verde/vermelho conforme `deal_stages`).
-- Search com placeholder mais específico: "Buscar por código (DEAL-...), título ou empresa".
+Esta é a parte que precisa de escolha sua, porque envolve provisionamento. Opções:
 
-### 4. Fix técnicos
+**A. Lovable Email (recomendada) com domínio próprio da GetBrain.** Vou pedir pra você configurar `notify.getbrain.com.br` (ou o subdomínio que preferir). O email sai como "GetBrain <propostas@getbrain.com.br>", deliverability boa, sem mexer com Resend/SendGrid. Setup é guiado por um modal que abre uma vez; depois só funciona.
 
-- `src/hooks/orcamentos/useGenerateProposalPDF.tsx`: trocar `accessUrl = .../p/${proposal.id}` por `proposal.access_token ?? proposal.id`.
-- `src/components/orcamentos/PropostaTrackingSheet.tsx`: envolver `Empty` em `forwardRef` ou usar `div` simples para silenciar warning.
-- Toast com loading no `handlePreviewAsClient` em `OrcamentoEditarDetalhe.tsx`.
+**B. Resend via connector da Lovable.** Você cria conta no Resend, conecta como connector da Lovable, e o email sai pelo Resend usando seu domínio verificado lá. Útil se você já tem conta Resend ativa.
+
+**C. Por enquanto sem email — apenas WhatsApp.** Implementamos só o canal WhatsApp agora (que não precisa de infra) e deixamos email pra um próximo passo. Você ainda ganha 80% do valor (WhatsApp é o canal mais usado para isso na prática).
+
+A opção A é a mais limpa para o longo prazo. A C é a mais rápida de entregar agora.
 
 ## Arquivos afetados
 
-- `src/components/orcamentos/page/tabs/TabResumo.tsx` — novo bloco de link público + grid reduzida.
-- `src/components/orcamentos/page/CrmDealLinkPicker.tsx` — header redesenhado, picker enriquecido.
-- `src/components/orcamentos/PreviewPdfDialog.tsx` — estados visíveis, timeout, botões de baixar/abrir.
-- `src/pages/financeiro/OrcamentoEditarDetalhe.tsx` — handler de preview com loading + fallback popup bloqueado.
-- `src/hooks/orcamentos/useGenerateProposalPDF.tsx` — fix do QR usando access_token.
-- `src/components/orcamentos/PropostaTrackingSheet.tsx` — fix forwardRef warning + retornar contador para o subtitle.
+- `src/components/orcamentos/page/tabs/TabResumo.tsx` — `PublicLinkBlock` ganha linha de senha + botão "Trocar senha".
+- `src/pages/financeiro/OrcamentoEditarDetalhe.tsx` — passa `accessPassword` e `onOpenPwdDialog` para `TabResumo`.
+- `src/components/orcamentos/GerarEEnviarDialog.tsx` — fase form ganha cartão de destinatário (carregado via novo hook), checkboxes de canais; fase success mantém botões manuais como fallback mas pré-preenche destinatário.
+- `src/hooks/crm/usePrimaryContact.ts` — novo hook: dado `company_id`, retorna `{ name, email, phone }` do contato principal.
+- `src/lib/orcamentos/sendProposal.ts` — novo helper: formata mensagem, dispara WhatsApp e/ou edge function de email, registra interações.
+- `supabase/functions/send-proposal-email/index.ts` — apenas se você escolher A ou B. Recebe `{ proposalId, recipientEmail, recipientName, message, link, password }`, manda email via Lovable Email (opção A) ou Resend (opção B), com template HTML simples e branded.
 
 ## Resultado esperado
 
-- Link público visível por extenso, com copiar/abrir/QR em um único bloco.
-- Preview do PDF mostra progresso real, com escape via download se travar.
-- Vínculo do CRM com header limpo e visualmente rico, ações em chips.
-- "Ver como cliente" com loading e fallback se o popup for bloqueado.
-- Console limpo de warnings.
+- Senha de acesso visível e copiável diretamente no Resumo, com botão de redefinir.
+- "Gerar e enviar" deixa de ser só "criar token" e vira de fato envio: identifica o contato principal do CRM, sugere os canais disponíveis, e envia. Tudo registrado no Tracking.
+
+Antes de começar a implementar, preciso que você responda: **qual canal de email — A, B ou C?**

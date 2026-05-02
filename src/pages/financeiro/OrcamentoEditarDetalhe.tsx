@@ -339,6 +339,7 @@ export default function OrcamentoEditarDetalhe() {
             onPreviewPdf={() => setPreviewPdfOpen(true)}
             onOpenSendDialog={handleOpenSendDialog}
             onGoToTab={(t) => isProposalTabKey(t) && handleTabChange(t)}
+            onOpenPasswordDialog={() => setPwdDialogOpen(true)}
             setField={setField}
             setItems={setItems}
             dealClientLink={(data as any).deal || null}
@@ -439,6 +440,7 @@ export default function OrcamentoEditarDetalhe() {
       <GerarEEnviarDialog
         proposalId={data.id}
         proposalCode={data.code}
+        companyId={(data as any).company_id || (data as any).company?.id || null}
         suggestedPassword={defaultProposalPassword(state.clientName || data.client_company_name)}
         clientLabel={state.clientName || data.client_company_name}
         expiresAt={state.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
@@ -462,6 +464,7 @@ export default function OrcamentoEditarDetalhe() {
         proposalCode={data.code}
         open={pwdDialogOpen}
         onOpenChange={setPwdDialogOpen}
+        onUpdated={() => detail.refetch?.()}
       />
       {detailsItemIdx !== null && (
         <ItemDetailsDialog
