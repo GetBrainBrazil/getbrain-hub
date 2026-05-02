@@ -57,7 +57,7 @@ const SECTIONS: Section[] = [
     tabs: [
       { key: "usuarios", label: "Usuários", path: "/configuracoes/sistema/usuarios", icon: Users },
       { key: "permissoes", label: "Permissões", path: "/configuracoes/sistema/permissoes", icon: Shield },
-      { key: "logs", label: "Logs", path: "/configuracoes/sistema/logs", icon: History },
+      { key: "auditoria", label: "Auditoria", path: "/configuracoes/sistema/auditoria", icon: History },
     ],
   },
 ];
