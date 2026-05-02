@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { uploadAvatar } from "@/hooks/useUsuarios";
 import { useUpdatePerfilCampos } from "@/hooks/useUsuarioFicha";
 import { toast } from "sonner";
+import { AvatarCropDialog } from "@/components/shared/AvatarCropDialog";
 
 interface Props {
   userId: string;
@@ -20,20 +21,38 @@ interface Props {
 export function UserHeaderCard({ userId, fullName, email, avatarUrl, cargoNome, cargoCor, canUpload }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const updateMut = useUpdatePerfilCampos();
 
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error("Máx 2MB"); return; }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Máx 2MB");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setPendingFile(file);
+  }
+
+  async function handleConfirmCrop(blob: Blob) {
     setUploading(true);
     try {
-      const url = await uploadAvatar(file, userId);
+      const url = await uploadAvatar(blob, userId);
       await updateMut.mutateAsync({ id: userId, patch: { avatar_url: url } });
       toast.success("Foto atualizada");
+      setPendingFile(null);
+      if (fileRef.current) fileRef.current.value = "";
     } catch (err: any) {
       toast.error("Erro: " + err.message);
-    } finally { setUploading(false); }
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleCancelCrop() {
+    setPendingFile(null);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (
