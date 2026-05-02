@@ -40,7 +40,7 @@ import CrmCompanyDetail from "./pages/crm/CrmCompanyDetail";
 import CrmDealDetail from "./pages/crm/CrmDealDetail";
 import CrmDashboard from "./pages/crm/CrmDashboard";
 import CrmCalendar from "./pages/crm/CrmCalendar";
-import CrmLeads from "./pages/crm/CrmLeads";
+import CrmLeadsAndCompanies from "./pages/crm/CrmLeadsAndCompanies";
 import CrmSettings from "./pages/crm/CrmSettings";
 import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
 import Clientes from "./pages/Clientes";
@@ -154,7 +154,7 @@ const App = () => (
               <Route index element={<Navigate to="pipeline" replace />} />
               <Route path="dashboard" element={<CrmDashboard />} />
               <Route path="pipeline" element={<CrmPipeline />} />
-              <Route path="leads" element={<CrmLeads />} />
+              <Route path="leads" element={<CrmLeadsAndCompanies />} />
               <Route path="empresas" element={<Navigate to="/crm/leads" replace />} />
               <Route path="calendario" element={<CrmCalendar />} />
               <Route path="configuracoes" element={<CrmSettings />} />
