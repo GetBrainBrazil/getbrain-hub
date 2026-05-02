@@ -329,7 +329,7 @@ export function TabResumo({
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-border/60 border-b border-border/60">
           <KpiCell
             label="Implementação"
-            value={formatBRL(total)}
+            value={formatBRL(implValue)}
             sub={
               installments > 1 && installmentValue > 0
                 ? `${installments}× ${formatBRL(installmentValue)}`
