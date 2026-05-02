@@ -1134,15 +1134,18 @@ function ProposalView({
           <h2 className="reveal font-editorial-display text-5xl sm:text-7xl lg:text-8xl tracking-tight font-light leading-[1.05] max-w-[18ch]">
             <span className="brand-dot">{s.next_steps_title}</span>
           </h2>
-          <p className="reveal mt-8 text-lg text-white/70 max-w-2xl font-light leading-relaxed">
-            Se faz sentido, clique em <strong className="text-white">"Quero avançar"</strong> — o
-            Daniel é avisado na hora pelo WhatsApp e te procura em algumas horas para
-            alinhar contrato e cronograma.
-          </p>
-          <p className="reveal mt-3 text-sm text-white/50 max-w-2xl font-light leading-relaxed">
-            Se preferir tirar dúvidas antes, fale pelo WhatsApp ou converse com o
-            agente IA no canto inferior direito — ele conhece esta proposta inteira.
-          </p>
+          {s.next_steps_paragraphs.map((para, i) => (
+            <p
+              key={i}
+              className={
+                i === 0
+                  ? "reveal mt-8 text-lg text-white/70 max-w-2xl font-light leading-relaxed"
+                  : "reveal mt-3 text-sm text-white/50 max-w-2xl font-light leading-relaxed"
+              }
+            >
+              {para}
+            </p>
+          ))}
 
           <div className="reveal mt-12 flex flex-wrap gap-3">
             <button
@@ -1171,10 +1174,10 @@ function ProposalView({
           <div className="flex flex-wrap items-end gap-8 justify-between text-white/55">
             <div className="flex items-center gap-4">
               <div className="h-14 w-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white text-xl">
-                D
+                {contactDisplayName.slice(0, 1).toUpperCase()}
               </div>
               <div>
-                <div className="text-white text-base font-medium">Daniel</div>
+                <div className="text-white text-base font-medium">{contactDisplayName}</div>
                 <div className="text-xs font-mono-display uppercase tracking-[0.2em]">Fundador · GetBrain</div>
               </div>
             </div>
@@ -1196,19 +1199,21 @@ function ProposalView({
               <span className="font-bold tracking-tight text-white">GetBrain</span>
             </div>
             <p className="text-xs text-white/40 font-mono-display uppercase tracking-[0.2em]">
-              Preparada exclusivamente para {clientLabel}
+              {s.footer_tagline} · Preparada para {clientLabel}
             </p>
           </div>
           <div className="sm:text-right">
             <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-white/35 mb-2">
-              Contato
+              {s.footer_contact_label}
             </div>
-            <a href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`} target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
-              WhatsApp do Daniel
+            <a href={`https://wa.me/${wppNumber}`} target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
+              WhatsApp · {contactDisplayName}
             </a>
-            <a href="mailto:daniel@getbrain.com.br" className="block text-sm text-white/70 hover:text-white transition-colors">
-              daniel@getbrain.com.br
-            </a>
+            {s.contact_email && (
+              <a href={`mailto:${s.contact_email}`} className="block text-sm text-white/70 hover:text-white transition-colors">
+                {s.contact_email}
+              </a>
+            )}
           </div>
         </div>
         <div className="border-t border-white/5">
