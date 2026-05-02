@@ -3844,6 +3844,71 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_interactions: {
+        Row: {
+          auto_generated: boolean
+          channel: Database["public"]["Enums"]["proposal_interaction_channel"]
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          details: string | null
+          direction: Database["public"]["Enums"]["proposal_interaction_direction"]
+          id: string
+          interaction_at: string
+          metadata: Json
+          organization_id: string
+          proposal_id: string
+          recorded_by: string | null
+          summary: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          auto_generated?: boolean
+          channel: Database["public"]["Enums"]["proposal_interaction_channel"]
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          details?: string | null
+          direction: Database["public"]["Enums"]["proposal_interaction_direction"]
+          id?: string
+          interaction_at?: string
+          metadata?: Json
+          organization_id?: string
+          proposal_id: string
+          recorded_by?: string | null
+          summary: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          auto_generated?: boolean
+          channel?: Database["public"]["Enums"]["proposal_interaction_channel"]
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          details?: string | null
+          direction?: Database["public"]["Enums"]["proposal_interaction_direction"]
+          id?: string
+          interaction_at?: string
+          metadata?: Json
+          organization_id?: string
+          proposal_id?: string
+          recorded_by?: string | null
+          summary?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_interactions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_items: {
         Row: {
           acceptance_criteria: string[]
@@ -5681,6 +5746,14 @@ export type Database = {
         | "comercial"
         | "outros"
       proposal_faq_status: "ativo" | "inativo"
+      proposal_interaction_channel:
+        | "whatsapp"
+        | "email"
+        | "telefone"
+        | "reuniao_presencial"
+        | "reuniao_video"
+        | "observacao"
+      proposal_interaction_direction: "inbound" | "outbound" | "internal"
       proposal_status:
         | "rascunho"
         | "enviada"
@@ -6018,6 +6091,15 @@ export const Constants = {
         "outros",
       ],
       proposal_faq_status: ["ativo", "inativo"],
+      proposal_interaction_channel: [
+        "whatsapp",
+        "email",
+        "telefone",
+        "reuniao_presencial",
+        "reuniao_video",
+        "observacao",
+      ],
+      proposal_interaction_direction: ["inbound", "outbound", "internal"],
       proposal_status: [
         "rascunho",
         "enviada",
