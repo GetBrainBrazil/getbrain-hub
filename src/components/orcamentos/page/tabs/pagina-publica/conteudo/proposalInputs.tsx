@@ -103,13 +103,15 @@ export function ProposalCommitNumber({
   };
 
   useEffect(() => {
-    if (!onLivePatch) return;
     const p = parsed();
     if (p === value) return;
-    const id = setTimeout(() => onLivePatch(p), 250);
+    const id = setTimeout(() => {
+      onLivePatch?.(p);
+      onCommit(p);
+    }, 300);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v]);
+  }, [v, value, onLivePatch, onCommit]);
 
   return (
     <div className="relative">
@@ -127,6 +129,7 @@ export function ProposalCommitNumber({
         onBlur={() => {
           const p = parsed();
           if (p !== value) {
+            onLivePatch?.(p);
             onCommit(p);
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 1100);
