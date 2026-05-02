@@ -18,6 +18,7 @@ import {
 } from "@/lib/orcamentos/storageConfig";
 import { getTemplate } from "@/lib/orcamentos/templates";
 import type { TemplateKey } from "@/lib/orcamentos/templates";
+import { buildPublicProposalUrl, PUBLIC_PROPOSAL_BASE } from "@/lib/orcamentos/publicProposalUrl";
 import { mapProposalToTemplateData } from "@/lib/orcamentos/mapProposalToTemplateData";
 import { generateQrDataUrl } from "@/lib/orcamentos/generateQrDataUrl";
 import { invalidateProposalCaches } from "@/lib/cacheInvalidation";
