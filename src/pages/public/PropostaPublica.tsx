@@ -71,6 +71,12 @@ interface PublicProposal {
     acceptance_criteria: string[];
     client_dependencies: string[];
   }>;
+  /** Autor da proposta (operador GetBrain). Pode ser null se created_by sumiu. */
+  author: {
+    name: string;
+    avatar_url: string | null;
+    role_label: string;
+  } | null;
 }
 
 function formatBRL(n: number): string {
