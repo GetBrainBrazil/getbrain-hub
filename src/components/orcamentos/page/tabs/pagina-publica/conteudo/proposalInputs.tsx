@@ -225,11 +225,13 @@ export function ProposalCommitColor({ value, onCommit, onLivePatch, placeholder 
   useEffect(() => setV(value || ""), [value]);
 
   useEffect(() => {
-    if (!onLivePatch) return;
     if (v === value) return;
-    const id = setTimeout(() => onLivePatch(v), 200);
+    const id = setTimeout(() => {
+      onLivePatch?.(v);
+      onCommit(v);
+    }, 300);
     return () => clearTimeout(id);
-  }, [v, value, onLivePatch]);
+  }, [v, value, onLivePatch, onCommit]);
 
   const isValidHex = /^#[0-9a-fA-F]{6}$/.test(v);
   const safeColor = isValidHex ? v : "#22D3EE";
@@ -246,7 +248,10 @@ export function ProposalCommitColor({ value, onCommit, onLivePatch, placeholder 
           value={safeColor}
           onChange={(e) => setV(e.target.value)}
           onBlur={() => {
-            if (v !== value) onCommit(v);
+            if (v !== value) {
+              onLivePatch?.(v);
+              onCommit(v);
+            }
           }}
           className="absolute inset-0 opacity-0 cursor-pointer"
         />
@@ -255,7 +260,10 @@ export function ProposalCommitColor({ value, onCommit, onLivePatch, placeholder 
         value={v}
         onChange={(e) => setV(e.target.value)}
         onBlur={() => {
-          if (v !== value) onCommit(v);
+          if (v !== value) {
+            onLivePatch?.(v);
+            onCommit(v);
+          }
         }}
         placeholder={placeholder || "#22D3EE"}
         className="h-10 text-sm font-mono uppercase max-w-[140px]"
