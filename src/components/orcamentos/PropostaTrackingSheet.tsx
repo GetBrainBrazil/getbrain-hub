@@ -306,7 +306,7 @@ export const PropostaTrackingSheet = forwardRef<HTMLDivElement, Props>(function 
       </SheetContent>
     </Sheet>
   );
-}
+});
 
 function Kpi({
   icon,
