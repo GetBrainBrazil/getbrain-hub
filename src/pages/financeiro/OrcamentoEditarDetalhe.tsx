@@ -301,26 +301,44 @@ export default function OrcamentoEditarDetalhe() {
   async function handleDownload() {
     if (dirty) await save();
     if (!data || !id) return;
-    gen.mutate({
+    // Novo fluxo (10D-1): React-PDF + storage + register-proposal-pdf-version edge.
+    genV2.mutate({
       proposalId: id,
-      code: data.code,
-      clientName: clientName || data.client_company_name,
-      elementId: PDF_DOM_ID,
-      snapshot: {
-        client_company_name: clientName,
-        client_logo_url: clientLogoUrl,
-        client_city: clientCity,
-        scope_items: scopeItems,
-        maintenance_monthly_value:
-          typeof maintenance === "number" && maintenance > 0 ? maintenance : null,
-        maintenance_description: maintenanceDesc || null,
-        implementation_days: implementationDays,
-        validation_days: validationDays,
-        considerations,
-        valid_until: validUntil,
-        template_key: templateKey,
-      },
+      proposal: { ...data, ...buildPreviewProposal() },
+      templateKey: templateKey,
+      isRegeneration: false,
+      triggerDownload: true,
     });
+  }
+
+  /**
+   * Monta a versão "ao vivo" da proposta usando o estado local do editor,
+   * pra preview e geração refletirem alterações ainda não salvas.
+   */
+  function buildPreviewProposal() {
+    return {
+      id,
+      code: data?.code,
+      title,
+      client_company_name: clientName,
+      client_logo_url: clientLogoUrl,
+      client_city: clientCity,
+      client_brand_color: clientBrandColor,
+      welcome_message: welcomeMessage,
+      executive_summary: executiveSummary,
+      pain_context: painContext,
+      solution_overview: solutionOverview,
+      scope_items: scopeItems,
+      maintenance_monthly_value:
+        typeof maintenance === "number" && maintenance > 0 ? maintenance : null,
+      maintenance_description: maintenanceDesc || null,
+      implementation_days: implementationDays,
+      validation_days: validationDays,
+      considerations,
+      valid_until: validUntil,
+      mockup_url: mockupUrl,
+      template_key: templateKey,
+    };
   }
 
   if (isLoading) {
