@@ -1,94 +1,66 @@
 
-## Contexto
+## O que muda
 
-Hoje em **`/projetos/:id`** (`ProjetoDetalhe.tsx`) **não existe** nenhuma aba de propostas ou anexos. As abas atuais são: Visão Geral, Escopo, Operacional, Tarefas, Marcos, Dependências, Riscos, Integrações, Atividade.
+Transformar a aba **Propostas & Anexos** de `/projetos/:id` num CRUD completo, sem precisar sair pra outra tela pra cada ação.
 
-A área "Descoberta | Proposta & Anexos" do print **vive no CRM** (`PropostaTabContent` em `src/components/crm/proposta/`). Como o projeto sempre nasce de um deal (campo `source_deal_id` em `projects`), dá pra trazer toda essa visão pro detalhe do projeto — mas em **modo leitura/consulta**, com o padrão visual novo dos cards de projeto (header denso, cards com bordas suaves, totais à direita em fonte mono, badges de status), e listando **todas** as versões de proposta vinculadas, não só a ativa.
+## 1. Card de proposta — novo comportamento
 
-## O que vai ser feito
-
-### 1. Nova aba "Propostas & Anexos" em ProjetoDetalhe
-
-Adicionar entre **Operacional** e **Tarefas**, com contador = nº de propostas vinculadas.
-
-```
-Visão Geral · Escopo · Operacional · Propostas (3) · Tarefas · Marcos · ...
-```
-
-### 2. Componente `AbaPropostas` (novo, em `src/components/projetos/`)
-
-Estrutura visual seguindo o padrão dos outros cards do projeto:
+O card inteiro vira clicável (abre o editor completo). E ganha um menu **⋯** no canto superior direito com tudo que existe na lista de orçamentos:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ Propostas comerciais                       [Abrir editor →] │
-│ Todas as versões geradas pra este projeto                   │
-├─────────────────────────────────────────────────────────────┤
-│ ╭─ PROP-0006  ● Convertida           TOTAL R$ 4.000  MRR 600 ╮│
-│ │  Sunbright Energia Solar                                   │
-│ │  Enviada 02/05/26 · Aceita 02/05/26 · Validade 30/05/26    │
-│ │  [Ver PDF] [Página pública] [Editor completo]              │
-│ ╰────────────────────────────────────────────────────────────╯│
-│ ╭─ PROP-0005  ○ Recusada (v anterior)  R$ 3.500              ╮│
-│ │  ...                                                        │
-│ ╰────────────────────────────────────────────────────────────╯│
-└─────────────────────────────────────────────────────────────┘
-
-┌─ Organograma do cliente ────────────────────────────────────┐
-│ [thumbnail clicável → abre original]                        │
-│ Herdado do deal #DEAL-008                                   │
-└─────────────────────────────────────────────────────────────┘
-
-┌─ Mockup BETA ──────────────────────────────────────────────┐
-│ Link: https://preview.lovable.app/...     [↗ Abrir]         │
-│ Galeria de prints (4):                                      │
-│ [img] [img] [img] [img]                                     │
-└─────────────────────────────────────────────────────────────┘
+┌─ PROP-0006  ● Convertida           TOTAL R$ 4.000  MRR 600  ⋯ ┐
+│  Sunbright Engenharia                                          │
+│  ✓ Aceita 02/05/26  📅 Validade 01/06/26                       │
+│  [PDF] [Página pública]            [Editor completo →]         │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-**Comportamento:**
-- Lista **todas** as propostas onde `proposals.deal_id = project.source_deal_id` (não só a ativa).
-- Cada card de proposta mostra: código, status efetivo (usando `effectiveStatus` + `OrcamentoStatusBadge`), total + mensal em fonte mono à direita, datas-chave (criada/enviada/aceita/recusada), validade.
-- Ações por proposta: **Ver PDF** (signed URL via `openProposalPdf`), **Página pública** (abre `/p/:token` em nova aba quando há `access_token`), **Editor completo** (`/financeiro/orcamentos/:id/editar`).
-- A versão ativa (mais recente, status ≠ recusada) ganha destaque visual (borda `accent`, badge "Ativa").
-- Versões antigas ficam recolhidas em `<details>` "Versões anteriores (N)" se houver mais de 1.
-- Estado vazio: card pontilhado "Este projeto ainda não tem proposta vinculada" + link pro deal de origem.
+**Menu ⋯ por card:**
+- **Abrir** (editor completo) — atalho do clique no card
+- **Duplicar como nova versão** (usa `useDuplicateProposal`, vincula ao mesmo deal)
+- **Copiar link público** (copia `buildPublicProposalUrl(...)` pro clipboard)
+- **Baixar PDF** (signed URL via `openProposalPdf`)
+- ─────────
+- **Marcar como enviada** (só se `rascunho`)
+- **Marcar como aceita** (só se `enviada`) → grava `accepted_at`
+- **Marcar como recusada** (só se `enviada`) → grava `rejected_at`
+- ─────────
+- **Excluir proposta** (vermelho) — usa `useDeleteProposal` (soft delete via `deleted_at`), pede confirmação com `useConfirm`
 
-**Organograma e Mockups** são reaproveitados do deal (somente leitura aqui — a edição continua no CRM, com link "Editar no deal #CODE"). Usa o mesmo `AnexoUploader` em modo display, ou simplesmente renderiza thumbnails clicáveis.
+## 2. Botão "+ Nova proposta" no header da seção
 
-### 3. Hook novo `useProjectProposals(projectId)`
+Substitui/complementa o atual "Abrir deal de origem":
 
-Em `src/hooks/projetos/useProjectProposals.ts` — `useQuery` que:
-1. Busca `projects.source_deal_id` se não vier do contexto.
-2. Faz `select` em `proposals` filtrando por `deal_id`, ordenado por `created_at desc`, ignorando `deleted_at`.
-3. Retorna também o organograma_url e mockup do deal num único payload.
-4. Chave de cache: `["project_proposals", projectId]` — invalidada via `invalidateProposalCaches` do `cacheInvalidation.ts` (já existe).
+- Quando há deal vinculado: dispara `createProposalFromDeal(sourceDealId, true)` direto (já trata conflito de proposta ativa abrindo o diálogo padrão "Já existe proposta…").
+- Quando o projeto não tem deal: o botão abre uma nota explicando que propostas sem deal precisam ser criadas em `/financeiro/orcamentos/novo` (mantém o link).
 
-### 4. Modernização visual (padrão atual de /projetos)
+## 3. Clique no card = abrir editor
 
-- Container externo: `rounded-lg border border-border bg-card`.
-- Header de seção com `SectionLabel` (uppercase 10px tracking) + descrição.
-- Totais em coluna à direita com `text-[10px] uppercase` em cima e `font-mono font-bold tabular-nums` embaixo (igual ao header da `PropostaCard` do CRM).
-- Botões: `size="sm" variant="outline"` com ícone à esquerda.
-- Sem qualquer edição inline aqui (o editor continua no `/financeiro/orcamentos/:id/editar`) — o objetivo dessa aba em projetos é **consulta + acesso rápido**.
-- Responsivo: cards empilham no mobile, ações viram bottom-sheet de ações via menu de 3 pontinhos quando largura < 640px.
+`onClick` no card todo navega pra `/financeiro/orcamentos/:id/editar`. O menu ⋯ usa `e.stopPropagation()` igual ao padrão de `OrcamentoTabela`.
 
-### 5. Detalhes técnicos
+## 4. Cache cross-módulo
 
-**Arquivos novos:**
-- `src/components/projetos/AbaPropostas.tsx`
-- `src/hooks/projetos/useProjectProposals.ts`
+Adicionar `["project_proposals", projectId]` ao `invalidateProjectCaches` em `src/lib/cacheInvalidation.ts`. Os hooks `useDeleteProposal` / `useDuplicateProposal` / `useUpdateProposal` já invalidam `["proposals"]`, mas como nossa chave é própria, precisamos garantir que o card recarregue.
 
-**Arquivos editados:**
-- `src/pages/ProjetoDetalhe.tsx` — adicionar entry no array de tabs (linha ~1221) + novo `<TabsContent value="proposals">`.
+Em todas as ações disparadas daqui, chamar:
+```ts
+invalidateProposalCaches(qc, { proposalId, dealId: sourceDealId, projectId });
+```
 
-**Sem migration.** Schema atual já tem `projects.source_deal_id`, `proposals.deal_id`, `proposals.access_token` e `deals.organograma_url / mockup_url / mockup_screenshots`. Tudo o que precisamos já está modelado.
+## 5. Confirmações e feedback
 
-**Edge cases tratados:**
-- Projeto sem `source_deal_id` (criado manualmente) → empty state explicando que propostas só aparecem aqui quando o projeto vem de um deal.
-- Proposta sem `pdf_url` → botão "Ver PDF" desabilitado com tooltip "Gere o PDF no editor completo".
-- `access_token` ausente → botão "Página pública" oculto.
+Seguindo o padrão do projeto:
+- `useConfirm()` pra excluir (variant destructive) e pra marcar recusada.
+- `toast.success` / `toast.error` do `sonner` em cada ação.
+- Estado `loading` por linha durante a mutação (botão menu vira spinner).
 
-## Confirmação
+## 6. Mobile
 
-Você falou "**dentro de /projetos**" e a screenshot é do CRM — vou implementar essa visão **dentro do detalhe do projeto** (`/projetos/:id`), reaproveitando os dados do deal de origem. Se você quiser também redesenhar a versão do CRM (`PropostaTabContent`) com o mesmo padrão visual, me avisa que eu replico — mas pelo texto da sua mensagem entendi que o pedido é trazer essa área pra projetos.
+O menu ⋯ resolve responsividade: no desktop mostra os botões PDF/Página pública inline + ⋯; no mobile (< 640px) os botões inline somem e só fica o ⋯ (que vira um dropdown nativo do shadcn — já é touch-friendly).
+
+## Arquivos editados
+
+- `src/components/projetos/AbaPropostas.tsx` — adicionar `DropdownMenu`, mutações, botão "Nova proposta", click handler.
+- `src/lib/cacheInvalidation.ts` — incluir `["project_proposals", projectId]`.
+
+**Sem migration.** Tudo já existe no schema (`deleted_at` em `proposals`, hooks `useDeleteProposal`/`useDuplicateProposal`/`useUpdateProposal` em `useUpdateProposal.ts`, `createProposalFromDeal` em `lib/orcamentos/`).
