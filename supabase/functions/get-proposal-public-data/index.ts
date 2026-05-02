@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
         public_roadmap: prop.public_roadmap,
         items: items ?? [],
       },
+      page_settings: pageSettings ?? null,
     });
   } catch (e) {
     console.error("get-proposal-public-data error", e);
