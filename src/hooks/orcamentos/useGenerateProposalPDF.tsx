@@ -198,11 +198,15 @@ export async function renderProposalPdfPreview(
   const template = getTemplate(templateKey ?? proposal?.template_key);
   const data = mapProposalToTemplateData(proposal);
   const accessUrl = `${window.location.origin}/p/${proposal.id}`;
+  const qrCodeDataUrl = await generateQrDataUrl(accessUrl);
+  const watermark = watermarkFor(proposal);
   const blob = await pdf(
     <template.PDFComponent
       data={data}
       templateVersion={template.config.version}
       proposalAccessUrl={accessUrl}
+      qrCodeDataUrl={qrCodeDataUrl}
+      watermark={watermark}
     />,
   ).toBlob();
   return { blob, url: URL.createObjectURL(blob) };
