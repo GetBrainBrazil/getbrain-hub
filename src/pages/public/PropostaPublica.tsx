@@ -142,6 +142,7 @@ export default function PropostaPublica() {
       }
       setAccessJwt(previewJwt);
       setProposal(r.data.proposal as PublicProposal);
+      setPageSettings(mergeWithDefaults(r.data.page_settings));
       setLoading(false);
     })();
   }, [previewJwt]);
@@ -182,6 +183,7 @@ export default function PropostaPublica() {
       return;
     }
     setProposal(r.data.proposal as PublicProposal);
+    setPageSettings(mergeWithDefaults(r.data.page_settings));
     setPwdInput("");
     setLoading(false);
   }
