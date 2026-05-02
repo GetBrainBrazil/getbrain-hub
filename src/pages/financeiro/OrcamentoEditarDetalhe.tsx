@@ -274,13 +274,9 @@ export default function OrcamentoEditarDetalhe() {
     }
   }
 
-  async function handleSave() {
-    try {
-      await save();
-    } catch {
-      // toast vem do hook
-    }
-  }
+  // (handleSave removido — autosave debounced + flush em pagehide tornam o
+  // botão manual redundante. O status é exibido na ProposalActionBar via
+  // SaveStatusIndicator.)
 
   async function handleDelete() {
     const ok = await confirm({
