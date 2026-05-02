@@ -14,4 +14,10 @@ export const GETBRAIN_INFO = {
   city: "Rio de Janeiro, RJ",
   website: "getbrain.com.br",
   email: "daniel@getbrain.com.br",
+  whatsapp: "5521973818244", // Daniel — usado em links wa.me/
 } as const;
+
+/** Helper para gerar URL do WhatsApp com mensagem pré-preenchida. */
+export function whatsappUrl(message: string, phone: string = GETBRAIN_INFO.whatsapp): string {
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}

@@ -7,6 +7,9 @@ import type { ActivityType, DealStage } from '@/types/crm';
  * posicionado entre "Proposta Enviada" e "Convertido", para evitar
  * migration do enum no banco. Cards antigos marcados como `gelado`
  * passam a aparecer como "Negociação".
+ *
+ * `com_interesse` (NOVO): cliente clicou em "Quero avançar" na proposta
+ * pública. Move automaticamente do estágio anterior para este.
  */
 export const DEAL_STAGES: DealStage[] = [
   'descoberta_marcada',
@@ -14,6 +17,7 @@ export const DEAL_STAGES: DealStage[] = [
   'proposta_na_mesa',
   'ajustando',
   'gelado',
+  'com_interesse',
   'ganho',
   'perdido',
 ];
@@ -23,7 +27,8 @@ export const DEAL_STAGE_PROBABILITY: Record<DealStage, number> = {
   descobrindo: 25,
   proposta_na_mesa: 50,
   ajustando: 70,
-  gelado: 85,
+  gelado: 60,
+  com_interesse: 85,
   ganho: 100,
   perdido: 0,
 };
@@ -34,6 +39,7 @@ export const DEAL_STAGE_LABEL: Record<DealStage, string> = {
   proposta_na_mesa: 'Qualificado',
   ajustando: 'Proposta Enviada',
   gelado: 'Negociação',
+  com_interesse: 'Com Interesse',
   ganho: 'Convertido',
   perdido: 'Perdido',
 };
@@ -45,6 +51,7 @@ export const DEAL_STAGE_TONE: Record<DealStage, string> = {
   proposta_na_mesa: 'border-l-chart-orange',
   ajustando: 'border-l-chart-5',
   gelado: 'border-l-chart-2',
+  com_interesse: 'border-l-success',
   ganho: 'border-l-success',
   perdido: 'border-l-destructive',
 };
@@ -56,6 +63,7 @@ export const DEAL_STAGE_BAR: Record<DealStage, string> = {
   proposta_na_mesa: 'bg-chart-orange',
   ajustando: 'bg-chart-5',
   gelado: 'bg-chart-2',
+  com_interesse: 'bg-success',
   ganho: 'bg-success',
   perdido: 'bg-destructive',
 };
@@ -67,6 +75,7 @@ export const DEAL_STAGE_DOT: Record<DealStage, string> = {
   proposta_na_mesa: 'bg-chart-orange',
   ajustando: 'bg-chart-5',
   gelado: 'bg-chart-2',
+  com_interesse: 'bg-success',
   ganho: 'bg-success',
   perdido: 'bg-destructive',
 };
@@ -78,6 +87,7 @@ export const DEAL_STAGE_TEXT: Record<DealStage, string> = {
   proposta_na_mesa: 'text-chart-orange',
   ajustando: 'text-chart-5',
   gelado: 'text-chart-2',
+  com_interesse: 'text-success',
   ganho: 'text-success',
   perdido: 'text-destructive',
 };
