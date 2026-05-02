@@ -238,24 +238,38 @@ export default function CrmPipeline() {
   const sortedListDeals = useSortedDeals(listDeals, sort);
 
   // KPIs reagem aos filtros aplicados (estágio, tipo, dono, origem, valor, busca).
-  // Em modo Lista usa listDeals (já oculta fechados quando não há filtro de estágio);
-  // em modo Kanban usa filteredDeals (representa o que está visível nas colunas).
+  // Sempre exclui deals fechados (ganho/perdido) — só pipeline ativo conta.
+  // Pipeline e MRR ficam separados; nada de TCV de 12 meses.
   const homeKpis = useMemo(() => {
-    const base = viewMode === 'lista' ? listDeals : filteredDeals;
+    const base = (viewMode === 'lista' ? listDeals : filteredDeals).filter(
+      (d) => ACTIVE_STAGES.includes(d.stage),
+    );
     const todayIso = new Date().toISOString().slice(0, 10);
-    const pipeline = base.reduce((s, d) => s + Number(d.estimated_value ?? 0), 0);
-    const forecast = base.reduce(
-      (s, d) => s + Number(d.estimated_value ?? 0) * (d.probability_pct / 100),
+    const impl = (d: any) => Number(d.estimated_implementation_value ?? 0);
+    const mrr = (d: any) => Number(d.estimated_mrr_value ?? 0);
+
+    const pipeline = base.reduce((s, d) => s + impl(d), 0);
+    const mrrPipeline = base.reduce((s, d) => s + mrr(d), 0);
+    const forecastImpl = base.reduce(
+      (s, d) => s + impl(d) * (d.probability_pct / 100),
       0,
     );
-    const withValue = base.filter((d) => Number(d.estimated_value ?? 0) > 0).length;
-    const ticketMedio = withValue > 0 ? pipeline / withValue : 0;
+    const forecastMrr = base.reduce(
+      (s, d) => s + mrr(d) * (d.probability_pct / 100),
+      0,
+    );
+    const withImpl = base.filter((d) => impl(d) > 0);
+    const ticketMedio = withImpl.length > 0
+      ? withImpl.reduce((s, d) => s + impl(d), 0) / withImpl.length
+      : 0;
     const overdueNextStep = base.filter(
       (d) => d.next_step_date && d.next_step_date < todayIso,
     ).length;
     return {
       pipeline,
-      forecast,
+      mrrPipeline,
+      forecastImpl,
+      forecastMrr,
       ticketMedio,
       dealsCount: base.length,
       overdueNextStep,
@@ -335,17 +349,12 @@ export default function CrmPipeline() {
     try {
       // Persiste implementação + MRR no deal. estimated_value só é setado se ainda estiver vazio,
       // para não sobrescrever uma estimativa anterior do usuário.
-      const dealUpdate: {
-        estimated_implementation_value: number;
-        estimated_mrr_value: number | null;
-        estimated_value?: number;
-      } = {
+      // estimated_value (legado) NÃO é mais sobrescrito automaticamente.
+      // Os KPIs do funil leem implementação e MRR separados.
+      const dealUpdate = {
         estimated_implementation_value: implementationValue,
         estimated_mrr_value: mrrValue ?? null,
       };
-      if (!deal.estimated_value) {
-        dealUpdate.estimated_value = implementationValue + (mrrValue ?? 0) * 12;
-      }
       const { error: updErr } = await supabase
         .from('deals')
         .update(dealUpdate)
