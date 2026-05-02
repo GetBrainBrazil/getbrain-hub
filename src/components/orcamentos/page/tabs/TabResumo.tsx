@@ -37,7 +37,8 @@ import {
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useEffect, useState } from "react";
-import { generateQrDataUrl } from "@/lib/orcamentos/generateQrDataUrl";
+import { generateBrandedQrDataUrl } from "@/lib/orcamentos/generateBrandedQrDataUrl";
+import { buildPublicProposalUrl } from "@/lib/orcamentos/publicProposalUrl";
 import type { ProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { OrcamentoStatusBadge } from "@/components/orcamentos/OrcamentoStatusBadge";
 import {
@@ -584,7 +585,7 @@ function PublicLinkBlock({
   const [pwdRevealed, setPwdRevealed] = useState(false);
   const [pwdCopied, setPwdCopied] = useState(false);
 
-  const fullUrl = accessToken ? `${window.location.origin}/p/${accessToken}` : null;
+  const fullUrl = buildPublicProposalUrl(accessToken);
   const displayUrl = fullUrl
     ? fullUrl.replace(/^https?:\/\//, "")
     : null;
@@ -593,7 +594,7 @@ function PublicLinkBlock({
     if (!qrOpen || !fullUrl) return;
     if (qrUrl) return;
     let cancelled = false;
-    generateQrDataUrl(fullUrl).then((url) => {
+    generateBrandedQrDataUrl(fullUrl).then((url) => {
       if (!cancelled) setQrUrl(url);
     });
     return () => {
