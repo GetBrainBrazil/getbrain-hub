@@ -2089,6 +2089,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          business_context: string | null
           code: string
           company_id: string
           contact_person_id: string | null
@@ -2096,23 +2097,35 @@ export type Database = {
           converted_to_deal_id: string | null
           created_at: string
           created_by: string | null
+          current_solution: string | null
           deleted_at: string | null
           estimated_value: number | null
+          fit: string | null
           id: string
           lost_reason: string | null
+          next_step: string | null
+          next_step_date: string | null
           notes: string | null
           organization_id: string
           owner_actor_id: string | null
+          pain_categories: string[]
+          pain_cost_brl_monthly: number | null
           pain_description: string | null
+          pain_hours_monthly: number | null
           source: string | null
           status: Database["public"]["Enums"]["lead_status"]
           title: string
+          triagem_channel: string | null
+          triagem_duration_minutes: number | null
           triagem_happened_at: string | null
           triagem_scheduled_at: string | null
+          triagem_summary: string | null
           updated_at: string
           updated_by: string | null
+          urgency: string | null
         }
         Insert: {
+          business_context?: string | null
           code?: string
           company_id: string
           contact_person_id?: string | null
@@ -2120,23 +2133,35 @@ export type Database = {
           converted_to_deal_id?: string | null
           created_at?: string
           created_by?: string | null
+          current_solution?: string | null
           deleted_at?: string | null
           estimated_value?: number | null
+          fit?: string | null
           id?: string
           lost_reason?: string | null
+          next_step?: string | null
+          next_step_date?: string | null
           notes?: string | null
           organization_id: string
           owner_actor_id?: string | null
+          pain_categories?: string[]
+          pain_cost_brl_monthly?: number | null
           pain_description?: string | null
+          pain_hours_monthly?: number | null
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           title: string
+          triagem_channel?: string | null
+          triagem_duration_minutes?: number | null
           triagem_happened_at?: string | null
           triagem_scheduled_at?: string | null
+          triagem_summary?: string | null
           updated_at?: string
           updated_by?: string | null
+          urgency?: string | null
         }
         Update: {
+          business_context?: string | null
           code?: string
           company_id?: string
           contact_person_id?: string | null
@@ -2144,21 +2169,32 @@ export type Database = {
           converted_to_deal_id?: string | null
           created_at?: string
           created_by?: string | null
+          current_solution?: string | null
           deleted_at?: string | null
           estimated_value?: number | null
+          fit?: string | null
           id?: string
           lost_reason?: string | null
+          next_step?: string | null
+          next_step_date?: string | null
           notes?: string | null
           organization_id?: string
           owner_actor_id?: string | null
+          pain_categories?: string[]
+          pain_cost_brl_monthly?: number | null
           pain_description?: string | null
+          pain_hours_monthly?: number | null
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           title?: string
+          triagem_channel?: string | null
+          triagem_duration_minutes?: number | null
           triagem_happened_at?: string | null
           triagem_scheduled_at?: string | null
+          triagem_summary?: string | null
           updated_at?: string
           updated_by?: string | null
+          urgency?: string | null
         }
         Relationships: [
           {

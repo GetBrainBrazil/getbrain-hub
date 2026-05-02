@@ -1,190 +1,122 @@
-# Reestruturação do módulo Leads & Empresas
+## Para que serve esse submódulo (Lead Detail)
 
-## Diagnóstico do que está ruim hoje
+Um Lead é a fase **anterior ao Deal**: ainda estamos qualificando se faz sentido investir tempo numa proposta. O detalhe precisa responder, em uma tela, três perguntas:
 
-A aba `/crm/leads` se chama "Leads & Empresas" mas é só uma lista de **leads** com 2 colunas extras de empresa coladas. Problemas:
+1. **Quem é** essa oportunidade? (empresa, contato, dono, origem, valor estimado)
+2. **Vale qualificar?** (dor declarada, contexto, urgência, fit)
+3. **Próximo passo claro** (agendar triagem → executar triagem → converter em Deal **ou** descartar com motivo)
 
-- **Empresas não são cidadãs de primeira classe.** Não dá para listar, filtrar ou paginar empresas — só chega nelas via lead.
-- **KPIs misturam contextos.** "Receita ganha" e "Clientes ativos" no topo de uma lista de leads confundem (a tela é sobre topo de funil).
-- **Tabela densa demais (12 colunas)** sem hierarquia visual; mobile usa cards genéricos.
-- **Filtros pobres**: só Status lead e Status empresa. Falta indústria/setor, dono, origem, tem deal/proposta/projeto, range de valor — coisas que já vivem no banco.
-- **Ficha de empresa subaproveitada**: tem dados ricos (`sector_id`, `client_type`, `revenue_range`, `digital_maturity`, `logo_url`, contratos de manutenção, MRR, projetos, financeiro) que não aparecem nem na ficha nem na lista.
-- **Sem integração cruzada**: não mostra MRR ativo, contratos de manutenção, último projeto, próxima atividade, ticket histórico.
+Hoje a tela tem só dois retângulos pretos de Markdown ("Dor" e "Notas") e uma sidebar genérica. Sem fluxo, sem dados conectados, sem visual do sistema.
 
-## Visão final
-
-`/crm/leads` vira um **hub "Leads & Empresas" com 2 sub-abas** controladas por `usePersistedState`:
+## Nova estrutura (espelha CrmDealDetail)
 
 ```text
-CRM › Leads & Empresas
-┌──────────────────────────────────────────────────────────┐
-│ [ Leads (12) ] [ Empresas (47) ]        [+ Novo Lead ▾]  │
-│                                          └ Nova Empresa  │
-├──────────────────────────────────────────────────────────┤
-│ KPIs contextuais (mudam conforme sub-aba)                │
-│ Toolbar contextual (filtros, busca, view toggle)         │
-│ Conteúdo (tabela densa | kanban | grid de empresas)      │
-└──────────────────────────────────────────────────────────┘
+┌─ Breadcrumb: CRM › Leads › LEAD-009 ────────────────── x ┐
+├─ HEADER ──────────────────────────────────────────────────┤
+│  LEAD-009 · Sunbright Engenharia · [Triagem agendada]     │
+│  Título do lead (inline edit)                             │
+│  R$ 4.000  ·  Daniel  ·  Indicação  ·  criado há 3d       │
+│  Próximo passo: "Triagem agendada p/ 05/05 14h" [Ver →]   │
+│  [Converter em Deal]  [Agendar triagem]  [Descartar]      │
+├─ MAIN (1fr) ─────────────────────┬─ SIDEBAR (360) ───────┤
+│ [Detalhes][Atividades][Timeline] │ STATUS DO LEAD        │
+│                                  │ ChipGroup 5 estágios  │
+│ 01 Qualificação                  │ ─────                 │
+│   • Origem (Combobox)            │ EMPRESA               │
+│   • Valor estimado (Currency)    │  card c/ link + KPI   │
+│   • Urgência (chips B/M/A)       │  porte, indústria     │
+│   • Fit (chips Bom/Médio/Ruim)   │ ─────                 │
+│                                  │ CONTATO PRINCIPAL     │
+│ 02 Dor & Contexto                │  nome, cargo, e-mail  │
+│   • Categorias da dor (multi)    │  (multi se houver)    │
+│   • Descrição da dor (rich)      │ ─────                 │
+│   • Custo R$/mês  +  Horas/mês   │ DONO + colaborador    │
+│   • Solução atual                │ ─────                 │
+│                                  │ TRIAGEM               │
+│ 03 Triagem                       │  Agendada (data/hora) │
+│   • Agenda da triagem            │  Aconteceu (data/hora)│
+│   • Resumo do que rolou          │  duração / canal      │
+│   • Decisão: avançar / descartar │ ─────                 │
+│                                  │ METADATA              │
+│ 04 Anotações livres              │  criado em / por      │
+│   RichTextEditor (sem .md box)   │  última atualização   │
+│                                  │                       │
+└──────────────────────────────────┴───────────────────────┘
+   [Zona de risco] (excluir lead)
 ```
 
-Mesmo padrão visual usado em `CrmPipeline` (chips de filtro removíveis, scope toggle, segmented controls, busca com clear).
+## Tabs
 
----
+- **Detalhes** — as 4 zonas acima, todas autosave on blur (padrão Deal).
+- **Atividades** — `<ActivityPanel entity={{type:'lead'}} />` já existe.
+- **Timeline** — auditoria via `useEntityAudit('lead')`, com agrupamento por dia (mesmo visual do AdminAuditoriaPage).
 
-## Sub-aba 1 — Leads (topo de funil)
+## Componentes/UI reaproveitados do Deal (sem reinventar)
 
-**KPIs (5 cards, focados em funil):**
-1. Leads abertos (novo + agendada + feita)
-2. Triagens nesta semana (count com base em `triagem_scheduled_at`)
-3. Taxa de conversão lead→deal (período filtrado)
-4. Valor estimado em pipeline de leads
-5. Leads parados >14 dias sem atividade (atenção)
+- `ZoneSection` (numeradas 01..04) — extrair para `src/components/crm/ZoneSection.tsx` para uso compartilhado Deal/Lead.
+- `ChipGroup`, `FieldLabel` — idem, mover para `src/components/crm/inlineFields.tsx`.
+- `InlineText`, `InlineMoney`, `InlineInteger` — idem.
+- `RichTextEditor` (`@/components/ui/rich-text-editor`) substitui os `MarkdownSplitEditor` pretos.
+- `PainCategoriesMultiSelect` — já existe, reutilizar igual ao Deal.
+- `DealHeader` inspira o novo `LeadHeader` (mesmo padrão de chips + ações).
+- `ConvertDialog` mantém-se, mas movido para `src/components/crm/ConvertLeadDialog.tsx` e enriquecido com pré-preenchimento de tudo (origem, owner, dor, valor) + checklist visual de "o que vai migrar".
 
-KPIs respondem aos filtros ativos. Quando há seleção, alternam para "métricas da seleção" (como hoje, mas mais enxutas: Selecionados / Valor / Conversão).
+## Sidebar conectada (cross-módulo, valor real)
 
-**Toolbar (mesmo padrão do Pipeline):**
-- Busca global (code, título, empresa, contato, owner)
-- `MultiFilter`: Status lead, Status empresa, Origem, Dono, Indústria/Setor
-- Range de valor estimado
-- Scope toggle: **Em trilha** (novo+agendada+feita) | **Tudo**
-- View toggle: **Tabela** | **Kanban**
-- Chips removíveis dos filtros ativos + "Limpar tudo"
-- `+ Novo Lead`
+- **Empresa**: card clicável com nome, indústria, porte, status do relacionamento, badge "X deals · Y projetos · MRR R$ Z" via `useCompanyStats(company_id)` (já existe).
+- **Contato principal**: usa `usePrimaryContact` (já existe). Mostra nome, papel, e-mail, telefone com ações `mailto:` / `tel:`. Botão "Trocar contato" abre Combobox de pessoas da empresa.
+- **Dono**: `useCrmActors`, com avatar.
+- **Triagem**: dois `Input type=datetime-local` + auto-cálculo de "atrasada/há tantos dias".
+- **Histórico relacionado**: lista compacta de últimos 3 leads/deals da mesma empresa (via `useCompanyLeads` / `useCompanyDeals`), para contexto.
 
-**Tabela (desktop) — densidade reduzida, hierarquia clara:**
+## Header rico
 
-| Sel | Code | Lead (título + empresa) | Status | Origem | Valor | Próx. ação | Dono | Idade |
+- Code mono + chip empresa (link) + status badge colorido por estágio.
+- Linha de meta: valor, dono (avatar), origem, idade do lead.
+- **Banner de próximo passo**: lê `triagem_scheduled_at` / `triagem_happened_at` / `status` e gera um CTA claro:
+  - novo → "Agendar triagem"
+  - triagem_agendada → "Triagem em 2 dias — preparar"
+  - triagem_feita → "Pronto para converter em Deal"
+  - descartado → motivo + botão "Reabrir"
+  - convertido → link p/ deal gerado
+- Botões: `Converter em Deal` (habilitado só em `triagem_feita`, com tooltip explicativo se não), `Agendar triagem` (abre datetime), `Descartar` (motivo obrigatório).
 
-- Coluna "Lead" combina título (primário) + empresa em chip clicável (secundário) = remove 2 colunas redundantes.
-- "Próx. ação" mostra triagem agendada ou última atividade com cor (vermelho se atrasado).
-- "Idade" em dias desde criação, com cor escalonada.
-- Linhas zebradas, hover destacado, clique abre ficha.
-- Colunas opcionais (Receita ganha, Deals) viram um menu "Colunas" (popover de visibilidade salvo em `usePersistedState`).
+## Novos campos opcionais (sem migration obrigatória)
 
-**Kanban**: mantém o atual mas com cabeçalho mostrando soma de valor por coluna (igual aos headers do Pipeline) e card mais clean.
+Preferimos não inflar schema agora — usamos campos existentes:
+- `urgency` e `fit` ficam armazenados em `notes` como JSON estruturado **só se** o usuário pedir persistência. Por padrão usamos o que já existe: `pain_description`, `pain_categories` (Lead **não** tem hoje — checar e, se faltar, adicionar via migration: `pain_categories text[]`, `pain_cost_brl_monthly numeric`, `pain_hours_monthly int`, `current_solution text`, `urgency text`, `fit text`).
 
-**Mobile**: cards já existem; refinar com chip de empresa, status colorido, próxima ação visível.
+→ **Faremos a migration**: estende `leads` com as mesmas colunas qualitativas do Deal, para que o handoff Lead→Deal seja 1:1 (já temos `close_deal_as_won` espelhando isso na outra ponta).
 
-**Bulk actions** (já existe): manter, mas mover para uma barra fixa no rodapé em mobile (bottom sheet pattern do sistema).
+## Responsividade
 
----
+- Mobile: header empilhado, ações em barra fixa no rodapé, sidebar vira `Sheet` acionado por botão "Detalhes" (padrão usado em outros módulos do sistema), tabs com scroll horizontal.
+- Desktop ≥1024: layout 2 colunas como hoje.
 
-## Sub-aba 2 — Empresas (relacionamento)
+## Arquivos a criar / editar
 
-Lista nova, focada em **gestão de carteira de clientes**.
+**Editar**
+- `src/pages/crm/CrmLeadDetail.tsx` — reescrita completa.
+- `src/types/crm.ts` — Lead recebe campos qualitativos novos.
+- `src/hooks/crm/useLeads.ts` / `useCrmDetails.ts` — `useUpdateLeadField` deve aceitar todos os novos campos (já genérico).
 
-**KPIs (5 cards, focados em base):**
-1. Empresas total / por status
-2. Clientes ativos (`relationship_status='active_client'`)
-3. MRR ativo total (soma de contratos ativos)
-4. Receita ganha YTD (deals ganhos no ano)
-5. Empresas sem atividade > 60 dias
+**Criar**
+- `src/components/crm/ZoneSection.tsx` — extraído do Deal.
+- `src/components/crm/inlineFields.tsx` — `InlineText`, `InlineMoney`, `InlineInteger`, `ChipGroup`, `FieldLabel`.
+- `src/components/crm/LeadHeader.tsx` — header rico com banner de próximo passo.
+- `src/components/crm/LeadSidebar.tsx` — sidebar conectada.
+- `src/components/crm/ConvertLeadDialog.tsx` — extraído + enriquecido.
+- `supabase/migrations/<ts>_lead_qualification_fields.sql` — colunas qualitativas no `leads`.
 
-**Toolbar:**
-- Busca (nome, CNPJ, indústria)
-- `MultiFilter`: Status relacionamento, Setor, Indústria, Porte (`employee_count_range`), Tipo de cliente, Dono (último deal/projeto)
-- Toggle: **Ativos** | **Tudo**
-- View toggle: **Tabela** | **Cards** (grid)
-- `+ Nova Empresa`
+**Refatorar (depois, sem quebrar)**
+- `CrmDealDetail.tsx` passa a importar `ZoneSection` / `inlineFields` dos novos paths (apaga as cópias internas).
 
-**Tabela:**
+## Critérios de aceite
 
-| Empresa (logo + razão/fantasia) | Status | Setor/Indústria | Leads ativos | Deals ativos | MRR | Receita ganha | Última atividade |
-
-Coluna "Empresa" mostra logo (do `logo_url`), trade_name primário, legal_name secundário. Status com badge colorido.
-
-**View Cards** (grid 3-col desktop / 1-col mobile):
-- Logo + nome
-- Badge de status
-- Mini-stats: Leads ativos · Deals · MRR
-- Última atividade
-- Footer: setor + porte
-
-**Mobile**: cards otimizados com mesma info.
-
----
-
-## Ficha de Empresa enriquecida (`/crm/empresas/:id`)
-
-Hoje a ficha existe mas é minimalista. Refatorar para usar dados que já temos:
-
-**Header novo:**
-- Logo + nome + status + setor + porte + website + LinkedIn (chips)
-- Strip de stats: Leads ativos · Deals ativos · Pipeline · MRR ativo · Receita ganha · Projetos ativos
-
-**Tabs:**
-- **Visão Geral**: timeline condensada (último lead, último deal, último projeto, último pagamento, próxima atividade) + cards-resumo
-- **Leads** (lista + botão Novo Lead pré-preenchendo a empresa)
-- **Deals** (lista + botão Novo Deal)
-- **Projetos** (lista, link para `/projetos/:id`)
-- **Contratos & Financeiro** (NOVA): contratos de manutenção ativos com MRR, próximas faturas a receber (`movimentacoes` com `cliente_id` matching CNPJ ou `company_id`), histórico de pagamentos
-- **Contatos** (gerenciar pessoas vinculadas via `company_people`)
-- **Atividades** (já existe)
-- **Notas** (já existe)
-
-**Sidebar direita** (existe): adicionar Setor (combobox de `sectors`), Tipo de cliente, Faixa de receita, Maturidade digital, upload de Logo.
-
----
-
-## Detalhes técnicos
-
-**Roteamento (em `App.tsx` / `CrmLayout.tsx`):**
-- `/crm/leads` continua sendo a rota; renderiza um wrapper `LeadsAndCompanies` com sub-abas `?view=leads|empresas` (querystring + `usePersistedState` fallback).
-- `/crm/empresas/:id` mantida (já existe). Adicionar redirect `/crm/empresas` → `/crm/leads?view=empresas`.
-
-**Novos arquivos:**
-- `src/pages/crm/CrmLeadsAndCompanies.tsx` — wrapper com tabs
-- `src/pages/crm/leads/LeadsView.tsx` — extrai todo o conteúdo atual de `CrmLeads.tsx` enxugado
-- `src/pages/crm/leads/CompaniesView.tsx` — nova lista de empresas
-- `src/components/crm/LeadsTable.tsx` — tabela densa com seletor de colunas
-- `src/components/crm/CompaniesTable.tsx` + `CompaniesGrid.tsx` + `CompanyCard.tsx`
-- `src/components/crm/CompanyContractsPanel.tsx` — financeiro/contratos na ficha
-- `src/components/crm/ColumnVisibilityMenu.tsx` — controle de colunas reutilizável
-
-**Hooks novos / estendidos (em `useCrmDetails.ts`):**
-- `useAllCompaniesEnriched()` — junta `companies` + `useAllCompaniesAggregates` + último activity + contagem de projetos + MRR ativo (de `contratos_manutencao` ou cálculo similar) numa só query memo'd.
-- `useCompanyMrr(id)` / `useCompanyFinance(id)` — busca contratos ativos e movimentações pendentes da empresa.
-- `useLastActivityByEntity(type, ids[])` — bulk para popular a coluna "Última atividade" sem N+1.
-
-**Reuso:**
-- `MultiFilter`, `SearchBox`, `FilterChip`, `ValueRangeFilter` de `CrmFilters.tsx` (já reformulados na última iteração).
-- Padrão de scope toggle (segmented com ícones) idêntico ao Pipeline.
-- `usePersistedState` para view, scope, filtros, colunas visíveis.
-- `useConfirm` para exclusões; `toast` (sonner) para feedback.
-- `invalidateCrmCaches` para mutações.
-
-**Performance:**
-- Manter `useAllLeads` + `useAllCompaniesAggregates` (uma query agregada). Paginação client-side com filtros (volumes esperados <2k).
-- Queries de "última atividade" agregadas em uma só por sub-aba.
-
-**Responsividade:**
-- Mobile-first: tabela vira cards <md, kanban com snap horizontal, filtros em sheet, ações bulk em barra fixa inferior.
-
-**Sem mudança de schema** — tudo é UI/composição em cima das tabelas existentes (`leads`, `companies`, `deals`, `projects`, `deal_activities`, `contratos_manutencao`, `movimentacoes`, `sectors`, `company_people`).
-
----
-
-## Arquivos a editar / criar
-
-| Ação | Arquivo |
-|---|---|
-| Criar | `src/pages/crm/CrmLeadsAndCompanies.tsx` |
-| Criar | `src/pages/crm/leads/LeadsView.tsx` |
-| Criar | `src/pages/crm/leads/CompaniesView.tsx` |
-| Criar | `src/components/crm/LeadsTable.tsx` |
-| Criar | `src/components/crm/CompaniesTable.tsx` |
-| Criar | `src/components/crm/CompaniesGrid.tsx` |
-| Criar | `src/components/crm/CompanyCard.tsx` |
-| Criar | `src/components/crm/CompanyContractsPanel.tsx` |
-| Criar | `src/components/crm/ColumnVisibilityMenu.tsx` |
-| Editar | `src/pages/crm/CrmLeads.tsx` → simplifica para reexportar wrapper |
-| Editar | `src/pages/crm/CrmCompanyDetail.tsx` (header rico, novas tabs, financeiro) |
-| Editar | `src/hooks/crm/useCrmDetails.ts` (novos hooks de enriquecimento) |
-| Editar | `src/App.tsx` (rota `/crm/empresas` redirect) |
-
-## Fora de escopo (mantido como está)
-
-- Pipeline de Deals (não mexer).
-- Schema de banco.
-- Conversão lead→deal (continua funcionando).
-- Auth/permissões.
+- Tela do lead segue exatamente o vocabulário visual do Deal (zonas numeradas, chips, autosave, sem caixa preta de Markdown).
+- Toda edição salva on blur, sem botão "Salvar" por seção.
+- Header sempre mostra **um único próximo passo claro** baseado no status.
+- Sidebar mostra dados reais conectados de Empresa, Contato e Dono — clicáveis.
+- Conversão para Deal copia 100% dos novos campos qualitativos.
+- Mobile: usável com uma mão, sidebar em Sheet.
+- Lead descartado mostra motivo destacado e botão de reabrir; lead convertido mostra link clicável para o deal.
