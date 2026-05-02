@@ -21,7 +21,7 @@ import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
 import ExtratosBancarios from "./pages/ExtratosBancarios";
 import ExtratoMovimentacaoDetalhe from "./pages/ExtratoMovimentacaoDetalhe";
-import ConfiguracoesFinanceiras from "./pages/ConfiguracoesFinanceiras";
+
 import Projetos from "./pages/Projetos";
 import ProjetoDetalhe from "./pages/ProjetoDetalhe";
 import ProjetoFinanceiroDetalhe from "./pages/projetos/ProjetoFinanceiroDetalhe";
