@@ -285,18 +285,60 @@ export function useProposalEditorState(proposalId: string | undefined) {
     [proposalId, state, itemsDirty, update, replaceItems],
   );
 
-  // Autosave debounced (1.5s).
+  // Autosave debounced (600ms — mais agressivo p/ minimizar perda em recarga).
   useEffect(() => {
     if (isInitialLoad.current || !dirty || !proposalId) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
       save({}, { silent: true }).catch(() => {});
-    }, 1500);
+    }, 600);
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dirty, state]);
+
+  // ----- Guards de saída/recarga -----
+  // Mantém referências sempre atualizadas pra usar nos handlers globais
+  // sem recriá-los (evita reanexar listeners a cada keystroke).
+  const dirtyRef = useRef(dirty);
+  const saveRef = useRef(save);
+  useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
+  useEffect(() => { saveRef.current = save; }, [save]);
+
+  useEffect(() => {
+    if (!proposalId) return;
+
+    // 1) Avisa antes de sair/recarregar com edições pendentes.
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      // Necessário em alguns navegadores p/ disparar o prompt nativo.
+      e.returnValue = "";
+    }
+
+    // 2) Flush síncrono quando a aba vai pra background ou está sendo fechada.
+    //    `pagehide` é o evento mais confiável pra isso (mais que `unload`).
+    function flushIfDirty() {
+      if (!dirtyRef.current) return;
+      // Cancela o debounce pendente e dispara save imediato.
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      try { saveRef.current({}, { silent: true }); } catch { /* noop */ }
+    }
+
+    function onVisibility() {
+      if (document.visibilityState === "hidden") flushIfDirty();
+    }
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("pagehide", flushIfDirty);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("pagehide", flushIfDirty);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [proposalId]);
 
   /**
    * Snapshot completo da proposta como está agora (banco + edições não salvas).
