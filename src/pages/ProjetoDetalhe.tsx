@@ -1226,6 +1226,7 @@ export default function ProjetoDetalhe() {
                   ["overview", "Visão Geral", null],
                   ["scope", "Escopo", null],
                   ["operacional", "Operacional", null],
+                  ["proposals", "Propostas & Anexos", proposalsCount || null],
                   ["tasks", "Tarefas", null],
                   ["milestones", "Marcos", milestones.length || null],
                   ["dependencies", "Dependências", blockingDeps.length || null],
