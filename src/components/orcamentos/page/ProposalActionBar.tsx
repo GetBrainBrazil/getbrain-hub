@@ -49,6 +49,7 @@ interface Props {
   status: ProposalStatus;
   isDirty: boolean;
   isSaving: boolean;
+  lastSavedAt: Date | null;
   isGeneratingPdf: boolean;
   hasPublicLink: boolean;
   onDelete: () => void;
@@ -56,7 +57,6 @@ interface Props {
   onPreviewAsClient: () => void;
   onDownloadPdf: () => void;
   onOpenWhatsApp: () => void;
-  onSave: () => void;
   onSendOrResend: () => void;
 }
 
@@ -64,6 +64,7 @@ export function ProposalActionBar({
   status,
   isDirty,
   isSaving,
+  lastSavedAt,
   isGeneratingPdf,
   hasPublicLink,
   onDelete,
@@ -71,7 +72,6 @@ export function ProposalActionBar({
   onPreviewAsClient,
   onDownloadPdf,
   onOpenWhatsApp,
-  onSave,
   onSendOrResend,
 }: Props) {
   const [confirmDeleteSent, setConfirmDeleteSent] = useState(false);
