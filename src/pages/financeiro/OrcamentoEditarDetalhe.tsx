@@ -332,6 +332,7 @@ export default function OrcamentoEditarDetalhe() {
           <TabResumo
             proposal={data}
             livePreview={buildPreviewProposal()}
+            interactionsCount={interactionsCount.data || 0}
             onPreviewAsClient={handlePreviewAsClient}
             onCopyLink={handleCopyLink}
             onOpenTracking={() => setTrackingOpen(true)}
