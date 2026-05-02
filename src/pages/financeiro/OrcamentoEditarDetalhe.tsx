@@ -218,13 +218,29 @@ export default function OrcamentoEditarDetalhe() {
   }
 
   async function handlePreviewAsClient() {
+    const tid = toast.loading("Gerando preview pré-autenticado…");
     try {
-      await previewProposalAsClient({
+      const { url, popupBlocked } = await previewProposalAsClient({
         proposalId: data.id,
         accessToken,
       });
+      if (popupBlocked) {
+        toast.warning("Pop-up bloqueado pelo navegador", {
+          id: tid,
+          description: "Permita pop-ups deste site ou abra o link manualmente.",
+          action: {
+            label: "Abrir mesmo assim",
+            onClick: () => window.open(url, "_blank", "noopener,noreferrer"),
+          },
+          duration: 8000,
+        });
+        // Tenta também copiar para clipboard como rede de segurança
+        navigator.clipboard?.writeText(url).catch(() => {});
+      } else {
+        toast.success("Preview aberto em nova aba", { id: tid });
+      }
     } catch (e: any) {
-      toast.error(e?.message || "Falha ao abrir preview");
+      toast.error(e?.message || "Falha ao abrir preview", { id: tid });
     }
   }
 
