@@ -113,7 +113,7 @@ export default function ConfiguracoesLayout() {
 
   // Se cair na raiz /configuracoes, leva para a primeira aba.
   if (pathname === "/configuracoes" || pathname === "/configuracoes/") {
-    return <Navigate to="/configuracoes/crm/etapas" replace />;
+    return <Navigate to={SECTIONS[0].tabs[0].path} replace />;
   }
 
   return (
