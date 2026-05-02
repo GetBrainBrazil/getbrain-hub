@@ -112,6 +112,7 @@ export default function MotivosDescartePage() {
 
   return (
     <div className="space-y-5">
+      {dialog}
       <header className="flex items-start gap-3">
         <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
         <div className="flex-1">
