@@ -11,7 +11,6 @@ const ALL_TABS = [
   { value: 'pipeline', label: 'Pipeline', adminOnly: false },
   { value: 'leads', label: 'Leads & Empresas', adminOnly: false },
   { value: 'calendario', label: 'Calendário', adminOnly: false },
-  { value: 'configuracoes', label: 'Configurações', adminOnly: true },
 ];
 
 // Botão "Novo Lead" só aparece em "Leads & Empresas".

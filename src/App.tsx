@@ -21,7 +21,7 @@ import Orcamento from "./pages/Orcamento";
 import Relatorios from "./pages/Relatorios";
 import ExtratosBancarios from "./pages/ExtratosBancarios";
 import ExtratoMovimentacaoDetalhe from "./pages/ExtratoMovimentacaoDetalhe";
-import ConfiguracoesFinanceiras from "./pages/ConfiguracoesFinanceiras";
+
 import Projetos from "./pages/Projetos";
 import ProjetoDetalhe from "./pages/ProjetoDetalhe";
 import ProjetoFinanceiroDetalhe from "./pages/projetos/ProjetoFinanceiroDetalhe";
@@ -41,15 +41,18 @@ import CrmDealDetail from "./pages/crm/CrmDealDetail";
 import CrmDashboard from "./pages/crm/CrmDashboard";
 import CrmCalendar from "./pages/crm/CrmCalendar";
 import CrmLeadsAndCompanies from "./pages/crm/CrmLeadsAndCompanies";
-import CrmSettings from "./pages/crm/CrmSettings";
+
 import CrmLeadDetail from "./pages/crm/CrmLeadDetail";
 import Clientes from "./pages/Clientes";
-import AdminLayout from "./pages/admin/AdminLayout";
+
 import AdminUsuariosList from "./pages/admin/AdminUsuariosList";
 import UsuarioFichaPage from "./pages/admin/UsuarioFichaPage";
 import AdminPermissoesPage from "./pages/admin/AdminPermissoesPage";
 import AdminAuditoriaPage from "./pages/admin/AdminAuditoriaPage";
-import AdminPropostasIaPage from "./pages/admin/AdminPropostasIaPage";
+
+import IaPropostasPage from "./pages/configuracoes/integracoes/IaPropostasPage";
+import EtapasFunilPage from "./pages/configuracoes/crm/EtapasFunilPage";
+import MotivosDescartePage from "./pages/configuracoes/crm/MotivosDescartePage";
 import Suporte from "./pages/Suporte";
 import Tokens from "./pages/Tokens";
 import ContratosManutencao from "./pages/ContratosManutencao";
@@ -157,7 +160,7 @@ const App = () => (
               <Route path="leads" element={<CrmLeadsAndCompanies />} />
               <Route path="empresas" element={<Navigate to="/crm/leads" replace />} />
               <Route path="calendario" element={<CrmCalendar />} />
-              <Route path="configuracoes" element={<CrmSettings />} />
+              <Route path="configuracoes" element={<Navigate to="/configuracoes/crm/etapas" replace />} />
             </Route>
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             {/* Centro de Configurações Gerais (admin-only) */}
@@ -177,21 +180,23 @@ const App = () => (
               <Route path="financeiro/colaboradores" element={<FinColaboradoresPage />} />
               <Route path="sistema/usuarios" element={<AdminUsuariosList />} />
               <Route path="sistema/permissoes" element={<AdminPermissoesPage />} />
-              <Route path="sistema/logs" element={<Navigate to="/admin/auditoria" replace />} />
+              <Route path="sistema/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
               <Route path="sistema/auditoria" element={<AdminAuditoriaPage />} />
+              <Route path="integracoes/ia-propostas" element={<IaPropostasPage />} />
+              <Route path="crm/etapas" element={<EtapasFunilPage />} />
+              <Route path="crm/motivos-descarte" element={<MotivosDescartePage />} />
             </Route>
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
-            <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-              <Route index element={<Navigate to="usuarios" replace />} />
-              <Route path="usuarios" element={<AdminUsuariosList />} />
-              <Route path="permissoes" element={<AdminPermissoesPage />} />
-              <Route path="agencia" element={<Navigate to="/admin/usuarios" replace />} />
-              <Route path="auditoria" element={<AdminAuditoriaPage />} />
-              <Route path="logs" element={<Navigate to="/admin/auditoria" replace />} />
-              <Route path="propostas-ia" element={<AdminPropostasIaPage />} />
-            </Route>
+            {/* Compat: /admin/* foi unificado em /configuracoes/* */}
+            <Route path="/admin" element={<Navigate to="/configuracoes/sistema/usuarios" replace />} />
+            <Route path="/admin/usuarios" element={<Navigate to="/configuracoes/sistema/usuarios" replace />} />
+            <Route path="/admin/permissoes" element={<Navigate to="/configuracoes/sistema/permissoes" replace />} />
+            <Route path="/admin/auditoria" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
+            <Route path="/admin/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
+            <Route path="/admin/agencia" element={<Navigate to="/configuracoes/sistema/usuarios" replace />} />
+            <Route path="/admin/propostas-ia" element={<Navigate to="/configuracoes/integracoes/ia-propostas" replace />} />
             <Route path="/admin/usuarios/:id" element={<AdminRoute><UsuarioFichaPage mode="admin" /></AdminRoute>} />
             <Route path="/suporte" element={<ProtectedRoute><Suporte /></ProtectedRoute>} />
             <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
