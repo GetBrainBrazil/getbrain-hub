@@ -19,7 +19,15 @@ export interface GenerationResult {
           item_id: string;
           detailed_description: string;
         }>;
+        descriptions?: Array<{ index: number; text: string }>;
       };
+  was_filtered: boolean;
+  filter_reasons: string[];
+  tokens: { input: number; output: number; cost_usd: number };
+}
+
+export interface BatchDescriptionsResult {
+  descriptions: Array<{ index: number; text: string }>;
   was_filtered: boolean;
   filter_reasons: string[];
   tokens: { input: number; output: number; cost_usd: number };
