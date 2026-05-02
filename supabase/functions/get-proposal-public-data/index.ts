@@ -83,6 +83,35 @@ Deno.serve(async (req) => {
       if (fullName) recipientName = fullName.split(/\s+/)[0];
     }
 
+    // Autor da proposta (operador GetBrain). Aparece como assinatura na carta
+    // de abertura e no bloco de fechamento. Cargo é puxado do vínculo ativo
+    // mais recente em usuario_cargos → cargos.nome.
+    let author: { name: string; avatar_url: string | null; role_label: string } | null = null;
+    if ((prop as any).created_by) {
+      const [{ data: profile }, { data: cargoLink }] = await Promise.all([
+        admin
+          .from("profiles")
+          .select("full_name, avatar_url")
+          .eq("id", (prop as any).created_by)
+          .maybeSingle(),
+        admin
+          .from("usuario_cargos")
+          .select("cargo:cargos(nome)")
+          .eq("user_id", (prop as any).created_by)
+          .order("assigned_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      if (profile) {
+        const cargoNome = (cargoLink as any)?.cargo?.nome as string | undefined;
+        author = {
+          name: profile.full_name || "GetBrain",
+          avatar_url: profile.avatar_url ?? null,
+          role_label: cargoNome ? `${cargoNome} · GetBrain` : "GetBrain",
+        };
+      }
+    }
+
     return json({
       proposal: {
         code: prop.code,
