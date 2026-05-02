@@ -196,7 +196,39 @@ Deno.serve(async (req) => {
       deal = d;
     }
 
-    const dataPayload = {
+    // Para batch de descrições de módulos: usar scope_titles do body OU
+    // tentar derivar do JSON proposal.scope_items.
+    let scopeModulesForBatch: Array<{ index: number; title: string }> = [];
+    let indicesToGenerate: number[] = [];
+    if (body.generation_type === "item_descriptions_batch") {
+      let titles: string[] = [];
+      if (Array.isArray(body.scope_titles) && body.scope_titles.length > 0) {
+        titles = body.scope_titles.map((t) => String(t ?? "").trim());
+      } else if (Array.isArray((proposal as any).scope_items)) {
+        titles = ((proposal as any).scope_items as any[]).map((it) =>
+          String(it?.title ?? "").trim()
+        );
+      }
+      if (titles.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "no_scope_items" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      scopeModulesForBatch = titles.map((title, index) => ({ index, title }));
+      indicesToGenerate =
+        Array.isArray(body.item_indices) && body.item_indices.length > 0
+          ? body.item_indices.filter((i) => i >= 0 && i < titles.length)
+          : titles.map((_, i) => i);
+      if (indicesToGenerate.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "no_indices" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    const dataPayload: Record<string, unknown> = {
       cliente: proposal.client_company_name,
       cidade_cliente: proposal.client_city,
       titulo_proposta: proposal.title,
@@ -232,6 +264,11 @@ Deno.serve(async (req) => {
           }
         : null,
     };
+
+    if (body.generation_type === "item_descriptions_batch") {
+      dataPayload.modulos_escopo = scopeModulesForBatch;
+      dataPayload.indices_a_gerar = indicesToGenerate;
+    }
 
     const promptUser = [
       `DADOS DA PROPOSTA:\n${JSON.stringify(dataPayload, null, 2)}`,
