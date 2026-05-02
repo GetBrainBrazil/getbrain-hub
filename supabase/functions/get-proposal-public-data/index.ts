@@ -33,7 +33,8 @@ Deno.serve(async (req) => {
          considerations, maintenance_description, maintenance_monthly_value,
          implementation_days, validation_days, expires_at, valid_until,
          mockup_url, sent_at, status, template_slug, template_version,
-         company_id`,
+         company_id, implementation_value, installments_count,
+         first_installment_date, public_opening_letter, public_roadmap`,
       )
       .eq("id", proposalId)
       .is("deleted_at", null)
@@ -88,6 +89,11 @@ Deno.serve(async (req) => {
         mockup_url: prop.mockup_url,
         sent_at: prop.sent_at,
         recipient_first_name: recipientName,
+        implementation_value: prop.implementation_value,
+        installments_count: prop.installments_count,
+        first_installment_date: prop.first_installment_date,
+        public_opening_letter: prop.public_opening_letter,
+        public_roadmap: prop.public_roadmap,
         items: items ?? [],
       },
     });
