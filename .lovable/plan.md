@@ -1,98 +1,153 @@
-## Problema atual
-
-A sub-aba **Conteúdo** hoje é uma pilha de 8 accordions, todos com tipografia muito pequena (10–11px), labels em cinza fraco, sem hierarquia clara, sem busca e sem nenhuma forma de ver o impacto da edição. O usuário precisa abrir/fechar acordeões para chegar em qualquer campo, e não consegue identificar visualmente em qual seção da página pública cada bloco aparece.
-
 ## Objetivo
 
-Transformar essa tela num **editor de CMS profissional** — claro, navegável, com preview integrada, e com cada campo "amarrado" visualmente à seção correspondente da página pública.
+Transformar a sub-aba **Conteúdo** num CMS verdadeiro: (1) com **preview lado a lado** que **acompanha a seção** em edição, e (2) cobrindo **todas** as variáveis da página pública — não só as institucionais (globais), mas também os textos e números **por-proposta** (boas-vindas, contexto, solução, escopo, itens, preços, parcelamento, prazos, considerações, manutenção, validade).
 
-## Novo layout
+## Como vai funcionar
+
+### Layout
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ [Conteúdo global · afeta todas as propostas]    [⟳ salvo 14:32] [👁]   │
-├──────────────┬─────────────────────────────────────────────────────────┤
-│ 🔎 Buscar…   │ Hero & navegação                                        │
-│              │ ─────────────────────────────────────────────────────   │
-│ ▸ Hero       │ Etiquetas exibidas no topo                              │
-│ ▸ Seções     │ [ Estratégia × ] [ Tecnologia × ] [ Resultado × ] [+]   │
-│ ▸ Sobre   ●  │                                                         │
-│ ▸ Capacid.   │ Texto de "role para baixo"                              │
-│ ▸ Stack      │ ┌────────────────────────────────────────────────────┐  │
-│ ▸ Próximos   │ │ Role para baixo                                    │  │
-│ ▸ Senha      │ └────────────────────────────────────────────────────┘  │
-│ ▸ Rodapé     │                                                         │
-│              │ 💡 Dica: aparece logo abaixo do título principal.       │
-│ ────────     │                                                         │
-│ 👁 Abrir     │                                                         │
-│ pré-visual   │                                                         │
-└──────────────┴─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ [Conteúdo · global + esta proposta]  [salvo 14:32]  [📐 lado a lado] [📺]  │
+├──────────────┬───────────────────────────────────┬─────────────────────────┤
+│ 🔎 Buscar…   │ Hero & navegação                  │  ╭─ PREVIEW AO VIVO ─╮  │
+│              │ ─────────────────────────────────│  │  iframe da página  │  │
+│ ESTA PROPOSTA│ Etiquetas do hero…                │  │  ↳ rola pra seção  │  │
+│ ▸ Hero msg ●│ Texto "role para baixo"           │  │     que estou      │  │
+│ ▸ Contexto   │                                   │  │     editando       │  │
+│ ▸ Solução    │                                   │  │                    │  │
+│ ▸ Escopo     │                                   │  │  [recarregar] [↗] │  │
+│ ▸ Investim.  │                                   │  ╰────────────────────╯  │
+│ ▸ Cronograma │                                   │                         │
+│ ▸ Manutenção │                                   │                         │
+│ ▸ Considerações                                  │                         │
+│              │                                   │                         │
+│ GLOBAL       │                                   │                         │
+│ ▸ Hero       │                                   │                         │
+│ ▸ Títulos    │                                   │                         │
+│ ▸ Sobre      │                                   │                         │
+│ ▸ Capacid.   │                                   │                         │
+│ ▸ Stack      │                                   │                         │
+│ ▸ Próximos   │                                   │                         │
+│ ▸ Senha      │                                   │                         │
+│ ▸ Rodapé     │                                   │                         │
+└──────────────┴───────────────────────────────────┴─────────────────────────┘
 ```
 
-### 1. Navegação lateral (em vez de accordions)
-- Sidebar fixa à esquerda (≥md), com 8 itens agrupados em **3 categorias**:
-  - **Estrutura da página**: Hero, Títulos das seções, CTA Próximos passos
-  - **Institucional**: Sobre a GetBrain, Cards de capacidades, Stack tecnológico
-  - **Acesso & contato**: Tela de senha, Rodapé & contato
-- Cada item mostra ícone, nome, e um **dot accent** quando tem alteração não persistida.
-- Em mobile, a sidebar vira um `Select` no topo (mesma navegação, sem perder espaço).
+Dois modos:
+- **Lado a lado** (padrão em telas ≥ lg): editor à esquerda + preview à direita.
+- **Foco** (toggle): só editor, com botão "Pré-visualizar" no header que pula direto para a aba Acesso & Preview (comportamento atual). Persiste via `usePersistedState`.
 
-### 2. Busca global de campos
-- Input no topo da sidebar filtra os itens por nome **e** por palavra contida em qualquer label/placeholder/valor atual. Resolve "onde mudo o texto X?".
+Em mobile: preview vira um botão flutuante "Ver preview" que abre uma sheet bottom sheet em tela cheia (sem competir por largura).
 
-### 3. Painel de edição (direita)
-- Cada bloco tem **header** com título 16px + descrição curta + ícone, separador, e os campos com **labels 12px legíveis** (não 10px cinza fraco).
-- Cada grupo de campo recebe uma **dica contextual** ("aparece logo abaixo do hero", "exibido no rodapé") — ajuda o usuário a entender impacto.
-- Inputs/textarea com tamanho confortável (`h-9`, `text-sm`), espaçamento `space-y-4` em vez de `space-y-2`.
-- Indicador de salvamento por campo: bordinha verde piscando 1s após o blur quando salvou (mais sutil que o toast atual).
+### Sincronização com a seção em edição
 
-### 4. Editor de "Títulos das seções" repaginado
-Hoje é uma tabela de 9 linhas estilo planilha. Vira um **grid de cards**, um por seção, cada um com:
-- Pequeno preview de como o eyebrow + título vão renderizar (texto pequeno mono uppercase + título em serif).
-- Dois inputs lado-a-lado abaixo.
-- Ordem reflete a ordem real da página pública.
+1. Quando o usuário muda de painel na sidebar (ex.: clica em "Solução"), o componente envia uma mensagem `postMessage({type:"scroll-to", section:"solucao"})` ao iframe.
+2. Dentro de `PropostaPublica.tsx` adicionamos um listener:
+   - `scroll-to`: faz `document.getElementById(section)?.scrollIntoView({behavior:'smooth', block:'start'})` e adiciona um anel/halo temporário (`.preview-highlight`) na seção por ~1.4s.
+   - `force-reload`: recarrega via incremento de query param (já temos `previewBust`).
+3. Cada `persist()` envia também `postMessage({type:"settings-changed"})` — o iframe re-fetcha apenas `page_settings` (não o preview inteiro), atualizando textos globais sem perder a posição de scroll.
+4. Para campos **por-proposta** (texto editado em tempo real), enviamos `postMessage({type:"proposal-patch", patch:{welcome_message, pain_context, ...}})` — o iframe aplica em memória sem precisar bater no servidor; persiste no banco via autosave normal a cada blur.
 
-### 5. Cards de capacidades
-- Mantém o picker de ícone, mas o card fica maior (mostra preview real do ícone num círculo com o tom accent), com handle de drag para reordenar (em vez dos 2 botões up/down sempre visíveis).
-- Botão "+ Adicionar" vira tile pontilhado no fim do grid.
+### Novas seções editáveis (por-proposta) na sidebar
 
-### 6. Editor de tags (eyebrows, stack)
-- Pílulas com altura confortável (`h-7`), input embutido com placeholder "+ adicionar".
-- Mostra contador `(3)` ao lado do label.
+Criamos um grupo **"Esta proposta"** com painéis dedicados. Cada painel lê/grava direto no `useProposalEditorState` existente (mesmo state que a aba Escopo usa). Como o state é compartilhado pelo editor da página, **persiste igual** à aba Escopo, com autosave on blur (já implementado lá). Painéis:
 
-### 7. Header da sub-aba
-- Faixa única com:
-  - chip "🌐 Conteúdo global · afeta todas as propostas"
-  - status de save (Salvando… / Salvo às HH:mm)
-  - botão **"Pré-visualizar"** que abre a sub-aba Preview já no estado atual (em vez do usuário ter que clicar manualmente em outra tab)
+| Painel | Campos (do state) |
+|---|---|
+| Mensagem de boas-vindas | `welcomeMessage` |
+| Contexto / dor | `painContext` (textarea longa, suporta markdown) |
+| Solução | `solutionOverview` (markdown) |
+| Resumo executivo (carta base) | `executiveSummary` (markdown — fallback quando IA não rodou) |
+| Escopo (itens) | `items[]` — editor compacto: descrição + quantidade + valor unit. Com botão "Abrir em Escopo" para fluxo completo |
+| Investimento | `implementationValue`, `installmentsCount`, `firstInstallmentDate` |
+| Cronograma | `implementationDays`, `validationDays`, `expiresAt` |
+| Manutenção | `maintenanceDescription`, `maintenanceMonthlyValue` |
+| Considerações | `considerations[]` (lista de strings) |
+
+> Cada painel mostra o **mesmo input** que existe hoje na tab Escopo (mantém validações), mas envolto na UI nova de painel/dica/preview-highlight. Não duplicamos lógica de salvamento — chamamos `setField` do state já existente, e ele dispara o autosave que a tab Escopo já dispara.
+
+### Botão "Pré-visualizar" do header
+
+Como agora o preview pode estar embutido, o botão muda comportamento:
+- Se o modo "lado a lado" estiver ativo → faz scroll do iframe para a seção atual (re-emite `scroll-to`).
+- Se estiver em modo "foco" → leva à aba **Acesso & Preview** e dá scroll, igual hoje.
 
 ## Arquivos afetados
 
-- **Reescrita**: `src/components/orcamentos/page/tabs/pagina-publica/SubTabConteudo.tsx`
-  - troca Accordion por layout sidebar + painel
-  - implementa busca, agrupamento, indicadores
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/SidebarConteudo.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelHero.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelSecoes.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelSobre.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelCapacidades.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelStack.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelProximos.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelSenha.tsx`
-- **Novo**: `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelRodape.tsx`
-- **Refino visual**: editores existentes (`EditorTags`, `EditorTextoLista`, `EditorCapabilities`, `EditorSecoes`) — paddings, tamanhos, drag handle nos cards.
-- **Atualização**: `index.tsx` ganha prop para abrir a sub-aba Preview a partir do botão do header.
+### Novos
+
+- `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PreviewPane.tsx` — componente reutilizável que renderiza o iframe + handshake `postMessage` (recarregar, scroll-to, patch). Aceita `section`, `proposalPatch`, `bust`. Recebe `accessToken` e gera o `previewJwt` via `preview-proposal-as-internal` (mesmo padrão de `SubTabPreview`).
+- `src/components/orcamentos/page/tabs/pagina-publica/conteudo/PainelMensagemBoasVindas.tsx`
+- `…/PainelContexto.tsx`
+- `…/PainelSolucao.tsx`
+- `…/PainelResumoExecutivo.tsx`
+- `…/PainelEscopoItens.tsx` (editor compacto de items)
+- `…/PainelInvestimento.tsx`
+- `…/PainelCronograma.tsx`
+- `…/PainelManutencao.tsx`
+- `…/PainelConsideracoes.tsx`
+
+### Editados
+
+- `src/components/orcamentos/page/tabs/pagina-publica/SubTabConteudo.tsx`
+  - Recebe `proposal`, `state`, `setField` por props (vindos de `index.tsx`).
+  - Sidebar passa a ter dois grupos: "Esta proposta" (novos painéis) e "Global" (os 8 atuais).
+  - Renderiza a `PreviewPane` à direita quando modo "lado a lado" ativo.
+  - Toggle "Lado a lado / Foco" persistido com `usePersistedState`.
+  - A cada mudança de `active`, dispara `previewRef.current?.scrollToSection(map[active])`.
+- `src/components/orcamentos/page/tabs/pagina-publica/index.tsx`
+  - Repassa `proposal`, `state`, `setField` ao `SubTabConteudo`.
+  - Mantém `handleOpenPreview` para o modo foco.
+- `src/pages/public/PropostaPublica.tsx`
+  - Adiciona listener `window.addEventListener("message", …)` que aceita `scroll-to`, `proposal-patch` e `settings-changed` (somente quando `isPreview`).
+  - Quando recebe `proposal-patch`, faz merge no state local da proposta exibida (sem chamar API).
+  - Adiciona uma classe `.preview-highlight` (anel cyan + leve scale) aplicada por 1.4s após `scroll-to`.
+
+### Sem mudanças
+
+- Hooks `usePublicPageSettings` e `useProposalEditorState`.
+- Edge functions.
+- Schema do banco.
 
 ## Detalhes técnicos
 
-- **Estado da seção ativa** persistido com `usePersistedState("proposal-pagina-publica-conteudo-secao", "hero")` para o usuário voltar onde estava.
-- **Busca** usa `useMemo` filtrando contra um índice in-memory `{ id, label, group, keywords[] }`.
-- **Dirty dot**: cada painel chama `onDirty(id)` enquanto valor local difere do salvo; limpa ao receber confirmação do `usePublicPageSettings`.
-- **Drag handle** dos capabilities usa `@dnd-kit/sortable` se já presente; caso contrário, mantém setas mas movidas para um menu kebab no canto.
-- Mobile: `useIsMobile()` troca sidebar por Select sticky no topo. Cards stack em 1 coluna; tabela de seções vira lista vertical.
-- Nada muda no schema, no hook `usePublicPageSettings`, na edge function ou na página pública — é puramente UI/UX da aba admin.
+- **Mapa seção→âncora**:
+  ```ts
+  const SECTION_ANCHOR: Record<string, string> = {
+    // por-proposta
+    "p.boas-vindas": "hero",
+    "p.contexto":    "contexto",
+    "p.solucao":     "solucao",
+    "p.resumo":      "carta",
+    "p.escopo":      "escopo",
+    "p.investimento":"investimento",
+    "p.cronograma":  "cronograma",
+    "p.manutencao":  "investimento", // mensalidade aparece junto
+    "p.consideracoes":"escopo",
+    // globais
+    "g.hero":        "hero",
+    "g.secoes":      "contexto",
+    "g.sobre":       "sobre",
+    "g.capacidades": "sobre",
+    "g.stack":       "sobre",
+    "g.proximos":    "proximos",
+    "g.senha":       "hero",       // gate só aparece sem JWT — mostramos hero
+    "g.rodape":      "proximos",
+  };
+  ```
+- **Origem postMessage**: o iframe é same-origin (preview servido em `/p/:token`), então `event.origin === window.location.origin` para validar.
+- **Throttle de patches por-proposta**: ao digitar, faz patch a cada `keyup` com debounce de 300 ms para o iframe ficar fluido sem flooding.
+- **Persistência real (banco)** continua sendo on blur via `setField` do `useProposalEditorState`.
+- **Highlight visual** no iframe: classe inserida via `<style>` injetado dentro do `PropostaPublica`:
+  ```css
+  .preview-highlight { box-shadow: inset 0 0 0 2px var(--brand), 0 0 0 6px color-mix(in srgb, var(--brand) 18%, transparent); transition: box-shadow .8s; }
+  ```
+- **Mobile**: usa `useIsMobile()`. Quando true, preview vai pra `Sheet side="bottom"` acessível pelo botão flutuante; sidebar continua sendo Select.
+- **Performance**: o iframe não recarrega ao mudar de painel — só envia `scroll-to`. Recarrega só quando `settings_changed` global (igual hoje) ou quando o token muda.
 
 ## Fora do escopo
 
-- Sub-abas Acesso e Pré-visualização (não foram apontadas como problema).
-- Adicionar novos campos editáveis (mantemos exatamente os mesmos do schema atual).
+- Reescrever a tab Escopo (continua funcionando; apenas reaproveitamos seu state).
+- Drag-and-drop de itens do escopo (mantém ordem do banco).
+- Editor de markdown rico (mantemos `Textarea` com hint sobre markdown, igual hoje).
