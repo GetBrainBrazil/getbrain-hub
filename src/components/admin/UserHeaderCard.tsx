@@ -88,6 +88,12 @@ export function UserHeaderCard({ userId, fullName, email, avatarUrl, cargoNome, 
           <p className="text-xs text-muted-foreground mt-2">JPG ou PNG. Máx 2MB.</p>
         </div>
       </div>
+      <AvatarCropDialog
+        open={!!pendingFile}
+        file={pendingFile}
+        onCancel={handleCancelCrop}
+        onConfirm={handleConfirmCrop}
+      />
     </Card>
   );
 }
