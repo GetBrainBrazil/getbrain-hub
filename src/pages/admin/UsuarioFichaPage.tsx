@@ -318,7 +318,7 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome</Label>
-                <Input value={emerNome} onChange={e => setEmerNome(e.target.value)} disabled={!canEdit} />
+                <Input value={emerNome} onChange={e => setEmerNome(e.target.value)} maxLength={100} disabled={!canEdit} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Telefone</Label>
@@ -327,7 +327,7 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
             </div>
             <div className="border-t pt-5">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Plano de Saúde</Label>
-              <Input value={planoSaude} onChange={e => setPlanoSaude(e.target.value)} placeholder="Ex: Unimed, SulAmérica" disabled={!canEdit} />
+              <Input value={planoSaude} onChange={e => setPlanoSaude(e.target.value)} placeholder="Ex: Unimed, SulAmérica" maxLength={60} disabled={!canEdit} />
             </div>
             <div className="flex justify-end pt-2 border-t">
               <Button onClick={saveEndereco} disabled={!canEdit || updatePerfil.isPending} className="gap-2 w-full sm:w-auto">
