@@ -1,115 +1,94 @@
-## Objetivo
 
-Preencher o projeto **Sunbright Engenharia (PRJ-0015)** como se fosse criado e gerenciado manualmente — populando **todos os submódulos** (Visão Geral, Escopo, Operacional, Tarefas, Marcos, Dependências, Riscos, Integrações) com dados realistas extraídos do DEAL-008, do que já está no projeto e completando o que falta com inferências coerentes.
+## Contexto
 
-Importante: este é um **trabalho de dados** sobre o registro existente (PRJ-0015). **Nada de UI/lógica nova** será alterado. Tudo é feito via migrations (UPDATE/INSERT) porque o sandbox só tem permissão de leitura/insert direto.
+Hoje em **`/projetos/:id`** (`ProjetoDetalhe.tsx`) **não existe** nenhuma aba de propostas ou anexos. As abas atuais são: Visão Geral, Escopo, Operacional, Tarefas, Marcos, Dependências, Riscos, Integrações, Atividade.
 
----
+A área "Descoberta | Proposta & Anexos" do print **vive no CRM** (`PropostaTabContent` em `src/components/crm/proposta/`). Como o projeto sempre nasce de um deal (campo `source_deal_id` em `projects`), dá pra trazer toda essa visão pro detalhe do projeto — mas em **modo leitura/consulta**, com o padrão visual novo dos cards de projeto (header denso, cards com bordas suaves, totais à direita em fonte mono, badges de status), e listando **todas** as versões de proposta vinculadas, não só a ativa.
 
-## O que está hoje em PRJ-0015
+## O que vai ser feito
 
-- Status: `aceito` | Tipo: `sistema_personalizado` | Cliente: Sunbright Engenharia
-- `business_context`, `deliverables` (7), `premises` (4), `identified_risks` (4), `technical_stack` (2), `acceptance_criteria` (6) — **OK**
-- `commercial_context` JSON: dor + solução atual + confiança de estimativa — **OK** (já reorganizado)
-- **Faltando** no projeto: `contract_value`, `installments_count`, `start_date`, `estimated_delivery_date`, `description`, `notes`, `primary_contact_person_id`, `token_budget_brl`, `scope_in`, `scope_out`
-- **Vazias**: `project_milestones`, `project_dependencies`, `project_risks`, `project_integrations`, `project_actors`, `maintenance_contracts`
+### 1. Nova aba "Propostas & Anexos" em ProjetoDetalhe
 
-Dados disponíveis no DEAL-008 a aproveitar:  
-contrato R$ 4.000 implantação + R$ 600 MRR (`on_delivery`), 7 parcelas com 1ª em 08/06/2026, contato Vanessa, custo extra Z-API R$ 100/mês, complexidade 3, MRR trigger `on_delivery`.
+Adicionar entre **Operacional** e **Tarefas**, com contador = nº de propostas vinculadas.
 
----
+```
+Visão Geral · Escopo · Operacional · Propostas (3) · Tarefas · Marcos · ...
+```
 
-## Plano de preenchimento
+### 2. Componente `AbaPropostas` (novo, em `src/components/projetos/`)
 
-### 1. Tabela `projects` — completar campos do header e da Visão Geral
+Estrutura visual seguindo o padrão dos outros cards do projeto:
 
-UPDATE em PRJ-0015:
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Propostas comerciais                       [Abrir editor →] │
+│ Todas as versões geradas pra este projeto                   │
+├─────────────────────────────────────────────────────────────┤
+│ ╭─ PROP-0006  ● Convertida           TOTAL R$ 4.000  MRR 600 ╮│
+│ │  Sunbright Energia Solar                                   │
+│ │  Enviada 02/05/26 · Aceita 02/05/26 · Validade 30/05/26    │
+│ │  [Ver PDF] [Página pública] [Editor completo]              │
+│ ╰────────────────────────────────────────────────────────────╯│
+│ ╭─ PROP-0005  ○ Recusada (v anterior)  R$ 3.500              ╮│
+│ │  ...                                                        │
+│ ╰────────────────────────────────────────────────────────────╯│
+└─────────────────────────────────────────────────────────────┘
 
-- `contract_value = 4000`, `installments_count = 7`
-- `start_date = 2026-05-05`, `estimated_delivery_date = 2026-07-15`
-- `primary_contact_person_id` = Vanessa (3d147a48…)
-- `token_budget_brl = 150` (consistente com escopo IA conservador)
-- `description`: parágrafo curto descrevendo o produto (CRM + WhatsApp + Agentes IA + Analytics)
-- `notes`: observações operacionais (cliente embrionário, foco em SDR e pós-venda)
-- `scope_in`: bullets do que está incluso (resumido a partir de `deliverables`)
-- `scope_out`: bullets do que NÃO está incluso (treinamento presencial, integração com ERPs, migração de base, etc.)
+┌─ Organograma do cliente ────────────────────────────────────┐
+│ [thumbnail clicável → abre original]                        │
+│ Herdado do deal #DEAL-008                                   │
+└─────────────────────────────────────────────────────────────┘
 
-### 2. `maintenance_contracts` — criar contrato de manutenção
+┌─ Mockup BETA ──────────────────────────────────────────────┐
+│ Link: https://preview.lovable.app/...     [↗ Abrir]         │
+│ Galeria de prints (4):                                      │
+│ [img] [img] [img] [img]                                     │
+└─────────────────────────────────────────────────────────────┘
+```
 
-INSERT 1 linha:
+**Comportamento:**
+- Lista **todas** as propostas onde `proposals.deal_id = project.source_deal_id` (não só a ativa).
+- Cada card de proposta mostra: código, status efetivo (usando `effectiveStatus` + `OrcamentoStatusBadge`), total + mensal em fonte mono à direita, datas-chave (criada/enviada/aceita/recusada), validade.
+- Ações por proposta: **Ver PDF** (signed URL via `openProposalPdf`), **Página pública** (abre `/p/:token` em nova aba quando há `access_token`), **Editor completo** (`/financeiro/orcamentos/:id/editar`).
+- A versão ativa (mais recente, status ≠ recusada) ganha destaque visual (borda `accent`, badge "Ativa").
+- Versões antigas ficam recolhidas em `<details>` "Versões anteriores (N)" se houver mais de 1.
+- Estado vazio: card pontilhado "Este projeto ainda não tem proposta vinculada" + link pro deal de origem.
 
-- `monthly_fee = 600`, `token_budget_brl = 150`, `hours_budget = 8`
-- `start_date = 2026-07-15` (alinhado com entrega + trigger `on_delivery`)
-- `status = 'active'`
-- `notes`: "MRR começa na entrega. Inclui Z-API R$ 100/mês como custo de integração."
+**Organograma e Mockups** são reaproveitados do deal (somente leitura aqui — a edição continua no CRM, com link "Editar no deal #CODE"). Usa o mesmo `AnexoUploader` em modo display, ou simplesmente renderiza thumbnails clicáveis.
 
-### 3. `project_milestones` — criar 5 marcos com cobrança parcelada
+### 3. Hook novo `useProjectProposals(projectId)`
 
-Sequência alinhada com 7 parcelas de R$ 571,43 (4000/7), spread por marco:
+Em `src/hooks/projetos/useProjectProposals.ts` — `useQuery` que:
+1. Busca `projects.source_deal_id` se não vier do contexto.
+2. Faz `select` em `proposals` filtrando por `deal_id`, ordenado por `created_at desc`, ignorando `deleted_at`.
+3. Retorna também o organograma_url e mockup do deal num único payload.
+4. Chave de cache: `["project_proposals", projectId]` — invalidada via `invalidateProposalCaches` do `cacheInvalidation.ts` (já existe).
 
+### 4. Modernização visual (padrão atual de /projetos)
 
-| #   | Título                                     | Data       | Status       | Cobra? | Valor                |
-| --- | ------------------------------------------ | ---------- | ------------ | ------ | -------------------- |
-| 1   | Kickoff e descoberta técnica               | 12/05/2026 | concluido    | sim    | 571,43               |
-| 2   | Setup base + integração WhatsApp Cloud API | 26/05/2026 | em_andamento | sim    | 571,43               |
-| 3   | Módulo CRM + base de leads                 | 16/06/2026 | planejado    | sim    | 1142,86 (2 parcelas) |
-| 4   | Agentes IA (SDR + pós-venda) treinados     | 30/06/2026 | planejado    | sim    | 1142,86 (2 parcelas) |
-| 5   | Analytics + monitoramento + go-live        | 15/07/2026 | planejado    | sim    | 571,43               |
+- Container externo: `rounded-lg border border-border bg-card`.
+- Header de seção com `SectionLabel` (uppercase 10px tracking) + descrição.
+- Totais em coluna à direita com `text-[10px] uppercase` em cima e `font-mono font-bold tabular-nums` embaixo (igual ao header da `PropostaCard` do CRM).
+- Botões: `size="sm" variant="outline"` com ícone à esquerda.
+- Sem qualquer edição inline aqui (o editor continua no `/financeiro/orcamentos/:id/editar`) — o objetivo dessa aba em projetos é **consulta + acesso rápido**.
+- Responsivo: cards empilham no mobile, ações viram bottom-sheet de ações via menu de 3 pontinhos quando largura < 640px.
 
+### 5. Detalhes técnicos
 
-### 4. `project_dependencies` — criar 4 dependências (vindas do cliente)
+**Arquivos novos:**
+- `src/components/projetos/AbaPropostas.tsx`
+- `src/hooks/projetos/useProjectProposals.ts`
 
-- Conta ativa Meta WhatsApp Cloud API (kind: `cliente`, blocking, expected 10/05)
-- Base de leads exportada/CSV (kind: `cliente`, blocking, expected 15/05)
-- Aprovação dos templates de mensagem WhatsApp (kind: `cliente`, blocking, expected 20/05)
-- Definição da hierarquia de usuários e permissões (kind: `cliente`, não-blocking, expected 22/05)
+**Arquivos editados:**
+- `src/pages/ProjetoDetalhe.tsx` — adicionar entry no array de tabs (linha ~1221) + novo `<TabsContent value="proposals">`.
 
-### 5. `project_risks` — criar 4 riscos (mesmos do `identified_risks`, agora estruturados)
+**Sem migration.** Schema atual já tem `projects.source_deal_id`, `proposals.deal_id`, `proposals.access_token` e `deals.organograma_url / mockup_url / mockup_screenshots`. Tudo o que precisamos já está modelado.
 
+**Edge cases tratados:**
+- Projeto sem `source_deal_id` (criado manualmente) → empty state explicando que propostas só aparecem aqui quando o projeto vem de um deal.
+- Proposta sem `pdf_url` → botão "Ver PDF" desabilitado com tooltip "Gere o PDF no editor completo".
+- `access_token` ausente → botão "Página pública" oculto.
 
-| Risco                            | Severidade | Probabilidade | Status      | Mitigação                                       |
-| -------------------------------- | ---------- | ------------- | ----------- | ----------------------------------------------- |
-| API WhatsApp instável/bloqueios  | alta       | media         | monitorando | Fallback via segundo número + retry com backoff |
-| Base de leads desatualizada      | media      | alta          | monitorando | Validação prévia + enriquecimento amostral      |
-| Ajuste fino dos agentes demorado | media      | media         | monitorando | Sprints semanais de tuning + métricas A/B       |
-| Aprovação de templates WhatsApp  | alta       | media         | monitorando | Submeter templates já no kickoff                |
+## Confirmação
 
-
-### 6. `project_integrations` — criar 3 integrações
-
-
-| Nome                | Provider | Status | Custo/mês | Propósito                                   |
-| ------------------- | -------- | ------ | --------- | ------------------------------------------- |
-| WhatsApp Cloud API  | Meta     | ativa  | 0         | Disparo e recebimento de mensagens          |
-| Z-API               | Z-API    | ativa  | 100       | Camada de envio (já no extra_costs do deal) |
-| OpenAI / Lovable AI | OpenAI   | ativa  | 150       | Agentes generativos SDR + pós-venda         |
-
-
-### 7. `project_actors` — alocar Daniel como owner
-
-INSERT 1 linha: Daniel (owner do deal: 79f250f2…), `role_in_project = responsavel_tecnico`, `allocation_percent = 50`, `started_at = 2026-05-05`.
-
-### 8. Limpar `commercial_context`
-
-Adicionar `decision_makers` ("Vanessa — sócia") e ajustar `pricing_rationale` ("R$ 4k implantação em 7x + R$ 600 MRR after delivery; Z-API R$ 100/mês custo passado adiante via MRR.") para a Visão Geral ficar redonda.
-
----
-
-## Detalhes técnicos
-
-- Tudo é executado em **uma migration** (`20260502_seed_prj0015_full.sql`) com UPDATEs e INSERTs idempotentes (`ON CONFLICT DO NOTHING` onde aplicável; usar UUIDs determinísticos via `gen_random_uuid()` aceitável já que a tabela está vazia).
-- Não toca em schema, não muda RLS, não cria função.
-- `organization_id` em todas as inserções: `00000000-0000-0000-0000-000000000001` (mesma do projeto).
-- Não mexe em `crm.deals` — o deal já está fechado e correto.
-- Após rodar, refresh de `/projetos/a8b4179b…` deve mostrar todas as abas preenchidas e o card Operacional (que lê `project_metrics`) com KPIs financeiros consistentes.
-
-## Validação pós-execução
-
-Rodar SELECT de contagem nas 6 sub-tabelas + leitura do projeto e confirmar:
-
-- Marcos: 5 | Dependências: 4 | Riscos: 4 | Integrações: 3 | Atores: 1 | Manutenção: 1
-- `contract_value=4000`, `installments_count=7`, `primary_contact_person_id` setado
-- Aba Operacional mostra MRR R$ 600 e custo integração R$ 250/mês  
-  
-  
-Fazer isso para todos os card que forem dados como ganho, quero que esse processo de automação seja feito sempre, seguindo as correções que fizemos aqui com a sunbtright
+Você falou "**dentro de /projetos**" e a screenshot é do CRM — vou implementar essa visão **dentro do detalhe do projeto** (`/projetos/:id`), reaproveitando os dados do deal de origem. Se você quiser também redesenhar a versão do CRM (`PropostaTabContent`) com o mesmo padrão visual, me avisa que eu replico — mas pelo texto da sua mensagem entendi que o pedido é trazer essa área pra projetos.
