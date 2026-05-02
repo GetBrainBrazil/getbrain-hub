@@ -339,6 +339,7 @@ export default function OrcamentoEditarDetalhe() {
             onPreviewPdf={() => setPreviewPdfOpen(true)}
             onOpenSendDialog={handleOpenSendDialog}
             onGoToTab={(t) => isProposalTabKey(t) && handleTabChange(t)}
+            onOpenPasswordDialog={() => setPwdDialogOpen(true)}
             setField={setField}
             setItems={setItems}
             dealClientLink={(data as any).deal || null}
