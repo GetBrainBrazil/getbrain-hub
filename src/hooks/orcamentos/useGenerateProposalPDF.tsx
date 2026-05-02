@@ -19,7 +19,18 @@ import {
 import { getTemplate } from "@/lib/orcamentos/templates";
 import type { TemplateKey } from "@/lib/orcamentos/templates";
 import { mapProposalToTemplateData } from "@/lib/orcamentos/mapProposalToTemplateData";
+import { generateQrDataUrl } from "@/lib/orcamentos/generateQrDataUrl";
 import { invalidateProposalCaches } from "@/lib/cacheInvalidation";
+
+/**
+ * Decide se o PDF deve sair com watermark "RASCUNHO" baseado no status.
+ * `rascunho` e `recusada` ganham marca d'água; demais ficam limpos.
+ */
+function watermarkFor(proposal: any): "draft" | null {
+  const status = proposal?.status;
+  if (status === "rascunho" || status === "recusada") return "draft";
+  return null;
+}
 
 interface Args {
   proposalId: string;
@@ -80,8 +91,10 @@ export function useGenerateProposalPDF() {
         // 1) Mapear dados → shape do template
         const data = mapProposalToTemplateData(proposal);
 
-        // 2) URL pública (preparada pro QR code do 10D-2). Apenas best-effort.
+        // 2) URL pública + QR + watermark conforme status
         const accessUrl = `${window.location.origin}/p/${proposalId}`;
+        const qrCodeDataUrl = await generateQrDataUrl(accessUrl);
+        const watermark = watermarkFor(proposal);
 
         // 3) Render React-PDF → blob
         const blob = await pdf(
@@ -89,6 +102,8 @@ export function useGenerateProposalPDF() {
             data={data}
             templateVersion={templateVersion}
             proposalAccessUrl={accessUrl}
+            qrCodeDataUrl={qrCodeDataUrl}
+            watermark={watermark}
           />,
         ).toBlob();
 
@@ -183,11 +198,15 @@ export async function renderProposalPdfPreview(
   const template = getTemplate(templateKey ?? proposal?.template_key);
   const data = mapProposalToTemplateData(proposal);
   const accessUrl = `${window.location.origin}/p/${proposal.id}`;
+  const qrCodeDataUrl = await generateQrDataUrl(accessUrl);
+  const watermark = watermarkFor(proposal);
   const blob = await pdf(
     <template.PDFComponent
       data={data}
       templateVersion={template.config.version}
       proposalAccessUrl={accessUrl}
+      qrCodeDataUrl={qrCodeDataUrl}
+      watermark={watermark}
     />,
   ).toBlob();
   return { blob, url: URL.createObjectURL(blob) };

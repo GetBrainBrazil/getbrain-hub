@@ -12,13 +12,12 @@ import {
   useDuplicateProposal,
   useUpdateProposal,
 } from "@/hooks/orcamentos/useUpdateProposal";
-import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
+import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
 import { OrcamentoKPICards } from "@/components/orcamentos/OrcamentoKPICards";
 import { OrcamentoTabela } from "@/components/orcamentos/OrcamentoTabela";
 import { OrcamentoKanban } from "@/components/orcamentos/OrcamentoKanban";
 
 import { NovoOrcamentoModal } from "@/components/orcamentos/NovoOrcamentoModal";
-import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import type { ProposalStatus } from "@/lib/orcamentos/calculateTotal";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
@@ -52,7 +51,6 @@ export default function Orcamentos() {
     "kanban"
   );
   const [novoOpen, setNovoOpen] = useState(false);
-  const [pdfRow, setPdfRow] = useState<any | null>(null);
 
   // No Kanban ignoramos o filtro de status (Kanban mostra tudo, dividido por coluna).
   // O filtro só age na tabela.
@@ -61,28 +59,12 @@ export default function Orcamentos() {
   const update = useUpdateProposal();
   const del = useDeleteProposal();
   const dup = useDuplicateProposal();
-  const gen = useGeneratePDF();
+  const gen = useGenerateProposalPDF();
 
   const isEmpty = useMemo(() => !isLoading && data.length === 0, [
     isLoading,
     data,
   ]);
-
-  function buildSnapshot(row: any) {
-    return {
-      client_company_name: row.client_company_name,
-      client_logo_url: row.client_logo_url,
-      client_city: row.client_city,
-      scope_items: row.scope_items,
-      maintenance_monthly_value: row.maintenance_monthly_value,
-      maintenance_description: row.maintenance_description ?? null,
-      implementation_days: row.implementation_days ?? 30,
-      validation_days: row.validation_days ?? 7,
-      considerations: row.considerations || [],
-      valid_until: row.valid_until,
-      template_key: row.template_key || "inovacao_tecnologica",
-    };
-  }
 
   async function handleAction(row: any, action: string) {
     if (action === "edit") {
@@ -99,18 +81,12 @@ export default function Orcamentos() {
       return;
     }
     if (action === "download") {
-      setPdfRow(row);
-      await new Promise((r) => setTimeout(r, 50));
-      gen.mutate(
-        {
-          proposalId: row.id,
-          code: row.code,
-          clientName: row.client_company_name,
-          elementId: `pdf-list-${row.id}`,
-          snapshot: buildSnapshot(row),
-        },
-        { onSettled: () => setPdfRow(null) }
-      );
+      gen.mutate({
+        proposalId: row.id,
+        proposal: row,
+        templateKey: row.template_key,
+        triggerDownload: true,
+      });
       return;
     }
     if (action === "mark-sent") {
@@ -262,33 +238,6 @@ export default function Orcamentos() {
 
       <NovoOrcamentoModal open={novoOpen} onOpenChange={setNovoOpen} />
       {confirmDialog}
-      {/* Render off-screen template for PDF generation */}
-      {pdfRow && (
-        <div
-          style={{
-            position: "fixed",
-            left: "-99999px",
-            top: 0,
-            pointerEvents: "none",
-          }}
-        >
-          <ProposalPDFTemplate
-            domId={`pdf-list-${pdfRow.id}`}
-            proposal={{
-              client_company_name: pdfRow.client_company_name,
-              client_logo_url: pdfRow.client_logo_url,
-              scope_items: pdfRow.scope_items || [],
-              maintenance_monthly_value: pdfRow.maintenance_monthly_value,
-              maintenance_description: pdfRow.maintenance_description ?? null,
-              implementation_days: pdfRow.implementation_days ?? 30,
-              validation_days: pdfRow.validation_days ?? 7,
-              considerations: pdfRow.considerations || [],
-              valid_until: pdfRow.valid_until,
-              template_key: pdfRow.template_key,
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }

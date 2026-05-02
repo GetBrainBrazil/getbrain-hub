@@ -12,6 +12,6 @@ export const config: TemplateConfig = {
   label: "Inovação Tecnológica",
   description:
     "Proposta padrão GetBrain — capa dark, 7 páginas A4, focada em transformação digital",
-  version: "2.0.0",
+  version: "2.1.0",
   pageCount: 7,
 };

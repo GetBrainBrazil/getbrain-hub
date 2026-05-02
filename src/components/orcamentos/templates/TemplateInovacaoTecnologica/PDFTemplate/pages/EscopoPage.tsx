@@ -16,6 +16,7 @@ import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { PDFHeader } from "../components/PDFHeader";
 import { PDFFooter } from "../components/PDFFooter";
+import { Watermark } from "../components/Watermark";
 import { Bullet } from "../components/Bullet";
 import { formatBRL } from "../components/format";
 import { styles, colors, spacing, fontSizes } from "../styles";
@@ -90,9 +91,10 @@ const escopoStyles = StyleSheet.create({
 
 interface Props {
   data: ProposalDataForTemplate;
+  isDraft?: boolean;
 }
 
-export function EscopoPage({ data }: Props) {
+export function EscopoPage({ data, isDraft }: Props) {
   return (
     <Page size="A4" style={styles.page}>
       <PDFHeader title="Escopo detalhado" />
@@ -157,6 +159,7 @@ export function EscopoPage({ data }: Props) {
       )}
 
       <PDFFooter />
+      {isDraft && <Watermark />}
     </Page>
   );
 }

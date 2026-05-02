@@ -6,6 +6,7 @@ import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { PDFHeader } from "../components/PDFHeader";
 import { PDFFooter } from "../components/PDFFooter";
+import { Watermark } from "../components/Watermark";
 import { styles, colors, spacing, fontSizes } from "../styles";
 
 const cronStyles = StyleSheet.create({
@@ -61,9 +62,10 @@ const cronStyles = StyleSheet.create({
 
 interface Props {
   data: ProposalDataForTemplate;
+  isDraft?: boolean;
 }
 
-export function CronogramaPage({ data }: Props) {
+export function CronogramaPage({ data, isDraft }: Props) {
   const impl = data.implementation_days ?? 30;
   const valid = data.validation_days ?? 7;
   const total = impl + valid;
@@ -138,6 +140,7 @@ export function CronogramaPage({ data }: Props) {
       </View>
 
       <PDFFooter />
+      {isDraft && <Watermark />}
     </Page>
   );
 }

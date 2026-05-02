@@ -7,6 +7,7 @@ import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { PDFHeader } from "../components/PDFHeader";
 import { PDFFooter } from "../components/PDFFooter";
+import { Watermark } from "../components/Watermark";
 import { styles, colors, spacing, fontSizes } from "../styles";
 
 const considStyles = StyleSheet.create({
@@ -33,9 +34,10 @@ const considStyles = StyleSheet.create({
 
 interface Props {
   data: ProposalDataForTemplate;
+  isDraft?: boolean;
 }
 
-export function ConsideracoesPage({ data }: Props) {
+export function ConsideracoesPage({ data, isDraft }: Props) {
   return (
     <Page size="A4" style={styles.page}>
       <PDFHeader title="Considerações finais" />
@@ -53,6 +55,7 @@ export function ConsideracoesPage({ data }: Props) {
       ))}
 
       <PDFFooter />
+      {isDraft && <Watermark />}
     </Page>
   );
 }

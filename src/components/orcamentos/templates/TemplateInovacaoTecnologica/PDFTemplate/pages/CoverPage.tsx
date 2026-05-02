@@ -16,6 +16,7 @@ import logoGetBrain from "@/assets/logo-getbrain.svg";
 import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { colors, fontSizes, spacing } from "../styles";
 import { formatDateBR } from "../components/format";
+import { Watermark } from "../components/Watermark";
 
 const coverStyles = StyleSheet.create({
   page: {
@@ -146,9 +147,12 @@ const coverStyles = StyleSheet.create({
 
 interface Props {
   data: ProposalDataForTemplate;
+  qrCodeDataUrl?: string | null;
+  proposalAccessUrl?: string;
+  isDraft?: boolean;
 }
 
-export function CoverPage({ data }: Props) {
+export function CoverPage({ data, qrCodeDataUrl, proposalAccessUrl, isDraft }: Props) {
   return (
     <Page size="A4" style={coverStyles.page}>
       <View style={coverStyles.topBar}>
@@ -196,6 +200,16 @@ export function CoverPage({ data }: Props) {
           <Text style={[coverStyles.footerLabel, { marginTop: 6 }]}>Válida até</Text>
           <Text style={coverStyles.footerValue}>{formatDateBR(data.expires_at)}</Text>
         </View>
+        <View style={{ alignItems: "center" }}>
+          {qrCodeDataUrl ? (
+            <>
+              <Image src={qrCodeDataUrl} style={{ width: 70, height: 70, backgroundColor: "#fff", padding: 4, borderRadius: 4 }} />
+              <Text style={[coverStyles.footerLabel, { marginTop: 6, textAlign: "center" }]}>
+                Acesse a versão digital
+              </Text>
+            </>
+          ) : null}
+        </View>
         <View style={{ alignItems: "flex-end" }}>
           <Text style={coverStyles.footerLabel}>Documento</Text>
           <Text style={coverStyles.footerValue}>{data.code}</Text>
@@ -204,6 +218,9 @@ export function CoverPage({ data }: Props) {
           </Text>
         </View>
       </View>
+      {isDraft && <Watermark />}
+      {/* proposalAccessUrl reservado para futura página de QR dedicada */}
+      {proposalAccessUrl ? null : null}
     </Page>
   );
 }

@@ -7,6 +7,7 @@ import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { ABOUT_GETBRAIN_PARAGRAPHS } from "@/content/about-getbrain";
 import { PDFHeader } from "../components/PDFHeader";
 import { PDFFooter } from "../components/PDFFooter";
+import { Watermark } from "../components/Watermark";
 import { styles, colors, fontSizes, spacing } from "../styles";
 
 const empresaStyles = StyleSheet.create({
@@ -69,9 +70,10 @@ const METAS = [
 
 interface Props {
   data: ProposalDataForTemplate;
+  isDraft?: boolean;
 }
 
-export function EmpresaPage({ data: _data }: Props) {
+export function EmpresaPage({ data: _data, isDraft }: Props) {
   return (
     <Page size="A4" style={styles.page}>
       <PDFHeader title="A empresa" />
@@ -98,6 +100,7 @@ export function EmpresaPage({ data: _data }: Props) {
       </View>
 
       <PDFFooter />
+      {isDraft && <Watermark />}
     </Page>
   );
 }

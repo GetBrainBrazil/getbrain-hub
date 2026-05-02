@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Download, Send, X, Save, ZoomIn, ZoomOut, Loader2, KeyRound, Link2, Eye, Activity, FileText } from "lucide-react";
+import { ArrowLeft, Download, Send, X, Save, Loader2, KeyRound, Link2, Eye, Activity, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
-import { useGeneratePDF } from "@/hooks/orcamentos/useGeneratePDF";
 import { useGenerateProposalPDF } from "@/hooks/orcamentos/useGenerateProposalPDF";
 import { PreviewPdfDialog } from "@/components/orcamentos/PreviewPdfDialog";
+import { LivePdfPreview } from "@/components/orcamentos/LivePdfPreview";
 import { useProposalItems, useReplaceProposalItems } from "@/hooks/orcamentos/useProposalItems";
-import { ProposalPDFTemplate } from "@/components/orcamentos/ProposalPDFTemplate";
 import { NotionItemsEditor } from "@/components/orcamentos/NotionItemsEditor";
 import { ConsiderationsEditor } from "@/components/orcamentos/ConsiderationsEditor";
 import { LogoUploader } from "@/components/orcamentos/LogoUploader";
@@ -44,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { listTemplates } from "@/lib/orcamentos/templates";
 
-const PDF_DOM_ID = "proposal-pdf-template-live";
+
 
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
 function canonicalToScopeItems(
@@ -65,7 +64,6 @@ export default function OrcamentoEditarDetalhe() {
   const { data: itemsRows } = useProposalItems(id);
   const replaceItems = useReplaceProposalItems();
   const update = useUpdateProposal();
-  const gen = useGeneratePDF();
   const genV2 = useGenerateProposalPDF();
   const [previewPdfOpen, setPreviewPdfOpen] = useState(false);
 
@@ -88,7 +86,7 @@ export default function OrcamentoEditarDetalhe() {
   const [painContext, setPainContext] = useState("");
   const [solutionOverview, setSolutionOverview] = useState("");
   const [clientBrandColor, setClientBrandColor] = useState<string>("");
-  const [zoom, setZoom] = useState(0.5);
+  
   const [dirty, setDirty] = useState(false);
   const [itemsDirty, setItemsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -139,31 +137,6 @@ export default function OrcamentoEditarDetalhe() {
     if (itemsDirty) return; // não sobrescreve edição em andamento
     setScopeItems(canonicalToScopeItems(itemsRows as any));
   }, [itemsRows, itemsDirty]);
-
-  const previewProposal = useMemo(
-    () => ({
-      client_company_name: clientName,
-      client_logo_url: clientLogoUrl,
-      scope_items: scopeItems,
-      maintenance_monthly_value: typeof maintenance === "number" ? maintenance : null,
-      maintenance_description: maintenanceDesc || null,
-      implementation_days: implementationDays,
-      validation_days: validationDays,
-      considerations,
-      valid_until: validUntil,
-    }),
-    [
-      clientName,
-      clientLogoUrl,
-      scopeItems,
-      maintenance,
-      maintenanceDesc,
-      implementationDays,
-      validationDays,
-      considerations,
-      validUntil,
-    ]
-  );
 
   function markDirty<T>(setter: (v: T) => void) {
     return (v: T) => {
@@ -836,51 +809,23 @@ export default function OrcamentoEditarDetalhe() {
           </div>
         </div>
 
-        {/* Preview (right) */}
-        <div className="overflow-y-auto bg-muted/30 p-4">
-          <div className="sticky top-0 z-10 mb-3 flex items-center justify-between bg-muted/30 backdrop-blur py-2">
+        {/* Preview (right) — PDF React-PDF ao vivo */}
+        <div className="bg-muted/30 p-4 flex flex-col">
+          <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Pré-visualização (3 páginas A4)
+              Pré-visualização ao vivo
             </span>
-            <div className="flex items-center gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => setZoom((z) => Math.max(0.3, +(z - 0.1).toFixed(2)))}
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </Button>
-              <span className="text-xs tabular-nums w-12 text-center">
-                {Math.round(zoom * 100)}%
-              </span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => setZoom((z) => Math.min(1, +(z + 0.1).toFixed(2)))}
-              >
-                <ZoomIn className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            <span className="text-[10px] text-muted-foreground">
+              Atualiza 500ms após cada edição
+            </span>
           </div>
-
-          <div
-            style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: "top center",
-              width: "210mm",
-              margin: "0 auto",
-            }}
-            className="shadow-2xl"
-          >
-            <ProposalPDFTemplate
-              domId={PDF_DOM_ID}
-              proposal={previewProposal}
+          <div className="flex-1 min-h-[600px]">
+            <LivePdfPreview
+              proposal={{ ...data, ...buildPreviewProposal() }}
+              templateKey={templateKey}
+              proposalKey={JSON.stringify(buildPreviewProposal())}
             />
           </div>
-          {/* Spacer para o scroll alcançar o final mesmo escalado */}
-          <div style={{ height: `${297 * 3 * zoom}mm` }} aria-hidden />
         </div>
       </div>
       {confirmDialog}

@@ -2,7 +2,7 @@
  * PDFTemplate "Inovação Tecnológica" — Document React-PDF.
  *
  * Estrutura de 7 páginas A4:
- *   1. Cover — capa dark com logo, título e cliente
+ *   1. Cover — capa dark com logo, título, cliente e QR code
  *   2. Empresa — institucional GetBrain
  *   3. Proposta — boas-vindas + resumo executivo + contexto + solução
  *   4. Escopo — items detalhados com deliverables/critérios/dependências
@@ -10,9 +10,7 @@
  *   6. Investimento — tabela de valores + manutenção + validade
  *   7. Considerações — apenas se houver itens
  *
- * Polimento visual completo (capa premium, sumário com índice clicável,
- * QR code, watermark RASCUNHO, gráficos de cronograma, refinamento
- * tipográfico) fica para o 10D-2.
+ * 10D-2: watermark "RASCUNHO" em todas as páginas quando `watermark="draft"`.
  */
 
 import { Document } from "@react-pdf/renderer";
@@ -28,10 +26,13 @@ import { ConsideracoesPage } from "./pages/ConsideracoesPage";
 export function PDFTemplateInovacaoTecnologica({
   data,
   templateVersion,
-  proposalAccessUrl: _proposalAccessUrl,
+  proposalAccessUrl,
+  watermark,
+  qrCodeDataUrl,
 }: PDFTemplateProps) {
   const hasConsiderations =
     Array.isArray(data.considerations) && data.considerations.length > 0;
+  const isDraft = watermark === "draft";
 
   return (
     <Document
@@ -41,14 +42,18 @@ export function PDFTemplateInovacaoTecnologica({
       keywords={`proposta, getbrain, ${data.client_name}, ${templateVersion}`}
       creator={`GetBrain Hub · template inovacao_tecnologica@${templateVersion}`}
     >
-      <CoverPage data={data} />
-      <EmpresaPage data={data} />
-      <PropostaPage data={data} />
-      <EscopoPage data={data} />
-      <CronogramaPage data={data} />
-      <InvestimentoPage data={data} />
-      {hasConsiderations && <ConsideracoesPage data={data} />}
-      {/* QR code page será adicionada no 10D-2 (usa proposalAccessUrl) */}
+      <CoverPage
+        data={data}
+        qrCodeDataUrl={qrCodeDataUrl}
+        proposalAccessUrl={proposalAccessUrl}
+        isDraft={isDraft}
+      />
+      <EmpresaPage data={data} isDraft={isDraft} />
+      <PropostaPage data={data} isDraft={isDraft} />
+      <EscopoPage data={data} isDraft={isDraft} />
+      <CronogramaPage data={data} isDraft={isDraft} />
+      <InvestimentoPage data={data} isDraft={isDraft} />
+      {hasConsiderations && <ConsideracoesPage data={data} isDraft={isDraft} />}
     </Document>
   );
 }
