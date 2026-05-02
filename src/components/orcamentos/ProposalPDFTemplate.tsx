@@ -1,5 +1,7 @@
-import { getTemplate, type TemplateKey } from "@/lib/orcamentos/templates";
-import type { TemplateProposalShape } from "./templates/TemplateInovacaoTecnologica";
+import {
+  TemplateInovacaoTecnologica,
+  type TemplateProposalShape,
+} from "./templates/TemplateInovacaoTecnologica";
 
 interface Props {
   proposal: TemplateProposalShape & { template_key?: string | null };
@@ -8,15 +10,16 @@ interface Props {
 }
 
 /**
- * Container roteador: escolhe o template a renderizar conforme `template_key`.
- * Adicionar template novo = registrar em src/lib/orcamentos/templates.ts.
+ * Container legado usado pelo fluxo html2pdf (10B). O novo fluxo (10D-1) usa
+ * `@react-pdf/renderer` via registry de templates em `src/lib/orcamentos/templates.ts`.
+ *
+ * Hoje só há um template legado disponível: `TemplateInovacaoTecnologica`.
+ * Quando o html2pdf for removido, este arquivo pode ser deletado.
  */
 export function ProposalPDFTemplate({ proposal, domId = "proposal-pdf-template" }: Props) {
-  const template = getTemplate(proposal.template_key as TemplateKey | undefined);
-  const Component = template.WebComponent;
   return (
     <div id={domId} style={{ backgroundColor: "#fff" }}>
-      <Component proposal={proposal} />
+      <TemplateInovacaoTecnologica proposal={proposal} />
     </div>
   );
 }
