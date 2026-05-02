@@ -361,10 +361,7 @@ function PasswordGate(props: {
       </div>
 
       <header className="relative px-6 py-6 flex items-center gap-2">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-sm">
-          G
-        </div>
-        <span className="font-bold tracking-tight text-lg">GetBrain</span>
+        <img src={logoGetBrain} alt="GetBrain" className="h-8 w-auto" draggable={false} />
       </header>
 
       <main className="relative flex-1 flex items-center justify-center px-4">
