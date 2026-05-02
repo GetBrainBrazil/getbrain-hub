@@ -608,6 +608,57 @@ export default function CrmPipeline() {
               </>
             )}
           </div>
+
+          {/* Linha 3: chips de filtros ativos (removíveis individualmente) */}
+          {hasAnyFilters && (
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-border/40 pt-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Aplicados:
+              </span>
+              {search.trim() && (
+                <FilterChip label={`"${search.trim()}"`} onRemove={() => setSearch('')} />
+              )}
+              {stageFilter.map((s) => (
+                <FilterChip
+                  key={`stage-${s}`}
+                  prefix="Estágio"
+                  label={DEAL_STAGE_LABEL[s]}
+                  onRemove={() => setStageFilter(stageFilter.filter((x) => x !== s))}
+                />
+              ))}
+              {projectTypeFilter.map((t) => (
+                <FilterChip
+                  key={`type-${t}`}
+                  prefix="Tipo"
+                  label={activeProjectTypes.find((x) => x.slug === t)?.name ?? t}
+                  onRemove={() => setProjectTypeFilter(projectTypeFilter.filter((x) => x !== t))}
+                />
+              ))}
+              {ownerFilter.map((o) => (
+                <FilterChip
+                  key={`owner-${o}`}
+                  prefix="Dono"
+                  label={actors.find((x) => x.id === o)?.display_name ?? o}
+                  onRemove={() => setOwnerFilter(ownerFilter.filter((x) => x !== o))}
+                />
+              ))}
+              {sourceFilter.map((s) => (
+                <FilterChip
+                  key={`src-${s}`}
+                  prefix="Origem"
+                  label={s === 'direto' ? 'Direto' : s}
+                  onRemove={() => setSourceFilter(sourceFilter.filter((x) => x !== s))}
+                />
+              ))}
+              {valueRange && (
+                <FilterChip
+                  prefix="Valor"
+                  label={`${formatCurrency(valueRange[0])} – ${formatCurrency(valueRange[1])}`}
+                  onRemove={() => setValueRange(null)}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* KPIs — apenas deals ativos. Implementação e MRR ficam separados. */}
