@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
       return json({ error: "invalid_password_length" }, 400);
     }
 
-    const hash = await bcrypt.hash(password, await bcrypt.genSalt(10));
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
     return json({ hash });
   } catch (e) {
     console.error("hash-proposal-password error", e);
