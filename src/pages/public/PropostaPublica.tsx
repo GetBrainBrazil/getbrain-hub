@@ -56,6 +56,8 @@ interface PublicProposal {
   first_installment_date: string | null;
   public_opening_letter: string | null;
   public_roadmap: { phases: Array<{ number: number; title: string; duration_days: number; outcome: string; deliverables: string[] }> } | null;
+  investment_layout: "total_first" | "installments_first";
+  show_investment_breakdown: boolean;
   items: Array<{
     id: string;
     description: string;
