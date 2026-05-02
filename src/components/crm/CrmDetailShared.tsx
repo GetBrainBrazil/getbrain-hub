@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -8,7 +8,10 @@ import { cn } from '@/lib/utils';
 import type { DealStage } from '@/types/crm';
 
 // Etapas em progresso, na ordem do funil.
-const PROGRESS_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando', 'gelado'];
+// `com_interesse` é o sinal do cliente vindo da proposta pública ("Quero avançar"),
+// renderizado com destaque verde para diferenciar dos passos empurrados pelo vendedor.
+const PROGRESS_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando', 'gelado', 'com_interesse'];
+const INTEREST_STAGE: DealStage = 'com_interesse';
 // Etapas finais — sempre visíveis no fim do stepper, com estilo distinto.
 const CLOSED_STAGES: DealStage[] = ['ganho', 'perdido'];
 
@@ -45,9 +48,10 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
   const progressIndex = PROGRESS_STAGES.indexOf(stage);
   const isClosedStage = CLOSED_STAGES.includes(stage);
 
-  const renderStep = (s: DealStage, opts: { isDone: boolean; isCurrent: boolean; kind: 'progress' | 'won' | 'lost' }) => {
+  const renderStep = (s: DealStage, opts: { isDone: boolean; isCurrent: boolean; kind: 'progress' | 'interest' | 'won' | 'lost' }) => {
     const { isDone, isCurrent, kind } = opts;
     const isFuture = !isDone && !isCurrent;
+    const isInterest = kind === 'interest';
     const isWon = kind === 'won';
     const isLost = kind === 'lost';
 
@@ -71,6 +75,10 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
               kind === 'progress' && isDone && 'border-accent bg-accent text-accent-foreground',
               kind === 'progress' && isCurrent && 'border-accent bg-accent text-accent-foreground ring-4 ring-accent/20',
               kind === 'progress' && isFuture && 'border-border bg-background',
+              // Com interesse — sinal do cliente, sempre verde
+              isInterest && isCurrent && 'border-success bg-success text-success-foreground ring-4 ring-success/25 animate-pulse',
+              isInterest && isDone && 'border-success bg-success text-success-foreground',
+              isInterest && isFuture && 'border-success/40 bg-background text-success',
               // Convertido (won)
               isWon && isCurrent && 'border-success bg-success text-success-foreground ring-4 ring-success/20',
               isWon && !isCurrent && 'border-success/40 bg-background text-success',
@@ -79,6 +87,7 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
               isLost && !isCurrent && 'border-destructive/40 bg-background text-destructive',
             )}>
               {kind === 'progress' && isDone && <Check className="h-3 w-3" strokeWidth={3} />}
+              {isInterest && <Sparkles className="h-3 w-3" strokeWidth={3} />}
               {isWon && <Check className="h-3 w-3" strokeWidth={3} />}
               {isLost && <X className="h-3 w-3" strokeWidth={3} />}
             </span>
@@ -87,6 +96,8 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
               isCurrent && 'font-semibold text-foreground',
               isDone && 'text-foreground/80',
               isFuture && 'text-muted-foreground',
+              isInterest && isCurrent && 'font-semibold text-success',
+              isInterest && !isCurrent && 'text-success/80',
               isWon && !isCurrent && 'text-success/80',
               isLost && !isCurrent && 'text-destructive/80',
             )}>
@@ -96,7 +107,11 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
         </TooltipTrigger>
         <TooltipContent side="bottom">
           <p className="font-medium">{DEAL_STAGE_LABEL[s]}</p>
-          <p className="text-xs text-muted-foreground">Probabilidade padrão: {DEAL_STAGE_PROBABILITY[s]}%</p>
+          {isInterest ? (
+            <p className="text-xs text-muted-foreground">Cliente clicou em "Quero avançar" na proposta pública.</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Probabilidade padrão: {DEAL_STAGE_PROBABILITY[s]}%</p>
+          )}
         </TooltipContent>
       </Tooltip>
     );
@@ -109,13 +124,20 @@ export function StageStepper({ stage, onChange }: { stage: DealStage; onChange?:
           const isDone = progressIndex >= 0 && i < progressIndex;
           const isCurrent = i === progressIndex;
           const showConnector = i < PROGRESS_STAGES.length - 1;
+          const stepKind = s === INTEREST_STAGE ? 'interest' : 'progress';
+          // Conector que precede o passo "Com Interesse" fica verde quando ativo,
+          // pra reforçar que o sinal vem do cliente.
+          const nextIsInterest = PROGRESS_STAGES[i + 1] === INTEREST_STAGE;
+          const connectorActive = i < progressIndex;
           return (
             <div key={s} className="flex flex-1 min-w-[110px] items-start gap-1">
-              {renderStep(s, { isDone, isCurrent, kind: 'progress' })}
+              {renderStep(s, { isDone, isCurrent, kind: stepKind })}
               {showConnector && (
                 <span className={cn(
                   'mt-[14px] h-1 flex-1 min-w-[16px] rounded-full transition',
-                  i < progressIndex ? 'bg-accent' : 'bg-border'
+                  connectorActive
+                    ? (nextIsInterest ? 'bg-success' : 'bg-accent')
+                    : (nextIsInterest ? 'bg-success/30' : 'bg-border'),
                 )} />
               )}
             </div>
