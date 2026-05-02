@@ -177,6 +177,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
   const [dirty, setDirty] = useState(false);
   const [itemsDirty, setItemsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [hydratedAt, setHydratedAt] = useState(0);
 
   const isInitialLoad = useRef(true);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -242,6 +243,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
     // libera o autosave após o ciclo de hidratação
     setTimeout(() => {
       isInitialLoad.current = false;
+      setHydratedAt(Date.now());
     }, 0);
   }, [detail.data?.id]);
 
@@ -384,7 +386,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, state]);
+  }, [dirty, state, hydratedAt]);
 
   // ----- Guards de saída/recarga -----
   // Mantém referências sempre atualizadas pra usar nos handlers globais
