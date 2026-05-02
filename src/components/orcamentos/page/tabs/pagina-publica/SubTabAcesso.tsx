@@ -1,14 +1,15 @@
 /**
- * SubTab "Acesso" — extrai o conteúdo original da TabPaginaPublica:
- * link de acesso, senha, mockup interativo. O preview ao vivo foi
- * movido para a sub-tab "Pré-visualização".
+ * SubTab "Acesso" — link público, senha, mockup interativo e, abaixo,
+ * a pré-visualização ao vivo da página pública.
  */
+import { forwardRef, useImperativeHandle, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Eye, Send } from "lucide-react";
 import { AcessoClienteCard } from "@/components/orcamentos/AcessoClienteCard";
+import { SubTabPreview } from "./SubTabPreview";
 import type { ProposalDetail } from "@/hooks/orcamentos/useProposalDetail";
 
 interface Props {
@@ -18,12 +19,26 @@ interface Props {
   onPreviewAsClient: () => void;
   onOpenSendDialog: () => void;
   onPasswordUpdated: () => void;
+  /** Bumped quando o conteúdo global muda → força reload do iframe */
+  previewBust?: number;
 }
 
-export function SubTabAcesso({
-  proposal, state, setField, onPreviewAsClient, onOpenSendDialog, onPasswordUpdated,
-}: Props) {
+export interface SubTabAcessoHandle {
+  scrollToPreview: () => void;
+}
+
+export const SubTabAcesso = forwardRef<SubTabAcessoHandle, Props>(function SubTabAcesso(
+  { proposal, state, setField, onPreviewAsClient, onOpenSendDialog, onPasswordUpdated, previewBust = 0 },
+  ref,
+) {
   const accessToken = (proposal as any).access_token as string | null;
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    scrollToPreview: () => {
+      previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+  }));
 
   return (
     <div className="space-y-4">
@@ -78,16 +93,15 @@ export function SubTabAcesso({
         </div>
       </Card>
 
-      {!accessToken && (
-        <Card className="p-6 text-center space-y-3">
-          <Eye className="h-8 w-8 text-muted-foreground/30 mx-auto" />
-          <p className="text-sm">A página pública ainda não foi gerada.</p>
-          <Button onClick={onOpenSendDialog} className="bg-accent hover:bg-accent/90">
-            <Send className="h-3.5 w-3.5 mr-1.5" />
-            Gerar e enviar
-          </Button>
-        </Card>
-      )}
+      {/* Pré-visualização ao vivo — embutida abaixo do mockup */}
+      <div ref={previewRef} className="scroll-mt-4">
+        <SubTabPreview
+          proposal={proposal}
+          onPreviewAsClient={onPreviewAsClient}
+          onOpenSendDialog={onOpenSendDialog}
+          externalRefreshKey={previewBust}
+        />
+      </div>
     </div>
   );
-}
+});
