@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
         expires_at: prop.expires_at ?? prop.valid_until,
         mockup_url: prop.mockup_url,
         sent_at: prop.sent_at,
+        recipient_first_name: recipientName,
         items: items ?? [],
       },
     });
