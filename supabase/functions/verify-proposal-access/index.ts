@@ -13,7 +13,7 @@ const corsHeaders = {
 
 const RATE_WINDOW_MIN = 15;
 const RATE_MAX_ATTEMPTS = 5;
-const JWT_TTL_SECONDS = 15 * 60;
+const JWT_TTL_SECONDS = 12 * 60 * 60;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
