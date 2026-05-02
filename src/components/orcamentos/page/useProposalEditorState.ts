@@ -54,6 +54,9 @@ export interface ProposalFormState {
   mrrDurationMonths: number | "";
   mrrDiscountValue: number | "";
   mrrDiscountMonths: number | "";
+  // Apresentação na página pública
+  investmentLayout: "total_first" | "installments_first";
+  showInvestmentBreakdown: boolean;
 }
 
 const EMPTY_STATE: ProposalFormState = {
@@ -83,6 +86,8 @@ const EMPTY_STATE: ProposalFormState = {
   mrrDurationMonths: "",
   mrrDiscountValue: "",
   mrrDiscountMonths: "",
+  investmentLayout: "total_first",
+  showInvestmentBreakdown: true,
 };
 
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
@@ -163,6 +168,9 @@ export function useProposalEditorState(proposalId: string | undefined) {
       mrrDiscountMonths: (data as any).mrr_discount_months
         ? Number((data as any).mrr_discount_months)
         : "",
+      investmentLayout: ((data as any).investment_layout as any) || "total_first",
+      showInvestmentBreakdown:
+        (data as any).show_investment_breakdown ?? true,
     });
     setDirty(false);
     setItemsDirty(false);
@@ -251,6 +259,8 @@ export function useProposalEditorState(proposalId: string | undefined) {
             typeof state.mrrDiscountMonths === "number" && state.mrrDiscountMonths > 0
               ? state.mrrDiscountMonths
               : null,
+          investment_layout: state.investmentLayout || "total_first",
+          show_investment_breakdown: !!state.showInvestmentBreakdown,
           ...extra,
         },
       });
@@ -342,6 +352,8 @@ export function useProposalEditorState(proposalId: string | undefined) {
         typeof state.mrrDiscountMonths === "number" && state.mrrDiscountMonths > 0
           ? state.mrrDiscountMonths
           : null,
+      investment_layout: state.investmentLayout,
+      show_investment_breakdown: state.showInvestmentBreakdown,
     };
   }, [detail.data, proposalId, state]);
 
