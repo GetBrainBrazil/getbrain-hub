@@ -117,7 +117,7 @@ export function useUploadAttachment() {
         .select()
         .single();
       if (error) throw error;
-      return data as ProposalAttachment;
+      return data as unknown as ProposalAttachment;
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["proposal_attachments", vars.proposalId] });
@@ -145,7 +145,7 @@ export function useUpdateAttachment() {
         .select()
         .single();
       if (error) throw error;
-      return data as ProposalAttachment;
+      return data as unknown as ProposalAttachment;
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["proposal_attachments", vars.proposalId] });
