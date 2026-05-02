@@ -463,6 +463,7 @@ export default function OrcamentoEditarDetalhe() {
         proposalCode={data.code}
         open={pwdDialogOpen}
         onOpenChange={setPwdDialogOpen}
+        onUpdated={() => detail.refetch?.()}
       />
       {detailsItemIdx !== null && (
         <ItemDetailsDialog
