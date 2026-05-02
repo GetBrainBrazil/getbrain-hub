@@ -385,9 +385,12 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Tenta parsear JSON pra full_content
+    // Tenta parsear JSON pra full_content e item_descriptions_batch
     let parsedContent: any = filterResult.filteredOutput;
-    if (body.generation_type === "full_content") {
+    if (
+      body.generation_type === "full_content" ||
+      body.generation_type === "item_descriptions_batch"
+    ) {
       try {
         // Remove possíveis cercas markdown
         const cleaned = filterResult.filteredOutput
