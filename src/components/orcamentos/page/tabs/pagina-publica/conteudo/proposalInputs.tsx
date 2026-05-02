@@ -1,5 +1,5 @@
 /**
- * Inputs por-proposta com autosave on blur + patch in-memory para o iframe.
+ * Inputs por-proposta com autosave enquanto digita + patch in-memory para o iframe.
  * Usado pelos painéis do grupo "Esta proposta" do CMS da página pública.
  */
 import { useEffect, useState } from "react";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface BaseProps<T extends string | number> {
   value: T;
-  /** Persiste no banco (chamado on blur, only-if-dirty). */
+  /** Persiste no estado/banco (debounced enquanto digita e flush no blur). */
   onCommit: (v: T) => void;
   /** Patch in-memory no iframe (debounced enquanto digita). */
   onLivePatch?: (v: T) => void;
@@ -38,11 +38,13 @@ export function ProposalCommitInput({
   useEffect(() => setV(value ?? ""), [value]);
 
   useEffect(() => {
-    if (!onLivePatch) return;
     if (v === value) return;
-    const id = setTimeout(() => onLivePatch(v), 250);
+    const id = setTimeout(() => {
+      onLivePatch?.(v);
+      onCommit(v);
+    }, 300);
     return () => clearTimeout(id);
-  }, [v, value, onLivePatch]);
+  }, [v, value, onLivePatch, onCommit]);
 
   return (
     <div className="relative">
@@ -51,6 +53,7 @@ export function ProposalCommitInput({
         onChange={(e) => setV(e.target.value)}
         onBlur={() => {
           if (v !== value) {
+            onLivePatch?.(v);
             onCommit(v);
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 1100);
