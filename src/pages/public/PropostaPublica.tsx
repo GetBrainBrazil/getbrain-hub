@@ -25,7 +25,7 @@ import ProposalChatBubble from "@/components/orcamentos/ProposalChatBubble";
 import { GETBRAIN_INFO, whatsappUrl as buildWhatsappUrl } from "@/lib/getbrain-info";
 import { DEFAULT_PAGE_SETTINGS, mergeWithDefaults, type PublicPageSettings } from "@/lib/publicPageDefaults";
 import { getIcon } from "@/lib/iconMap";
-import logoGetBrain from "@/assets/logo-getbrain.svg";
+import logoGetBrain from "@/assets/logo-getbrain.png";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -712,8 +712,13 @@ function ProposalView({
             onClick={() => scrollTo("hero")}
             className="flex items-center gap-3 min-w-0 group"
           >
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-sm text-white flex-shrink-0">
-              G
+            <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 p-1">
+              <img
+                src={logoGetBrain}
+                alt="GetBrain"
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
             </div>
             <div className="min-w-0 text-left">
               <div className="text-[9px] font-mono-display uppercase tracking-[0.3em] text-white/40 leading-none">
