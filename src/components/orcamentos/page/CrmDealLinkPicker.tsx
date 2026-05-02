@@ -12,7 +12,7 @@
  * Mostra um diff resumido antes de aplicar (campos sobrescritos vs vazios).
  */
 import { useEffect, useMemo, useState } from "react";
-import { Search, Link2, Unlink, Sparkles, Loader2, ChevronRight, X } from "lucide-react";
+import { Search, Link2, Unlink, Sparkles, Loader2, ChevronRight, X, ExternalLink, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
