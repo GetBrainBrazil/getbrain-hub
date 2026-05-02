@@ -181,6 +181,7 @@ const App = () => (
               <Route path="sistema/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
               <Route path="sistema/auditoria" element={<AdminAuditoriaPage />} />
               <Route path="integracoes/ia-propostas" element={<IaPropostasPage />} />
+            </Route>
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
             <Route path="/perfil" element={<ProtectedRoute><UsuarioFichaPage mode="perfil" /></ProtectedRoute>} />
