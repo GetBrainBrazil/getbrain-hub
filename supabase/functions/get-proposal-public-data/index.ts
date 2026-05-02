@@ -32,7 +32,8 @@ Deno.serve(async (req) => {
          executive_summary, pain_context, solution_overview,
          considerations, maintenance_description, maintenance_monthly_value,
          implementation_days, validation_days, expires_at, valid_until,
-         mockup_url, sent_at, status, template_slug, template_version`,
+         mockup_url, sent_at, status, template_slug, template_version,
+         company_id`,
       )
       .eq("id", proposalId)
       .is("deleted_at", null)
@@ -43,11 +44,27 @@ Deno.serve(async (req) => {
     const { data: items } = await admin
       .from("proposal_items")
       .select(
-        "id, description, quantity, unit_price, total, order_index, detailed_description, deliverables, acceptance_criteria, client_dependencies",
+        "id, description, quantity, unit_price, total, order_index, detailed_description, deliverables, acceptance_criteria, client_dependencies, long_description",
       )
       .eq("proposal_id", proposalId)
       .is("deleted_at", null)
       .order("order_index", { ascending: true });
+
+    // Contato primário (para personalização "Olá, X")
+    let recipientName: string | null = null;
+    if (prop.company_id) {
+      const { data: cps } = await admin
+        .from("company_people")
+        .select("is_primary_contact, ended_at, person:people(full_name, deleted_at)")
+        .eq("company_id", prop.company_id)
+        .is("ended_at", null)
+        .order("is_primary_contact", { ascending: false })
+        .limit(5);
+      const primary = (cps ?? []).find((r: any) => r.is_primary_contact && r.person && !r.person.deleted_at)
+        ?? (cps ?? []).find((r: any) => r.person && !r.person.deleted_at);
+      const fullName: string | undefined = (primary as any)?.person?.full_name;
+      if (fullName) recipientName = fullName.split(/\s+/)[0];
+    }
 
     return json({
       proposal: {
