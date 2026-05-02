@@ -329,5 +329,27 @@ function MoveDialogBody({
       </DialogHeader>
     );
   }
+  if (target === "visualizada") {
+    return (
+      <DialogHeader>
+        <DialogTitle>Marcar {row.code} como visualizada?</DialogTitle>
+        <DialogDescription>
+          Normalmente este status muda sozinho quando o cliente abre a página
+          pública. Forçar manualmente é útil só para correção de histórico.
+        </DialogDescription>
+      </DialogHeader>
+    );
+  }
+  if (target === "interesse_manifestado") {
+    return (
+      <DialogHeader>
+        <DialogTitle>Marcar {row.code} como "com interesse"?</DialogTitle>
+        <DialogDescription>
+          Indica que o cliente clicou em "Tenho interesse" na página pública.
+          Normalmente é automático — confirme apenas se for ajuste manual.
+        </DialogDescription>
+      </DialogHeader>
+    );
+  }
   return null;
 }
