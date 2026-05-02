@@ -144,7 +144,7 @@ export function UsuarioDialog({ open, onOpenChange, usuario }: Props) {
           </div>
           <div>
             <Label>Telefone</Label>
-            <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+            <Input value={telefone} onChange={e => setTelefone(formatPhoneBR(e.target.value))} placeholder="(11) 99999-9999" inputMode="tel" />
           </div>
           <div>
             <Label>{isEdit ? "Nova senha (opcional)" : "Senha *"}</Label>
