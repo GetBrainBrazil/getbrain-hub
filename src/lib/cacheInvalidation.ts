@@ -71,6 +71,7 @@ export function invalidateProjectCaches(qc: QueryClient, projectId?: string | nu
     qc.invalidateQueries({ queryKey: ["project-tasks", projectId] });
     qc.invalidateQueries({ queryKey: ["project-support", projectId] });
     qc.invalidateQueries({ queryKey: ["project-tokens", projectId] });
+    qc.invalidateQueries({ queryKey: ["project_proposals", projectId] });
   }
 }
 
