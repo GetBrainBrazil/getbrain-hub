@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
          mockup_url, sent_at, status, template_slug, template_version,
          company_id, implementation_value, installments_count,
          first_installment_date, public_opening_letter, public_roadmap,
-         investment_layout, show_investment_breakdown`,
+         investment_layout, show_investment_breakdown, created_by`,
       )
       .eq("id", proposalId)
       .is("deleted_at", null)
@@ -83,6 +83,35 @@ Deno.serve(async (req) => {
       if (fullName) recipientName = fullName.split(/\s+/)[0];
     }
 
+    // Autor da proposta (operador GetBrain). Aparece como assinatura na carta
+    // de abertura e no bloco de fechamento. Cargo é puxado do vínculo ativo
+    // mais recente em usuario_cargos → cargos.nome.
+    let author: { name: string; avatar_url: string | null; role_label: string } | null = null;
+    if ((prop as any).created_by) {
+      const [{ data: profile }, { data: cargoLink }] = await Promise.all([
+        admin
+          .from("profiles")
+          .select("full_name, avatar_url")
+          .eq("id", (prop as any).created_by)
+          .maybeSingle(),
+        admin
+          .from("usuario_cargos")
+          .select("cargo:cargos(nome)")
+          .eq("user_id", (prop as any).created_by)
+          .order("assigned_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      if (profile) {
+        const cargoNome = (cargoLink as any)?.cargo?.nome as string | undefined;
+        author = {
+          name: profile.full_name || "GetBrain",
+          avatar_url: profile.avatar_url ?? null,
+          role_label: cargoNome ? `${cargoNome} · GetBrain` : "GetBrain",
+        };
+      }
+    }
+
     return json({
       proposal: {
         code: prop.code,
@@ -113,6 +142,7 @@ Deno.serve(async (req) => {
         investment_layout: (prop as any).investment_layout ?? "total_first",
         show_investment_breakdown: (prop as any).show_investment_breakdown ?? true,
         items: items ?? [],
+        author,
       },
       page_settings: pageSettings ?? null,
     });

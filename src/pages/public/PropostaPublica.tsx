@@ -25,6 +25,7 @@ import ProposalChatBubble from "@/components/orcamentos/ProposalChatBubble";
 import { GETBRAIN_INFO, whatsappUrl as buildWhatsappUrl } from "@/lib/getbrain-info";
 import { DEFAULT_PAGE_SETTINGS, mergeWithDefaults, type PublicPageSettings } from "@/lib/publicPageDefaults";
 import { getIcon } from "@/lib/iconMap";
+import logoGetBrain from "@/assets/logo-getbrain.svg";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -70,6 +71,12 @@ interface PublicProposal {
     acceptance_criteria: string[];
     client_dependencies: string[];
   }>;
+  /** Autor da proposta (operador GetBrain). Pode ser null se created_by sumiu. */
+  author: {
+    name: string;
+    avatar_url: string | null;
+    role_label: string;
+  } | null;
 }
 
 function formatBRL(n: number): string {
@@ -354,10 +361,7 @@ function PasswordGate(props: {
       </div>
 
       <header className="relative px-6 py-6 flex items-center gap-2">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-sm">
-          G
-        </div>
-        <span className="font-bold tracking-tight text-lg">GetBrain</span>
+        <img src={logoGetBrain} alt="GetBrain" className="h-8 w-auto" draggable={false} />
       </header>
 
       <main className="relative flex-1 flex items-center justify-center px-4">
@@ -902,12 +906,14 @@ function ProposalView({
               ) : null}
             </div>
             <div className="reveal mt-12 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white">
-                D
-              </div>
+              <AuthorAvatar author={proposal.author} size={48} className="shadow-md" />
               <div>
-                <div className="text-sm font-medium text-slate-900">Daniel</div>
-                <div className="text-xs text-muted-ink">Fundador · GetBrain</div>
+                <div className="text-sm font-medium text-slate-900">
+                  {proposal.author?.name?.split(/\s+/)[0] ?? "Daniel"}
+                </div>
+                <div className="text-xs text-muted-ink">
+                  {proposal.author?.role_label ?? "Fundador · GetBrain"}
+                </div>
               </div>
             </div>
           </div>
@@ -1264,12 +1270,18 @@ function ProposalView({
 
           <div className="flex flex-wrap items-end gap-8 justify-between text-white/55">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white text-xl">
-                {contactDisplayName.slice(0, 1).toUpperCase()}
-              </div>
+              <AuthorAvatar
+                author={proposal.author}
+                size={56}
+                fallbackInitial={contactDisplayName.slice(0, 1).toUpperCase()}
+              />
               <div>
-                <div className="text-white text-base font-medium">{contactDisplayName}</div>
-                <div className="text-xs font-mono-display uppercase tracking-[0.2em]">Fundador · GetBrain</div>
+                <div className="text-white text-base font-medium">
+                  {proposal.author?.name ?? contactDisplayName}
+                </div>
+                <div className="text-xs font-mono-display uppercase tracking-[0.2em]">
+                  {proposal.author?.role_label ?? "Fundador · GetBrain"}
+                </div>
               </div>
             </div>
             <div className="text-xs font-mono-display uppercase tracking-[0.2em]">
@@ -1284,10 +1296,12 @@ function ProposalView({
         <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-14 grid sm:grid-cols-2 gap-10 items-end">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-sm text-white">
-                G
-              </div>
-              <span className="font-bold tracking-tight text-white">GetBrain</span>
+              <img
+                src={logoGetBrain}
+                alt="GetBrain"
+                className="h-8 w-auto"
+                draggable={false}
+              />
             </div>
             <p className="text-xs text-white/40 font-mono-display uppercase tracking-[0.2em]">
               {s.footer_tagline} · Preparada para {clientLabel}
@@ -1676,6 +1690,58 @@ function RoadmapTimeline({
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/**
+ * Avatar circular do autor da proposta. Usa a foto de perfil do operador
+ * GetBrain (profiles.avatar_url, vinda da edge `get-proposal-public-data`).
+ *
+ * Fallback: gradiente cyan→blue + inicial do primeiro nome (ou prop
+ * `fallbackInitial` quando o autor for null, p.ex. propostas antigas sem
+ * created_by).
+ */
+function AuthorAvatar({
+  author,
+  size,
+  fallbackInitial,
+  className = "",
+}: {
+  author: { name: string; avatar_url: string | null } | null;
+  size: number;
+  fallbackInitial?: string;
+  className?: string;
+}) {
+  const initial =
+    author?.name?.trim().slice(0, 1).toUpperCase() ||
+    fallbackInitial ||
+    "G";
+  const dim = { width: size, height: size };
+  const fontSize = Math.max(14, Math.round(size * 0.42));
+
+  if (author?.avatar_url) {
+    return (
+      <img
+        src={author.avatar_url}
+        alt={author.name}
+        style={dim}
+        className={`rounded-full object-cover ring-2 ring-white/10 ${className}`}
+        draggable={false}
+        onError={(e) => {
+          // Foto removida/expirada → degrada pra fallback sem quebrar layout.
+          (e.currentTarget as HTMLImageElement).style.display = "none";
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{ ...dim, fontSize }}
+      className={`rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white ${className}`}
+    >
+      {initial}
     </div>
   );
 }
