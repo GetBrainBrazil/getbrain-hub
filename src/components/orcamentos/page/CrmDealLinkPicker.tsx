@@ -396,10 +396,19 @@ function ImportDealDialog({
       },
       {
         key: "scope_items",
-        label: `Itens do escopo (${scopeItems.length})`,
+        label: `Módulos inclusos (${scopeItems.length})`,
         preview: scopeItems.map((i) => `• ${i.title}`).join("\n"),
         available: scopeItems.length > 0,
         apply: () => setItems(scopeItems),
+      },
+      {
+        key: "implementation_value",
+        label: "Investimento (implementação)",
+        preview: deal.estimated_implementation_value
+          ? `R$ ${Number(deal.estimated_implementation_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (one-time)`
+          : null,
+        available: !!deal.estimated_implementation_value,
+        apply: () => setField("implementationValue", Number(deal.estimated_implementation_value)),
       },
       {
         key: "mrr",
@@ -422,6 +431,30 @@ function ImportDealDialog({
           if (deal.first_installment_date) {
             setField("firstInstallmentDate", deal.first_installment_date);
           }
+        },
+      },
+      {
+        key: "mrr_triggers",
+        label: "Gatilhos do MRR (início, duração, desconto)",
+        preview: (() => {
+          const parts: string[] = [];
+          if ((deal as any).mrr_start_trigger) parts.push(`Início: ${(deal as any).mrr_start_trigger}`);
+          if ((deal as any).mrr_duration_months) parts.push(`Duração: ${(deal as any).mrr_duration_months} meses`);
+          if ((deal as any).mrr_discount_value && (deal as any).mrr_discount_months)
+            parts.push(`Desconto: R$ ${(deal as any).mrr_discount_value} × ${(deal as any).mrr_discount_months}m`);
+          return parts.join(" · ") || null;
+        })(),
+        available: !!(
+          (deal as any).mrr_start_trigger ||
+          (deal as any).mrr_duration_months ||
+          ((deal as any).mrr_discount_value && (deal as any).mrr_discount_months)
+        ),
+        apply: () => {
+          if ((deal as any).mrr_start_trigger) setField("mrrStartTrigger", (deal as any).mrr_start_trigger);
+          if ((deal as any).mrr_start_date) setField("mrrStartDate", (deal as any).mrr_start_date);
+          if ((deal as any).mrr_duration_months) setField("mrrDurationMonths", Number((deal as any).mrr_duration_months));
+          if ((deal as any).mrr_discount_value) setField("mrrDiscountValue", Number((deal as any).mrr_discount_value));
+          if ((deal as any).mrr_discount_months) setField("mrrDiscountMonths", Number((deal as any).mrr_discount_months));
         },
       },
       {
