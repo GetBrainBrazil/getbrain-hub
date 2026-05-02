@@ -172,11 +172,13 @@ export function ProposalCommitTextarea({
   useEffect(() => setV(value ?? ""), [value]);
 
   useEffect(() => {
-    if (!onLivePatch) return;
     if (v === value) return;
-    const id = setTimeout(() => onLivePatch(v), 300);
+    const id = setTimeout(() => {
+      onLivePatch?.(v);
+      onCommit(v);
+    }, 350);
     return () => clearTimeout(id);
-  }, [v, value, onLivePatch]);
+  }, [v, value, onLivePatch, onCommit]);
 
   return (
     <div className="relative">
@@ -185,6 +187,7 @@ export function ProposalCommitTextarea({
         onChange={(e) => setV(e.target.value)}
         onBlur={() => {
           if (v !== value) {
+            onLivePatch?.(v);
             onCommit(v);
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 1100);
