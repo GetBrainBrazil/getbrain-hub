@@ -24,12 +24,17 @@ type GenerationType =
   | "executive_summary"
   | "pain_context"
   | "solution_overview"
-  | "item_description";
+  | "item_description"
+  | "item_descriptions_batch";
 
 interface ReqBody {
   proposal_id: string;
   generation_type: GenerationType;
   item_id?: string;
+  /** Para item_descriptions_batch: títulos dos módulos do scope_items JSON. */
+  scope_titles?: string[];
+  /** Para item_descriptions_batch: índices a processar (default: todos). */
+  item_indices?: number[];
 }
 
 const SYSTEM_PROMPT = `Você é assistente comercial da GetBrain, empresa brasileira que constrói sistemas personalizados com IA integrada.
@@ -59,6 +64,8 @@ function describeType(t: GenerationType): string {
       return "VISÃO DA SOLUÇÃO: como vamos resolver o problema, em alto nível. Sem repetir lista de itens. 2-3 parágrafos.";
     case "item_description":
       return "DESCRIÇÃO DETALHADA DO ITEM: 2-4 frases explicando o que esse item entrega e o valor que gera. Sem inventar funcionalidade.";
+    case "item_descriptions_batch":
+      return "DESCRIÇÕES DOS MÓDULOS: para CADA módulo da lista 'modulos_escopo' fornecida, gere 2-3 frases curtas, práticas e específicas explicando o que aquele módulo entrega no contexto deste cliente. Use o título do módulo + o contexto do deal (dor, escopo, entregáveis). Sem inventar funcionalidade fora do escopo.";
   }
 }
 
@@ -72,6 +79,16 @@ function expectedFormat(t: GenerationType): string {
   "item_descriptions": [{"item_id": "...", "detailed_description": "..."}]
 }
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`;
+  }
+  if (t === "item_descriptions_batch") {
+    return `JSON com a forma exata:
+{
+  "descriptions": [
+    {"index": 0, "text": "descrição de 2-3 frases para o módulo de índice 0"},
+    {"index": 1, "text": "..."}
+  ]
+}
+O array DEVE ter exatamente um objeto por índice solicitado em "indices_a_gerar". Retorne APENAS o JSON, sem markdown, sem explicação extra.`;
   }
   return "Texto puro em português. Sem markdown. Sem aspas envolvendo a resposta.";
 }
@@ -179,7 +196,39 @@ Deno.serve(async (req) => {
       deal = d;
     }
 
-    const dataPayload = {
+    // Para batch de descrições de módulos: usar scope_titles do body OU
+    // tentar derivar do JSON proposal.scope_items.
+    let scopeModulesForBatch: Array<{ index: number; title: string }> = [];
+    let indicesToGenerate: number[] = [];
+    if (body.generation_type === "item_descriptions_batch") {
+      let titles: string[] = [];
+      if (Array.isArray(body.scope_titles) && body.scope_titles.length > 0) {
+        titles = body.scope_titles.map((t) => String(t ?? "").trim());
+      } else if (Array.isArray((proposal as any).scope_items)) {
+        titles = ((proposal as any).scope_items as any[]).map((it) =>
+          String(it?.title ?? "").trim()
+        );
+      }
+      if (titles.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "no_scope_items" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      scopeModulesForBatch = titles.map((title, index) => ({ index, title }));
+      indicesToGenerate =
+        Array.isArray(body.item_indices) && body.item_indices.length > 0
+          ? body.item_indices.filter((i) => i >= 0 && i < titles.length)
+          : titles.map((_, i) => i);
+      if (indicesToGenerate.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "no_indices" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    const dataPayload: Record<string, unknown> = {
       cliente: proposal.client_company_name,
       cidade_cliente: proposal.client_city,
       titulo_proposta: proposal.title,
@@ -215,6 +264,11 @@ Deno.serve(async (req) => {
           }
         : null,
     };
+
+    if (body.generation_type === "item_descriptions_batch") {
+      dataPayload.modulos_escopo = scopeModulesForBatch;
+      dataPayload.indices_a_gerar = indicesToGenerate;
+    }
 
     const promptUser = [
       `DADOS DA PROPOSTA:\n${JSON.stringify(dataPayload, null, 2)}`,
@@ -331,9 +385,12 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Tenta parsear JSON pra full_content
+    // Tenta parsear JSON pra full_content e item_descriptions_batch
     let parsedContent: any = filterResult.filteredOutput;
-    if (body.generation_type === "full_content") {
+    if (
+      body.generation_type === "full_content" ||
+      body.generation_type === "item_descriptions_batch"
+    ) {
       try {
         // Remove possíveis cercas markdown
         const cleaned = filterResult.filteredOutput

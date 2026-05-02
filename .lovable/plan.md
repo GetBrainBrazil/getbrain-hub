@@ -1,95 +1,85 @@
-## Diagnóstico
+## Objetivo
 
-Olhando o deal `DEAL-008` ligado à proposta `Sunbright Engenharia`:
+Adicionar um botão **"Gerar com IA"** no card **"Módulos inclusos"** (TabEscopo) que, com um clique, gera uma descrição curta e prática para cada módulo da lista — usando o contexto do escopo do CRM (deal vinculado) + o título do módulo.
 
-| Variável no CRM (`deals`) | Valor real | O que aparece hoje na proposta |
-|---|---|---|
-| `estimated_implementation_value` | **R$ 4.000** (one-time) | Some — virou "total dos itens" |
-| `estimated_mrr_value` | **R$ 600 / mês** | OK em "Manutenção / mês" |
-| `installments_count` | **7×** | Some — proposta não exibe |
-| `first_installment_date` | **08/06/2026** | Some |
-| `deliverables` (7 entregáveis) | títulos reais | Vira 7 "módulos" com **R$ 571,43 cada** (4000 ÷ 7) ❌ |
-| `scope_bullets` | `[]` (vazio) | — |
-| `mrr_duration_months` / `mrr_discount_*` | gatilhos do MRR | Some |
+## Como vai funcionar (UX)
 
-### A raiz do bug
+No header do card "Módulos inclusos", ao lado do toggle "Exibir valor por módulo", aparece um novo botão `Sparkles · Gerar descrições com IA`.
 
-`parseScopeItems()` em `CrmDealLinkPicker.tsx` faz `4000 / 7 = 571,43` e injeta esse valor falso em cada item, porque o modelo mental atual é **"itens somam o valor de implementação"**. Mas no CRM `estimated_implementation_value` é o **preço cheio do projeto** — os `deliverables` são só descrições do que está incluso, sem preço por item.
+- **Sem módulos na lista:** botão desabilitado, tooltip "Adicione módulos primeiro".
+- **Sem deal vinculado:** habilitado, mas avisa no modal de confirmação que vai gerar de forma genérica.
+- **Ao clicar:** modal de confirmação mostrando:
+  - Quantidade de módulos que serão processados.
+  - Custo estimado (preço por item × N).
+  - Aviso "Vai sobrescrever descrições existentes" + checkbox "Pular módulos que já têm descrição" (default: marcado, mais seguro).
+- **Ao confirmar:** chama a edge function uma única vez (modo batch), recebe uma descrição por módulo, atualiza `state.scopeItems[i].description` para cada item, autosave dispara normalmente.
+- **Loading:** botão vira `Loader2 · Claude está escrevendo… (3/7)` com contador.
+- **Sucesso:** toast "7 descrições geradas. Revise antes de enviar." Itens ficam expandidos automaticamente para o usuário ver o que foi escrito.
+- **Falha parcial:** se algum item der erro, gera os demais e mostra toast "5 de 7 descrições geradas. 2 falharam — tente novamente."
 
-Resultado: a proposta perde a noção de "R$ 4.000 em 7×" e mostra um total de itens fake (R$ 4.000,01 por arredondamento) com módulos precificados artificialmente.
+## Arquitetura técnica
 
-## Modelo correto (alinhado ao CRM)
+### 1. Edge function `generate-proposal-content` — novo modo `item_descriptions_batch`
 
-A tab Escopo passa a refletir o que o vendedor realmente cadastra no deal:
+Adicionar um novo `generation_type`:
+- `item_descriptions_batch` — gera descrição de **todos** os módulos do escopo de uma vez, em uma única chamada ao gateway.
+- Recebe opcional `item_indices?: number[]` no body para gerar só de alguns (usado quando "pular existentes" está marcado).
+- Recebe opcional `scope_titles: string[]` no body — porque os módulos do escopo (`state.scopeItems`) vivem no campo `proposals.scope_items` (JSON), **não** em `proposal_items`. Isso é importante: a função hoje lê `proposal_items` (tabela), mas os módulos exibidos no editor são `scope_items` no JSON.
+- Prompt instrui retornar JSON: `{ "descriptions": [{ "index": 0, "text": "..." }, ...] }`.
+- Cada descrição: 2-3 frases, prática, sem inventar funcionalidade, baseada em `deal.scope_summary`, `deal.deliverables`, `deal.business_context` e `deal.pain_description`.
+- Aplica os mesmos filtros de output (`filterAiOutput`) por descrição.
+- Persiste **uma** linha em `proposal_ai_generations` agregando custo total.
+- Retorna `{ content: { descriptions: [{index, text}] }, was_filtered, ... }`.
 
-```text
-┌─ KPIs comerciais ────────────────────────────────────────┐
-│ IMPLEMENTAÇÃO       MRR             1º ANO              │
-│ R$ 4.000            R$ 600/mês      R$ 11.200           │
-│ 7× R$ 571,43        início em ...   impl + 12× MRR      │
-│ 1ª em 08/06/2026                                         │
-└──────────────────────────────────────────────────────────┘
+### 2. `src/lib/orcamentos/generateContent.ts`
+
+Adicionar tipo e helper:
+```ts
+export type GenerationType = ... | "item_descriptions_batch";
+
+export async function generateItemDescriptionsBatch(params: {
+  proposalId: string;
+  scopeTitles: string[];
+  itemIndices?: number[];
+}): Promise<{ descriptions: Array<{index: number; text: string}>; was_filtered: boolean; filter_reasons: string[]; }>
 ```
+Atualizar `estimateGenerationCostBrl` para aceitar `(type, itemCount?)` retornando `~R$ 0.03 × N` para o batch.
 
-1. **Bloco "Investimento (implementação)"** — substitui "Total dos itens"
-   - Campo `implementationValue` (R$, editável). Mapeia direto de `deals.estimated_implementation_value`.
-   - Campos `installmentsCount` (1–60) + `firstInstallmentDate`.
-   - Mostra preview ao vivo: `7× R$ 571,43 — 1ª em 08/06/2026`.
+### 3. Novo componente `GerarDescricoesIaButton.tsx`
 
-2. **Bloco "Módulos inclusos"** — substitui "Módulos da proposta"
-   - Lista de **descrições sem preço por item** (alinha com `deliverables`/`scope_bullets`).
-   - Esconde a coluna de R$ no `NotionItemsEditor` por padrão; opção "exibir valor por módulo" só aparece quando o usuário tem `scope_bullets` reais com `value > 0` no deal.
-   - Header agora diz `7 módulos inclusos` em vez de somar valores.
+Em `src/components/orcamentos/`, recebe:
+- `proposalId`
+- `items: ScopeItem[]`
+- `hasDealLink: boolean`
+- `onDescriptionsGenerated(updatedItems: ScopeItem[])`
 
-3. **Bloco "Manutenção mensal (MRR)"** — expande o atual
-   - Mantém valor + descrição.
-   - Adiciona (opcional): nº de meses (`mrr_duration_months`), desconto inicial (`mrr_discount_value` × `mrr_discount_months`), gatilho de início (`mrr_start_trigger`: na assinatura / na entrega / em data).
-   - Linha de receita anual atualizada para considerar desconto: `(MRR − desconto)×meses_desc + MRR×(12−meses_desc)`.
+Renderiza o botão + Dialog de confirmação + estado de loading. Reusa o visual do `GerarComIaDropdown` existente para consistência.
 
-4. **Bloco "Prazos"** e **"Considerações"** — sem mudança.
+### 4. `TabEscopo.tsx` — integração
 
-## Mudanças no importador (`CrmDealLinkPicker`)
+- Importa `GerarDescricoesIaButton`.
+- Recebe novas props já disponíveis no editor state: `proposalId` e `dealClientLink` (para saber se há deal vinculado).
+- Renderiza o botão no header do card "Módulos inclusos", à esquerda do toggle de valor.
+- Callback `onDescriptionsGenerated` chama `setItems(novaLista)` — mesmo fluxo de autosave que já existe.
 
-Reescreve `parseScopeItems` e a lista de seções:
+### 5. `OrcamentoEditarDetalhe.tsx` — passar props
 
-- Item **"Itens do escopo"** vira **"Módulos inclusos (N)"** e copia apenas títulos+descrição, **sem distribuir valores**.
-- Adiciona item **"Investimento (implementação)"** — copia `estimated_implementation_value` para `implementationValue`.
-- Item "Parcelamento" passa a copiar os 2 campos juntos (já faz, mantém).
-- Adiciona item **"Gatilhos do MRR"** quando o deal tiver `mrr_start_trigger` ou `mrr_discount_*` preenchidos.
-- Remove a heurística `4000/7=571,43`.
+Já passa `state` para TabEscopo; só adicionar `proposalId={proposalId}` e `hasDealLink={Boolean(state.dealClientLink)}` ao componente.
 
-## Mudanças de schema
+### 6. Audit log
 
-Adicionar à tabela `proposals` (todas opcionais, com defaults seguros):
+A própria edge function já registra em `audit_logs` com `action: "ai_content_generated"` e `metadata.generation_type`. Sem mudanças extras.
 
-```sql
-implementation_value       numeric(12,2)
-mrr_start_trigger          text       -- 'on_signature' | 'on_delivery' | 'on_date'
-mrr_start_date             date
-mrr_duration_months        integer
-mrr_discount_value         numeric(12,2)
-mrr_discount_months        integer
-```
+## Fora do escopo
 
-`scope_items` continua existindo, mas o `value` por item passa a ser opcional (UI esconde se todos forem 0).
+- Não toca em `proposal_items` (tabela legada usada pelo PDF antigo).
+- Não muda o dropdown `GerarComIaDropdown` existente (continua para conteúdos textuais como resumo executivo).
+- Sem regenerar descrições item-a-item via UI (batch resolve o caso real). O endpoint singular `item_description` continua funcionando como está.
 
-## Estado e tipos
+## Arquivos afetados
 
-`useProposalEditorState`: novos campos no state + hidratação + autosave (segue o padrão de `installmentsCount`). `TabResumo` já mostra parcelamento — passa a usar `implementationValue` (não a soma dos itens) como "valor de implementação" e o cálculo do 1º ano usa o MRR efetivo (com desconto).
-
-## Arquivos impactados
-
-- `supabase/migrations/<nova>.sql` — adicionar 6 colunas em `proposals`.
-- `src/components/orcamentos/page/useProposalEditorState.ts` — novos campos + hidratação + save.
-- `src/components/orcamentos/page/CrmDealLinkPicker.tsx` — remover distribuição falsa, novas seções.
-- `src/components/orcamentos/page/tabs/TabEscopo.tsx` — novo bloco "Investimento", header de módulos sem somatório, MRR expandido.
-- `src/components/orcamentos/NotionItemsEditor.tsx` — prop `showItemValue?: boolean` (default false).
-- `src/components/orcamentos/page/tabs/TabResumo.tsx` — passar a ler `implementationValue` direto e MRR efetivo.
-- `src/pages/public/PropostaPublica.tsx` + `PropostaTrackingSheet.tsx` — exibir parcelamento e MRR efetivo (ajuste pequeno).
-
-## Migração de dados existentes
-
-Para propostas já criadas com a heurística antiga (como `Sunbright`), a migration faz um `UPDATE` único:
-
-- `implementation_value = COALESCE(SUM(scope_items.value), 0)` quando `implementation_value IS NULL`.
-- Não mexe em `scope_items` (continuam visíveis, só não mostram preço por padrão).
+- `supabase/functions/generate-proposal-content/index.ts` (edita)
+- `src/lib/orcamentos/generateContent.ts` (edita)
+- `src/components/orcamentos/GerarDescricoesIaButton.tsx` (novo)
+- `src/components/orcamentos/page/tabs/TabEscopo.tsx` (edita)
+- `src/pages/financeiro/OrcamentoEditarDetalhe.tsx` (edita — passar props)
