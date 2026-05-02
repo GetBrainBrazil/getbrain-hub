@@ -334,9 +334,6 @@ export default function OrcamentoEditarDetalhe() {
             proposalId={data.id}
             state={state}
             setField={setField}
-            setItems={setItems}
-            dealClientLink={(data as any).deal || null}
-            onLinkChanged={() => detail.refetch?.()}
           />
         )}
 
