@@ -424,6 +424,7 @@ export default function OrcamentoEditarDetalhe() {
         status={eff}
         isDirty={dirty}
         isSaving={isSaving}
+        lastSavedAt={lastSavedAt}
         isGeneratingPdf={genPdf.isPending}
         hasPublicLink={hasPublicLink}
         onDelete={handleDelete}
@@ -431,7 +432,6 @@ export default function OrcamentoEditarDetalhe() {
         onPreviewAsClient={handlePreviewAsClient}
         onDownloadPdf={handleDownloadPdf}
         onOpenWhatsApp={handleOpenWhatsApp}
-        onSave={handleSave}
         onSendOrResend={handleOpenSendDialog}
       />
 
