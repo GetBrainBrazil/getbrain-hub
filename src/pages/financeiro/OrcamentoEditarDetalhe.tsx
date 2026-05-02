@@ -40,7 +40,7 @@ import { ProposalActionBar } from "@/components/orcamentos/page/ProposalActionBa
 import { TabResumo } from "@/components/orcamentos/page/tabs/TabResumo";
 import { TabCliente } from "@/components/orcamentos/page/tabs/TabCliente";
 import { TabEscopo } from "@/components/orcamentos/page/tabs/TabEscopo";
-import { TabConteudoIA } from "@/components/orcamentos/page/tabs/TabConteudoIA";
+// TabConteudoIA removido — narrativa migrada para TabEscopo
 import { TabPaginaPublica } from "@/components/orcamentos/page/tabs/TabPaginaPublica";
 import { TabInteracoes } from "@/components/orcamentos/page/tabs/TabInteracoes";
 import { TabConfiguracoes } from "@/components/orcamentos/page/tabs/TabConfiguracoes";
@@ -336,6 +336,9 @@ export default function OrcamentoEditarDetalhe() {
 
         {activeTab === "escopo" && (
           <TabEscopo
+            proposalId={data.id}
+            hasDealLink={!!data.deal_id}
+            isLocked={isLocked}
             state={state}
             setField={setField}
             setItems={setItems}
@@ -346,16 +349,6 @@ export default function OrcamentoEditarDetalhe() {
               }
               setDetailsItemIdx(idx);
             }}
-          />
-        )}
-
-        {activeTab === "conteudo_ia" && (
-          <TabConteudoIA
-            proposalId={data.id}
-            hasDealLink={!!data.deal_id}
-            isLocked={isLocked}
-            state={state}
-            setField={setField}
             dealPainDescription={(data as any).deal?.pain_description || null}
             onAiGenerated={handleAiGenerated}
           />
