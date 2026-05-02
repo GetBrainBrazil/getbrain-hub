@@ -319,10 +319,10 @@ function PasswordGate(props: {
             </div>
             <div className="space-y-1 mb-6 text-center">
               <h1 className="text-2xl font-bold tracking-tight">
-                Proposta protegida
+                {s.password_gate_title}
               </h1>
               <p className="text-sm text-white/60">
-                Digite a senha que você recebeu junto com o link.
+                {s.password_gate_subtitle}
               </p>
             </div>
             {props.expiredOn ? (
@@ -363,7 +363,7 @@ function PasswordGate(props: {
                   {props.loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <>Acessar proposta <ArrowRight className="h-4 w-4 ml-1" /></>
+                    <>{s.password_gate_button} <ArrowRight className="h-4 w-4 ml-1" /></>
                   )}
                 </Button>
               </form>
@@ -372,7 +372,7 @@ function PasswordGate(props: {
           <p className="text-center text-xs text-white/40 mt-6">
             Problemas?{" "}
             <a
-              href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`}
+              href={`https://wa.me/${wppNumber}`}
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-cyan-400"
