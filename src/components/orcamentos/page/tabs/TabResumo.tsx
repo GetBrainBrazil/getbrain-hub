@@ -79,6 +79,7 @@ export function TabResumo({
   onPreviewPdf,
   onOpenSendDialog,
   onGoToTab,
+  onOpenPasswordDialog,
   setField,
   setItems,
   dealClientLink,
