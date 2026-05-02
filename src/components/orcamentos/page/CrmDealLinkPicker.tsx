@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import type { ScopeItem } from "@/lib/orcamentos/calculateTotal";
+import { cn } from "@/lib/utils";
 
 const DEAL_STAGE_LABEL: Record<string, string> = {
   descoberta_marcada: "Descoberta marcada",
