@@ -180,6 +180,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
 
   const isInitialLoad = useRef(true);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revisionRef = useRef(0);
 
   // Hidrata estado quando os dados chegam (1ª vez ou ao trocar de proposta).
   useEffect(() => {
@@ -260,6 +261,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
   // Setter genérico — útil pra binding direto em inputs sem boilerplate.
   const setField = useCallback(
     <K extends keyof ProposalFormState>(field: K, value: ProposalFormState[K]) => {
+      revisionRef.current += 1;
       setState((s) => ({ ...s, [field]: value }));
       setDirty(true);
     },
@@ -267,6 +269,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
   );
 
   const setItems = useCallback((next: ScopeItem[]) => {
+    revisionRef.current += 1;
     setState((s) => ({ ...s, scopeItems: next }));
     setItemsDirty(true);
     setDirty(true);
