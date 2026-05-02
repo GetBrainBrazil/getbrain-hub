@@ -367,6 +367,13 @@ function ImportDealDialog({
         apply: () => setField("clientName", companyName),
       },
       {
+        key: "logo",
+        label: "Logo do cliente",
+        preview: deal.company?.logo_url || null,
+        available: !!deal.company?.logo_url,
+        apply: () => setField("clientLogoUrl", deal.company?.logo_url || null),
+      },
+      {
         key: "pain",
         label: "Contexto e dor",
         preview: deal.pain_description,
@@ -402,6 +409,20 @@ function ImportDealDialog({
           : null,
         available: !!deal.estimated_mrr_value,
         apply: () => setField("maintenance", Number(deal.estimated_mrr_value)),
+      },
+      {
+        key: "installments",
+        label: "Parcelamento da implementação",
+        preview: deal.installments_count
+          ? `${deal.installments_count}× ${deal.first_installment_date ? `· 1ª parcela em ${deal.first_installment_date}` : ""}`
+          : null,
+        available: !!deal.installments_count,
+        apply: () => {
+          setField("installmentsCount", Number(deal.installments_count));
+          if (deal.first_installment_date) {
+            setField("firstInstallmentDate", deal.first_installment_date);
+          }
+        },
       },
       {
         key: "valid",
