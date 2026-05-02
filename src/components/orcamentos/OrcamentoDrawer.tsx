@@ -57,7 +57,7 @@ export function OrcamentoDrawer({ proposalId, onClose }: Props) {
                   />
                   <span className="text-muted-foreground">·</span>
                   <span className="text-muted-foreground">
-                    Template: {getTemplate(data.template_key).label}
+                    Template: {getTemplate(data.template_key).config.label}
                   </span>
                 </SheetDescription>
               </div>
