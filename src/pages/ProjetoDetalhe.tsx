@@ -1994,7 +1994,12 @@ export default function ProjetoDetalhe() {
                 />
               </TabsContent>
 
-              {/* ----- TAREFAS ----- */}
+              {/* ----- PROPOSTAS & ANEXOS ----- */}
+              <TabsContent value="proposals">
+                <AbaPropostas projectId={projectId!} />
+              </TabsContent>
+
+
               <TabsContent value="tasks">
                 {project && (
                   <AbaTarefas projectId={projectId!} projectCode={project.code} />
