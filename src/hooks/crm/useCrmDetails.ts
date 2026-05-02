@@ -71,27 +71,197 @@ export function useAllCompanies() {
   return useQuery({ queryKey: ['crm-companies-full'], queryFn: async (): Promise<CompanyDetail[]> => { const { data, error } = await sb.from('companies').select('id, legal_name, trade_name, relationship_status, cnpj, industry, employee_count_range, website, linkedin_url, notes, created_at, updated_at').is('deleted_at', null).order('legal_name'); if (error) throw error; return data ?? []; } });
 }
 
-export type CompanyAggregate = { dealsOpen: number; dealsWon: number; revenueWon: number; leadsOpen: number };
+export type CompanyAggregate = {
+  dealsOpen: number;
+  dealsWon: number;
+  revenueWon: number;
+  leadsOpen: number;
+  projectsOpen: number;
+  projectsTotal: number;
+  mrrActive: number;
+  lastActivityAt: string | null;
+  pipelineValue: number;
+};
+
 export function useAllCompaniesAggregates() {
   return useQuery({
     queryKey: ['crm-companies-aggregates'],
     queryFn: async (): Promise<Record<string, CompanyAggregate>> => {
-      const [{ data: deals, error: de }, { data: leads, error: le }] = await Promise.all([
-        sb.from('deals').select('company_id, stage, estimated_value').is('deleted_at', null),
+      const [
+        { data: deals, error: de },
+        { data: leads, error: le },
+        { data: projects, error: pe },
+        { data: contracts, error: ce },
+        { data: activities, error: ae },
+      ] = await Promise.all([
+        sb.from('deals').select('company_id, stage, estimated_value, estimated_implementation_value').is('deleted_at', null),
         sb.from('leads').select('company_id, status').is('deleted_at', null),
+        sb.from('projects').select('id, company_id, status').is('deleted_at', null),
+        sb.from('maintenance_contracts').select('project_id, monthly_fee, monthly_fee_discount_percent, status').is('deleted_at', null).eq('status', 'active'),
+        sb.from('deal_activities').select('lead_id, deal_id, scheduled_at, happened_at, created_at').is('deleted_at', null),
       ]);
-      if (de) throw de; if (le) throw le;
+      if (de) throw de; if (le) throw le; if (pe) throw pe; if (ce) throw ce; if (ae) throw ae;
+
       const map: Record<string, CompanyAggregate> = {};
-      const get = (id: string) => (map[id] ||= { dealsOpen: 0, dealsWon: 0, revenueWon: 0, leadsOpen: 0 });
-      for (const d of (deals ?? []) as { company_id: string; stage: DealStage; estimated_value: number | null }[]) {
+      const get = (id: string) =>
+        (map[id] ||= {
+          dealsOpen: 0,
+          dealsWon: 0,
+          revenueWon: 0,
+          leadsOpen: 0,
+          projectsOpen: 0,
+          projectsTotal: 0,
+          mrrActive: 0,
+          lastActivityAt: null,
+          pipelineValue: 0,
+        });
+
+      for (const d of (deals ?? []) as { company_id: string; stage: DealStage; estimated_value: number | null; estimated_implementation_value: number | null }[]) {
         const a = get(d.company_id);
-        if (d.stage === 'ganho') { a.dealsWon += 1; a.revenueWon += Number(d.estimated_value ?? 0); }
-        else if (d.stage !== 'perdido') { a.dealsOpen += 1; }
+        if (d.stage === 'ganho') {
+          a.dealsWon += 1;
+          a.revenueWon += Number(d.estimated_value ?? d.estimated_implementation_value ?? 0);
+        } else if (d.stage !== 'perdido') {
+          a.dealsOpen += 1;
+          a.pipelineValue += Number(d.estimated_implementation_value ?? d.estimated_value ?? 0);
+        }
       }
       for (const l of (leads ?? []) as { company_id: string; status: LeadStatus }[]) {
         if (!['descartado', 'convertido'].includes(l.status)) get(l.company_id).leadsOpen += 1;
       }
+
+      // Projects + MRR (project → company link, contract → project link)
+      const projectsList = (projects ?? []) as { id: string; company_id: string | null; status: string }[];
+      const projectByCompany = new Map<string, { id: string; status: string }[]>();
+      const companyByProject = new Map<string, string>();
+      for (const p of projectsList) {
+        if (!p.company_id) continue;
+        companyByProject.set(p.id, p.company_id);
+        const arr = projectByCompany.get(p.company_id) ?? [];
+        arr.push({ id: p.id, status: p.status });
+        projectByCompany.set(p.company_id, arr);
+      }
+      for (const [companyId, arr] of projectByCompany.entries()) {
+        const a = get(companyId);
+        a.projectsTotal = arr.length;
+        a.projectsOpen = arr.filter((p) => !['concluido', 'cancelado', 'arquivado'].includes(p.status)).length;
+      }
+      for (const c of (contracts ?? []) as { project_id: string; monthly_fee: number | null; monthly_fee_discount_percent: number | null; status: string }[]) {
+        const companyId = companyByProject.get(c.project_id);
+        if (!companyId) continue;
+        const fee = Number(c.monthly_fee ?? 0);
+        const disc = Number(c.monthly_fee_discount_percent ?? 0);
+        get(companyId).mrrActive += fee * (1 - disc / 100);
+      }
+
+      // Last activity — find most recent across deals/leads of company
+      const dealCompany = new Map<string, string>();
+      for (const d of (deals ?? []) as { company_id: string }[] & { id?: string }[]) { /* noop; need id */ }
+      const { data: dealsForActivity } = await sb.from('deals').select('id, company_id').is('deleted_at', null);
+      for (const d of (dealsForActivity ?? []) as { id: string; company_id: string }[]) dealCompany.set(d.id, d.company_id);
+      const leadCompany = new Map<string, string>();
+      const { data: leadsForActivity } = await sb.from('leads').select('id, company_id').is('deleted_at', null);
+      for (const l of (leadsForActivity ?? []) as { id: string; company_id: string }[]) leadCompany.set(l.id, l.company_id);
+
+      for (const a of (activities ?? []) as { lead_id: string | null; deal_id: string | null; scheduled_at: string | null; happened_at: string | null; created_at: string | null }[]) {
+        const companyId = a.deal_id ? dealCompany.get(a.deal_id) : a.lead_id ? leadCompany.get(a.lead_id) : null;
+        if (!companyId) continue;
+        const ts = a.happened_at ?? a.scheduled_at ?? a.created_at;
+        if (!ts) continue;
+        const cur = get(companyId);
+        if (!cur.lastActivityAt || ts > cur.lastActivityAt) cur.lastActivityAt = ts;
+      }
+
       return map;
+    },
+    staleTime: 30_000,
+  });
+}
+
+/** Resumo financeiro/MRR de uma empresa (contratos ativos + próximas faturas). */
+export type CompanyContractRow = { id: string; project_id: string; project_code: string | null; project_name: string | null; monthly_fee: number; monthly_fee_discount_percent: number; effective_fee: number; start_date: string; end_date: string | null; status: string; hours_budget: number | null };
+export function useCompanyContracts(id?: string) {
+  return useQuery({
+    queryKey: ['crm-company-contracts', id],
+    enabled: !!id,
+    queryFn: async (): Promise<CompanyContractRow[]> => {
+      const { data: projects } = await sb.from('projects').select('id, code, name').eq('company_id', id).is('deleted_at', null);
+      const projectIds = ((projects ?? []) as { id: string }[]).map((p) => p.id);
+      if (!projectIds.length) return [];
+      const projMap = new Map(((projects ?? []) as { id: string; code: string | null; name: string | null }[]).map((p) => [p.id, p]));
+      const { data: contracts, error } = await sb
+        .from('maintenance_contracts')
+        .select('id, project_id, monthly_fee, monthly_fee_discount_percent, start_date, end_date, status, hours_budget')
+        .in('project_id', projectIds)
+        .is('deleted_at', null)
+        .order('status', { ascending: true })
+        .order('start_date', { ascending: false });
+      if (error) throw error;
+      return ((contracts ?? []) as Array<{ id: string; project_id: string; monthly_fee: number; monthly_fee_discount_percent: number; start_date: string; end_date: string | null; status: string; hours_budget: number | null }>).map((c) => {
+        const p = projMap.get(c.project_id);
+        const fee = Number(c.monthly_fee ?? 0);
+        const disc = Number(c.monthly_fee_discount_percent ?? 0);
+        return {
+          id: c.id,
+          project_id: c.project_id,
+          project_code: p?.code ?? null,
+          project_name: p?.name ?? null,
+          monthly_fee: fee,
+          monthly_fee_discount_percent: disc,
+          effective_fee: fee * (1 - disc / 100),
+          start_date: c.start_date,
+          end_date: c.end_date,
+          status: c.status,
+          hours_budget: c.hours_budget,
+        };
+      });
+    },
+  });
+}
+
+/** Movimentações financeiras vinculadas (a receber e recebidas) — match por CNPJ ou nome de empresa em clientes. */
+export type CompanyFinanceRow = { id: string; descricao: string; valor: number; data_vencimento: string | null; data_pagamento: string | null; tipo: string; status: string; categoria: string | null };
+export function useCompanyFinance(id?: string) {
+  return useQuery({
+    queryKey: ['crm-company-finance', id],
+    enabled: !!id,
+    queryFn: async (): Promise<{ pendingTotal: number; receivedTotal: number; rows: CompanyFinanceRow[] }> => {
+      const { data: company } = await sb.from('companies').select('cnpj, legal_name, trade_name').eq('id', id).maybeSingle();
+      if (!company) return { pendingTotal: 0, receivedTotal: 0, rows: [] };
+      // Find legacy clientes matching CNPJ (preferred) or name fallback
+      let clienteIds: string[] = [];
+      if (company.cnpj) {
+        const { data: byCnpj } = await sb.from('clientes').select('id').eq('cpf_cnpj', company.cnpj);
+        clienteIds = ((byCnpj ?? []) as { id: string }[]).map((c) => c.id);
+      }
+      if (!clienteIds.length) {
+        const name = company.trade_name || company.legal_name;
+        const { data: byName } = await sb
+          .from('clientes')
+          .select('id')
+          .or(`nome_empresa.ilike.${name},nome.ilike.${name}`);
+        clienteIds = ((byName ?? []) as { id: string }[]).map((c) => c.id);
+      }
+      if (!clienteIds.length) return { pendingTotal: 0, receivedTotal: 0, rows: [] };
+      const { data: movs } = await sb
+        .from('movimentacoes')
+        .select('id, descricao, valor, data_vencimento, data_pagamento, tipo, status, categoria_id')
+        .in('cliente_id', clienteIds)
+        .order('data_vencimento', { ascending: false })
+        .limit(200);
+      const rows = ((movs ?? []) as Array<{ id: string; descricao: string; valor: number; data_vencimento: string | null; data_pagamento: string | null; tipo: string; status: string; categoria_id: string | null }>).map((m) => ({
+        id: m.id,
+        descricao: m.descricao,
+        valor: Number(m.valor ?? 0),
+        data_vencimento: m.data_vencimento,
+        data_pagamento: m.data_pagamento,
+        tipo: m.tipo,
+        status: m.status,
+        categoria: null,
+      }));
+      const pendingTotal = rows.filter((r) => r.status === 'pendente' || r.status === 'agendado').reduce((s, r) => s + r.valor, 0);
+      const receivedTotal = rows.filter((r) => r.status === 'pago' || r.status === 'recebido').reduce((s, r) => s + r.valor, 0);
+      return { pendingTotal, receivedTotal, rows };
     },
   });
 }
