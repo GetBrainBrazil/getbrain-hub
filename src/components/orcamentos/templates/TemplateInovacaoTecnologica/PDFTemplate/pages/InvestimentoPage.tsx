@@ -7,6 +7,7 @@ import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { ProposalDataForTemplate } from "@/types/proposal-template-props";
 import { PDFHeader } from "../components/PDFHeader";
 import { PDFFooter } from "../components/PDFFooter";
+import { Watermark } from "../components/Watermark";
 import { formatBRL, formatDateBR } from "../components/format";
 import { styles, colors, spacing, fontSizes } from "../styles";
 
@@ -121,9 +122,10 @@ const invStyles = StyleSheet.create({
 
 interface Props {
   data: ProposalDataForTemplate;
+  isDraft?: boolean;
 }
 
-export function InvestimentoPage({ data }: Props) {
+export function InvestimentoPage({ data, isDraft }: Props) {
   const hasMaintenance =
     data.maintenance_monthly_value !== null &&
     data.maintenance_monthly_value !== undefined &&
@@ -203,6 +205,7 @@ export function InvestimentoPage({ data }: Props) {
       </View>
 
       <PDFFooter />
+      {isDraft && <Watermark />}
     </Page>
   );
 }
