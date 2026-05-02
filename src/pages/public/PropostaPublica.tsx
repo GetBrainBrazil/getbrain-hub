@@ -16,18 +16,15 @@ import {
   ThumbsUp,
   Sparkles,
   CheckCircle2,
-  Zap,
-  Brain,
-  Target,
-  Rocket,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ABOUT_GETBRAIN_PARAGRAPHS } from "@/content/about-getbrain";
 import ProposalChatBubble from "@/components/orcamentos/ProposalChatBubble";
 import { GETBRAIN_INFO, whatsappUrl as buildWhatsappUrl } from "@/lib/getbrain-info";
+import { DEFAULT_PAGE_SETTINGS, mergeWithDefaults, type PublicPageSettings } from "@/lib/publicPageDefaults";
+import { getIcon } from "@/lib/iconMap";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -121,6 +118,7 @@ export default function PropostaPublica() {
   const previewJwt = searchParams.get("preview");
   const [accessJwt, setAccessJwt] = useState<string | null>(null);
   const [proposal, setProposal] = useState<PublicProposal | null>(null);
+  const [pageSettings, setPageSettings] = useState<PublicPageSettings>(DEFAULT_PAGE_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [pwdInput, setPwdInput] = useState("");
@@ -140,6 +138,7 @@ export default function PropostaPublica() {
       }
       setAccessJwt(previewJwt);
       setProposal(r.data.proposal as PublicProposal);
+      setPageSettings(mergeWithDefaults(r.data.page_settings));
       setLoading(false);
     })();
   }, [previewJwt]);
@@ -180,6 +179,7 @@ export default function PropostaPublica() {
       return;
     }
     setProposal(r.data.proposal as PublicProposal);
+    setPageSettings(mergeWithDefaults(r.data.page_settings));
     setPwdInput("");
     setLoading(false);
   }
@@ -216,6 +216,7 @@ export default function PropostaPublica() {
         onPwdChange={setPwdInput}
         onToggleShow={() => setShowPwd((v) => !v)}
         onSubmit={handleLogin}
+        settings={pageSettings}
       />
     );
   }
@@ -223,6 +224,7 @@ export default function PropostaPublica() {
   return (
     <ProposalView
       proposal={proposal}
+      pageSettings={pageSettings}
       onDownloadPdf={handleDownloadPdf}
       isPreview={isPreview}
       accessJwt={accessJwt}
@@ -285,7 +287,10 @@ function PasswordGate(props: {
   onPwdChange: (v: string) => void;
   onToggleShow: () => void;
   onSubmit: (e?: React.FormEvent) => void;
+  settings: PublicPageSettings;
 }) {
+  const s = props.settings;
+  const wppNumber = s.contact_whatsapp || GETBRAIN_INFO.whatsapp;
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0a0e1a] text-white flex flex-col">
       <div className="pointer-events-none absolute inset-0">
@@ -310,10 +315,10 @@ function PasswordGate(props: {
             </div>
             <div className="space-y-1 mb-6 text-center">
               <h1 className="text-2xl font-bold tracking-tight">
-                Proposta protegida
+                {s.password_gate_title}
               </h1>
               <p className="text-sm text-white/60">
-                Digite a senha que você recebeu junto com o link.
+                {s.password_gate_subtitle}
               </p>
             </div>
             {props.expiredOn ? (
@@ -354,7 +359,7 @@ function PasswordGate(props: {
                   {props.loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <>Acessar proposta <ArrowRight className="h-4 w-4 ml-1" /></>
+                    <>{s.password_gate_button} <ArrowRight className="h-4 w-4 ml-1" /></>
                   )}
                 </Button>
               </form>
@@ -363,7 +368,7 @@ function PasswordGate(props: {
           <p className="text-center text-xs text-white/40 mt-6">
             Problemas?{" "}
             <a
-              href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`}
+              href={`https://wa.me/${wppNumber}`}
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-cyan-400"
@@ -395,15 +400,20 @@ const SECTIONS = [
 
 function ProposalView({
   proposal,
+  pageSettings,
   onDownloadPdf,
   isPreview,
   accessJwt,
 }: {
   proposal: PublicProposal;
+  pageSettings: PublicPageSettings;
   onDownloadPdf: () => void;
   isPreview: boolean;
   accessJwt: string | null;
 }) {
+  const s = pageSettings;
+  const wppNumber = s.contact_whatsapp || GETBRAIN_INFO.whatsapp;
+  const contactDisplayName = s.contact_display_name || "Daniel";
   const brand = proposal.client_brand_color || DEFAULT_BRAND;
   const itemsTotal = useMemo(
     () => proposal.items.reduce((acc, it) => acc + Number(it.total ?? 0), 0),
@@ -714,11 +724,12 @@ function ProposalView({
 
           {/* Eyebrow filosofal */}
           <div className="reveal mt-10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-mono-display uppercase tracking-[0.35em] text-white/55">
-            <span>Estratégia</span>
-            <span className="text-white/20">·</span>
-            <span>Tecnologia</span>
-            <span className="text-white/20">·</span>
-            <span>Resultado</span>
+            {s.hero_eyebrows.map((eb, i) => (
+              <span key={`${eb}-${i}`} className="contents">
+                {i > 0 && <span className="text-white/20">·</span>}
+                <span>{eb}</span>
+              </span>
+            ))}
           </div>
 
           {/* Sub */}
@@ -782,7 +793,7 @@ function ProposalView({
 
         {/* Scroll cue */}
         <div className="relative pb-12 flex flex-col items-center gap-4 text-white/45">
-          <span className="text-[9px] font-mono-display uppercase tracking-[0.4em]">Role para baixo</span>
+          <span className="text-[9px] font-mono-display uppercase tracking-[0.4em]">{s.hero_scroll_cue}</span>
           <div className="scroll-line" />
         </div>
       </section>
@@ -845,8 +856,8 @@ function ProposalView({
         <EditorialSection
           id="contexto"
           number="01"
-          eyebrow="Contexto"
-          title="O ponto de partida"
+          eyebrow={s.section_eyebrows.contexto}
+          title={s.section_titles.contexto}
           theme="dark"
         >
           <div className="grid lg:grid-cols-12 gap-10">
@@ -867,8 +878,8 @@ function ProposalView({
         <EditorialSection
           id="solucao"
           number="02"
-          eyebrow="Solução"
-          title="O que vamos construir"
+          eyebrow={s.section_eyebrows.solucao}
+          title={s.section_titles.solucao}
           theme="light"
         >
           <Prose markdown={proposal.solution_overview} />
@@ -880,8 +891,8 @@ function ProposalView({
         <EditorialSection
           id="escopo"
           number="03"
-          eyebrow="Escopo"
-          title="Capítulos da entrega"
+          eyebrow={s.section_eyebrows.escopo}
+          title={s.section_titles.escopo}
           theme="dark"
         >
           <div className="space-y-0">
@@ -902,7 +913,7 @@ function ProposalView({
                 <span className="text-brand">04 ·</span> Investimento
               </div>
               <h2 className="font-editorial-display text-4xl sm:text-6xl lg:text-7xl tracking-tight font-light leading-[1.05]">
-                <span className="brand-dot">Os números</span>
+                <span className="brand-dot">{s.section_titles.investimento}</span>
               </h2>
             </div>
 
@@ -979,8 +990,8 @@ function ProposalView({
         <EditorialSection
           id="cronograma"
           number="05"
-          eyebrow="Cronograma"
-          title="A jornada"
+          eyebrow={s.section_eyebrows.cronograma}
+          title={s.section_titles.cronograma}
           theme="dark"
         >
           <RoadmapTimeline
@@ -1053,84 +1064,52 @@ function ProposalView({
       <EditorialSection
         id="sobre"
         number="08"
-        eyebrow="Sobre"
-        title="A GetBrain"
+        eyebrow={s.section_eyebrows.sobre}
+        title={s.section_titles.sobre}
         theme="light"
       >
         <div className="reveal max-w-3xl space-y-6 text-slate-700 text-lg leading-relaxed font-light mb-16">
-          {ABOUT_GETBRAIN_PARAGRAPHS.map((p, i) => (
+          {s.about_paragraphs.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
         </div>
 
-        {/* Capability cards */}
+        {/* Capability cards (editáveis) */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
-          {[
-            {
-              icon: Brain,
-              title: "IA aplicada",
-              desc: "Agentes, RAG, automações com LLMs — não é hype, é ferramenta.",
-            },
-            {
-              icon: Zap,
-              title: "Engenharia enxuta",
-              desc: "Stack moderna, sem over-engineering. Deploy contínuo desde o dia 1.",
-            },
-            {
-              icon: Target,
-              title: "Foco no resultado",
-              desc: "Métricas claras de sucesso, ciclos curtos, ajuste no caminho.",
-            },
-            {
-              icon: Rocket,
-              title: "Time-to-market",
-              desc: "MVP no ar em semanas, não em meses. Iterar com dados reais.",
-            },
-            {
-              icon: CheckCircle2,
-              title: "Parceria de longo prazo",
-              desc: "Manutenção evolutiva, contexto preservado, mesmo time sempre.",
-            },
-            {
-              icon: Sparkles,
-              title: "Atendimento sênior",
-              desc: "Daniel diretamente envolvido. Sem camada de 'gerente de conta'.",
-            },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div
-              key={title}
-              className="reveal group bg-white border border-slate-900/8 rounded-2xl p-6 hover:border-brand hover:shadow-lg transition-all"
-            >
+          {s.capabilities.map((cap, idx) => {
+            const Icon = getIcon(cap.icon);
+            return (
               <div
-                className="h-10 w-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
-                style={{
-                  background: "color-mix(in srgb, var(--brand) 12%, transparent)",
-                  color: "var(--brand)",
-                }}
+                key={`${cap.title}-${idx}`}
+                className="reveal group bg-white border border-slate-900/8 rounded-2xl p-6 hover:border-brand hover:shadow-lg transition-all"
               >
-                <Icon className="h-5 w-5" />
+                <div
+                  className="h-10 w-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                  style={{
+                    background: "color-mix(in srgb, var(--brand) 12%, transparent)",
+                    color: "var(--brand)",
+                  }}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h4 className="font-editorial-display text-xl text-slate-900 mb-2 leading-tight">
+                  {cap.title}
+                </h4>
+                <p className="text-sm text-slate-600 leading-relaxed font-light">
+                  {cap.description}
+                </p>
               </div>
-              <h4 className="font-editorial-display text-xl text-slate-900 mb-2 leading-tight">
-                {title}
-              </h4>
-              <p className="text-sm text-slate-600 leading-relaxed font-light">
-                {desc}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Tech stack scroll */}
+        {/* Tech stack (editável) */}
         <div className="reveal pt-12 border-t border-slate-900/8">
           <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-muted-ink mb-6">
             Tecnologias que usamos
           </div>
           <div className="flex flex-wrap gap-2">
-            {[
-              "React", "TypeScript", "Node.js", "Python", "Supabase", "PostgreSQL",
-              "OpenAI", "Anthropic", "Gemini", "LangChain", "Tailwind", "Vite",
-              "Vercel", "Lovable Cloud", "n8n", "Zapier", "WhatsApp API",
-            ].map((tech) => (
+            {s.tech_stack.map((tech) => (
               <span
                 key={tech}
                 className="text-xs font-mono-display px-3 py-1.5 rounded-full bg-slate-900/5 text-slate-700 border border-slate-900/8 hover:border-brand hover:text-brand transition-colors"
@@ -1149,17 +1128,20 @@ function ProposalView({
             <span className="text-brand">—</span> Próximos passos
           </div>
           <h2 className="reveal font-editorial-display text-5xl sm:text-7xl lg:text-8xl tracking-tight font-light leading-[1.05] max-w-[18ch]">
-            <span className="brand-dot">Vamos começar?</span>
+            <span className="brand-dot">{s.next_steps_title}</span>
           </h2>
-          <p className="reveal mt-8 text-lg text-white/70 max-w-2xl font-light leading-relaxed">
-            Se faz sentido, clique em <strong className="text-white">"Quero avançar"</strong> — o
-            Daniel é avisado na hora pelo WhatsApp e te procura em algumas horas para
-            alinhar contrato e cronograma.
-          </p>
-          <p className="reveal mt-3 text-sm text-white/50 max-w-2xl font-light leading-relaxed">
-            Se preferir tirar dúvidas antes, fale pelo WhatsApp ou converse com o
-            agente IA no canto inferior direito — ele conhece esta proposta inteira.
-          </p>
+          {s.next_steps_paragraphs.map((para, i) => (
+            <p
+              key={i}
+              className={
+                i === 0
+                  ? "reveal mt-8 text-lg text-white/70 max-w-2xl font-light leading-relaxed"
+                  : "reveal mt-3 text-sm text-white/50 max-w-2xl font-light leading-relaxed"
+              }
+            >
+              {para}
+            </p>
+          ))}
 
           <div className="reveal mt-12 flex flex-wrap gap-3">
             <button
@@ -1188,10 +1170,10 @@ function ProposalView({
           <div className="flex flex-wrap items-end gap-8 justify-between text-white/55">
             <div className="flex items-center gap-4">
               <div className="h-14 w-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white text-xl">
-                D
+                {contactDisplayName.slice(0, 1).toUpperCase()}
               </div>
               <div>
-                <div className="text-white text-base font-medium">Daniel</div>
+                <div className="text-white text-base font-medium">{contactDisplayName}</div>
                 <div className="text-xs font-mono-display uppercase tracking-[0.2em]">Fundador · GetBrain</div>
               </div>
             </div>
@@ -1213,19 +1195,21 @@ function ProposalView({
               <span className="font-bold tracking-tight text-white">GetBrain</span>
             </div>
             <p className="text-xs text-white/40 font-mono-display uppercase tracking-[0.2em]">
-              Preparada exclusivamente para {clientLabel}
+              {s.footer_tagline} · Preparada para {clientLabel}
             </p>
           </div>
           <div className="sm:text-right">
             <div className="text-[10px] font-mono-display uppercase tracking-[0.3em] text-white/35 mb-2">
-              Contato
+              {s.footer_contact_label}
             </div>
-            <a href={`https://wa.me/${GETBRAIN_INFO.whatsapp}`} target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
-              WhatsApp do Daniel
+            <a href={`https://wa.me/${wppNumber}`} target="_blank" rel="noreferrer" className="block text-sm text-white/70 hover:text-white transition-colors">
+              WhatsApp · {contactDisplayName}
             </a>
-            <a href="mailto:daniel@getbrain.com.br" className="block text-sm text-white/70 hover:text-white transition-colors">
-              daniel@getbrain.com.br
-            </a>
+            {s.contact_email && (
+              <a href={`mailto:${s.contact_email}`} className="block text-sm text-white/70 hover:text-white transition-colors">
+                {s.contact_email}
+              </a>
+            )}
           </div>
         </div>
         <div className="border-t border-white/5">

@@ -42,6 +42,21 @@ Deno.serve(async (req) => {
 
     if (error || !prop) return json({ error: "not_found" }, 404);
 
+    // Conteúdo institucional editável (singleton por organização). Usa org default
+    // pois o sistema é single-org. Se não existir, retorna null e o frontend usa fallbacks.
+    const { data: pageSettings } = await admin
+      .from("public_page_settings")
+      .select(
+        `hero_eyebrows, hero_scroll_cue, section_eyebrows, section_titles,
+         about_paragraphs, capabilities, tech_stack,
+         next_steps_title, next_steps_paragraphs,
+         footer_tagline, footer_contact_label,
+         password_gate_title, password_gate_subtitle, password_gate_button,
+         contact_whatsapp, contact_email, contact_display_name`,
+      )
+      .eq("organization_id", "00000000-0000-0000-0000-000000000001")
+      .maybeSingle();
+
     const { data: items } = await admin
       .from("proposal_items")
       .select(
@@ -96,6 +111,7 @@ Deno.serve(async (req) => {
         public_roadmap: prop.public_roadmap,
         items: items ?? [],
       },
+      page_settings: pageSettings ?? null,
     });
   } catch (e) {
     console.error("get-proposal-public-data error", e);

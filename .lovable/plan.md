@@ -1,147 +1,144 @@
-## Resumo
+## Objetivo
 
-Refinar a página pública da proposta com base nos seus 7 pontos: corrigir valor de investimento (vem zerado), gerar carta de abertura com IA, reescrever Contexto/Solução com formatação melhor, transformar escopo em **timeline com IA priorizando entregas que destravam valor**, redesenhar Investimento com parcelas em destaque, repaginar "Sobre GetBrain" com mais elementos visuais, transformar o chat em **bolinha flutuante** com agente de IA realmente funcional, e fazer o botão "Quero avançar" disparar **WhatsApp + mover card no Kanban**.
+Hoje a página pública (`/p/{token}`) tem **vários textos hard-coded** espalhados pelo `PropostaPublica.tsx`: textos institucionais da GetBrain (about), 6 cards de capacidades, lista de 17 tecnologias, microcopy do hero, scroll cue, headlines de seção ("O ponto de partida", "O que vamos construir", "Capítulos da entrega", "Os números", "A jornada", "Vamos começar?"), texto da seção "Próximos passos", labels do footer, etc.
 
-## 1. Corrigir Investimento zerado
+Vou centralizar **todo conteúdo institucional editável** numa tabela `public_page_settings` (configuração global única, por organização) e remodelar a tab "Página Pública" pra ser o editor visual completo desses conteúdos + a parte específica da proposta atual (link, senha, mockup, preview).
 
-O componente hoje calcula `total = soma dos items`, mas a proposta tem coluna própria `implementation_value` (numeric) na tabela `proposals`, junto com `installments_count` e `first_installment_date`. O `get-proposal-public-data` não está retornando esses campos.
+Conteúdos **específicos da proposta** (carta IA, escopo, contexto, solução, valores) continuam onde estão — eles já são editáveis pelas outras tabs.
 
-**Ações:**
-- Atualizar `supabase/functions/get-proposal-public-data/index.ts` para selecionar e retornar `implementation_value`, `installments_count`, `first_installment_date`.
-- No `PropostaPublica.tsx`, usar `implementation_value` como valor de investimento principal (com fallback para soma dos items, se nulo).
+## O que vai ser editável
 
-## 2. Carta de abertura gerada por IA
+**Conteúdo institucional global** (afeta todas as propostas, edita uma vez):
+- Hero: eyebrows ("Estratégia · Tecnologia · Resultado"), scroll cue ("Role para baixo")
+- Headlines/eyebrows de cada seção (Carta, Contexto, Solução, Escopo, Investimento, Cronograma, Sobre, Próximos passos)
+- Sobre a GetBrain: parágrafos descritivos (lista editável)
+- Cards de capacidades: lista editável (ícone, título, descrição) — começa com os 6 atuais
+- Stack tecnológico: lista editável de tags
+- Próximos passos: título e dois parágrafos explicativos
+- Footer: tagline, labels de contato
+- Tela de senha: título, subtítulo, label do botão
+- Contato global: WhatsApp, email, número exibido (vem de `GETBRAIN_INFO`, mas editável aqui também)
 
-Hoje a carta usa `executive_summary` que veio das suas notas internas. Vou criar uma nova edge function **`generate-proposal-opening-letter`** que:
+**Conteúdo específico da proposta** (já existe, mantém):
+- Carta IA, contexto, solução, escopo, valores → outras tabs
 
-- É chamada uma vez quando a proposta é carregada na página pública (cacheada na coluna nova `proposal.public_opening_letter` para não regerar a cada visita).
-- Usa Lovable AI Gateway (`google/gemini-2.5-flash`) com prompt focado em **impacto + retenção**: usa nome do contato primário, nome da empresa, dor identificada, solução proposta e total de investimento. Saída: 3-4 parágrafos curtos, tom consultivo, primeira pessoa do Daniel, sem repetir números (só sensação/visão).
-- Filtros de output já existentes (`_shared/ai-output-filters.ts`) são aplicados.
-- Migration: adiciona coluna `public_opening_letter text` em `proposals`.
+## Mudanças no banco
 
-A página passa a renderizar `public_opening_letter` em vez de `executive_summary` na seção Carta. Se ainda não foi gerada, mostra skeleton e dispara geração.
+Nova tabela `public_page_settings` (singleton por organização):
 
-## 3. Contexto + Solução melhor formatados
+```sql
+create table public.public_page_settings (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null unique, -- garante 1 registro por org
+  hero_eyebrows text[] default array['Estratégia','Tecnologia','Resultado'],
+  hero_scroll_cue text default 'Role para baixo',
+  section_titles jsonb default '{...}'::jsonb,    -- { contexto: "O ponto de partida", ... }
+  section_eyebrows jsonb default '{...}'::jsonb,  -- { contexto: "Contexto", ... }
+  about_paragraphs text[],                          -- substitui ABOUT_GETBRAIN_PARAGRAPHS
+  capabilities jsonb,                               -- [{icon:"Brain", title, desc}, ...]
+  tech_stack text[],                                -- ["React","TypeScript",...]
+  next_steps_title text default 'Vamos começar?',
+  next_steps_paragraphs text[],
+  footer_tagline text,
+  footer_contact_label text,
+  password_gate_title text default 'Proposta protegida',
+  password_gate_subtitle text default 'Digite a senha que você recebeu junto com o link.',
+  password_gate_button text default 'Acessar proposta',
+  contact_whatsapp text,
+  contact_email text,
+  contact_display_name text,
+  updated_at timestamptz default now(),
+  updated_by uuid
+);
+```
 
-- **Contexto ("O ponto de partida"):** novo prompt na edge function `generate-proposal-content` (já existe) para gerar `pain_context` como texto explicando a dor + 1 frase de gatilho no final ("...e é exatamente aí que entra o que vamos construir →"). Sem bullets — texto corrido editorial.
-- **Solução:** prompt revisado para gerar `solution_overview` como **2 parágrafos de texto corrido + 4-6 bullet points** com os pilares da entrega. O `<Prose>` já renderiza markdown, então só ajustar o prompt para retornar essa estrutura.
-- Adicionar botão "Regenerar com IA" no editor interno (`OrcamentoEditarDetalhe`) já existente — apenas ajustar prompt.
+RLS: SELECT por authenticated; INSERT/UPDATE/DELETE só admin. Trigger `updated_at`. Seed inicial automático na primeira leitura via edge.
 
-## 4. Escopo virando Timeline (com priorização por IA)
+A edge function `get-proposal-public-data` passa a também retornar esses settings (join via `organization_id`), pra serem consumidos junto com os dados da proposta.
 
-Substituir os "capítulos" expandidos pelo formato de **roadmap horizontal/vertical compacto**, gerado por IA que analisa todos os items e agrupa em **fases de entrega** otimizadas para "tempo até o cliente começar a usar".
+## Mudanças no frontend
 
-**Estrutura:**
-- Nova edge function `generate-proposal-roadmap` que recebe os items + dependências e retorna JSON estruturado:
-  ```
-  phases: [
-    { name: "Fase 1 — No ar em 7 dias", days: 7, deliverables: ["...", "..."], rationale: "..." },
-    { name: "Fase 2 — Inteligência", days: 15, ... },
-    { name: "Fase 3 — Refinamento", days: 8, ... }
-  ]
-  ```
-- Cacheada em nova coluna `proposal.public_roadmap jsonb`.
-- UI: timeline vertical com 3-5 fases, cada fase ocupa ~1 viewport com:
-  - Número grande da fase + duração ("DIA 1 → DIA 7")
-  - Título serif da fase
-  - 3-5 entregáveis em lista compacta
-  - Por que esta fase vem agora (1 frase)
-- Linha conectora vertical com pontos brand ligando as fases.
-- Muito mais compacto que o accordion atual (cada item ocupava ~120px abertos).
+### 1. `PropostaPublica.tsx`
+- Substitui todos os textos hard-coded por leitura do novo objeto `pageSettings` que vem do payload.
+- Fallback pros valores atuais caso a tabela ainda não tenha registro (compatibilidade).
+- Capabilities renderizadas dinamicamente, com lookup de ícone via mapa `lucide-react`.
 
-## 5. Investimento redesenhado
+### 2. Nova tab "Página Pública" (remodelada)
 
-Hierarquia nova (parcela em evidência):
+Reorganizada com sub-abas internas, layout limpo e prático:
 
 ```text
-INVESTIMENTO
-12x R$ 1.250,00          ← serif gigante (~96px), brand color
-no cartão ou boleto       ← caption mono
-
-R$ 15.000,00 à vista      ← total menor (~32px), texto suave
-+ R$ 600,00/mês           ← mensalidade, mesmo peso do total
+┌──────────────────────────────────────────────────────┐
+│  [Acesso]  [Conteúdo Global]  [Pré-visualização]    │  ← sub-tabs
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│   conteúdo da sub-aba ativa                         │
+│                                                      │
+└──────────────────────────────────────────────────────┘
 ```
 
-Se `installments_count` for nulo ou 1, usa só o total à vista como protagonista.
+- **Acesso** (atual conteúdo): link, senha, mockup, ver como cliente.
+- **Conteúdo Global** (NOVO): editor visual, em accordions colapsáveis por bloco:
+  - Hero & navegação (eyebrows, scroll cue)
+  - Títulos das seções (grid 2 colunas: eyebrow + title por seção)
+  - Sobre a GetBrain (TextArea para lista de parágrafos, drag-to-reorder)
+  - Cards de capacidades (cards inline editáveis: ícone picker, título, descrição, botão "+ Adicionar")
+  - Stack tecnológico (tags com input, igual chips/badges editáveis)
+  - Próximos passos (campos do CTA final)
+  - Tela de senha (título, subtítulo, botão)
+  - Footer & contato (WhatsApp, email, tagline)
+  - Cada bloco com **autosave on blur** (padrão da memória `inline-edit-and-tabs`)
+  - Indicador "Salvo às HH:MM" no topo
+  - Aviso "Estas alterações afetam todas as propostas"
+- **Pré-visualização** (atual iframe): preview ao vivo que reflete as alterações em tempo real (recarrega ao salvar).
 
-**Composição reformulada:**
-- Cards com hairline em vez de tabela seca.
-- Cada item: número (mono), descrição, badge "incluso" ou valor (mono), barra fina mostrando proporção do item no total.
-- "Mensalidade inclui" vira grid 2 colunas com ícones discretos (do lucide-react: `CheckCircle2`, `Wrench`, `MessageSquare`, `TrendingUp`) em vez de lista plana.
+### 3. Hooks novos
+- `usePublicPageSettings()` — react-query, lê settings, expõe `update(field, value)` com autosave + invalidate.
+- Helper `iconMap` em `src/lib/iconMap.ts` mapeando strings → componentes lucide.
 
-## 6. "Sobre GetBrain" com mais identidade visual
+## Fluxo do usuário
 
-Adicionar à seção `sobre`:
-- **3 cards de capacidades** lado a lado com ícones grandes (lucide: `Brain`, `Zap`, `Code2`) e 1 frase cada: "IA aplicada ao seu negócio", "Velocidade de execução", "Engenharia de verdade".
-- **Faixa de números** estilo manifesto: "X projetos · Y clientes · Z anos focados em IA" em mono grande.
-- **Stack visual**: badges discretos das tecnologias (OpenAI, Supabase, React, etc.) numa linha horizontal scrollável.
-- **Background pattern**: grid sutil + gradiente brand + um SVG decorativo de neurônio/grafo no canto.
-- Manter parágrafos do `ABOUT_GETBRAIN_PARAGRAPHS` mas em coluna ao lado dos elementos visuais (grid 5/7).
+1. Você abre uma proposta → tab Página Pública.
+2. Sub-aba "Conteúdo Global" → edita parágrafos do "Sobre", troca um card de capacidade, adiciona uma tecnologia.
+3. Cada blur salva no banco automaticamente.
+4. Sub-aba "Pré-visualização" → vê a página atualizada (botão refresh + auto-refresh ao trocar de sub-aba).
+5. Toda outra proposta (atual e futura) já reflete essas mudanças.
 
-## 7. Chat IA — bolinha flutuante funcional
+## UI/UX da nova tab
 
-**Problema atual:** o `ProposalChatBox` é uma barra fixa no rodapé que conflita com o conteúdo e provavelmente está com bug por isso. Reescrever como bolinha flutuante.
+- Visual consistente com o resto do editor (Card cinza-escuro, mesma tipografia).
+- Toolbar fixa no topo com: badge "Conteúdo global · afeta todas as propostas", indicador de save, botão "Resetar para padrão".
+- Bloco "Cards de capacidades" usa grid responsivo de mini-cards com hover overlay pra editar/excluir/reordenar.
+- Bloco "Stack tecnológico" usa input estilo "tags": digite + Enter pra adicionar, X pra remover, drag pra reordenar.
+- Bloco "Sobre a GetBrain" usa lista de TextArea com botões + (entre parágrafos) e × (remover).
+- Mobile-first: accordions colapsam por padrão no mobile, desktop pode abrir vários ao mesmo tempo.
 
-**Novo formato (`ProposalChatBubble.tsx`):**
-- Bolinha 56px no canto inferior direito, gradiente brand, ícone `Sparkles` + leve pulse.
-- Click abre drawer 380×560px (mobile: bottom sheet full width).
-- Header: avatar IA + "Assistente da proposta · online".
-- Mensagens com bubble pattern padrão (user direita brand, assistente esquerda cinza).
-- Sugestões iniciais clicáveis: "Qual o prazo?", "O que está incluso?", "Como funciona o pagamento?".
-- Botões de escalation aparecem quando IA detecta dúvida fora de escopo: "Falar com Daniel" → dispara `manifested_interest` + abre WhatsApp.
-- Persistência local da conversa (sessionStorage por sessionToken).
+## Arquivos novos/alterados
 
-**Edge function `proposal-chat` já existe e está funcional** — vou só validar que os parâmetros do request estão corretos e ajustar o system prompt para incluir o roadmap e a parcela. O bug provavelmente é de payload/state no front; vou auditar o flow ao reescrever o componente.
+**Banco:**
+- migration: criar `public_page_settings` + RLS + trigger updated_at + seed function.
 
-## 8. "Quero avançar" funcional (WhatsApp + Kanban)
+**Edge:**
+- `get-proposal-public-data/index.ts`: incluir `page_settings` no payload.
 
-Hoje só dispara `interest_manifested` que faz audit log. Falta:
-1. Notificação WhatsApp pra você
-2. Mover o deal no Kanban
+**Frontend:**
+- novo: `src/lib/iconMap.ts`
+- novo: `src/hooks/orcamentos/usePublicPageSettings.ts`
+- novo: `src/components/orcamentos/page/tabs/pagina-publica/` com:
+  - `index.tsx` (sub-tabs)
+  - `SubTabAcesso.tsx` (extrai parte atual)
+  - `SubTabConteudo.tsx` (editor)
+  - `SubTabPreview.tsx` (extrai iframe atual)
+  - `editores/EditorTextoLista.tsx` (lista editável de parágrafos)
+  - `editores/EditorCapabilities.tsx` (cards)
+  - `editores/EditorTags.tsx` (chips de tech stack)
+  - `editores/EditorSecao.tsx` (eyebrow + title pairs)
+- alterar: `src/components/orcamentos/page/tabs/TabPaginaPublica.tsx` → vira wrapper que renderiza o novo `pagina-publica/index.tsx`.
+- alterar: `src/pages/public/PropostaPublica.tsx` → consumir `pageSettings` do payload, fallback pros defaults atuais.
+- deprecar (manter apenas como fallback constants): `src/content/about-getbrain.tsx`.
 
-**Ações:**
-- A função `track-proposal-view` **já dispara `notify-daniel` com kind `manifested_interest`** quando recebe `event=interest_manifested`, e o `notify-daniel` **já tenta WhatsApp via Z-API**. Preciso validar:
-  - Z-API secrets (`Z_API_DANIEL_INSTANCE_ID`, `Z_API_DANIEL_TOKEN`, `Z_API_DANIEL_PHONE`) configurados — vou rodar `fetch_secrets` e, se faltarem, pedir.
-  - Settings `notify_on_manifested_interest = true` em `proposal_ai_settings`.
+## Observações
 
-- **Mover o card no Kanban:** estender `track-proposal-view` para, no caso `interest_manifested`, atualizar o `deal` ligado à proposta (`proposals.deal_id`) movendo `stage` para `'gelado'` (label "Negociação") se estava em `proposta_na_mesa` ou `ajustando`. Registra activity no deal: "Cliente manifestou interesse pela proposta {code}".
-
-- **Número fake no WhatsApp do front:** o link `wa.me/5511999999999` é placeholder. Trocar por uma constante centralizada (env ou hardcoded em `getbrain-info.ts`) com o número real do Daniel. Vou perguntar via questions.
-
-## Detalhes técnicos
-
-**Migrations:**
-```sql
-ALTER TABLE proposals 
-  ADD COLUMN public_opening_letter text,
-  ADD COLUMN public_roadmap jsonb;
-```
-
-**Novas edge functions:**
-- `generate-proposal-opening-letter` — IA, cacheia em `public_opening_letter`
-- `generate-proposal-roadmap` — IA, cacheia em `public_roadmap`
-
-**Edge functions atualizadas:**
-- `get-proposal-public-data` — retornar `implementation_value`, `installments_count`, `first_installment_date`, `public_opening_letter`, `public_roadmap`
-- `track-proposal-view` — no `interest_manifested`, mover deal stage e registrar activity
-- `proposal-chat` — system prompt enriquecido com roadmap e parcela
-- `generate-proposal-content` — prompts de pain_context e solution_overview revisados
-
-**Componentes:**
-- `PropostaPublica.tsx` — usar `implementation_value`, novo bloco de Investimento, integrar `<Roadmap>`, remover `ProposalChatBox` antigo
-- Novo: `ProposalRoadmap.tsx` — timeline editorial
-- Novo: `ProposalChatBubble.tsx` — bolinha + drawer
-- Novo: `AboutGetBrainSection.tsx` — seção redesenhada com cards + stats + stack
-- Atualizar `getbrain-info.ts` com WhatsApp real
-
-**Não vou mexer:**
-- PasswordGate (continua igual)
-- Tracking/auth/PDF
-- Editor interno de proposta (só ajusto prompts no backend)
-
-## Perguntas antes de implementar
-
-Vou perguntar via `ask_questions`:
-1. Qual o WhatsApp real do Daniel (pra trocar o `5511999999999`)?
-2. Os secrets Z-API estão configurados? (vou checar antes)
-3. Quando o cliente clica "Quero avançar", o deal deve ir pra `gelado` (Negociação) ou direto pra `ganho`?
+- Mantenho `GETBRAIN_INFO` em `src/lib/getbrain-info.ts` como fonte para PDFs e emails (essas coisas precisam de constante de build). A tela pública lê do `pageSettings` quando disponível, com fallback pro `GETBRAIN_INFO`.
+- Settings é singleton **por organização** (não por proposta) — uma única configuração global para o cliente ver consistente entre propostas.
+- Se quiser no futuro overrides por proposta (ex.: mudar o "Sobre" só pra um cliente específico), adicionamos campos opcionais em `proposals` que prevalecem sobre os settings — mas isso fica fora desse escopo.
