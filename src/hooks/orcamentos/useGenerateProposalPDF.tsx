@@ -19,7 +19,18 @@ import {
 import { getTemplate } from "@/lib/orcamentos/templates";
 import type { TemplateKey } from "@/lib/orcamentos/templates";
 import { mapProposalToTemplateData } from "@/lib/orcamentos/mapProposalToTemplateData";
+import { generateQrDataUrl } from "@/lib/orcamentos/generateQrDataUrl";
 import { invalidateProposalCaches } from "@/lib/cacheInvalidation";
+
+/**
+ * Decide se o PDF deve sair com watermark "RASCUNHO" baseado no status.
+ * `rascunho` e `recusada` ganham marca d'água; demais ficam limpos.
+ */
+function watermarkFor(proposal: any): "draft" | null {
+  const status = proposal?.status;
+  if (status === "rascunho" || status === "recusada") return "draft";
+  return null;
+}
 
 interface Args {
   proposalId: string;
