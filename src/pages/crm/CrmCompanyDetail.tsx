@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DetailBreadcrumb, DetailShell, InfoBadge } from '@/components/crm/CrmDetailShared';
+import { CompanyContractsPanel } from '@/components/crm/CompanyContractsPanel';
 import { MarkdownSplitEditor } from '@/components/dev/MarkdownComposer';
 import { useActivitiesForEntity, useCompanyContacts, useCompanyDeals, useCompanyDetail, useCompanyLeads, useCompanyProjects, useCompanyStats, useDeleteCompany, useUpdateCompanyField } from '@/hooks/crm/useCrmDetails';
 import { DangerZone } from '@/components/crm/DangerZone';
