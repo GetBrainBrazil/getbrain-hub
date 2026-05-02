@@ -495,8 +495,45 @@ export default function CrmPipeline() {
             </div>
           </div>
 
-          {/* Linha 2: filtros lado a lado */}
+          {/* Linha 2: escopo + filtros lado a lado */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Escopo: Em trilha (ativos) vs Tudo (inclui ganho/perdido). */}
+            <div
+              className={cn(
+                'inline-flex h-9 items-center overflow-hidden rounded-md border bg-background p-0.5',
+                stageFilter.length ? 'border-border/50 opacity-50' : 'border-border',
+              )}
+              title={stageFilter.length ? 'Limpe o filtro de estágio para usar o escopo' : undefined}
+            >
+              <button
+                type="button"
+                disabled={stageFilter.length > 0}
+                onClick={() => setScope('trilha')}
+                aria-pressed={scope === 'trilha' && !stageFilter.length}
+                className={cn(
+                  'flex h-full items-center rounded-sm px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed',
+                  scope === 'trilha' && !stageFilter.length
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                Em trilha
+              </button>
+              <button
+                type="button"
+                disabled={stageFilter.length > 0}
+                onClick={() => setScope('todos')}
+                aria-pressed={scope === 'todos' && !stageFilter.length}
+                className={cn(
+                  'flex h-full items-center rounded-sm px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed',
+                  scope === 'todos' && !stageFilter.length
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                Tudo
+              </button>
+            </div>
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               Filtros:
             </span>
