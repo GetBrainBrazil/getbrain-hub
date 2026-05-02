@@ -8,7 +8,10 @@ import { cn } from '@/lib/utils';
 import type { DealStage } from '@/types/crm';
 
 // Etapas em progresso, na ordem do funil.
-const PROGRESS_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando', 'gelado'];
+// `com_interesse` é o sinal do cliente vindo da proposta pública ("Quero avançar"),
+// renderizado com destaque verde para diferenciar dos passos empurrados pelo vendedor.
+const PROGRESS_STAGES: DealStage[] = ['descoberta_marcada', 'descobrindo', 'proposta_na_mesa', 'ajustando', 'gelado', 'com_interesse'];
+const INTEREST_STAGE: DealStage = 'com_interesse';
 // Etapas finais — sempre visíveis no fim do stepper, com estilo distinto.
 const CLOSED_STAGES: DealStage[] = ['ganho', 'perdido'];
 
