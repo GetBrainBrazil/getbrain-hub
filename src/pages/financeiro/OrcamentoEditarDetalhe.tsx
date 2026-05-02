@@ -85,6 +85,13 @@ export default function OrcamentoEditarDetalhe() {
 
   const interactionsCount = useProposalInteractionsCount(id);
   const versionsQuery = useProposalVersions(id);
+  const handleUpdateField = useCallback(
+    (field: string, value: any) => {
+      if (!id) return;
+      update.mutate({ id, payload: { [field]: value } });
+    },
+    [id, update],
+  );
 
   // Tab control
   const [activeTab, setActiveTab] = useState<ProposalTabKey>(getInitialTab());
@@ -274,11 +281,6 @@ export default function OrcamentoEditarDetalhe() {
       // toast vem do hook
     }
   }
-
-  const handleUpdateField = useCallback(
-    (field: string, value: any) => update.mutate({ id: data.id, payload: { [field]: value } }),
-    [data.id, update],
-  );
 
   async function handleDelete() {
     const ok = await confirm({
