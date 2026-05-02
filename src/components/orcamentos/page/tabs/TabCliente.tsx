@@ -37,6 +37,15 @@ export function TabCliente({
 }: Props) {
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Vínculo com CRM (no topo — fonte de verdade dos dados) */}
+      <CrmDealLinkPicker
+        proposalId={proposalId}
+        currentDeal={dealClientLink || null}
+        setField={setField}
+        setItems={setItems}
+        onLinkChanged={onLinkChanged}
+      />
+
       {/* Título da proposta */}
       <section className="space-y-2">
         <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
