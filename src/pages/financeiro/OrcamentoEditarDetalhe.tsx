@@ -884,6 +884,12 @@ export default function OrcamentoEditarDetalhe() {
         </div>
       </div>
       {confirmDialog}
+      <PreviewPdfDialog
+        open={previewPdfOpen}
+        onOpenChange={setPreviewPdfOpen}
+        proposal={{ ...data, ...buildPreviewProposal() }}
+        templateKey={templateKey}
+      />
 
       {/* Modal: gerar e enviar (define senha + valida data + tela de sucesso) */}
       <GerarEEnviarDialog
