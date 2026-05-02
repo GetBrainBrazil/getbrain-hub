@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -62,12 +62,10 @@ interface ChatMessageRow {
   cost_usd: number | null;
 }
 
-export function PropostaTrackingSheet({
-  open,
-  onOpenChange,
-  proposalId,
-  proposalCode,
-}: Props) {
+export const PropostaTrackingSheet = forwardRef<HTMLDivElement, Props>(function PropostaTrackingSheet(
+  { open, onOpenChange, proposalId, proposalCode }: Props,
+  _ref,
+) {
   const [loading, setLoading] = useState(false);
   const [views, setViews] = useState<ViewRow[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
@@ -308,7 +306,7 @@ export function PropostaTrackingSheet({
       </SheetContent>
     </Sheet>
   );
-}
+});
 
 function Kpi({
   icon,
