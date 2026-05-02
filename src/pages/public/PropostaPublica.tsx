@@ -546,7 +546,7 @@ function ProposalView({
 
   const visibleSections = SECTIONS.filter((s) => {
     if (s.id === "hero") return true;
-    if (s.id === "carta") return !!proposal.executive_summary;
+    if (s.id === "carta") return true; // sempre exibida (IA gera mesmo sem executive_summary)
     if (s.id === "contexto") return !!proposal.pain_context;
     if (s.id === "solucao") return !!proposal.solution_overview;
     if (s.id === "escopo") return proposal.items.length > 0;
