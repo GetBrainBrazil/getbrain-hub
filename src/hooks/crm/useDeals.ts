@@ -127,10 +127,32 @@ export function useUpdateDealStage() {
         if (!list) return;
         qc.setQueryData(key, list.map((d) => d.id === id ? { ...d, stage, probability_pct: DEAL_STAGE_PROBABILITY[stage], lost_reason: lost_reason ?? d.lost_reason, estimated_value: estimated_value ?? d.estimated_value } : d));
       });
-      return { snapshots };
+      // Patch otimista também no detalhe do deal (qualquer code em cache)
+      const detailEntries = qc.getQueriesData<Deal>({ queryKey: ['crm-deal-code'] });
+      const detailSnapshots: Array<[readonly unknown[], Deal | undefined]> = [];
+      detailEntries.forEach(([key, prev]) => {
+        if (!prev || prev.id !== id) return;
+        detailSnapshots.push([key, prev]);
+        qc.setQueryData(key, {
+          ...prev,
+          stage,
+          probability_pct: DEAL_STAGE_PROBABILITY[stage],
+          lost_reason: lost_reason ?? prev.lost_reason,
+          estimated_value: estimated_value ?? prev.estimated_value,
+        });
+      });
+      return { snapshots, detailSnapshots };
     },
-    onError: (_e, _v, ctx) => ctx?.snapshots?.forEach(([key, snap]) => qc.setQueryData(key, snap)),
-    onSettled: () => { qc.invalidateQueries({ queryKey: ['crm-deals'] }); qc.invalidateQueries({ queryKey: ['crm-metrics'] }); },
+    onError: (_e, _v, ctx) => {
+      ctx?.snapshots?.forEach(([key, snap]) => qc.setQueryData(key, snap));
+      ctx?.detailSnapshots?.forEach(([key, snap]) => qc.setQueryData(key, snap));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['crm-deals'] });
+      qc.invalidateQueries({ queryKey: ['crm-deal-code'] });
+      qc.invalidateQueries({ queryKey: ['crm-metrics'] });
+      qc.invalidateQueries({ queryKey: ['crm-deal-audit'] });
+    },
   });
 }
 
