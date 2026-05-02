@@ -1299,10 +1299,12 @@ function ProposalView({
         <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-14 grid sm:grid-cols-2 gap-10 items-end">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-sm text-white">
-                G
-              </div>
-              <span className="font-bold tracking-tight text-white">GetBrain</span>
+              <img
+                src={logoGetBrain}
+                alt="GetBrain"
+                className="h-8 w-auto"
+                draggable={false}
+              />
             </div>
             <p className="text-xs text-white/40 font-mono-display uppercase tracking-[0.2em]">
               {s.footer_tagline} · Preparada para {clientLabel}
