@@ -27,11 +27,12 @@ import {
   Eye,
   Download,
   MessageCircle,
-  Save,
   Send,
   RefreshCw,
   Loader2,
   MoreVertical,
+  Check,
+  CloudUpload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
