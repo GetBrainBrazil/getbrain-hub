@@ -215,7 +215,7 @@ export default function OrcamentoEditarDetalhe() {
       toast.error("Esta proposta ainda não tem link público");
       return;
     }
-    const url = `${window.location.origin}/p/${accessToken}`;
+    const url = buildPublicProposalUrl(accessToken)!;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copiado");
@@ -256,7 +256,7 @@ export default function OrcamentoEditarDetalhe() {
       toast.error("Disponível após enviar a proposta");
       return;
     }
-    const url = `${window.location.origin}/p/${accessToken}`;
+    const url = buildPublicProposalUrl(accessToken)!;
     const msg = `Olá! Segue o link da nossa proposta para a ${state.clientName || data.client_company_name}: ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
     // Auto-registro silencioso
