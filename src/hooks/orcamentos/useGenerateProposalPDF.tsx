@@ -197,7 +197,9 @@ export async function renderProposalPdfPreview(
 ): Promise<{ blob: Blob; url: string }> {
   const template = getTemplate(templateKey ?? proposal?.template_key);
   const data = mapProposalToTemplateData(proposal);
-  const accessUrl = `${window.location.origin}/p/${proposal.id}`;
+  // Usa access_token quando existir (link público real); fallback p/ id em rascunhos
+  const tokenOrId = (proposal as any)?.access_token || proposal?.id;
+  const accessUrl = `${window.location.origin}/p/${tokenOrId}`;
   const qrCodeDataUrl = await generateQrDataUrl(accessUrl);
   const watermark = watermarkFor(proposal);
   const blob = await pdf(

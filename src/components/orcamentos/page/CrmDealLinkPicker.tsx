@@ -12,7 +12,7 @@
  * Mostra um diff resumido antes de aplicar (campos sobrescritos vs vazios).
  */
 import { useEffect, useMemo, useState } from "react";
-import { Search, Link2, Unlink, Sparkles, Loader2, ChevronRight, X } from "lucide-react";
+import { Search, Link2, Unlink, Sparkles, Loader2, ChevronRight, X, ExternalLink, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { useUpdateProposal } from "@/hooks/orcamentos/useUpdateProposal";
 import type { ScopeItem } from "@/lib/orcamentos/calculateTotal";
+import { cn } from "@/lib/utils";
 
 const DEAL_STAGE_LABEL: Record<string, string> = {
   descoberta_marcada: "Descoberta marcada",
@@ -190,140 +191,129 @@ export function CrmDealLinkPicker({
 
   return (
     <>
-      <Card className="p-4 space-y-3 border-accent/30 bg-accent/5">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="space-y-1 min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-accent flex items-center gap-1.5">
-              <Link2 className="h-3 w-3" />
-              Vínculo com CRM
-            </p>
-            {currentDeal ? (
-              <p className="text-sm">
-                <a
-                  href={`/crm/deals/${currentDeal.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-accent hover:underline"
-                >
-                  {currentDeal.code}
-                </a>
-                <span className="mx-1.5 text-muted-foreground">·</span>
-                <span className="text-foreground">{currentDeal.title}</span>
-                {currentDeal.stage && (
-                  <Badge variant="outline" className="ml-2 text-[10px]">
-                    {DEAL_STAGE_LABEL[currentDeal.stage] || currentDeal.stage}
-                  </Badge>
-                )}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Vincule a um deal do CRM para puxar contexto, dor, escopo e valores
-                automaticamente.
-              </p>
-            )}
-          </div>
+      <Card className={cn(
+        "p-4 transition-colors",
+        currentDeal
+          ? "border-accent/30 bg-accent/5"
+          : "border-dashed border-muted-foreground/30 bg-muted/20"
+      )}>
+        {currentDeal ? (
+          // ───────────── Estado: vinculado ─────────────
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className={cn(
+                "rounded-md p-2 shrink-0",
+                stageColorClass(currentDeal.stage)
+              )}>
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-accent flex items-center gap-1.5 mb-1">
+                  <Link2 className="h-3 w-3" />
+                  Vínculo com CRM
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {currentDeal.code}
+                  </span>
+                  {currentDeal.stage && (
+                    <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                      {DEAL_STAGE_LABEL[currentDeal.stage] || currentDeal.stage}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm font-medium mt-0.5 truncate">
+                  {currentDeal.title}
+                </p>
+              </div>
+            </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {currentDeal && (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="default"
-                  className="h-8"
-                  onClick={openImportDialog}
-                >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                  Importar dados
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 text-muted-foreground hover:text-destructive"
-                  onClick={handleUnlink}
-                  disabled={update.isPending}
-                >
-                  <Unlink className="h-3.5 w-3.5" />
-                </Button>
-              </>
-            )}
+            <div className="flex items-center gap-1 flex-wrap">
+              <Button
+                type="button"
+                size="sm"
+                variant="default"
+                className="h-8"
+                onClick={openImportDialog}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                Importar dados do deal
+              </Button>
+              <a
+                href={`/crm/deals/${currentDeal.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Abrir no CRM
+              </a>
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button type="button" size="sm" variant="outline" className="h-8">
+                    <Search className="h-3.5 w-3.5 mr-1.5" />
+                    Trocar
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[420px] p-2" align="start">
+                  {renderPicker({
+                    search,
+                    setSearch,
+                    loading,
+                    results,
+                    currentDeal,
+                    update,
+                    handleLink,
+                  })}
+                </PopoverContent>
+              </Popover>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 text-muted-foreground hover:text-destructive ml-auto"
+                onClick={handleUnlink}
+                disabled={update.isPending}
+                title="Desvincular"
+              >
+                <Unlink className="h-3.5 w-3.5 mr-1.5" />
+                Desvincular
+              </Button>
+            </div>
+          </div>
+        ) : (
+          // ───────────── Estado: sem vínculo ─────────────
+          <div className="flex items-start gap-3 flex-wrap">
+            <div className="rounded-md bg-muted p-2 text-muted-foreground shrink-0">
+              <Link2 className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Nenhum deal do CRM vinculado</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Vincule a um deal para puxar contexto, dor, escopo e valores automaticamente.
+              </p>
+            </div>
             <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
               <PopoverTrigger asChild>
-                <Button type="button" size="sm" variant={currentDeal ? "outline" : "default"} className="h-8">
+                <Button type="button" size="sm" variant="default" className="h-8 shrink-0">
                   <Search className="h-3.5 w-3.5 mr-1.5" />
-                  {currentDeal ? "Trocar deal" : "Vincular deal"}
+                  Vincular deal
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[420px] p-2" align="end">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    autoFocus
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar por título ou código (DEAL-...)"
-                    className="h-9 pl-7 text-sm"
-                  />
-                </div>
-                <div className="max-h-[320px] overflow-y-auto space-y-0.5">
-                  {loading && (
-                    <div className="flex items-center justify-center py-6 text-xs text-muted-foreground gap-2">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Carregando…
-                    </div>
-                  )}
-                  {!loading && results.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-6">
-                      Nenhum deal encontrado.
-                    </p>
-                  )}
-                  {!loading &&
-                    results.map((d) => {
-                      const isCurrent = currentDeal?.id === d.id;
-                      const companyName =
-                        d.company?.trade_name || d.company?.legal_name || "—";
-                      return (
-                        <button
-                          key={d.id}
-                          type="button"
-                          onClick={() => handleLink(d)}
-                          disabled={isCurrent || update.isPending}
-                          className="w-full text-left rounded-md p-2 hover:bg-muted/60 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 group"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-[10px] text-muted-foreground">
-                                {d.code}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className="text-[9px] px-1 py-0 h-4"
-                              >
-                                {DEAL_STAGE_LABEL[d.stage] || d.stage}
-                              </Badge>
-                              {isCurrent && (
-                                <Badge className="text-[9px] px-1 py-0 h-4 bg-accent/20 text-accent">
-                                  atual
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm font-medium truncate mt-0.5">
-                              {d.title}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground truncate">
-                              {companyName}
-                            </p>
-                          </div>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
-                        </button>
-                      );
-                    })}
-                </div>
+                {renderPicker({
+                  search,
+                  setSearch,
+                  loading,
+                  results,
+                  currentDeal,
+                  update,
+                  handleLink,
+                })}
               </PopoverContent>
             </Popover>
           </div>
-        </div>
+        )}
       </Card>
 
       <ImportDealDialog
@@ -332,6 +322,129 @@ export function CrmDealLinkPicker({
         setField={setField}
         setItems={setItems}
       />
+    </>
+  );
+}
+
+// ───────────── helpers ─────────────
+
+function stageColorClass(stage?: string): string {
+  switch (stage) {
+    case "ganho":
+      return "bg-success/15 text-success";
+    case "perdido":
+      return "bg-destructive/15 text-destructive";
+    case "gelado":
+      return "bg-muted text-muted-foreground";
+    case "proposta_na_mesa":
+    case "ajustando":
+      return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
+    default:
+      return "bg-accent/15 text-accent";
+  }
+}
+
+function renderPicker({
+  search,
+  setSearch,
+  loading,
+  results,
+  currentDeal,
+  update,
+  handleLink,
+}: {
+  search: string;
+  setSearch: (v: string) => void;
+  loading: boolean;
+  results: DealRow[];
+  currentDeal: DealLinkLite | null;
+  update: ReturnType<typeof useUpdateProposal>;
+  handleLink: (d: DealRow) => void;
+}) {
+  return (
+    <>
+      <div className="relative mb-2">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          autoFocus
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por código, título ou empresa"
+          className="h-9 pl-7 text-sm"
+        />
+      </div>
+      <div className="max-h-[320px] overflow-y-auto space-y-0.5">
+        {loading && (
+          <div className="flex items-center justify-center py-6 text-xs text-muted-foreground gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Carregando…
+          </div>
+        )}
+        {!loading && results.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-6">
+            Nenhum deal encontrado.
+          </p>
+        )}
+        {!loading &&
+          results.map((d) => {
+            const isCurrent = currentDeal?.id === d.id;
+            const companyName =
+              d.company?.trade_name || d.company?.legal_name || "—";
+            const value = d.estimated_implementation_value || d.estimated_value;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => handleLink(d)}
+                disabled={isCurrent || update.isPending}
+                className="w-full text-left rounded-md p-2 hover:bg-muted/60 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2.5 group"
+              >
+                <div className="h-9 w-9 rounded border border-border/60 bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
+                  {d.company?.logo_url ? (
+                    <img
+                      src={d.company.logo_url}
+                      alt={companyName}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      {d.code}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[9px] px-1 py-0 h-4 border-0", stageColorClass(d.stage))}
+                    >
+                      {DEAL_STAGE_LABEL[d.stage] || d.stage}
+                    </Badge>
+                    {isCurrent && (
+                      <Badge className="text-[9px] px-1 py-0 h-4 bg-accent/20 text-accent">
+                        atual
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium truncate mt-0.5">{d.title}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {companyName}
+                    {value ? (
+                      <>
+                        {" · "}
+                        <span className="tabular-nums text-success font-medium">
+                          R$ {Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
+              </button>
+            );
+          })}
+      </div>
     </>
   );
 }

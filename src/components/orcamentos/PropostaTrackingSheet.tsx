@@ -328,24 +328,26 @@ function Kpi({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">
-        {title}
-      </h3>
-      {children}
-    </div>
-  );
-}
+const Section = forwardRef<HTMLDivElement, { title: string; children: React.ReactNode }>(
+  function Section({ title, children }, ref) {
+    return (
+      <div ref={ref}>
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+          {title}
+        </h3>
+        {children}
+      </div>
+    );
+  },
+);
 
-function Empty({ text }: { text: string }) {
+const Empty = forwardRef<HTMLDivElement, { text: string }>(function Empty({ text }, ref) {
   return (
-    <div className="text-xs text-muted-foreground italic py-4 text-center border border-dashed rounded">
+    <div ref={ref} className="text-xs text-muted-foreground italic py-4 text-center border border-dashed rounded">
       {text}
     </div>
   );
-}
+});
 
 function EventIcon({ type }: { type: string }) {
   const map: Record<string, React.ReactNode> = {
