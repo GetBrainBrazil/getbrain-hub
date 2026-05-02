@@ -27,13 +27,19 @@ interface Props {
   items: ScopeItem[];
   onChange: (items: ScopeItem[]) => void;
   onOpenDetails?: (index: number) => void;
+  /**
+   * Controla a visibilidade da coluna de valor por item.
+   * Default: false — itens são descrições do escopo, o valor cheio fica no
+   * card "Investimento" da proposta. Mantemos `true` apenas para legados.
+   */
+  showItemValue?: boolean;
 }
 
 /**
  * Editor de itens estilo Notion: cada item é um bloco fluido com handle de drag,
  * título inline, valor à direita e descrição expansível. Sem cards aninhados.
  */
-export function NotionItemsEditor({ items, onChange, onOpenDetails }: Props) {
+export function NotionItemsEditor({ items, onChange, onOpenDetails, showItemValue = false }: Props) {
   // Cada item ganha um id estável local pra DnD funcionar com reorder.
   // Como ScopeItem não tem id, usamos índice + título como fallback.
   const ids = items.map((_, i) => `item-${i}`);
@@ -72,6 +78,7 @@ export function NotionItemsEditor({ items, onChange, onOpenDetails }: Props) {
               id={ids[idx]}
               index={idx}
               item={it}
+              showValue={showItemValue}
               onChange={(patch) => update(idx, patch)}
               onRemove={() => remove(idx)}
               onOpenDetails={onOpenDetails ? () => onOpenDetails(idx) : undefined}
@@ -102,6 +109,7 @@ function SortableItem({
   id,
   index,
   item,
+  showValue,
   onChange,
   onRemove,
   onOpenDetails,
@@ -109,6 +117,7 @@ function SortableItem({
   id: string;
   index: number;
   item: ScopeItem;
+  showValue: boolean;
   onChange: (patch: Partial<ScopeItem>) => void;
   onRemove: () => void;
   onOpenDetails?: () => void;
@@ -165,18 +174,20 @@ function SortableItem({
               placeholder="Título do módulo"
               className="h-8 border-0 bg-transparent px-1 text-base font-medium shadow-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring"
             />
-            <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-muted-foreground">R$</span>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={item.value || ""}
-                onChange={(e) => onChange({ value: parseFloat(e.target.value) || 0 })}
-                className="h-8 w-28 border-0 bg-transparent px-1 text-right tabular-nums font-mono text-sm shadow-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="0,00"
-              />
-            </div>
+            {showValue && (
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[10px] text-muted-foreground">R$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={item.value || ""}
+                  onChange={(e) => onChange({ value: parseFloat(e.target.value) || 0 })}
+                  className="h-8 w-28 border-0 bg-transparent px-1 text-right tabular-nums font-mono text-sm shadow-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="0,00"
+                />
+              </div>
+            )}
           </div>
 
           {expanded && (
@@ -187,7 +198,7 @@ function SortableItem({
                 placeholder="Bullets curtos, um por linha…"
                 className="min-h-[60px] border-0 bg-transparent px-1 text-sm shadow-none focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring resize-none"
               />
-              {item.value > 0 && (
+              {showValue && item.value > 0 && (
                 <div className="px-1 text-[10px] text-success/80 tabular-nums">
                   {formatBRL(item.value)}
                 </div>

@@ -60,6 +60,11 @@ interface DealRow {
   discount_valid_until: string | null;
   installments_count: number | null;
   first_installment_date: string | null;
+  mrr_start_trigger: string | null;
+  mrr_start_date: string | null;
+  mrr_duration_months: number | null;
+  mrr_discount_value: number | null;
+  mrr_discount_months: number | null;
   company?: {
     id: string;
     trade_name: string | null;
@@ -396,10 +401,19 @@ function ImportDealDialog({
       },
       {
         key: "scope_items",
-        label: `Itens do escopo (${scopeItems.length})`,
+        label: `Módulos inclusos (${scopeItems.length})`,
         preview: scopeItems.map((i) => `• ${i.title}`).join("\n"),
         available: scopeItems.length > 0,
         apply: () => setItems(scopeItems),
+      },
+      {
+        key: "implementation_value",
+        label: "Investimento (implementação)",
+        preview: deal.estimated_implementation_value
+          ? `R$ ${Number(deal.estimated_implementation_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (one-time)`
+          : null,
+        available: !!deal.estimated_implementation_value,
+        apply: () => setField("implementationValue", Number(deal.estimated_implementation_value)),
       },
       {
         key: "mrr",
@@ -422,6 +436,30 @@ function ImportDealDialog({
           if (deal.first_installment_date) {
             setField("firstInstallmentDate", deal.first_installment_date);
           }
+        },
+      },
+      {
+        key: "mrr_triggers",
+        label: "Gatilhos do MRR (início, duração, desconto)",
+        preview: (() => {
+          const parts: string[] = [];
+          if ((deal as any).mrr_start_trigger) parts.push(`Início: ${(deal as any).mrr_start_trigger}`);
+          if ((deal as any).mrr_duration_months) parts.push(`Duração: ${(deal as any).mrr_duration_months} meses`);
+          if ((deal as any).mrr_discount_value && (deal as any).mrr_discount_months)
+            parts.push(`Desconto: R$ ${(deal as any).mrr_discount_value} × ${(deal as any).mrr_discount_months}m`);
+          return parts.join(" · ") || null;
+        })(),
+        available: !!(
+          (deal as any).mrr_start_trigger ||
+          (deal as any).mrr_duration_months ||
+          ((deal as any).mrr_discount_value && (deal as any).mrr_discount_months)
+        ),
+        apply: () => {
+          if ((deal as any).mrr_start_trigger) setField("mrrStartTrigger", (deal as any).mrr_start_trigger);
+          if ((deal as any).mrr_start_date) setField("mrrStartDate", (deal as any).mrr_start_date);
+          if ((deal as any).mrr_duration_months) setField("mrrDurationMonths", Number((deal as any).mrr_duration_months));
+          if ((deal as any).mrr_discount_value) setField("mrrDiscountValue", Number((deal as any).mrr_discount_value));
+          if ((deal as any).mrr_discount_months) setField("mrrDiscountMonths", Number((deal as any).mrr_discount_months));
         },
       },
       {
@@ -536,7 +574,6 @@ function ImportDealDialog({
  */
 function parseScopeItems(deal: DealRow): ScopeItem[] {
   const items: ScopeItem[] = [];
-  const totalValue = Number(deal.estimated_implementation_value || deal.estimated_value || 0);
 
   // 1) scope_bullets (jsonb)
   if (Array.isArray(deal.scope_bullets) && deal.scope_bullets.length > 0) {
@@ -564,12 +601,10 @@ function parseScopeItems(deal: DealRow): ScopeItem[] {
     });
   }
 
-  // Se temos um valor total estimado e itens sem valor, distribui igualmente
-  const hasZeroValues = items.length > 0 && items.every((i) => !i.value);
-  if (hasZeroValues && totalValue > 0) {
-    const per = Math.round((totalValue / items.length) * 100) / 100;
-    items.forEach((i) => (i.value = per));
-  }
-
+  // NÃO distribuir o valor da implementação entre os itens — o
+  // estimated_implementation_value do CRM é o preço cheio do projeto, não a
+  // soma de itens precificados. Os itens são descrições do escopo (deliverables
+  // ou scope_bullets) e ficam sem valor a menos que o vendedor tenha cadastrado
+  // value > 0 nos scope_bullets.
   return items;
 }

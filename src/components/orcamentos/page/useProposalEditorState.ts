@@ -47,6 +47,13 @@ export interface ProposalFormState {
   clientBrandColor: string;
   installmentsCount: number | "";
   firstInstallmentDate: string;
+  // Investimento e MRR (espelham o CRM)
+  implementationValue: number | "";
+  mrrStartTrigger: string; // 'on_signature' | 'on_delivery' | 'on_date' | ''
+  mrrStartDate: string;
+  mrrDurationMonths: number | "";
+  mrrDiscountValue: number | "";
+  mrrDiscountMonths: number | "";
 }
 
 const EMPTY_STATE: ProposalFormState = {
@@ -70,6 +77,12 @@ const EMPTY_STATE: ProposalFormState = {
   clientBrandColor: "",
   installmentsCount: "",
   firstInstallmentDate: "",
+  implementationValue: "",
+  mrrStartTrigger: "",
+  mrrStartDate: "",
+  mrrDurationMonths: "",
+  mrrDiscountValue: "",
+  mrrDiscountMonths: "",
 };
 
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
@@ -129,6 +142,22 @@ export function useProposalEditorState(proposalId: string | undefined) {
         ? Number((data as any).installments_count)
         : "",
       firstInstallmentDate: (data as any).first_installment_date || "",
+      implementationValue:
+        (data as any).implementation_value != null
+          ? Number((data as any).implementation_value)
+          : "",
+      mrrStartTrigger: (data as any).mrr_start_trigger || "",
+      mrrStartDate: (data as any).mrr_start_date || "",
+      mrrDurationMonths: (data as any).mrr_duration_months
+        ? Number((data as any).mrr_duration_months)
+        : "",
+      mrrDiscountValue:
+        (data as any).mrr_discount_value != null
+          ? Number((data as any).mrr_discount_value)
+          : "",
+      mrrDiscountMonths: (data as any).mrr_discount_months
+        ? Number((data as any).mrr_discount_months)
+        : "",
     });
     setDirty(false);
     setItemsDirty(false);
@@ -199,6 +228,24 @@ export function useProposalEditorState(proposalId: string | undefined) {
               ? state.installmentsCount
               : null,
           first_installment_date: state.firstInstallmentDate || null,
+          implementation_value:
+            typeof state.implementationValue === "number" && state.implementationValue >= 0
+              ? state.implementationValue
+              : null,
+          mrr_start_trigger: state.mrrStartTrigger || null,
+          mrr_start_date: state.mrrStartDate || null,
+          mrr_duration_months:
+            typeof state.mrrDurationMonths === "number" && state.mrrDurationMonths > 0
+              ? state.mrrDurationMonths
+              : null,
+          mrr_discount_value:
+            typeof state.mrrDiscountValue === "number" && state.mrrDiscountValue > 0
+              ? state.mrrDiscountValue
+              : null,
+          mrr_discount_months:
+            typeof state.mrrDiscountMonths === "number" && state.mrrDiscountMonths > 0
+              ? state.mrrDiscountMonths
+              : null,
           ...extra,
         },
       });
@@ -271,6 +318,24 @@ export function useProposalEditorState(proposalId: string | undefined) {
           ? state.installmentsCount
           : null,
       first_installment_date: state.firstInstallmentDate || null,
+      implementation_value:
+        typeof state.implementationValue === "number" && state.implementationValue >= 0
+          ? state.implementationValue
+          : null,
+      mrr_start_trigger: state.mrrStartTrigger || null,
+      mrr_start_date: state.mrrStartDate || null,
+      mrr_duration_months:
+        typeof state.mrrDurationMonths === "number" && state.mrrDurationMonths > 0
+          ? state.mrrDurationMonths
+          : null,
+      mrr_discount_value:
+        typeof state.mrrDiscountValue === "number" && state.mrrDiscountValue > 0
+          ? state.mrrDiscountValue
+          : null,
+      mrr_discount_months:
+        typeof state.mrrDiscountMonths === "number" && state.mrrDiscountMonths > 0
+          ? state.mrrDiscountMonths
+          : null,
     };
   }, [detail.data, proposalId, state]);
 

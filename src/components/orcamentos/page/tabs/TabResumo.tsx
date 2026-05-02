@@ -74,11 +74,23 @@ export function TabResumo({
   const items: ScopeItem[] = Array.isArray(livePreview.scope_items)
     ? livePreview.scope_items
     : [];
-  const total = calculateScopeTotal(items);
+  // Implementação = valor cheio (CRM-aligned). Fallback p/ soma legada de itens
+  // quando a proposta foi criada antes da migração.
+  const implValue =
+    livePreview.implementation_value != null && Number(livePreview.implementation_value) >= 0
+      ? Number(livePreview.implementation_value)
+      : calculateScopeTotal(items);
   const monthly = livePreview.maintenance_monthly_value || 0;
-  const annual = total + monthly * 12;
+  // MRR efetivo no 1º ano: aplica desconto inicial se houver
+  const discValue = Number(livePreview.mrr_discount_value) || 0;
+  const discMonths = Math.min(Number(livePreview.mrr_discount_months) || 0, 12);
+  const annualMrr =
+    monthly > 0
+      ? Math.max(monthly - discValue, 0) * discMonths + monthly * (12 - discMonths)
+      : 0;
+  const annual = implValue + annualMrr;
   const installments = Number(livePreview.installments_count) || 0;
-  const installmentValue = installments > 1 ? total / installments : 0;
+  const installmentValue = installments > 1 && implValue > 0 ? implValue / installments : 0;
   const implDays = livePreview.implementation_days || 0;
   const validDays = livePreview.validation_days || 0;
   const totalDays = implDays + validDays;
@@ -317,7 +329,7 @@ export function TabResumo({
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-border/60 border-b border-border/60">
           <KpiCell
             label="Implementação"
-            value={formatBRL(total)}
+            value={formatBRL(implValue)}
             sub={
               installments > 1 && installmentValue > 0
                 ? `${installments}× ${formatBRL(installmentValue)}`
