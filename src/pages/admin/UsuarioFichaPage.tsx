@@ -164,22 +164,22 @@ export default function UsuarioFichaPage({ mode }: { mode: "perfil" | "admin" })
       await deleteUser.mutateAsync(userId);
       await logAction({ acao: "delete", modulo: "Usuários", tabela: "auth.users", registro_id: userId, resumo: `Usuário excluído (${fullName})` });
       toast.success("Usuário excluído");
-      navigate("/admin/usuarios");
+      navigate("/configuracoes/sistema/usuarios");
     } catch (e: any) { toast.error(e.message ?? "Erro"); }
   }
 
   if (isLoading) return <div className="p-8 text-center text-sm text-muted-foreground">Carregando…</div>;
   if (!ficha) return <div className="p-8 text-center text-sm text-muted-foreground">Usuário não encontrado</div>;
 
-  const breadcrumbBack = mode === "admin" ? "/admin/usuarios" : "/";
+  const breadcrumbBack = mode === "admin" ? "/configuracoes/sistema/usuarios" : "/";
 
   return (
     <div className="space-y-5">
       {mode === "admin" && (
         <div className="text-xs text-muted-foreground">
-          <button onClick={() => navigate("/admin/usuarios")} className="hover:underline">Admin</button>
+          <button onClick={() => navigate("/configuracoes")} className="hover:underline">Configurações</button>
           {" / "}
-          <button onClick={() => navigate("/admin/usuarios")} className="hover:underline">Usuários</button>
+          <button onClick={() => navigate("/configuracoes/sistema/usuarios")} className="hover:underline">Usuários</button>
           {" / "}<span className="text-foreground">{ficha.full_name}</span>
         </div>
       )}
