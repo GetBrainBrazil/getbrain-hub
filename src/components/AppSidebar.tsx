@@ -79,9 +79,12 @@ const navItems: NavItem[] = [
     url: "/configuracoes",
     icon: Settings,
     children: [
-      { title: "Pessoas & Empresas", url: "/configuracoes/pessoas/setores" },
+      { title: "CRM", url: "/configuracoes/crm/etapas" },
+      { title: "Projetos", url: "/configuracoes/projetos/tipos" },
       { title: "Financeiro", url: "/configuracoes/financeiro/contas" },
+      { title: "Pessoas & Empresas", url: "/configuracoes/pessoas/setores" },
       { title: "Sistema", url: "/configuracoes/sistema/usuarios" },
+      { title: "Integrações", url: "/configuracoes/integracoes/ia-propostas" },
     ],
   },
 ];
