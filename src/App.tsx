@@ -165,26 +165,37 @@ const App = () => (
             <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
             {/* Centro de Configurações Gerais (admin-only) */}
             <Route path="/configuracoes" element={<AdminRoute><ConfiguracoesLayout /></AdminRoute>}>
-              <Route index element={<Navigate to="pessoas/setores" replace />} />
-              <Route path="pessoas/setores" element={<Setores />} />
-              <Route path="pessoas/papeis-contato" element={<PapeisContatoPage />} />
-              <Route path="pessoas/origens" element={<OrigensLeadPage />} />
-              <Route path="pessoas/categorias-dor" element={<CategoriasDorPage />} />
-              <Route path="pessoas/tipos-projeto" element={<TiposProjetoPage />} />
-              <Route path="pessoas/cargos" element={<CargosPage />} />
+              <Route index element={<Navigate to="crm/etapas" replace />} />
+              {/* CRM */}
+              <Route path="crm/etapas" element={<EtapasFunilPage />} />
+              <Route path="crm/motivos-descarte" element={<MotivosDescartePage />} />
+              <Route path="crm/origens" element={<OrigensLeadPage />} />
+              <Route path="crm/papeis-contato" element={<PapeisContatoPage />} />
+              <Route path="crm/categorias-dor" element={<CategoriasDorPage />} />
+              {/* Projetos */}
+              <Route path="projetos/tipos" element={<TiposProjetoPage />} />
+              {/* Financeiro */}
               <Route path="financeiro/contas" element={<FinContasPage />} />
               <Route path="financeiro/categorias" element={<FinCategoriasPage />} />
               <Route path="financeiro/centros" element={<FinCentrosPage />} />
               <Route path="financeiro/clientes" element={<FinClientesPage />} />
               <Route path="financeiro/fornecedores" element={<FinFornecedoresPage />} />
               <Route path="financeiro/colaboradores" element={<FinColaboradoresPage />} />
+              {/* Pessoas & Empresas */}
+              <Route path="pessoas/setores" element={<Setores />} />
+              <Route path="pessoas/cargos" element={<CargosPage />} />
+              {/* Compat: páginas que migraram para CRM/Projetos */}
+              <Route path="pessoas/papeis-contato" element={<Navigate to="/configuracoes/crm/papeis-contato" replace />} />
+              <Route path="pessoas/origens" element={<Navigate to="/configuracoes/crm/origens" replace />} />
+              <Route path="pessoas/categorias-dor" element={<Navigate to="/configuracoes/crm/categorias-dor" replace />} />
+              <Route path="pessoas/tipos-projeto" element={<Navigate to="/configuracoes/projetos/tipos" replace />} />
+              {/* Sistema */}
               <Route path="sistema/usuarios" element={<AdminUsuariosList />} />
               <Route path="sistema/permissoes" element={<AdminPermissoesPage />} />
               <Route path="sistema/logs" element={<Navigate to="/configuracoes/sistema/auditoria" replace />} />
               <Route path="sistema/auditoria" element={<AdminAuditoriaPage />} />
+              {/* Integrações */}
               <Route path="integracoes/ia-propostas" element={<IaPropostasPage />} />
-              <Route path="crm/etapas" element={<EtapasFunilPage />} />
-              <Route path="crm/motivos-descarte" element={<MotivosDescartePage />} />
             </Route>
             {/* Compat: rota antiga /configuracoes/setores */}
             <Route path="/configuracoes/setores" element={<Navigate to="/configuracoes/pessoas/setores" replace />} />
