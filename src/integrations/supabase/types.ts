@@ -3920,6 +3920,7 @@ export type Database = {
           description: string
           detailed_description: string | null
           id: string
+          long_description: string | null
           order_index: number
           proposal_id: string
           quantity: number
@@ -3938,6 +3939,7 @@ export type Database = {
           description: string
           detailed_description?: string | null
           id?: string
+          long_description?: string | null
           order_index?: number
           proposal_id: string
           quantity?: number
@@ -3956,6 +3958,7 @@ export type Database = {
           description?: string
           detailed_description?: string | null
           id?: string
+          long_description?: string | null
           order_index?: number
           proposal_id?: string
           quantity?: number

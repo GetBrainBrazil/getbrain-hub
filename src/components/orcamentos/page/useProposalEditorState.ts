@@ -87,11 +87,16 @@ const EMPTY_STATE: ProposalFormState = {
 
 /** Adapter ScopeItem (UI legado) ↔ proposal_items canônico */
 function canonicalToScopeItems(
-  rows: Array<{ description: string; unit_price: number | string; quantity: number | string }>,
+  rows: Array<{
+    description: string;
+    long_description?: string | null;
+    unit_price: number | string;
+    quantity: number | string;
+  }>,
 ): ScopeItem[] {
   return rows.map((r) => ({
     title: r.description,
-    description: "",
+    description: r.long_description ?? "",
     value: (Number(r.unit_price) || 0) * (Number(r.quantity) || 1),
   }));
 }
@@ -255,6 +260,7 @@ export function useProposalEditorState(proposalId: string | undefined) {
           proposalId,
           items: state.scopeItems.map((it, i) => ({
             description: it.title || "Item",
+            long_description: (it.description ?? "").trim() || null,
             quantity: 1,
             unit_price: Number(it.value) || 0,
             order_index: i,
