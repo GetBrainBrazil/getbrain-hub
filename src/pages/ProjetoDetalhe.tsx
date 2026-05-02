@@ -120,6 +120,8 @@ import { AbaDependencias } from "@/components/projetos/AbaDependencias";
 import { AbaIntegracoes } from "@/components/projetos/AbaIntegracoes";
 import { AbaOperacional } from "@/components/projetos/AbaOperacional";
 import { AbaTarefas } from "@/components/projetos/AbaTarefas";
+import { AbaPropostas } from "@/components/projetos/AbaPropostas";
+import { useProjectProposals } from "@/hooks/projetos/useProjectProposals";
 import { CardContatos } from "@/components/projetos/CardContatos";
 import { useProjectContacts } from "@/hooks/projetos/useProjectContacts";
 import { usePersistedState } from "@/hooks/use-persisted-state";
@@ -401,6 +403,8 @@ export default function ProjetoDetalhe() {
   const [logActors, setLogActors] = useState<Record<string, string>>({});
   const [dependencies, setDependencies] = useState<any[]>([]);
   const [milestones, setMilestones] = useState<any[]>([]);
+  const { data: proposalsPayload } = useProjectProposals(projectId ?? null);
+  const proposalsCount = proposalsPayload?.proposals.length ?? 0;
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [allocOpen, setAllocOpen] = useState(false);
   // (modal de contrato removido — agora editamos inline no card Financeiro)
@@ -1222,6 +1226,7 @@ export default function ProjetoDetalhe() {
                   ["overview", "Visão Geral", null],
                   ["scope", "Escopo", null],
                   ["operacional", "Operacional", null],
+                  ["proposals", "Propostas & Anexos", proposalsCount || null],
                   ["tasks", "Tarefas", null],
                   ["milestones", "Marcos", milestones.length || null],
                   ["dependencies", "Dependências", blockingDeps.length || null],
@@ -1989,7 +1994,12 @@ export default function ProjetoDetalhe() {
                 />
               </TabsContent>
 
-              {/* ----- TAREFAS ----- */}
+              {/* ----- PROPOSTAS & ANEXOS ----- */}
+              <TabsContent value="proposals">
+                <AbaPropostas projectId={projectId!} />
+              </TabsContent>
+
+
               <TabsContent value="tasks">
                 {project && (
                   <AbaTarefas projectId={projectId!} projectCode={project.code} />
