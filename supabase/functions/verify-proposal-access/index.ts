@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
 
     if (propErr || !prop) return json({ error: "invalid_token" }, 404);
 
-    // Status válido
-    const validStatuses = ["enviada", "visualizada", "interesse_manifestado"];
+    // Status válido (rascunho permitido para teste pelo autor antes de enviar)
+    const validStatuses = ["rascunho", "enviada", "visualizada", "interesse_manifestado"];
     if (!validStatuses.includes(prop.status)) {
       return json({ error: "invalid_token" }, 403);
     }
@@ -73,9 +73,9 @@ Deno.serve(async (req) => {
       return json({ error: "rate_limited" }, 429);
     }
 
-    // Comparar senha
+    // Comparar senha (usar versão sync — Worker não disponível no edge runtime)
     const passwordOk = prop.access_password_hash
-      ? await bcrypt.compare(password, prop.access_password_hash)
+      ? bcrypt.compareSync(password, prop.access_password_hash)
       : false;
 
     // Registrar tentativa
