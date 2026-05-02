@@ -486,6 +486,28 @@ function ProposalView({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Auto-gera carta IA + roadmap se ainda não estiverem em cache
+  useEffect(() => {
+    if (!accessJwt) return;
+    if (!openingLetter && !letterLoading) {
+      setLetterLoading(true);
+      callEdge("generate-proposal-opening-letter", {}, accessJwt)
+        .then((r) => {
+          if (r.ok && r.data?.letter) setOpeningLetter(r.data.letter as string);
+        })
+        .finally(() => setLetterLoading(false));
+    }
+    if (!roadmap && !roadmapLoading && proposal.items.length > 0) {
+      setRoadmapLoading(true);
+      callEdge("generate-proposal-roadmap", {}, accessJwt)
+        .then((r) => {
+          if (r.ok && r.data?.roadmap) setRoadmap(r.data.roadmap);
+        })
+        .finally(() => setRoadmapLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessJwt]);
+
   // reveal-on-scroll
   useEffect(() => {
     const els = document.querySelectorAll<HTMLElement>(".reveal");
