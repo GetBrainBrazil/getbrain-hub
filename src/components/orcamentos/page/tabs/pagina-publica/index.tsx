@@ -1,9 +1,7 @@
 /**
- * Wrapper da tab "Página Pública" — agora dividida em 2 sub-abas:
+ * Wrapper da tab "Página Pública" — duas sub-abas:
  *   1. Acesso & Preview — link, senha, mockup e pré-visualização ao vivo
- *   2. Conteúdo        — editor global de textos institucionais
- *
- * Persistência da sub-aba ativa via usePersistedState.
+ *   2. Conteúdo        — CMS completo (global + por-proposta) com preview embutido
  */
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link2, Type } from "lucide-react";
@@ -15,8 +13,9 @@ import { SubTabConteudo } from "./SubTabConteudo";
 
 interface Props {
   proposal: ProposalDetail;
-  state: { clientName: string; mockupUrl: string };
+  state: any;
   setField: (field: any, value: any) => void;
+  setItems: (items: any[]) => void;
   onPreviewAsClient: () => void;
   onOpenSendDialog: () => void;
   onPasswordUpdated: () => void;
@@ -27,13 +26,11 @@ export function PaginaPublicaTab(props: Props) {
     "proposal-pagina-publica-subtab",
     "acesso",
   );
-  // bumped sempre que o conteúdo global muda → força reload do iframe
   const [previewBust, setPreviewBust] = useState(0);
   const acessoRef = useRef<SubTabAcessoHandle>(null);
 
   const handleOpenPreview = () => {
     setActive("acesso");
-    // dá um tick para a tab montar antes de fazer scroll
     setTimeout(() => acessoRef.current?.scrollToPreview(), 80);
   };
 
@@ -52,12 +49,27 @@ export function PaginaPublicaTab(props: Props) {
       </TabsList>
 
       <TabsContent value="acesso" className="mt-4">
-        <SubTabAcesso ref={acessoRef} {...props} previewBust={previewBust} />
+        <SubTabAcesso
+          ref={acessoRef}
+          proposal={props.proposal}
+          state={props.state}
+          setField={props.setField}
+          onPreviewAsClient={props.onPreviewAsClient}
+          onOpenSendDialog={props.onOpenSendDialog}
+          onPasswordUpdated={props.onPasswordUpdated}
+          previewBust={previewBust}
+        />
       </TabsContent>
       <TabsContent value="conteudo" className="mt-4">
         <SubTabConteudo
+          proposal={props.proposal}
+          state={props.state}
+          setField={props.setField}
+          setItems={props.setItems}
           onSettingsChanged={() => setPreviewBust((k) => k + 1)}
-          onOpenPreview={handleOpenPreview}
+          onOpenPreviewTab={handleOpenPreview}
+          onPreviewAsClient={props.onPreviewAsClient}
+          onOpenSendDialog={props.onOpenSendDialog}
         />
       </TabsContent>
     </Tabs>

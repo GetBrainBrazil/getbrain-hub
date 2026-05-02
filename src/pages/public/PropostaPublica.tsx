@@ -143,6 +143,59 @@ export default function PropostaPublica() {
     })();
   }, [previewJwt]);
 
+  // ============ Canal postMessage com o editor (somente em preview) ============
+  // O editor pode pedir: scroll-to seção, aplicar patch in-memory na proposta,
+  // ou re-fetchar settings globais. Fica isolado nesta página.
+  useEffect(() => {
+    if (!isPreview) return;
+
+    function highlight(section: string) {
+      const el = document.getElementById(section);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("preview-highlight");
+      window.setTimeout(() => el.classList.remove("preview-highlight"), 1600);
+    }
+
+    async function refetchSettings() {
+      if (!previewJwt) return;
+      const r = await callEdge("get-proposal-public-data", {}, previewJwt);
+      if (r.ok) {
+        setPageSettings(mergeWithDefaults(r.data.page_settings));
+        setProposal((p) => (p ? { ...p, ...r.data.proposal } : (r.data.proposal as PublicProposal)));
+      }
+    }
+
+    function onMsg(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      const data = e.data;
+      if (!data || typeof data !== "object") return;
+
+      if (data.type === "scroll-to" && typeof data.section === "string") {
+        highlight(data.section);
+      } else if (data.type === "settings-changed") {
+        refetchSettings();
+      } else if (data.type === "proposal-patch" && data.patch) {
+        setProposal((p) => (p ? { ...p, ...data.patch } : p));
+        // se patch incluir uma seção alvo, dá scroll/highlight
+        if (typeof data.scrollTo === "string") highlight(data.scrollTo);
+      }
+    }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [isPreview, previewJwt]);
+
+  // re-anuncia "preview-ready" toda vez que a página completar uma renderização
+  // significativa (proposal carregado), pra cobrir o caso de o iframe ter sido
+  // recriado depois de o editor ter setado seu listener.
+  useEffect(() => {
+    if (isPreview && proposal) {
+      window.parent?.postMessage({ type: "preview-ready" }, window.location.origin);
+    }
+  }, [isPreview, proposal]);
+
+
+
   async function handleLogin(e?: React.FormEvent) {
     e?.preventDefault();
     if (!token || pwdInput.length < 1) return;
@@ -581,6 +634,14 @@ function ProposalView({
 
         .reveal { opacity: 0; transform: translateY(28px); transition: opacity 1s cubic-bezier(.2,.7,.2,1), transform 1s cubic-bezier(.2,.7,.2,1); }
         .reveal-in { opacity: 1; transform: none; }
+
+        /* Halo usado pelo editor (modo preview) ao apontar a seção em edição */
+        .preview-highlight {
+          box-shadow:
+            inset 0 0 0 2px var(--brand),
+            0 0 0 8px color-mix(in srgb, var(--brand) 18%, transparent);
+          transition: box-shadow .8s ease;
+        }
 
         .text-brand { color: var(--brand); }
         .bg-brand { background: var(--brand); }
