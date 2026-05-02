@@ -51,6 +51,7 @@ import type { ScopeItem } from "@/lib/orcamentos/calculateTotal";
 interface Props {
   proposal: ProposalDetail;
   livePreview: any;
+  interactionsCount?: number;
   onPreviewAsClient: () => void;
   onCopyLink: () => void;
   onOpenTracking: () => void;
@@ -67,6 +68,7 @@ interface Props {
 export function TabResumo({
   proposal,
   livePreview,
+  interactionsCount = 0,
   onPreviewAsClient,
   onCopyLink,
   onOpenTracking,
