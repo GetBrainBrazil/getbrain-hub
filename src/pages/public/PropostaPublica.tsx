@@ -1151,10 +1151,14 @@ function ProposalView({
           <h2 className="reveal font-editorial-display text-5xl sm:text-7xl lg:text-8xl tracking-tight font-light leading-[1.05] max-w-[18ch]">
             <span className="brand-dot">Vamos começar?</span>
           </h2>
-          <p className="reveal mt-8 text-lg text-white/65 max-w-2xl font-light leading-relaxed">
-            Se essa proposta faz sentido, é só avisar — o Daniel é chamado na hora.
-            Se quiser ajustar algo ou tirar uma dúvida, fale pelo WhatsApp ou pelo
-            chat aqui no canto.
+          <p className="reveal mt-8 text-lg text-white/70 max-w-2xl font-light leading-relaxed">
+            Se faz sentido, clique em <strong className="text-white">"Quero avançar"</strong> — o
+            Daniel é avisado na hora pelo WhatsApp e te procura em algumas horas para
+            alinhar contrato e cronograma.
+          </p>
+          <p className="reveal mt-3 text-sm text-white/50 max-w-2xl font-light leading-relaxed">
+            Se preferir tirar dúvidas antes, fale pelo WhatsApp ou converse com o
+            agente IA no canto inferior direito — ele conhece esta proposta inteira.
           </p>
 
           <div className="reveal mt-12 flex flex-wrap gap-3">
