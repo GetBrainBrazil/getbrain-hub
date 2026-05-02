@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Eye,
+  EyeOff,
   Link2,
   FileText,
   Activity,
@@ -31,6 +32,8 @@ import {
   QrCode,
   Check,
   Lock,
+  KeyRound,
+  RefreshCcw,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useEffect, useState } from "react";
