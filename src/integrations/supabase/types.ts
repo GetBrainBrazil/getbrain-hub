@@ -319,6 +319,7 @@ export type Database = {
       }
       catalog_products: {
         Row: {
+          archetype: Database["public"]["Enums"]["catalog_archetype"]
           billing_unit: string
           category_id: string | null
           code: string
@@ -331,20 +332,30 @@ export type Database = {
           id: string
           image_url: string | null
           internal_notes: string | null
+          maintenance_required: string
           name: string
+          oneshot_adjustable: boolean
+          oneshot_payment_terms: string
+          oneshot_value: number | null
           owner_actor_id: string | null
           pitch: string | null
           price_max: number | null
           price_min: number | null
           price_mode: Database["public"]["Enums"]["catalog_price_mode"]
           price_value: number | null
+          recurring_adjustable: boolean
+          recurring_value: number | null
           sale_type: Database["public"]["Enums"]["catalog_sale_type"]
+          setup_adjustable: boolean
+          setup_payment_terms: string
+          setup_value: number | null
           status: Database["public"]["Enums"]["catalog_product_status"]
           tags: string[]
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          archetype?: Database["public"]["Enums"]["catalog_archetype"]
           billing_unit?: string
           category_id?: string | null
           code?: string
@@ -357,20 +368,30 @@ export type Database = {
           id?: string
           image_url?: string | null
           internal_notes?: string | null
+          maintenance_required?: string
           name: string
+          oneshot_adjustable?: boolean
+          oneshot_payment_terms?: string
+          oneshot_value?: number | null
           owner_actor_id?: string | null
           pitch?: string | null
           price_max?: number | null
           price_min?: number | null
           price_mode: Database["public"]["Enums"]["catalog_price_mode"]
           price_value?: number | null
+          recurring_adjustable?: boolean
+          recurring_value?: number | null
           sale_type: Database["public"]["Enums"]["catalog_sale_type"]
+          setup_adjustable?: boolean
+          setup_payment_terms?: string
+          setup_value?: number | null
           status?: Database["public"]["Enums"]["catalog_product_status"]
           tags?: string[]
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          archetype?: Database["public"]["Enums"]["catalog_archetype"]
           billing_unit?: string
           category_id?: string | null
           code?: string
@@ -383,14 +404,23 @@ export type Database = {
           id?: string
           image_url?: string | null
           internal_notes?: string | null
+          maintenance_required?: string
           name?: string
+          oneshot_adjustable?: boolean
+          oneshot_payment_terms?: string
+          oneshot_value?: number | null
           owner_actor_id?: string | null
           pitch?: string | null
           price_max?: number | null
           price_min?: number | null
           price_mode?: Database["public"]["Enums"]["catalog_price_mode"]
           price_value?: number | null
+          recurring_adjustable?: boolean
+          recurring_value?: number | null
           sale_type?: Database["public"]["Enums"]["catalog_sale_type"]
+          setup_adjustable?: boolean
+          setup_payment_terms?: string
+          setup_value?: number | null
           status?: Database["public"]["Enums"]["catalog_product_status"]
           tags?: string[]
           updated_at?: string
@@ -5937,6 +5967,12 @@ export type Database = {
         | "restore"
         | "status_change"
         | "custom"
+      catalog_archetype:
+        | "one_shot"
+        | "with_maintenance"
+        | "saas"
+        | "hybrid"
+        | "aggregator"
       catalog_payment_terms: "unica" | "mensal" | "anual" | "parcelada"
       catalog_price_mode: "fixed" | "suggested" | "range" | "on_request"
       catalog_product_status: "active" | "in_review" | "archived"
@@ -6267,6 +6303,13 @@ export const Constants = {
         "restore",
         "status_change",
         "custom",
+      ],
+      catalog_archetype: [
+        "one_shot",
+        "with_maintenance",
+        "saas",
+        "hybrid",
+        "aggregator",
       ],
       catalog_payment_terms: ["unica", "mensal", "anual", "parcelada"],
       catalog_price_mode: ["fixed", "suggested", "range", "on_request"],

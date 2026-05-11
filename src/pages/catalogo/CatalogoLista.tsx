@@ -1,19 +1,19 @@
 /**
  * Catálogo — fonte única dos produtos vendáveis da GetBrain.
  *
- * INTENÇÃO DE PRODUTO (cesta no CRM):
- * Esta tela é o "estoque". Em fase próxima, os mesmos cards de produto serão
- * reaproveitados num drawer "Cesta" dentro da ficha do Deal (CrmDealDetail),
- * onde o vendedor SELECIONA itens para montar a proposta sem digitar nada.
- * A cesta vive no Deal (snapshot dos preços), não no Catálogo — alterações
- * futuras de preço aqui não afetam propostas já montadas. Cada item da cesta
- * referencia `catalog_product_id` para relatórios.
+ * Cada produto pertence a 1 de 5 arquétipos (one_shot, with_maintenance,
+ * saas, hybrid, aggregator). O arquétipo define quais campos de preço
+ * aparecem no formulário e o que o card exibe.
  *
- * Por isso a visualização padrão é GALERIA (cards), não tabela.
+ * Em fase próxima, os mesmos cards serão reaproveitados num drawer "Cesta"
+ * dentro da ficha do Deal (CrmDealDetail).
  */
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Package, Plus, Search, Settings2, Archive, ArchiveRestore, Copy, LayoutGrid, List } from "lucide-react";
+import {
+  Package, Plus, Search, Settings2, Archive, ArchiveRestore, Copy, LayoutGrid, List,
+  AlertTriangle, X, Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,38 +24,51 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   useCatalogProducts,
   useCatalogCategories,
   useArchiveProduct,
   useDuplicateProduct,
-  CatalogSaleType,
-  SALE_TYPE_LABEL,
+  CatalogArchetype,
+  ARCHETYPE_LABEL,
   STATUS_LABEL,
 } from "@/hooks/catalogo/useCatalog";
-import { SaleTypeBadge } from "@/components/catalogo/SaleTypeBadge";
-import { PriceDisplay } from "@/components/catalogo/PriceDisplay";
+import { ArchetypeBadge } from "@/components/catalogo/ArchetypeBadge";
+import { PriceBlockDisplay } from "@/components/catalogo/PriceBlockDisplay";
 import { CategoriesManagerDialog } from "@/components/catalogo/CategoriesManagerDialog";
 import { ProductGalleryCard } from "@/components/catalogo/ProductGalleryCard";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { usePersistedState } from "@/hooks/use-persisted-state";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "grid" | "table";
 
+const MIGRATION_BANNER_KEY = "catalogo:migration-banner-dismissed:v1";
+
 export default function CatalogoLista() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [params] = useSearchParams();
   const highlightId = params.get("highlight");
 
   const [search, setSearch] = useState("");
-  const [saleType, setSaleType] = useState<CatalogSaleType | "all">("all");
+  const [archetypes, setArchetypes] = useState<CatalogArchetype[]>([]);
   const [categoryId, setCategoryId] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [catDialog, setCatDialog] = useState(false);
   const [view, setView] = usePersistedState<ViewMode>("catalogo:view", "grid");
+  const [bannerDismissed, setBannerDismissed] = usePersistedState<boolean>(MIGRATION_BANNER_KEY, false);
 
-  const { data: products = [], isLoading } = useCatalogProducts({ search, saleType, categoryId, showArchived });
+  const { data: products = [], isLoading } = useCatalogProducts({
+    search,
+    archetypes: archetypes.length ? archetypes : undefined,
+    categoryId,
+    showArchived,
+  });
   const { data: categories = [] } = useCatalogCategories();
   const archive = useArchiveProduct();
   const duplicate = useDuplicateProduct();
@@ -77,6 +90,14 @@ export default function CatalogoLista() {
   const handleDuplicate = async (id: string) => {
     const created = await duplicate.mutateAsync(id);
     navigate(`/catalogo/${created.id}`);
+  };
+
+  const archetypeOptions: CatalogArchetype[] = isAdmin
+    ? ["one_shot", "with_maintenance", "saas", "hybrid", "aggregator"]
+    : ["one_shot", "with_maintenance", "saas", "hybrid"];
+
+  const toggleArchetype = (a: CatalogArchetype) => {
+    setArchetypes((curr) => (curr.includes(a) ? curr.filter((x) => x !== a) : [...curr, a]));
   };
 
   return (
@@ -101,6 +122,26 @@ export default function CatalogoLista() {
         </div>
       </header>
 
+      {/* Faixa de migração */}
+      {!bannerDismissed && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex-1 text-xs text-amber-100/90">
+            Os produtos cadastrados foram migrados pra nova estrutura por arquétipos. Revise os tipos e
+            preencha os campos de Setup quando aplicável.
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs text-amber-100 hover:text-amber-50"
+            onClick={() => setBannerDismissed(true)}
+          >
+            Entendi
+            <X className="h-3.5 w-3.5 ml-1" />
+          </Button>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-card/30 p-3 lg:flex-row lg:items-center">
         <div className="relative flex-1">
@@ -112,15 +153,45 @@ export default function CatalogoLista() {
             className="pl-9"
           />
         </div>
-        <Select value={saleType} onValueChange={(v) => setSaleType(v as any)}>
-          <SelectTrigger className="lg:w-52"><SelectValue placeholder="Tipo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {(Object.keys(SALE_TYPE_LABEL) as CatalogSaleType[]).map((t) => (
-              <SelectItem key={t} value={t}>{SALE_TYPE_LABEL[t]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Multi-select arquétipo */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="lg:w-52 justify-between">
+              <span className="truncate">
+                {archetypes.length === 0
+                  ? "Todos os arquétipos"
+                  : `${archetypes.length} selecionado${archetypes.length > 1 ? "s" : ""}`}
+              </span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-1" align="start">
+            {archetypeOptions.map((a) => {
+              const checked = archetypes.includes(a);
+              return (
+                <button
+                  key={a}
+                  onClick={() => toggleArchetype(a)}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-accent/10"
+                >
+                  <span>{ARCHETYPE_LABEL[a]}</span>
+                  {checked && <Check className="h-3.5 w-3.5 text-accent" />}
+                </button>
+              );
+            })}
+            {archetypes.length > 0 && (
+              <div className="border-t border-border mt-1 pt-1">
+                <button
+                  onClick={() => setArchetypes([])}
+                  className="w-full text-left rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent/10"
+                >
+                  Limpar seleção
+                </button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
         <Select value={categoryId} onValueChange={setCategoryId}>
           <SelectTrigger className="lg:w-52"><SelectValue placeholder="Categoria" /></SelectTrigger>
           <SelectContent>
@@ -190,7 +261,7 @@ export default function CatalogoLista() {
           <TableHeader>
             <TableRow>
               <TableHead>Produto</TableHead>
-              <TableHead>Tipo</TableHead>
+              <TableHead>Arquétipo</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Preço</TableHead>
               <TableHead>Status</TableHead>
@@ -217,9 +288,9 @@ export default function CatalogoLista() {
                   <div className="font-medium">{p.name}</div>
                   <div className="text-xs text-muted-foreground font-mono">{p.code}</div>
                 </TableCell>
-                <TableCell><SaleTypeBadge type={p.sale_type} /></TableCell>
+                <TableCell><ArchetypeBadge archetype={p.archetype} /></TableCell>
                 <TableCell className="text-sm text-muted-foreground">{p.catalog_categories?.name ?? "—"}</TableCell>
-                <TableCell><PriceDisplay product={p} /></TableCell>
+                <TableCell><PriceBlockDisplay product={p} className="min-w-[12rem]" /></TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">{STATUS_LABEL[p.status]}</Badge>
                 </TableCell>
@@ -259,11 +330,10 @@ export default function CatalogoLista() {
                 <div className="font-medium truncate">{p.name}</div>
                 <div className="text-xs text-muted-foreground font-mono">{p.code}</div>
               </div>
-              <SaleTypeBadge type={p.sale_type} />
+              <ArchetypeBadge archetype={p.archetype} />
             </div>
-            <div className="mt-2 flex items-center justify-between text-sm">
-              <PriceDisplay product={p} />
-              <Badge variant="outline" className="text-xs">{STATUS_LABEL[p.status]}</Badge>
+            <div className="mt-2 border-t border-border/40 pt-2">
+              <PriceBlockDisplay product={p} />
             </div>
             <div className="mt-2 flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
               <Button size="sm" variant="ghost" onClick={() => handleDuplicate(p.id)}>

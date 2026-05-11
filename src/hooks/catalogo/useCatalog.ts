@@ -14,6 +14,43 @@ export type CatalogPriceMode = "fixed" | "suggested" | "range" | "on_request";
 export type CatalogProductStatus = "active" | "in_review" | "archived";
 export type CatalogPaymentTerms = "unica" | "mensal" | "anual" | "parcelada";
 
+/** Arquétipos de produto — definem quais campos de preço aparecem. */
+export type CatalogArchetype =
+  | "one_shot"          // Serviço one-shot
+  | "with_maintenance"  // Serviço com setup + manutenção mensal
+  | "saas"              // Assinatura sem setup
+  | "hybrid"            // SaaS com setup
+  | "aggregator";       // Calculado a partir da cesta
+
+/** Forma de pagamento padrão para campos de cobrança única. */
+export type CatalogOneShotTerms =
+  | "a_vista" | "2x" | "3x" | "4x" | "6x" | "12x";
+
+export const ONESHOT_TERMS_OPTIONS: { value: CatalogOneShotTerms; label: string }[] = [
+  { value: "a_vista", label: "À vista" },
+  { value: "2x", label: "Parcelado em 2x" },
+  { value: "3x", label: "Parcelado em 3x" },
+  { value: "4x", label: "Parcelado em 4x" },
+  { value: "6x", label: "Parcelado em 6x" },
+  { value: "12x", label: "Parcelado em 12x" },
+];
+
+export const ARCHETYPE_LABEL: Record<CatalogArchetype, string> = {
+  one_shot: "Serviço one-shot",
+  with_maintenance: "Serviço com manutenção",
+  saas: "Assinatura / SaaS",
+  hybrid: "Híbrido (SaaS com setup)",
+  aggregator: "Agregador",
+};
+
+export const ARCHETYPE_HINT: Record<CatalogArchetype, string> = {
+  one_shot: "Você entrega o serviço e acaba. Sem cobrança recorrente.",
+  with_maintenance: "Entrega + plantão mensal pra manter rodando.",
+  saas: "Produto digital cobrado mensal. Sem implementação separada.",
+  hybrid: "Onboarding único + mensalidade contínua.",
+  aggregator: "Comportamento especial — usado para produtos do tipo Manutenção/Suporte.",
+};
+
 export interface CatalogCategory {
   id: string;
   name: string;
@@ -34,7 +71,9 @@ export interface CatalogProduct {
   tags: string[];
   category_id: string | null;
   image_url: string | null;
+  /** @deprecated mantém por compatibilidade — usar `archetype`. */
   sale_type: CatalogSaleType;
+  /** @deprecated — substituído pelos novos campos de preço por arquétipo. */
   price_mode: CatalogPriceMode;
   price_value: number | null;
   price_min: number | null;
@@ -47,11 +86,24 @@ export interface CatalogProduct {
   internal_notes: string | null;
   created_at: string;
   updated_at: string;
+  // ---- Novo modelo (arquétipos) ----
+  archetype: CatalogArchetype;
+  setup_value: number | null;
+  setup_adjustable: boolean;
+  setup_payment_terms: CatalogOneShotTerms;
+  oneshot_value: number | null;
+  oneshot_adjustable: boolean;
+  oneshot_payment_terms: CatalogOneShotTerms;
+  recurring_value: number | null;
+  recurring_adjustable: boolean;
+  maintenance_required: "client_decides" | "mandatory";
 }
 
 export interface CatalogProductFilters {
   search?: string;
   saleType?: CatalogSaleType | "all";
+  archetype?: CatalogArchetype | "all";
+  archetypes?: CatalogArchetype[];
   categoryId?: string | "all";
   showArchived?: boolean;
 }
@@ -141,6 +193,8 @@ export function useCatalogProducts(filters: CatalogProductFilters = {}) {
         .order("updated_at", { ascending: false });
       if (!filters.showArchived) q = q.neq("status", "archived");
       if (filters.saleType && filters.saleType !== "all") q = q.eq("sale_type", filters.saleType);
+      if (filters.archetype && filters.archetype !== "all") q = q.eq("archetype", filters.archetype);
+      if (filters.archetypes && filters.archetypes.length > 0) q = q.in("archetype", filters.archetypes);
       if (filters.categoryId && filters.categoryId !== "all") q = q.eq("category_id", filters.categoryId);
       const { data, error } = await q;
       if (error) throw error;

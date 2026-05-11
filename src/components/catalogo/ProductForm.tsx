@@ -4,28 +4,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Settings2 } from "lucide-react";
+import {
+  ChevronDown,
+  Settings2,
+  Box,
+  Wrench,
+  Cloud,
+  Layers,
+  Combine,
+  Info,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { maskCurrencyBRL, parseCurrencyBRL } from "@/lib/formatters";
 import { CategoriesManagerDialog } from "./CategoriesManagerDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   CatalogProduct,
   CatalogPriceMode,
   CatalogSaleType,
-  CatalogPaymentTerms,
-  PRICE_MODE_LABEL,
-  SALE_TYPE_LABEL,
-  PAYMENT_TERMS_LABEL,
+  CatalogArchetype,
+  CatalogOneShotTerms,
+  ARCHETYPE_LABEL,
+  ARCHETYPE_HINT,
+  ONESHOT_TERMS_OPTIONS,
   STATUS_LABEL,
-  BILLING_UNITS,
   useCatalogCategories,
 } from "@/hooks/catalogo/useCatalog";
 
 export type ProductFormValues = Partial<CatalogProduct> & {
   name: string;
-  sale_type: CatalogSaleType;
-  price_mode: CatalogPriceMode;
+  archetype: CatalogArchetype;
 };
 
 export const emptyProductForm: ProductFormValues = {
@@ -35,14 +45,26 @@ export const emptyProductForm: ProductFormValues = {
   tags: [],
   category_id: null,
   image_url: "",
-  sale_type: "one_shot",
-  price_mode: "fixed",
+  // legados (mantidos por compat na escrita)
+  sale_type: "one_shot" as CatalogSaleType,
+  price_mode: "fixed" as CatalogPriceMode,
   price_value: null,
   price_min: null,
   price_max: null,
   billing_unit: "unica",
   default_payment_terms: "unica",
   default_quantity: 1,
+  // novo modelo
+  archetype: "one_shot",
+  setup_value: null,
+  setup_adjustable: true,
+  setup_payment_terms: "a_vista",
+  oneshot_value: null,
+  oneshot_adjustable: true,
+  oneshot_payment_terms: "a_vista",
+  recurring_value: null,
+  recurring_adjustable: false,
+  maintenance_required: "client_decides",
   status: "active",
   internal_notes: "",
 };
@@ -76,7 +98,107 @@ function Section({
   );
 }
 
+const ARCHETYPE_ICON: Record<CatalogArchetype, React.ComponentType<{ className?: string }>> = {
+  one_shot: Box,
+  with_maintenance: Wrench,
+  saas: Cloud,
+  hybrid: Layers,
+  aggregator: Combine,
+};
+
+function MoneyInput({
+  value,
+  onChange,
+  error,
+  placeholder = "R$ 0,00",
+}: {
+  value: number | null | undefined;
+  onChange: (v: number | null) => void;
+  error?: string;
+  placeholder?: string;
+}) {
+  return (
+    <>
+      <Input
+        value={value != null ? maskCurrencyBRL(String(Math.round(Number(value) * 100))) : ""}
+        onChange={(e) => onChange(parseCurrencyBRL(e.target.value))}
+        placeholder={placeholder}
+        className={cn("font-mono", error && "border-destructive")}
+      />
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    </>
+  );
+}
+
+function AdjustableToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-border/50 bg-background/40 px-3 py-2">
+      <div>
+        <div className="text-xs font-medium">Vendedor pode ajustar este preço?</div>
+        <div className="text-[10px] text-muted-foreground">
+          {checked ? "Sim — vendedor pode mudar na cesta." : "Não — preço travado."}
+        </div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
+
+function PaymentTermsSelect({
+  value,
+  onChange,
+}: {
+  value: CatalogOneShotTerms;
+  onChange: (v: CatalogOneShotTerms) => void;
+}) {
+  return (
+    <div>
+      <Label className="text-xs">Forma de pagamento padrão</Label>
+      <Select value={value} onValueChange={(v) => onChange(v as CatalogOneShotTerms)}>
+        <SelectTrigger className="h-9">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ONESHOT_TERMS_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-[10px] text-muted-foreground mt-1">
+        Vendedor pode mudar na cesta — isso é só o sugerido.
+      </p>
+    </div>
+  );
+}
+
+function PriceBlock({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-background/30 p-3 space-y-3">
+      <div>
+        <div className="text-sm font-semibold">{title}</div>
+        {hint && <div className="text-[11px] text-muted-foreground mt-0.5">{hint}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export function ProductForm({ value, onChange, errors = {} }: Props) {
+  const { isAdmin } = useAuth();
   const { data: categories = [] } = useCatalogCategories();
   const [catDialog, setCatDialog] = useState(false);
   const [tagsInput, setTagsInput] = useState((value.tags ?? []).join(", "));
@@ -88,8 +210,20 @@ export function ProductForm({ value, onChange, errors = {} }: Props) {
   const setField = <K extends keyof ProductFormValues>(k: K, v: ProductFormValues[K]) =>
     onChange({ [k]: v } as any);
 
-  const isFixedOrSuggested = value.price_mode === "fixed" || value.price_mode === "suggested";
-  const isRange = value.price_mode === "range";
+  // Quando o vendedor escolhe um arquétipo, sincronizamos sale_type/price_mode legados
+  // só pra garantir consistência mínima na coluna antiga (compat).
+  const setArchetype = (a: CatalogArchetype) => {
+    const patch: Partial<ProductFormValues> = { archetype: a };
+    if (a === "saas") { patch.sale_type = "saas"; patch.price_mode = "fixed"; }
+    else if (a === "with_maintenance") { patch.sale_type = "recurring_service"; patch.price_mode = "suggested"; }
+    else if (a === "one_shot") { patch.sale_type = "one_shot"; patch.price_mode = "fixed"; }
+    else if (a === "hybrid") { patch.sale_type = "saas"; patch.price_mode = "fixed"; }
+    else if (a === "aggregator") { patch.sale_type = "recurring_service"; patch.price_mode = "on_request"; }
+    onChange(patch as any);
+  };
+
+  const archetypes: CatalogArchetype[] = ["one_shot", "with_maintenance", "saas", "hybrid"];
+  if (isAdmin) archetypes.push("aggregator");
 
   return (
     <div className="space-y-3">
@@ -179,140 +313,177 @@ export function ProductForm({ value, onChange, errors = {} }: Props) {
         </div>
       </Section>
 
-      {/* 2. Tipo de venda */}
-      <Section title="Tipo de venda">
+      {/* 2. Tipo de produto (arquétipo) */}
+      <Section title="Tipo de produto">
         <div className="grid gap-3 sm:grid-cols-2">
-          {(Object.keys(SALE_TYPE_LABEL) as CatalogSaleType[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setField("sale_type", t)}
-              className={cn(
-                "rounded-lg border p-3 text-left transition-colors",
-                value.sale_type === t
-                  ? "border-accent bg-accent/10"
-                  : "border-border hover:border-accent/40",
-              )}
-            >
-              <div className="text-sm font-semibold">{SALE_TYPE_LABEL[t]}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {t === "saas" && "Produto digital cobrado mensal/anual."}
-                {t === "recurring_service" && "Serviço prestado repetidamente."}
-                {t === "one_shot" && "Projeto fechado com início e fim."}
-                {t === "custom" && "Escopo e preço definidos a cada venda."}
-              </div>
-            </button>
-          ))}
+          {archetypes.map((a) => {
+            const Icon = ARCHETYPE_ICON[a];
+            const active = value.archetype === a;
+            return (
+              <button
+                key={a}
+                type="button"
+                onClick={() => setArchetype(a)}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition-colors flex gap-3 items-start",
+                  active ? "border-accent bg-accent/10" : "border-border hover:border-accent/40",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                    active ? "bg-accent/20 text-accent" : "bg-card text-muted-foreground",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold">{ARCHETYPE_LABEL[a]}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{ARCHETYPE_HINT[a]}</div>
+                  {a === "aggregator" && (
+                    <div className="text-[10px] text-amber-400/80 mt-1">Visível só para admins.</div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </Section>
 
-      {/* 3. Modo de preço */}
-      <Section title="Modo de preço">
-        <div>
-          <Label>Como o vendedor pode usar o preço *</Label>
-          <Select value={value.price_mode} onValueChange={(v) => setField("price_mode", v as CatalogPriceMode)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(PRICE_MODE_LABEL) as CatalogPriceMode[]).map((m) => (
-                <SelectItem key={m} value={m}>
-                  {PRICE_MODE_LABEL[m]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground mt-1">
-            {value.price_mode === "fixed" && "O vendedor NÃO pode mudar o valor."}
-            {value.price_mode === "suggested" && "O vendedor pode ajustar o valor para mais ou para menos."}
-            {value.price_mode === "range" && "O vendedor escolhe um valor entre o mínimo e o máximo."}
-            {value.price_mode === "on_request" && "Sem valor cadastrado. O vendedor define a cada venda."}
-          </p>
-        </div>
-
-        {isFixedOrSuggested && (
-          <div>
-            <Label>Valor *</Label>
-            <Input
-              value={value.price_value != null ? maskCurrencyBRL(String(Math.round(value.price_value * 100))) : ""}
-              onChange={(e) => setField("price_value", parseCurrencyBRL(e.target.value))}
-              placeholder="R$ 0,00"
-              className={errors.price_value ? "border-destructive" : ""}
+      {/* 3. Preço — dinâmico por arquétipo */}
+      <Section title="Preço">
+        {value.archetype === "aggregator" ? (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200/90 flex gap-2">
+            <Info className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>
+              Este produto não tem preço próprio. Quando adicionado à cesta de uma proposta, o valor será
+              calculado a partir dos outros itens da cesta (somando o valor de manutenção mensal sugerida
+              de cada um, com possibilidade de opt-out por item).
+            </p>
+          </div>
+        ) : value.archetype === "one_shot" ? (
+          <PriceBlock title="Preço único" hint="Pagamento único pela entrega do serviço.">
+            <div>
+              <Label className="text-xs">Valor *</Label>
+              <MoneyInput
+                value={value.oneshot_value}
+                onChange={(v) => setField("oneshot_value", v)}
+                error={errors.oneshot_value}
+              />
+            </div>
+            <AdjustableToggle
+              checked={!!value.oneshot_adjustable}
+              onChange={(v) => setField("oneshot_adjustable", v)}
             />
-            {errors.price_value && <p className="text-xs text-destructive mt-1">{errors.price_value}</p>}
+            <PaymentTermsSelect
+              value={(value.oneshot_payment_terms ?? "a_vista") as CatalogOneShotTerms}
+              onChange={(v) => setField("oneshot_payment_terms", v)}
+            />
+          </PriceBlock>
+        ) : value.archetype === "saas" ? (
+          <PriceBlock title="Mensalidade" hint="Cobrança mensal recorrente.">
+            <div>
+              <Label className="text-xs">Valor mensal *</Label>
+              <MoneyInput
+                value={value.recurring_value}
+                onChange={(v) => setField("recurring_value", v)}
+                error={errors.recurring_value}
+              />
+            </div>
+            <AdjustableToggle
+              checked={!!value.recurring_adjustable}
+              onChange={(v) => setField("recurring_adjustable", v)}
+            />
+          </PriceBlock>
+        ) : value.archetype === "hybrid" ? (
+          <div className="space-y-3">
+            <PriceBlock title="Setup (pagamento único)" hint="Onboarding/implementação inicial.">
+              <div>
+                <Label className="text-xs">Valor de setup *</Label>
+                <MoneyInput
+                  value={value.setup_value}
+                  onChange={(v) => setField("setup_value", v)}
+                  error={errors.setup_value}
+                />
+              </div>
+              <AdjustableToggle
+                checked={!!value.setup_adjustable}
+                onChange={(v) => setField("setup_adjustable", v)}
+              />
+              <PaymentTermsSelect
+                value={(value.setup_payment_terms ?? "a_vista") as CatalogOneShotTerms}
+                onChange={(v) => setField("setup_payment_terms", v)}
+              />
+            </PriceBlock>
+            <div className="border-t border-border/40" />
+            <PriceBlock title="Mensalidade" hint="Cobrança mensal contínua.">
+              <div>
+                <Label className="text-xs">Valor mensal *</Label>
+                <MoneyInput
+                  value={value.recurring_value}
+                  onChange={(v) => setField("recurring_value", v)}
+                  error={errors.recurring_value}
+                />
+              </div>
+              <AdjustableToggle
+                checked={!!value.recurring_adjustable}
+                onChange={(v) => setField("recurring_adjustable", v)}
+              />
+            </PriceBlock>
+          </div>
+        ) : (
+          // with_maintenance
+          <div className="space-y-3">
+            <PriceBlock title="Setup (pagamento único)" hint="Implementação no cliente. Pode ficar zerado se não houver setup.">
+              <div>
+                <Label className="text-xs">Valor de setup</Label>
+                <MoneyInput
+                  value={value.setup_value}
+                  onChange={(v) => setField("setup_value", v)}
+                  error={errors.setup_value}
+                />
+              </div>
+              <AdjustableToggle
+                checked={!!value.setup_adjustable}
+                onChange={(v) => setField("setup_adjustable", v)}
+              />
+              <PaymentTermsSelect
+                value={(value.setup_payment_terms ?? "a_vista") as CatalogOneShotTerms}
+                onChange={(v) => setField("setup_payment_terms", v)}
+              />
+            </PriceBlock>
+            <div className="border-t border-border/40" />
+            <PriceBlock title="Manutenção mensal sugerida (recorrente)" hint="Valor que será usado quando o produto Manutenção for adicionado à cesta.">
+              <div>
+                <Label className="text-xs">Valor mensal *</Label>
+                <MoneyInput
+                  value={value.recurring_value}
+                  onChange={(v) => setField("recurring_value", v)}
+                  error={errors.recurring_value}
+                />
+              </div>
+              <AdjustableToggle
+                checked={!!value.recurring_adjustable}
+                onChange={(v) => setField("recurring_adjustable", v)}
+              />
+              <div>
+                <Label className="text-xs">Obrigatoriedade pra fechar a venda</Label>
+                <Select
+                  value={value.maintenance_required ?? "client_decides"}
+                  onValueChange={(v) => setField("maintenance_required", v as any)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="client_decides">Cliente decide na proposta</SelectItem>
+                    <SelectItem value="mandatory">Obrigatória</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </PriceBlock>
           </div>
         )}
-
-        {isRange && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label>Mínimo *</Label>
-              <Input
-                value={value.price_min != null ? maskCurrencyBRL(String(Math.round(value.price_min * 100))) : ""}
-                onChange={(e) => setField("price_min", parseCurrencyBRL(e.target.value))}
-                placeholder="R$ 0,00"
-                className={errors.price_min ? "border-destructive" : ""}
-              />
-              {errors.price_min && <p className="text-xs text-destructive mt-1">{errors.price_min}</p>}
-            </div>
-            <div>
-              <Label>Máximo *</Label>
-              <Input
-                value={value.price_max != null ? maskCurrencyBRL(String(Math.round(value.price_max * 100))) : ""}
-                onChange={(e) => setField("price_max", parseCurrencyBRL(e.target.value))}
-                placeholder="R$ 0,00"
-                className={errors.price_max ? "border-destructive" : ""}
-              />
-              {errors.price_max && <p className="text-xs text-destructive mt-1">{errors.price_max}</p>}
-            </div>
-          </div>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <Label>Unidade de cobrança</Label>
-            <Select value={value.billing_unit} onValueChange={(v) => setField("billing_unit", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BILLING_UNITS.map((u) => (
-                  <SelectItem key={u.value} value={u.value}>
-                    {u.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Forma de pagamento padrão</Label>
-            <Select
-              value={value.default_payment_terms}
-              onValueChange={(v) => setField("default_payment_terms", v as CatalogPaymentTerms)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PAYMENT_TERMS_LABEL) as CatalogPaymentTerms[]).map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {PAYMENT_TERMS_LABEL[t]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Quantidade padrão</Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={value.default_quantity ?? 1}
-              onChange={(e) => setField("default_quantity", Number(e.target.value) || 0)}
-            />
-          </div>
-        </div>
       </Section>
 
       {/* 4. Controle interno */}
