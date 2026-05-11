@@ -50,6 +50,7 @@ const navItems: NavItem[] = [
     ],
   },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
+  { title: "Catálogo", url: "/catalogo", icon: Package },
   {
     title: "Financeiro",
     url: "/financeiro",
