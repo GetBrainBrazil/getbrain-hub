@@ -1,92 +1,113 @@
-# Módulo Catálogo — Plano de Implementação
+# Catálogo → Cesta no CRM: lógica e próximos passos
 
-Fonte única dos produtos/serviços vendáveis da GetBrain. Esta fase entrega só o cadastro (CRUD + categorias). Integração com propostas/CRM fica para fase posterior.
+## 1. Lógica do fluxo (visão de produto)
 
-## Estrutura de navegação
+A ideia central é separar **"o que vendemos"** (Catálogo, fonte única) de **"o que estamos propondo para esse cliente"** (Cesta, dentro do Deal). O Catálogo nunca é tocado pelo vendedor durante a negociação — ele só **seleciona, ajusta e combina**.
 
-- Novo item na sidebar: **Catálogo** (ícone `Package`), entre Vendas e Financeiro
-- Rotas:
-  - `/catalogo` — lista de produtos
-  - `/catalogo/novo` — cadastro
-  - `/catalogo/:id` — edição (tela cheia, padrão das outras fichas)
-  - `/catalogo/categorias` — gerenciamento de categorias (modal/dialog acessado pelo botão "Gerenciar categorias")
+```text
+Catálogo (admin/comercial)         Deal no CRM (vendedor)
+┌────────────────────────┐         ┌──────────────────────────┐
+│ Produto: Agente SDR    │  pick   │  Cesta do Deal           │
+│ Preço sugerido R$2,5k  │ ─────►  │  • Agente SDR  R$2.500   │
+│ Tags, pitch, escopo    │         │  • Setup     R$1.500     │
+└────────────────────────┘         │  Total recorrente / one  │
+                                   └──────────────────────────┘
+                                           │
+                                           ▼
+                                   Gera Proposta (módulo atual)
+```
 
-## Banco de dados
+Princípios:
+- **Cesta vive no Deal**, não no Catálogo. É um snapshot — se o preço do catálogo mudar depois, a cesta antiga não muda sozinha.
+- **Vendedor pode editar quantidade, preço e descrição** na cesta sem mexer no catálogo.
+- **Um item da cesta sempre lembra de qual produto veio** (`catalog_product_id`) para relatórios futuros ("quantos Agentes SDR vendemos esse mês").
+- A proposta gerada já entra com esses itens — substitui a digitação manual.
 
-Duas tabelas novas, RLS = qualquer autenticado pode ler/escrever (sem permissões granulares nesta fase, conforme pedido).
+## 2. Melhor formato de UI para a "seleção de cesta"
 
-### `catalog_categories`
-- `id`, `name`, `slug`, `display_order`, `is_active` (false = arquivada), `color` (opcional p/ badge), `created_at`, `updated_at`
+Pensando como senior UX:
 
-### `catalog_products`
-Identificação:
-- `id`, `code` (auto: `PRD-0001`), `name`, `pitch` (text curto), `description` (text longo), `tags` (text[]), `category_id` (FK), `image_url`
+**Onde colocar:** dentro da ficha do Deal (CrmDealDetail), uma aba/seção "Cesta" entre "Negociação" e "Proposta". Não é um modal isolado — vendedor precisa ver contexto do cliente enquanto monta.
 
-Tipo de venda (enum `catalog_sale_type`):
-- `saas` | `recurring_service` | `one_shot` | `custom`
+**Layout em 2 colunas (desktop) / sheet (mobile):**
 
-Modo de preço (enum `catalog_price_mode`):
-- `fixed` | `suggested` | `range` | `on_request`
-- `price_value` (numeric, usado em fixed/suggested)
-- `price_min`, `price_max` (numeric, usado em range)
-- `billing_unit` (text: `mes`, `hora`, `usuario`, `projeto`, `unica`)
-- `default_payment_terms` (enum: `unica` | `mensal` | `anual` | `parcelada`)
-- `default_quantity` (numeric, default 1)
+```text
+┌─────────────────────────────────┬──────────────────────┐
+│ CATÁLOGO (esquerda 60%)         │ CESTA (direita 40%) │
+│ ┌─────────────────────────────┐ │ ┌──────────────────┐ │
+│ │ 🔍 buscar  [Tipo▾][Cat▾]    │ │ Agente SDR    [×]│ │
+│ ├─────────────────────────────┤ │ qtd 1  R$2.500   │ │
+│ │ ▣ Agente SDR    R$2,5k/mês  │ │ ──────────────── │ │
+│ │   Qualifica leads 24/7      │ │ Setup IA      [×]│ │
+│ │   [+ Adicionar]             │ │ qtd 1  R$1.500   │ │
+│ ├─────────────────────────────┤ │ ──────────────── │ │
+│ │ ▣ Implantação SaaS  R$5–15k │ │ Subtotal recorr. │ │
+│ │   [+ Adicionar]             │ │   R$ 2.500/mês   │ │
+│ └─────────────────────────────┘ │ Subtotal único   │ │
+│                                 │   R$ 1.500       │ │
+│                                 │ [Gerar Proposta] │ │
+└─────────────────────────────────┴──────────────────────┘
+```
 
-Controle interno:
-- `status` (enum: `active` | `in_review` | `archived`, default `active`)
-- `owner_actor_id` (FK actors, opcional)
-- `internal_notes` (text)
-- `created_at`, `updated_at`, `created_by`, `updated_by`
+**Padrões de UI:**
+- **Cards visuais** (não tabela) na grade do catálogo — imagem/ícone, nome, pitch curto (1 linha), preço formatado, badge do tipo. Tabela é boa para gestão; para "shopping" cards convertem melhor.
+- **Botão "+ Adicionar"** com micro-animação (item voa pra cesta) — feedback claro.
+- **Cesta sticky** à direita (sheet drawer no mobile, com badge contando itens).
+- **Inline edit na cesta**: clicar no preço/qtd permite ajustar sem abrir modal.
+- **Agrupamento automático** por tipo de cobrança ("Mensais" / "Únicos") — dá ao vendedor visão de MRR vs ticket único.
+- **Sugestões inteligentes** (fase 2): "Clientes que levaram Agente SDR também levam: Setup IA" baseado no histórico.
 
-Validação por trigger (não CHECK): se `price_mode IN (fixed, suggested)` então `price_value` obrigatório; se `range` então `price_min` e `price_max` obrigatórios e `min <= max`.
+## 3. Refinamento da tela /catalogo (esta entrega)
 
-## Hooks (`src/hooks/catalogo/`)
-- `useCatalogProducts.ts` — list + filtros (search, tipo, categoria, mostrar arquivados), CRUD, archive/unarchive, duplicate
-- `useCatalogCategories.ts` — list + CRUD + archive
-- `useCatalogProduct.ts` — detalhe por id
+A tabela atual é boa para **gestão**, mas o catálogo será consumido visualmente — então adicionar **toggle de visualização Tabela ⇄ Galeria**, default galeria:
 
-Cache invalidation: helper `invalidateCatalogCaches` em `src/lib/cacheInvalidation.ts`.
+- Galeria: cards com nome, pitch, preço grande, tipo badge, categoria. Hover mostra ações (editar/duplicar/arquivar).
+- Tabela: como está hoje, para quem prefere densidade.
+- Persistir preferência via `usePersistedState`.
 
-## Componentes (`src/components/catalogo/`)
-- `ProductsTable.tsx` — tabela desktop (nome, tipo badge, preço formatado, status badge, atualizado em, ações rápidas)
-- `ProductMobileCard.tsx` — card para mobile (mobile-first, conforme regra do projeto)
-- `ProductFilters.tsx` — busca + selects + toggle "mostrar arquivados"
-- `SaleTypeBadge.tsx` — cores por tipo (saas=cyan, recurring=purple, one_shot=amber, custom=slate)
-- `PriceDisplay.tsx` — formata conforme `price_mode` ("R$ 199/mês", "R$ 5k–R$ 15k", "Sob consulta", "A partir de R$…")
-- `ProductFormSections/` — 4 sub-componentes (`IdentificationSection`, `SaleTypeSection`, `PricingSection`, `InternalControlSection`) usando `Collapsible`
-- `CategoriesManagerDialog.tsx` — dialog com lista, criar, renomear inline, arquivar
-- `ArchiveProductConfirm.tsx` — usa `useConfirm()` (regra do projeto, sem confirm nativo)
+Isso já prepara visualmente o componente que será reaproveitado no seletor de cesta.
 
-## Páginas (`src/pages/catalogo/`)
-- `CatalogoLista.tsx` — header com "Novo Produto" + "Gerenciar categorias", filtros, tabela/cards responsivos
-- `ProdutoDetalhe.tsx` — formulário tela cheia com 4 seções colapsáveis, autosave on blur (regra de inline edit do projeto), botão "Duplicar" e "Arquivar" no header
-- `ProdutoNovo.tsx` — mesma forma do detalhe, mas começa vazio; ao salvar redireciona p/ `/catalogo/:id` e a lista destaca o novo produto via query param `?highlight=`
+## 4. Produto seed: "Agente SDR"
 
-## Sidebar / App.tsx
-- Adicionar item "Catálogo" em `AppSidebar.tsx`
-- Adicionar 4 rotas em `App.tsx`
+Inserir via `supabase--insert` (uma só categoria + um produto), para você ver renderizado:
 
-## Validações de formulário (zod)
-- `name`: obrigatório, max 120
-- `category_id`: obrigatório
-- `sale_type`: obrigatório
-- `price_mode`: obrigatório
-- `price_value`: obrigatório se `fixed`/`suggested`
-- `price_min`/`price_max`: obrigatórios e coerentes se `range`
-- `tags`: array de strings, max 20
+**Categoria:** "Agentes de IA" (cor cyan)
 
-## Critérios de aceite (matching o pedido)
-- Cadastrar produto de cada um dos 4 tipos de venda ✅
-- Cadastrar com cada um dos 4 modos de preço ✅
-- Busca por nome / tag / categoria ✅
-- Filtros por tipo, categoria, mostrar arquivados ✅
-- Arquivar (soft, mantém dados) e duplicar ✅
-- Edição reflete imediato na lista (invalidate query) ✅
-- CRUD de categorias com arquivar (não remove de produtos antigos) ✅
+**Produto Agente SDR:**
+- code: PRD-0001 (auto)
+- name: Agente SDR
+- pitch: *"SDR de IA que qualifica leads 24/7 no WhatsApp e agenda reuniões direto na agenda do time comercial."*
+- description: texto longo com escopo (qualificação BANT, integração WhatsApp Cloud API, handoff humano, painel de conversões)
+- tags: `["ia", "sdr", "whatsapp", "comercial", "automação"]`
+- category: Agentes de IA
+- sale_type: `recurring_service`
+- price_mode: `suggested`
+- price_value: 2500
+- billing_unit: `mes`
+- default_payment_terms: `mensal`
+- default_quantity: 1
+- status: `active`
+- internal_notes: *"Exige setup inicial separado (PRD-Setup IA). Margem alvo 60%."*
 
-## Fora de escopo (conforme pedido)
-- Conexão com CRM/Propostas
-- Marcação "vendido"
-- Histórico de preço / relatórios
-- Permissões granulares
+## 5. Escopo desta entrega (em ordem)
+
+1. **Migration**: insert da categoria "Agentes de IA" + produto Agente SDR (via `supabase--migration` para versionar — ou `supabase--insert` se preferir só dados).
+2. **CatalogoLista.tsx**: adicionar toggle Tabela/Galeria + componente `ProductGalleryCard.tsx`. Galeria é o default.
+3. **Documentar** em comentário no topo do arquivo a intenção da cesta para quando formos integrar com o Deal (próxima fase).
+
+**Fora desta entrega** (próxima conversa, virá com plano próprio):
+- Tabela `deal_basket_items` no banco
+- Componente `BasketDrawer` na ficha do Deal
+- Botão "Adicionar à cesta" que aparece no card quando contexto = Deal
+- Geração da Proposta a partir da cesta
+
+## Detalhes técnicos
+
+- Toggle de view: `usePersistedState<"grid"|"table">("catalogo:view","grid")`
+- `ProductGalleryCard`: usa `SaleTypeBadge` e `PriceDisplay` já existentes; layout responsivo grid (1 col mobile, 2 tablet, 3-4 desktop) com `gap-3`.
+- Seed via migration garante reprodutibilidade entre Test/Live.
+- Code `PRD-0001` é gerado automaticamente pelo trigger existente — passamos só os campos de domínio.
+
+## Pergunta antes de implementar
+
+Esta entrega cobre **(a) seed do Agente SDR + (b) galeria visual no /catalogo + (c) documentar a estratégia da cesta**. A construção real da cesta no Deal eu faço numa próxima rodada com plano dedicado, ok? Se preferir já entrar direto na cesta do Deal agora me avise que reescrevo o plano focado nisso.
