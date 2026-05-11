@@ -7,6 +7,7 @@ import {
   Handshake,
   Settings,
   ChevronDown,
+  Package,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import logo from "@/assets/logo-getbrain.svg";
@@ -49,6 +50,7 @@ const navItems: NavItem[] = [
     ],
   },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
+  { title: "Catálogo", url: "/catalogo", icon: Package },
   {
     title: "Financeiro",
     url: "/financeiro",

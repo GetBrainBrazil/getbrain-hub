@@ -69,6 +69,8 @@ import FinCentrosPage from "./pages/configuracoes/financeiro/FinCentrosPage";
 import FinClientesPage from "./pages/configuracoes/financeiro/FinClientesPage";
 import FinFornecedoresPage from "./pages/configuracoes/financeiro/FinFornecedoresPage";
 import FinColaboradoresPage from "./pages/configuracoes/financeiro/FinColaboradoresPage";
+import CatalogoLista from "./pages/catalogo/CatalogoLista";
+import ProdutoDetalhe from "./pages/catalogo/ProdutoDetalhe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -140,6 +142,9 @@ const App = () => (
             <Route path="/projetos/:id/tarefas" element={<ProtectedRoute><ProjetoTarefasDetalhe /></ProtectedRoute>} />
             <Route path="/projetos/:id/suporte" element={<ProtectedRoute><ProjetoSuporteDetalhe /></ProtectedRoute>} />
             <Route path="/projetos/:id/tokens" element={<ProtectedRoute><ProjetoTokensDetalhe /></ProtectedRoute>} />
+            <Route path="/catalogo" element={<ProtectedRoute><CatalogoLista /></ProtectedRoute>} />
+            <Route path="/catalogo/novo" element={<ProtectedRoute><ProdutoDetalhe /></ProtectedRoute>} />
+            <Route path="/catalogo/:id" element={<ProtectedRoute><ProdutoDetalhe /></ProtectedRoute>} />
             <Route path="/area-dev" element={<Navigate to="/dev/kanban" replace />} />
             <Route path="/dev" element={<ProtectedRoute><DevLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="dashboard" replace />} />

@@ -284,6 +284,128 @@ export type Database = {
         }
         Relationships: []
       }
+      catalog_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      catalog_products: {
+        Row: {
+          billing_unit: string
+          category_id: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          default_payment_terms: Database["public"]["Enums"]["catalog_payment_terms"]
+          default_quantity: number
+          deleted_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          internal_notes: string | null
+          name: string
+          owner_actor_id: string | null
+          pitch: string | null
+          price_max: number | null
+          price_min: number | null
+          price_mode: Database["public"]["Enums"]["catalog_price_mode"]
+          price_value: number | null
+          sale_type: Database["public"]["Enums"]["catalog_sale_type"]
+          status: Database["public"]["Enums"]["catalog_product_status"]
+          tags: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          billing_unit?: string
+          category_id?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          default_payment_terms?: Database["public"]["Enums"]["catalog_payment_terms"]
+          default_quantity?: number
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          internal_notes?: string | null
+          name: string
+          owner_actor_id?: string | null
+          pitch?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          price_mode: Database["public"]["Enums"]["catalog_price_mode"]
+          price_value?: number | null
+          sale_type: Database["public"]["Enums"]["catalog_sale_type"]
+          status?: Database["public"]["Enums"]["catalog_product_status"]
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          billing_unit?: string
+          category_id?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          default_payment_terms?: Database["public"]["Enums"]["catalog_payment_terms"]
+          default_quantity?: number
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          internal_notes?: string | null
+          name?: string
+          owner_actor_id?: string | null
+          pitch?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          price_mode?: Database["public"]["Enums"]["catalog_price_mode"]
+          price_value?: number | null
+          sale_type?: Database["public"]["Enums"]["catalog_sale_type"]
+          status?: Database["public"]["Enums"]["catalog_product_status"]
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           ativo: boolean | null
@@ -5815,6 +5937,10 @@ export type Database = {
         | "restore"
         | "status_change"
         | "custom"
+      catalog_payment_terms: "unica" | "mensal" | "anual" | "parcelada"
+      catalog_price_mode: "fixed" | "suggested" | "range" | "on_request"
+      catalog_product_status: "active" | "in_review" | "archived"
+      catalog_sale_type: "saas" | "recurring_service" | "one_shot" | "custom"
       company_client_type: "b2b" | "b2c" | "b2b_b2c"
       company_relationship_status:
         | "prospect"
@@ -6142,6 +6268,10 @@ export const Constants = {
         "status_change",
         "custom",
       ],
+      catalog_payment_terms: ["unica", "mensal", "anual", "parcelada"],
+      catalog_price_mode: ["fixed", "suggested", "range", "on_request"],
+      catalog_product_status: ["active", "in_review", "archived"],
+      catalog_sale_type: ["saas", "recurring_service", "one_shot", "custom"],
       company_client_type: ["b2b", "b2c", "b2b_b2c"],
       company_relationship_status: [
         "prospect",
