@@ -69,6 +69,8 @@ import FinCentrosPage from "./pages/configuracoes/financeiro/FinCentrosPage";
 import FinClientesPage from "./pages/configuracoes/financeiro/FinClientesPage";
 import FinFornecedoresPage from "./pages/configuracoes/financeiro/FinFornecedoresPage";
 import FinColaboradoresPage from "./pages/configuracoes/financeiro/FinColaboradoresPage";
+import CatalogoLista from "./pages/catalogo/CatalogoLista";
+import ProdutoDetalhe from "./pages/catalogo/ProdutoDetalhe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
