@@ -193,6 +193,8 @@ export function useCatalogProducts(filters: CatalogProductFilters = {}) {
         .order("updated_at", { ascending: false });
       if (!filters.showArchived) q = q.neq("status", "archived");
       if (filters.saleType && filters.saleType !== "all") q = q.eq("sale_type", filters.saleType);
+      if (filters.archetype && filters.archetype !== "all") q = q.eq("archetype", filters.archetype);
+      if (filters.archetypes && filters.archetypes.length > 0) q = q.in("archetype", filters.archetypes);
       if (filters.categoryId && filters.categoryId !== "all") q = q.eq("category_id", filters.categoryId);
       const { data, error } = await q;
       if (error) throw error;
