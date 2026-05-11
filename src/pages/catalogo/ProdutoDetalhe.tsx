@@ -17,15 +17,23 @@ function validate(v: ProductFormValues) {
   const errors: Record<string, string> = {};
   if (!v.name?.trim()) errors.name = "Nome é obrigatório";
   if (!v.category_id) errors.category_id = "Selecione uma categoria";
-  if ((v.price_mode === "fixed" || v.price_mode === "suggested") && (v.price_value == null || v.price_value <= 0)) {
-    errors.price_value = "Valor obrigatório para este modo de preço";
-  }
-  if (v.price_mode === "range") {
-    if (v.price_min == null) errors.price_min = "Mínimo obrigatório";
-    if (v.price_max == null) errors.price_max = "Máximo obrigatório";
-    if (v.price_min != null && v.price_max != null && v.price_min > v.price_max) {
-      errors.price_max = "Máximo deve ser maior ou igual ao mínimo";
-    }
+  switch (v.archetype) {
+    case "one_shot":
+      if (v.oneshot_value == null || v.oneshot_value < 0) errors.oneshot_value = "Valor obrigatório";
+      break;
+    case "saas":
+      if (v.recurring_value == null || v.recurring_value < 0) errors.recurring_value = "Mensalidade obrigatória";
+      break;
+    case "hybrid":
+      if (v.setup_value == null || v.setup_value < 0) errors.setup_value = "Setup obrigatório";
+      if (v.recurring_value == null || v.recurring_value < 0) errors.recurring_value = "Mensalidade obrigatória";
+      break;
+    case "with_maintenance":
+      if (v.recurring_value == null || v.recurring_value < 0) errors.recurring_value = "Manutenção mensal obrigatória";
+      break;
+    case "aggregator":
+      // sem valor
+      break;
   }
   return errors;
 }
