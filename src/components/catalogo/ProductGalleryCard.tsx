@@ -36,7 +36,7 @@ export function ProductGalleryCard({ product, highlighted, onOpen, onDuplicate, 
       className={cn(
         "group relative flex flex-col rounded-lg border border-border bg-card/30 cursor-pointer transition-all overflow-hidden",
         "hover:border-accent/50 hover:bg-card/50 hover:shadow-[0_0_0_1px_hsl(var(--accent)/0.15)]",
-        highlighted && "ring-2 ring-accent animate-pulse-fade",
+        highlighted && "ring-2 ring-accent",
         isArchived && "opacity-60",
       )}
     >
