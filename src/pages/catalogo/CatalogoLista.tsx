@@ -1,6 +1,19 @@
+/**
+ * Catálogo — fonte única dos produtos vendáveis da GetBrain.
+ *
+ * INTENÇÃO DE PRODUTO (cesta no CRM):
+ * Esta tela é o "estoque". Em fase próxima, os mesmos cards de produto serão
+ * reaproveitados num drawer "Cesta" dentro da ficha do Deal (CrmDealDetail),
+ * onde o vendedor SELECIONA itens para montar a proposta sem digitar nada.
+ * A cesta vive no Deal (snapshot dos preços), não no Catálogo — alterações
+ * futuras de preço aqui não afetam propostas já montadas. Cada item da cesta
+ * referencia `catalog_product_id` para relatórios.
+ *
+ * Por isso a visualização padrão é GALERIA (cards), não tabela.
+ */
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Package, Plus, Search, Settings2, Archive, ArchiveRestore, Copy } from "lucide-react";
+import { Package, Plus, Search, Settings2, Archive, ArchiveRestore, Copy, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,9 +35,13 @@ import {
 import { SaleTypeBadge } from "@/components/catalogo/SaleTypeBadge";
 import { PriceDisplay } from "@/components/catalogo/PriceDisplay";
 import { CategoriesManagerDialog } from "@/components/catalogo/CategoriesManagerDialog";
+import { ProductGalleryCard } from "@/components/catalogo/ProductGalleryCard";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+
+type ViewMode = "grid" | "table";
 
 export default function CatalogoLista() {
   const navigate = useNavigate();
@@ -36,6 +53,7 @@ export default function CatalogoLista() {
   const [categoryId, setCategoryId] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [catDialog, setCatDialog] = useState(false);
+  const [view, setView] = usePersistedState<ViewMode>("catalogo:view", "grid");
 
   const { data: products = [], isLoading } = useCatalogProducts({ search, saleType, categoryId, showArchived });
   const { data: categories = [] } = useCatalogCategories();
@@ -116,10 +134,58 @@ export default function CatalogoLista() {
           <Switch id="archived" checked={showArchived} onCheckedChange={setShowArchived} />
           <Label htmlFor="archived" className="text-xs cursor-pointer">Mostrar arquivados</Label>
         </div>
+        <div className="hidden md:flex rounded-md border border-border bg-background/40 p-0.5">
+          <Button
+            size="sm"
+            variant={view === "grid" ? "secondary" : "ghost"}
+            className="h-7 px-2"
+            onClick={() => setView("grid")}
+            title="Galeria"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant={view === "table" ? "secondary" : "ghost"}
+            className="h-7 px-2"
+            onClick={() => setView("table")}
+            title="Tabela"
+          >
+            <List className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Lista — desktop */}
-      <div className="hidden md:block rounded-lg border border-border bg-card/30 overflow-hidden">
+      {/* Lista — galeria (desktop, default) */}
+      {view === "grid" && (
+        <div className="hidden md:block">
+          {isLoading && (
+            <div className="text-center py-12 text-sm text-muted-foreground">Carregando…</div>
+          )}
+          {!isLoading && products.length === 0 && (
+            <div className="text-center py-16 text-sm text-muted-foreground rounded-lg border border-dashed border-border">
+              Nenhum produto encontrado. Clique em "Novo Produto" para começar.
+            </div>
+          )}
+          {products.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {products.map((p) => (
+                <ProductGalleryCard
+                  key={p.id}
+                  product={p}
+                  highlighted={highlightId === p.id}
+                  onOpen={() => navigate(`/catalogo/${p.id}`)}
+                  onDuplicate={() => handleDuplicate(p.id)}
+                  onArchiveToggle={() => handleArchive(p.id, p.status === "archived")}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lista — tabela (desktop, opcional) */}
+      <div className={cn(view === "table" ? "hidden md:block" : "hidden", "rounded-lg border border-border bg-card/30 overflow-hidden")}>
         <Table>
           <TableHeader>
             <TableRow>
