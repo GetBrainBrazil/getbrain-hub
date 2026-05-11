@@ -134,10 +134,58 @@ export default function CatalogoLista() {
           <Switch id="archived" checked={showArchived} onCheckedChange={setShowArchived} />
           <Label htmlFor="archived" className="text-xs cursor-pointer">Mostrar arquivados</Label>
         </div>
+        <div className="hidden md:flex rounded-md border border-border bg-background/40 p-0.5">
+          <Button
+            size="sm"
+            variant={view === "grid" ? "secondary" : "ghost"}
+            className="h-7 px-2"
+            onClick={() => setView("grid")}
+            title="Galeria"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant={view === "table" ? "secondary" : "ghost"}
+            className="h-7 px-2"
+            onClick={() => setView("table")}
+            title="Tabela"
+          >
+            <List className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Lista — desktop */}
-      <div className="hidden md:block rounded-lg border border-border bg-card/30 overflow-hidden">
+      {/* Lista — galeria (desktop, default) */}
+      {view === "grid" && (
+        <div className="hidden md:block">
+          {isLoading && (
+            <div className="text-center py-12 text-sm text-muted-foreground">Carregando…</div>
+          )}
+          {!isLoading && products.length === 0 && (
+            <div className="text-center py-16 text-sm text-muted-foreground rounded-lg border border-dashed border-border">
+              Nenhum produto encontrado. Clique em "Novo Produto" para começar.
+            </div>
+          )}
+          {products.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {products.map((p) => (
+                <ProductGalleryCard
+                  key={p.id}
+                  product={p}
+                  highlighted={highlightId === p.id}
+                  onOpen={() => navigate(`/catalogo/${p.id}`)}
+                  onDuplicate={() => handleDuplicate(p.id)}
+                  onArchiveToggle={() => handleArchive(p.id, p.status === "archived")}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lista — tabela (desktop, opcional) */}
+      <div className={cn(view === "table" ? "hidden md:block" : "hidden", "rounded-lg border border-border bg-card/30 overflow-hidden")}>
         <Table>
           <TableHeader>
             <TableRow>
