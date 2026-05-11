@@ -1,6 +1,19 @@
+/**
+ * Catálogo — fonte única dos produtos vendáveis da GetBrain.
+ *
+ * INTENÇÃO DE PRODUTO (cesta no CRM):
+ * Esta tela é o "estoque". Em fase próxima, os mesmos cards de produto serão
+ * reaproveitados num drawer "Cesta" dentro da ficha do Deal (CrmDealDetail),
+ * onde o vendedor SELECIONA itens para montar a proposta sem digitar nada.
+ * A cesta vive no Deal (snapshot dos preços), não no Catálogo — alterações
+ * futuras de preço aqui não afetam propostas já montadas. Cada item da cesta
+ * referencia `catalog_product_id` para relatórios.
+ *
+ * Por isso a visualização padrão é GALERIA (cards), não tabela.
+ */
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Package, Plus, Search, Settings2, Archive, ArchiveRestore, Copy } from "lucide-react";
+import { Package, Plus, Search, Settings2, Archive, ArchiveRestore, Copy, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,9 +35,13 @@ import {
 import { SaleTypeBadge } from "@/components/catalogo/SaleTypeBadge";
 import { PriceDisplay } from "@/components/catalogo/PriceDisplay";
 import { CategoriesManagerDialog } from "@/components/catalogo/CategoriesManagerDialog";
+import { ProductGalleryCard } from "@/components/catalogo/ProductGalleryCard";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { usePersistedState } from "@/hooks/use-persisted-state";
 import { formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+
+type ViewMode = "grid" | "table";
 
 export default function CatalogoLista() {
   const navigate = useNavigate();
@@ -36,6 +53,7 @@ export default function CatalogoLista() {
   const [categoryId, setCategoryId] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [catDialog, setCatDialog] = useState(false);
+  const [view, setView] = usePersistedState<ViewMode>("catalogo:view", "grid");
 
   const { data: products = [], isLoading } = useCatalogProducts({ search, saleType, categoryId, showArchived });
   const { data: categories = [] } = useCatalogCategories();
