@@ -144,3 +144,14 @@ export function invalidateProposalCaches(qc: QueryClient, opts: ProposalOpts = {
     invalidateProjectCaches(qc, opts.projectId);
   }
 }
+
+/**
+ * Invalida caches do módulo Catálogo (produtos e categorias).
+ */
+export function invalidateCatalogCaches(qc: QueryClient, opts: { productId?: string | null } = {}) {
+  qc.invalidateQueries({ queryKey: ["catalog-products"] });
+  qc.invalidateQueries({ queryKey: ["catalog-categories"] });
+  if (opts.productId) {
+    qc.invalidateQueries({ queryKey: ["catalog-product", opts.productId] });
+  }
+}
