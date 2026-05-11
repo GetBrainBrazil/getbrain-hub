@@ -71,7 +71,9 @@ export interface CatalogProduct {
   tags: string[];
   category_id: string | null;
   image_url: string | null;
+  /** @deprecated mantém por compatibilidade — usar `archetype`. */
   sale_type: CatalogSaleType;
+  /** @deprecated — substituído pelos novos campos de preço por arquétipo. */
   price_mode: CatalogPriceMode;
   price_value: number | null;
   price_min: number | null;
@@ -84,11 +86,24 @@ export interface CatalogProduct {
   internal_notes: string | null;
   created_at: string;
   updated_at: string;
+  // ---- Novo modelo (arquétipos) ----
+  archetype: CatalogArchetype;
+  setup_value: number | null;
+  setup_adjustable: boolean;
+  setup_payment_terms: CatalogOneShotTerms;
+  oneshot_value: number | null;
+  oneshot_adjustable: boolean;
+  oneshot_payment_terms: CatalogOneShotTerms;
+  recurring_value: number | null;
+  recurring_adjustable: boolean;
+  maintenance_required: "client_decides" | "mandatory";
 }
 
 export interface CatalogProductFilters {
   search?: string;
   saleType?: CatalogSaleType | "all";
+  archetype?: CatalogArchetype | "all";
+  archetypes?: CatalogArchetype[];
   categoryId?: string | "all";
   showArchived?: boolean;
 }
