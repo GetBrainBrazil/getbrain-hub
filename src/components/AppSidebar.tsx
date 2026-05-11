@@ -7,6 +7,7 @@ import {
   Handshake,
   Settings,
   ChevronDown,
+  Package,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import logo from "@/assets/logo-getbrain.svg";
